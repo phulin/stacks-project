@@ -1080,9 +1080,7 @@ private lemma blowup_chart_awayMap_bijective
           (Submonoid.powers f) (P.degreeZeroEquiv.symm b)).val =
           Localization.mk ((P.degreeZeroEquiv.symm b : P.gradedPieces 0) :
             blowupAlgebra I) (1 : Submonoid.powers f) := by
-      simp [AlgebraicGeometry.Proj.toSpecZero,
-        AlgebraicGeometry.Proj.basicOpenToSpec,
-        Scheme.Hom.comp_base, TopCat.coe_comp]
+      rfl
     have haval :
         (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
           (Submonoid.powers f) (P.degreeZeroEquiv.symm a)).val =
@@ -1775,9 +1773,11 @@ private lemma rees_element_mem_of_prime
           algebraMap A (blowupAlgebra I) b =
         (P.degreeZeroEquiv.symm a : blowupAlgebra I) *
           reesHomogeneousElement I 1 (a := b) (by simpa using hb) := by
-    rw [P.degreeZeroEquiv_spec a, ← P.degreeZeroEquiv_spec b]
+    rw [P.degreeZeroEquiv_spec a]
     apply Subtype.ext
-    simp [reesHomogeneousElement, Polynomial.monomial_mul_monomial, mul_comm]
+    change Polynomial.monomial 1 a * Polynomial.C b =
+      Polynomial.C a * Polynomial.monomial 1 b
+    rw [Polynomial.monomial_mul_C, Polynomial.C_mul_monomial]
   have hprod' :
       reesHomogeneousElement I 1 (a := a) (by simpa using haI) *
           algebraMap A (blowupAlgebra I) b ∈ D.lift.asHomogeneousIdeal := by
@@ -1823,7 +1823,7 @@ private lemma twoVariable_irrelevant_le_of_mem
         have hzero : reesHomogeneousElement (twoVariableMaximalIdeal k) 1
               (a := 0) (by simp) = 0 := by
           apply Subtype.ext
-          simp [reesHomogeneousElement]
+          simp [reesHomogeneousElement, Polynomial.C_mul, mul_comm]
         rw [hzero]
         exact x.asHomogeneousIdeal.zero_mem
     | add a b ha hb hpa hpb =>
@@ -1940,6 +1940,7 @@ private lemma rees_element_coeff_mem_of_prime_lift
       reesHomogeneousElement I d (a := a) ha ∈ D.lift.asHomogeneousIdeal →
         a ∈ p := by
   intro hfb haD
+  letI : GradedAlgebra P.gradedPieces := P.graded
   let f : blowupAlgebra I :=
     reesHomogeneousElement I 1 (a := b) (by simpa using hb)
   have hf : f ∈ P.gradedPieces 1 := by
@@ -2015,6 +2016,7 @@ private lemma rees_element_coeff_mem_of_prime_lift
     refine ⟨1, ?_⟩
     rw [← hpoly]
     simp [Localization.mk_mul, Localization.mk_pow]
+    exact mul_comm _ _
   have hconst : g0 (P.degreeZeroEquiv.symm a) ∈ q.asIdeal := by
     rw [← hprod]
     exact q.asIdeal.mul_mem_left _ hz
@@ -2276,38 +2278,144 @@ theorem twoVariable_x_parabola_strictTransforms_not_disjoint
       · exact ⟨1, rfl⟩
     · rintro ⟨i, hi⟩
       fin_cases i <;> simp_all
+  have hpar_factor (d : ℕ) (r : twoVariablePolynomialRing k)
+      (hr : r * (twoVariableX k - twoVariableY k ^ 2) ∈
+        (twoVariableMaximalIdeal k) ^ d) :
+      d = 0 ∨ r ∈ (twoVariableMaximalIdeal k) ^ (d - 1) := by
+    classical
+    cases d with
+    | zero => exact Or.inl rfl
+    | succ d =>
+        right
+        rw [hI] at hr ⊢
+        apply (MvPolynomial.mem_pow_idealOfVars_iff' d r).2
+        intro u hu
+        have hlow : ∀ n : ℕ, ∀ v : Fin 2 →₀ ℕ,
+            Finsupp.degree v = n → Finsupp.degree v < d →
+              MvPolynomial.coeff v r = 0 := by
+          intro n
+          induction n using Nat.strong_induction_on with
+          | h n ih =>
+              intro v hdeg' hv
+              have hmdeg : Finsupp.degree (v + Finsupp.single 0 1) < d + 1 := by
+                rw [map_add, Finsupp.degree_single, hdeg']
+                omega
+              have hc :=
+                (MvPolynomial.mem_pow_idealOfVars_iff' (d + 1)
+                  (r * (twoVariableX k - twoVariableY k ^ 2))).1 hr
+                  (v + Finsupp.single 0 1) hmdeg
+              rw [show twoVariableX k = MvPolynomial.X 0 by rfl,
+                show twoVariableY k = MvPolynomial.X 1 by rfl,
+                mul_sub, MvPolynomial.coeff_sub,
+                MvPolynomial.X_pow_eq_monomial,
+                MvPolynomial.coeff_mul_X,
+                MvPolynomial.coeff_mul_monomial'] at hc
+              split at hc
+              · have hsum :
+                    Finsupp.degree (v + Finsupp.single 0 1 -
+                      Finsupp.single 1 2) + 2 = Finsupp.degree v + 1 := by
+                    have hsum' := congrArg Finsupp.degree
+                      (tsub_add_cancel_of_le ‹_›)
+                    simpa [map_add, Finsupp.degree_single] using hsum'
+                have hlt :
+                    Finsupp.degree (v + Finsupp.single 0 1 -
+                      Finsupp.single 1 2) < n := by
+                  rw [hdeg'] at hsum
+                  omega
+                have hprev := ih _ hlt _ rfl (by omega)
+                simpa [hprev] using hc
+              · simpa only [sub_zero] using hc
+        exact hlow _ u rfl hu
+  have hx_factor (d : ℕ) (r : twoVariablePolynomialRing k)
+      (hr : r * twoVariableX k ∈ (twoVariableMaximalIdeal k) ^ d) :
+      d = 0 ∨ r ∈ (twoVariableMaximalIdeal k) ^ (d - 1) := by
+    cases d with
+    | zero => exact Or.inl rfl
+    | succ d =>
+        right
+        rw [hI] at hr ⊢
+        apply (MvPolynomial.mem_pow_idealOfVars_iff' d r).2
+        intro u hu
+        have hmdeg : Finsupp.degree (u + Finsupp.single 0 1) < d + 1 := by
+          rw [map_add, Finsupp.degree_single]
+          omega
+        have hc :=
+          (MvPolynomial.mem_pow_idealOfVars_iff' (d + 1)
+            (r * twoVariableX k)).1 hr (u + Finsupp.single 0 1) hmdeg
+        simpa [twoVariableX, MvPolynomial.coeff_mul_X] using hc
+  let fG : blowupAlgebra (twoVariableMaximalIdeal k) :=
+    reesHomogeneousElement (twoVariableMaximalIdeal k) 1
+      (a := twoVariableX k - twoVariableY k ^ 2) (by
+        rw [pow_one, twoVariableMaximalIdeal]
+        apply Ideal.sub_mem
+        · exact Ideal.subset_span (by simp)
+        · rw [pow_two]
+          exact (twoVariableMaximalIdeal k).mul_mem_left _
+            (Ideal.subset_span (by simp)))
   let K : Ideal (blowupAlgebra (twoVariableMaximalIdeal k)) :=
     Ideal.span ({
       algebraMap (twoVariablePolynomialRing k)
         (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k),
       algebraMap (twoVariablePolynomialRing k)
         (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k),
-      fX} : Set (blowupAlgebra (twoVariableMaximalIdeal k)))
-  have hvanish (n : ℕ) : ∀ z : blowupAlgebra (twoVariableMaximalIdeal k),
-      z ∈ K →
-        MvPolynomial.coeff (Finsupp.single (1 : Fin 2) n) (z.1.coeff n) = 0 := by
-    intro z hz
+      fX, fG} : Set (blowupAlgebra (twoVariableMaximalIdeal k)))
+  have hspan4 (z : blowupAlgebra (twoVariableMaximalIdeal k)) (hz : z ∈ K) :
+      ∃ rX rY rF rG : blowupAlgebra (twoVariableMaximalIdeal k),
+        rX • algebraMap (twoVariablePolynomialRing k)
+            (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) +
+          rY • algebraMap (twoVariablePolynomialRing k)
+            (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) +
+          rF • fX + rG • fG = z := by
     change z ∈ Submodule.span (blowupAlgebra (twoVariableMaximalIdeal k))
       ({
         algebraMap (twoVariablePolynomialRing k)
           (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k),
         algebraMap (twoVariablePolynomialRing k)
           (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k),
-        fX} : Set (blowupAlgebra (twoVariableMaximalIdeal k))) at hz
-    obtain ⟨rX, rY, rF, hz'⟩ :=
+        fX, fG} : Set (blowupAlgebra (twoVariableMaximalIdeal k))) at hz
+    have hmem := Submodule.mem_span_insert
+        (R := blowupAlgebra (twoVariableMaximalIdeal k))
+        (x := z)
+        (y := algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k))
+        (s := ({
+          algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k),
+          fX, fG} : Set (blowupAlgebra (twoVariableMaximalIdeal k))))
+    obtain ⟨rX, z', hz', hzEq⟩ := hmem.mp hz
+    obtain ⟨rY, rF, rG, hz'⟩ :=
       (Submodule.mem_span_triple
         (R := blowupAlgebra (twoVariableMaximalIdeal k))
-        (w := z)
+        (w := z')
         (x := algebraMap (twoVariablePolynomialRing k)
-          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k))
-        (y := algebraMap (twoVariablePolynomialRing k)
           (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k))
-        (z := fX)).1 hz
+        (y := fX) (z := fG)).1 hz'
+    refine ⟨rX, rY, rF, rG, ?_⟩
+    calc
+      rX • algebraMap (twoVariablePolynomialRing k)
+            (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) +
+          rY • algebraMap (twoVariablePolynomialRing k)
+            (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) +
+          rF • fX + rG • fG =
+          rX • algebraMap (twoVariablePolynomialRing k)
+              (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) +
+            (rY • algebraMap (twoVariablePolynomialRing k)
+              (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) +
+              rF • fX + rG • fG) := by abel
+      _ = rX • algebraMap (twoVariablePolynomialRing k)
+              (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) + z' := by
+            rw [hz']
+      _ = z := hzEq.symm
+  have hvanish (n : ℕ) : ∀ z : blowupAlgebra (twoVariableMaximalIdeal k),
+      z ∈ K →
+        MvPolynomial.coeff (Finsupp.single (1 : Fin 2) n) (z.1.coeff n) = 0 := by
+    intro z hz
+    obtain ⟨rX, rY, rF, rG, hz'⟩ := hspan4 z hz
     rw [← hz']
     cases n with
     | zero =>
         simp [fX, reesHomogeneousElement, twoVariableX, twoVariableY,
-          Algebra.smul_def, MvPolynomial.coeff_mul_X']
+          fG, Algebra.smul_def, MvPolynomial.coeff_mul_X']
     | succ n =>
         have hrY : rY.1.coeff (n + 1) ∈
             MvPolynomial.idealOfVars (Fin 2) k ^ (n + 1) := by
@@ -2321,16 +2429,199 @@ theorem twoVariable_x_parabola_strictTransforms_not_disjoint
                 (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) +
               rY • algebraMap (twoVariablePolynomialRing k)
                 (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) +
-              rF • fX).1.coeff (n + 1) =
+              rF • fX + rG • fG).1.coeff (n + 1) =
             rX.1.coeff (n + 1) * MvPolynomial.X 0 +
               rY.1.coeff (n + 1) * MvPolynomial.X 1 +
-              rF.1.coeff n * MvPolynomial.X 0 := by
-          simp [fX, reesHomogeneousElement, twoVariableX, twoVariableY,
-            Algebra.smul_def, Polynomial.coeff_add, Polynomial.coeff_mul_C,
-            Polynomial.coeff_mul_monomial]
-          rw [Polynomial.coeff_mul_monomial]
+              rF.1.coeff n * MvPolynomial.X 0 +
+              rG.1.coeff n *
+                (MvPolynomial.X 0 - MvPolynomial.X 1 ^ 2) := by
+          simp only [Algebra.smul_def, Algebra.algebraMap_self_apply]
+          change
+            (rX.1 *
+                (algebraMap (twoVariablePolynomialRing k)
+                  (blowupAlgebra (twoVariableMaximalIdeal k))
+                  (twoVariableX k)).1 +
+              rY.1 *
+                (algebraMap (twoVariablePolynomialRing k)
+                  (blowupAlgebra (twoVariableMaximalIdeal k))
+                  (twoVariableY k)).1 +
+              rF.1 * fX.1 + rG.1 * fG.1).coeff (n + 1) =
+            rX.1.coeff (n + 1) * MvPolynomial.X 0 +
+              rY.1.coeff (n + 1) * MvPolynomial.X 1 +
+              rF.1.coeff n * MvPolynomial.X 0 +
+              rG.1.coeff n * (MvPolynomial.X 0 - MvPolynomial.X 1 ^ 2)
+          have hxmap :
+              (algebraMap (twoVariablePolynomialRing k)
+                  (blowupAlgebra (twoVariableMaximalIdeal k))
+                  (twoVariableX k)).1 =
+                Polynomial.C (twoVariableX k) := by
+            rfl
+          have hymap :
+              (algebraMap (twoVariablePolynomialRing k)
+                  (blowupAlgebra (twoVariableMaximalIdeal k))
+                  (twoVariableY k)).1 =
+                Polynomial.C (twoVariableY k) := by
+            rfl
+          have hfx : fX.1 = Polynomial.monomial 1 (twoVariableX k) := by
+            rfl
+          have hfg : fG.1 = Polynomial.monomial 1
+              (twoVariableX k - twoVariableY k ^ 2) := by
+            rfl
+          rw [hxmap, hymap, hfx, Polynomial.coeff_add,
+            hfg, Polynomial.coeff_add, Polynomial.coeff_add,
+            Polynomial.coeff_mul_C,
+            Polynomial.coeff_mul_C,
+            Polynomial.coeff_mul_monomial (p := rF.1) (n := 1) (d := n)
+              (r := twoVariableX k),
+            Polynomial.coeff_mul_monomial (p := rG.1) (n := 1) (d := n)
+              (r := twoVariableX k - twoVariableY k ^ 2)]
+          rw [show twoVariableX k = MvPolynomial.X 0 by rfl,
+            show twoVariableY k = MvPolynomial.X 1 by rfl]
+        have hG :
+            MvPolynomial.coeff (Finsupp.single (1 : Fin 2) n +
+              Finsupp.single (1 : Fin 2) 1)
+              (rG.1.coeff n *
+                (MvPolynomial.X 0 - MvPolynomial.X 1 ^ 2)) = 0 := by
+          cases n with
+          | zero =>
+              rw [MvPolynomial.X_pow_eq_monomial, mul_sub, MvPolynomial.coeff_sub,
+                MvPolynomial.coeff_mul_X',
+                MvPolynomial.coeff_mul_monomial']
+              simp
+          | succ n =>
+              have hrG : rG.1.coeff (n + 1) ∈
+                  MvPolynomial.idealOfVars (Fin 2) k ^ (n + 1) := by
+                simpa [hI] using rG.2 (n + 1)
+              have hrG0 :
+                  MvPolynomial.coeff (Finsupp.single (1 : Fin 2) n)
+                    (rG.1.coeff (n + 1)) = 0 := by
+                exact (MvPolynomial.mem_pow_idealOfVars_iff' (n + 1)
+                  (rG.1.coeff (n + 1))).1 hrG _ (by simp)
+              rw [MvPolynomial.X_pow_eq_monomial, mul_sub, MvPolynomial.coeff_sub,
+                MvPolynomial.coeff_mul_X',
+                MvPolynomial.coeff_mul_monomial']
+              have hidx :
+                  Finsupp.single (1 : Fin 2) (n + 1) + Finsupp.single (1 : Fin 2) 1 -
+                      Finsupp.single (1 : Fin 2) 2 =
+                    Finsupp.single (1 : Fin 2) n := by
+                ext i
+                fin_cases i <;> simp <;> omega
+              have hle : Finsupp.single (1 : Fin 2) 2 ≤
+                  Finsupp.single (1 : Fin 2) (n + 1) +
+                    Finsupp.single (1 : Fin 2) 1 := by
+                intro i
+                fin_cases i <;> simp <;> omega
+              have hzero : (0 : Fin 2) ∉
+                  (Finsupp.single (1 : Fin 2) (n + 1) +
+                    Finsupp.single (1 : Fin 2) 1).support := by
+                simp
+              simp only [hzero, if_false, hle, if_true, hidx, mul_one,
+                sub_zero]
+              simpa using hrG0
+        have hG' :
+            MvPolynomial.coeff (Finsupp.single (1 : Fin 2) (n + 1))
+              (rG.1.coeff n * (MvPolynomial.X 0 - MvPolynomial.X 1 ^ 2)) = 0 := by
+          have heq : Finsupp.single (1 : Fin 2) (n + 1) =
+              Finsupp.single (1 : Fin 2) n + Finsupp.single (1 : Fin 2) 1 := by
+            ext i
+            fin_cases i <;> simp
+          rw [heq]
+          exact hG
         rw [hcoeff]
-        simp [MvPolynomial.coeff_mul_X', hrY0]
+        rw [MvPolynomial.coeff_add, MvPolynomial.coeff_add,
+          MvPolynomial.coeff_add]
+        simp [MvPolynomial.coeff_mul_X', hrY0, hG']
+        exact hG
+  have hK_principal :
+      ∀ (g : twoVariablePolynomialRing k) (hg : g ∈ twoVariableMaximalIdeal k)
+        (h0 : algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) g ∈ K)
+        (h1 : reesHomogeneousElement (twoVariableMaximalIdeal k) 1
+          (a := g) (by simpa using hg) ∈ K)
+        (hf : ∀ d : ℕ, ∀ r : twoVariablePolynomialRing k,
+          r * g ∈ (twoVariableMaximalIdeal k) ^ d →
+            d = 0 ∨ r ∈ (twoVariableMaximalIdeal k) ^ (d - 1)),
+        ∀ d : ℕ, ∀ a : twoVariablePolynomialRing k,
+          a ∈ Ideal.span ({g} : Set (twoVariablePolynomialRing k)) →
+          ∀ haI : a ∈ (twoVariableMaximalIdeal k) ^ d,
+            reesHomogeneousElement (twoVariableMaximalIdeal k) d
+              (a := a) (by simpa using haI) ∈ K := by
+    intro g hg h0 h1 hf d a ha haI
+    obtain ⟨r, rfl⟩ := (Ideal.mem_span_singleton.mp ha)
+    have hr : r * g ∈ (twoVariableMaximalIdeal k) ^ d := by
+      simpa [smul_eq_mul, mul_comm] using haI
+    cases d with
+    | zero =>
+        have heq : reesHomogeneousElement (twoVariableMaximalIdeal k) 0
+              (a := g * r) haI =
+            algebraMap (twoVariablePolynomialRing k)
+              (blowupAlgebra (twoVariableMaximalIdeal k)) r *
+              algebraMap (twoVariablePolynomialRing k)
+                (blowupAlgebra (twoVariableMaximalIdeal k)) g := by
+          apply Subtype.ext
+          simp [reesHomogeneousElement] <;> exact mul_comm _ _
+        rw [heq]
+        exact K.mul_mem_left _ h0
+    | succ n =>
+        rcases hf (n + 1) r (by simpa using hr) with hzero | hnr
+        · exact (Nat.succ_ne_zero n (by simpa using hzero)).elim
+        · have heq : reesHomogeneousElement (twoVariableMaximalIdeal k) (n + 1)
+                (a := g * r) haI =
+              reesHomogeneousElement (twoVariableMaximalIdeal k) 1
+                (a := g) (by simpa using hg) *
+              reesHomogeneousElement (twoVariableMaximalIdeal k) n
+                (a := r) (by simpa using hnr) := by
+            apply Subtype.ext
+            simp [reesHomogeneousElement, Polynomial.monomial_mul_monomial]
+            rw [show n + 1 = 1 + n by omega]
+          rw [heq]
+          exact K.mul_mem_right _ h1
+  have h0x : algebraMap (twoVariablePolynomialRing k)
+        (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) ∈ K := by
+    exact Ideal.subset_span (by simp [K])
+  have h1x : fX ∈ K := by
+    exact Ideal.subset_span (by simp [K])
+  have h0g : algebraMap (twoVariablePolynomialRing k)
+        (blowupAlgebra (twoVariableMaximalIdeal k))
+        (twoVariableX k - twoVariableY k ^ 2) ∈ K := by
+    rw [map_sub, map_pow]
+    have h0y : algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) ∈ K := by
+      exact Ideal.subset_span (by simp [K])
+    apply K.sub_mem
+    · exact h0x
+    · have hprod := Ideal.mul_mem_left K
+          (algebraMap (twoVariablePolynomialRing k)
+            (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k)) h0y
+      simpa only [pow_two] using hprod
+  have h1g : fG ∈ K := by
+    exact Ideal.subset_span (by simp [K])
+  have hKX : ∀ d : ℕ, ∀ a : twoVariablePolynomialRing k,
+      a ∈ twoVariableXIdeal k →
+        ∀ haI : a ∈ (twoVariableMaximalIdeal k) ^ d,
+          reesHomogeneousElement (twoVariableMaximalIdeal k) d
+            (a := a) (by simpa using haI) ∈ K := by
+    intro d a ha haI
+    apply hK_principal (twoVariableX k) (by
+      rw [twoVariableMaximalIdeal]
+      exact Ideal.subset_span (by simp)) h0x
+      (by simpa [fX] using h1x) hx_factor d a
+    simpa [twoVariableXIdeal] using ha
+  have hKG : ∀ d : ℕ, ∀ a : twoVariablePolynomialRing k,
+      a ∈ twoVariableParabolaIdeal k →
+        ∀ haI : a ∈ (twoVariableMaximalIdeal k) ^ d,
+          reesHomogeneousElement (twoVariableMaximalIdeal k) d
+            (a := a) (by simpa using haI) ∈ K := by
+    intro d a ha haI
+    apply hK_principal (twoVariableX k - twoVariableY k ^ 2) (by
+      rw [twoVariableMaximalIdeal]
+      apply Ideal.sub_mem
+      · exact Ideal.subset_span (by simp)
+      · rw [pow_two]
+        exact (twoVariableMaximalIdeal k).mul_mem_left _
+          (Ideal.subset_span (by simp))) h0g
+      (by simpa [fG] using h1g) hpar_factor d a
+    simpa [twoVariableParabolaIdeal] using ha
   have hdisj : Disjoint
       (K : Set (blowupAlgebra (twoVariableMaximalIdeal k)))
       (↑(Submonoid.powers fY) : Set (blowupAlgebra (twoVariableMaximalIdeal k))) := by
@@ -2365,7 +2656,152 @@ theorem twoVariable_x_parabola_strictTransforms_not_disjoint
               exact Ideal.subset_span (by simp), rfl⟩
         exact hfYq ((Ideal.toIdeal_homogeneousCore_le P.gradedPieces q)
           (hirr hfYirr)) }
-  sorry
+  have hYnotX : twoVariableY k ∉ twoVariableXIdeal k := by
+    intro hy
+    let φ : twoVariablePolynomialRing k →+* k :=
+      MvPolynomial.eval₂Hom (RingHom.id k)
+        (fun i : Fin 2 => if i = 0 then 0 else 1)
+    have hspan : Ideal.span ({twoVariableX k} : Set (twoVariablePolynomialRing k)) ≤
+        Ideal.comap φ ⊥ := by
+      refine Ideal.span_le.2 ?_
+      intro w hw
+      rcases hw with rfl
+      change φ (twoVariableX k) ∈ (⊥ : Ideal k)
+      simp [φ, twoVariableX]
+    have hy' : φ (twoVariableY k) ∈ (⊥ : Ideal k) :=
+      hspan (by simpa [twoVariableXIdeal] using hy)
+    simpa [φ, twoVariableY] using hy'
+  have hYnotG : twoVariableY k ∉ twoVariableParabolaIdeal k := by
+    intro hy
+    let φ : twoVariablePolynomialRing k →+* k :=
+      MvPolynomial.eval₂Hom (RingHom.id k) (fun _ : Fin 2 => 1)
+    have hspan :
+        Ideal.span ({twoVariableX k - twoVariableY k ^ 2} :
+          Set (twoVariablePolynomialRing k)) ≤ Ideal.comap φ ⊥ := by
+      refine Ideal.span_le.2 ?_
+      intro w hw
+      rcases hw with rfl
+      change φ (twoVariableX k - twoVariableY k ^ 2) ∈ (⊥ : Ideal k)
+      simp [φ, twoVariableX, twoVariableY]
+    have hy' : φ (twoVariableY k) ∈ (⊥ : Ideal k) :=
+      hspan (by simpa [twoVariableParabolaIdeal] using hy)
+    simpa [φ, twoVariableY] using hy'
+  have hYnot_lift
+      {p : Ideal (twoVariablePolynomialRing k)} {hp : p.IsPrime}
+      (D : PrimeStrictTransformData P p hp) (hYp : twoVariableY k ∉ p) :
+      fY ∉ D.lift.asHomogeneousIdeal := by
+    intro hfY
+    have hY0 : algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) ∉
+        D.lift.asHomogeneousIdeal := by
+      intro h
+      apply hYp
+      have hconst :
+          (P.degreeZeroEquiv.symm (twoVariableY k) :
+            blowupAlgebra (twoVariableMaximalIdeal k)) ∈
+          D.lift.asHomogeneousIdeal := by
+        rw [P.degreeZeroEquiv_spec]
+        exact h
+      have hbase := (blowup_base_mem_iff P D.lift (twoVariableY k)).mpr hconst
+      rw [D.lift_over_prime] at hbase
+      exact hbase
+    have hrel : algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) * fX =
+        algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableX k) * fY := by
+      apply Subtype.ext
+      simp [fX, fY, reesHomogeneousElement,
+        Polynomial.monomial_mul_monomial]
+      congr 1
+      exact mul_comm _ _
+    have hprod : algebraMap (twoVariablePolynomialRing k)
+          (blowupAlgebra (twoVariableMaximalIdeal k)) (twoVariableY k) * fX ∈
+        D.lift.asHomogeneousIdeal := by
+      rw [hrel]
+      exact D.lift.asHomogeneousIdeal.toIdeal.mul_mem_left _ hfY
+    have hfx : fX ∈ D.lift.asHomogeneousIdeal := by
+      rcases D.lift.isPrime.mem_or_mem hprod with h | h
+      · exact (hY0 h).elim
+      · exact h
+    exact D.lift.not_irrelevant_le
+      (twoVariable_irrelevant_le_of_mem k P.gradedPieces_spec D.lift hfx hfY)
+  have hlift_le_q
+      {p : Ideal (twoVariablePolynomialRing k)} {hp : p.IsPrime}
+      (D : PrimeStrictTransformData P p hp) (hYp : twoVariableY k ∉ p)
+      (hcoeff : ∀ d : ℕ, ∀ a : twoVariablePolynomialRing k,
+        a ∈ p → ∀ haI : a ∈ (twoVariableMaximalIdeal k) ^ d,
+          reesHomogeneousElement (twoVariableMaximalIdeal k) d
+            (a := a) (by simpa using haI) ∈ K) :
+      D.lift.asHomogeneousIdeal.toIdeal ≤ q := by
+    classical
+    intro u hu
+    rw [D.lift.asHomogeneousIdeal.isHomogeneous.mem_iff] at hu
+    rw [← DirectSum.sum_support_decompose P.gradedPieces u]
+    apply Ideal.sum_mem
+    intro d hd
+    have hc_mem : GradedRing.proj P.gradedPieces d u ∈ P.gradedPieces d :=
+      SetLike.coe_mem _
+    obtain ⟨a, haI, hca⟩ := (P.gradedPieces_spec d
+      (GradedRing.proj P.gradedPieces d u)).1 hc_mem
+    have hreesD : reesHomogeneousElement (twoVariableMaximalIdeal k) d
+          (a := a) haI ∈ D.lift.asHomogeneousIdeal := by
+      have heq : reesHomogeneousElement (twoVariableMaximalIdeal k) d
+            (a := a) haI = GradedRing.proj P.gradedPieces d u := by
+        apply Subtype.ext
+        exact hca.symm
+      rw [heq]
+      exact hu d
+    have hap : a ∈ p := rees_element_coeff_mem_of_prime_lift D haI
+      (by
+        rw [twoVariableMaximalIdeal]
+        exact Ideal.subset_span (by simp)) hYp
+      (hYnot_lift D hYp) hreesD
+    have hreesq := hqK (hcoeff d a hap haI)
+    have heq : reesHomogeneousElement (twoVariableMaximalIdeal k) d
+          (a := a) haI = GradedRing.proj P.gradedPieces d u := by
+      apply Subtype.ext
+      exact hca.symm
+    rw [heq] at hreesq
+    exact hreesq
+  have hXleq :
+      (twoVariableXStrictTransformData k).lift.asHomogeneousIdeal.toIdeal ≤ q := by
+    apply hlift_le_q (twoVariableXStrictTransformData k) hYnotX
+    intro d a ha haI
+    apply hKX d a (by simpa [twoVariableXIdeal] using ha) haI
+  have hGleq :
+      (twoVariableParabolaStrictTransformData k).lift.asHomogeneousIdeal.toIdeal ≤ q := by
+    apply hlift_le_q (twoVariableParabolaStrictTransformData k) hYnotG
+    intro d a ha haI
+    apply hKG d a (by simpa [twoVariableParabolaIdeal] using ha) haI
+  have hXleqh :
+      (twoVariableXStrictTransformData k).lift.asHomogeneousIdeal ≤ qh := by
+    change (twoVariableXStrictTransformData k).lift.asHomogeneousIdeal.toIdeal ≤
+      (q.homogeneousCore P.gradedPieces).toIdeal
+    rw [← Ideal.IsHomogeneous.toIdeal_homogeneousCore_eq_self
+      (twoVariableXStrictTransformData k).lift.asHomogeneousIdeal.isHomogeneous]
+    exact Ideal.homogeneousCore_mono P.gradedPieces hXleq
+  have hGleqh :
+      (twoVariableParabolaStrictTransformData k).lift.asHomogeneousIdeal ≤ qh := by
+    change (twoVariableParabolaStrictTransformData k).lift.asHomogeneousIdeal.toIdeal ≤
+      (q.homogeneousCore P.gradedPieces).toIdeal
+    rw [← Ideal.IsHomogeneous.toIdeal_homogeneousCore_eq_self
+      (twoVariableParabolaStrictTransformData k).lift.asHomogeneousIdeal.isHomogeneous]
+    exact Ideal.homogeneousCore_mono P.gradedPieces hGleq
+  have hXle :
+      (twoVariableXStrictTransformData k).lift ≤ z := by
+    exact (ProjectiveSpectrum.as_ideal_le_as_ideal _ _ _).2 hXleqh
+  have hGle :
+      (twoVariableParabolaStrictTransformData k).lift ≤ z := by
+    exact (ProjectiveSpectrum.as_ideal_le_as_ideal _ _ _).2 hGleqh
+  have hzX : z ∈ primeStrictTransform (twoVariableXStrictTransformData k) := by
+    rw [primeStrictTransform]
+    exact (ProjectiveSpectrum.le_iff_mem_closure _ _ _).1 hXle
+  have hzG : z ∈ primeStrictTransform
+      (twoVariableParabolaStrictTransformData k) := by
+    rw [primeStrictTransform]
+    exact (ProjectiveSpectrum.le_iff_mem_closure _ _ _).1 hGle
+  intro hdis
+  exact Set.disjoint_left.mp hdis hzX hzG
 theorem exists_twoVariable_separatingIdeal (k : Type u) [Field k] :
     ∃ J : Ideal (twoVariablePolynomialRing k),
       PrimeSpectrum.zeroLocus (J : Set (twoVariablePolynomialRing k)) =

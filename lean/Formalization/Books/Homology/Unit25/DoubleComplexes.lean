@@ -1,6 +1,8 @@
 import Formalization.Books.Homology.Unit18.DoubleComplexes
 import Formalization.Books.Homology.Unit20.DoubleComplexes
 import Formalization.Books.Homology.Unit24.FilteredComplexes
+import Formalization.Books.Homology.Unit14.HomotopyAndShift
+import Formalization.Books.Homology.Unit19.Filtrations
 import Formalization.Books.Homology.Unit13.Complexes
 import Formalization.Books.Homology.Unit10.SerreSubcategories
 import Mathlib.CategoryTheory.Subobject.Limits
@@ -165,6 +167,20 @@ abbrev doubleComplexSecondFilteredTotal
     [HasCountableCoproducts C]
     (A : DoubleComplex C) : Formalization.Books.Homology.Unit24.FilteredComplex C :=
   Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredTotal A
+
+/-! The filtrations induced on total cohomology are the filtrations used in
+the source's weak-convergence comparison. -/
+abbrev doubleComplexFirstTotalCohomologyFilteredObject
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C]
+    (A : DoubleComplex C) (n : ℤ) : FilteredObject C :=
+  filteredComplexCohomologyFilteredObject (doubleComplexFirstFilteredTotal A) n
+
+abbrev doubleComplexSecondTotalCohomologyFilteredObject
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C]
+    (A : DoubleComplex C) (n : ℤ) : FilteredObject C :=
+  filteredComplexCohomologyFilteredObject (doubleComplexSecondFilteredTotal A) n
 
 theorem doubleComplex_first_filtration_formula
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -493,6 +509,21 @@ structure DoubleComplexResolutionHypotheses
     ∃ e : K.X p ≅ kernel (A.d2 p 0),
       e.hom ≫ kernel.ι (A.d2 p 0) = augmentation.f p
 
+theorem doubleComplex_resolution_augmentation_cycle
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {K : CochainComplex C ℤ} {A : DoubleComplex C}
+    (h : DoubleComplexResolutionHypotheses K A) (p : ℤ) :
+    h.augmentation.f p ≫ A.d2 p 0 = 0 := by
+  obtain ⟨e, he⟩ := h.augmentation_kernel_iso p
+  calc
+    h.augmentation.f p ≫ A.d2 p 0 =
+        (e.hom ≫ kernel.ι (A.d2 p 0)) ≫ A.d2 p 0 := by
+      rw [he]
+      rfl
+    _ = e.hom ≫ (kernel.ι (A.d2 p 0) ≫ A.d2 p 0) :=
+      Category.assoc _ _ _
+    _ = 0 := by rw [kernel.condition, comp_zero]
+
 noncomputable def doubleComplexResolutionMap
     {C : Type u} [Category.{v} C] [Abelian C]
     {K : CochainComplex C ℤ} {A : DoubleComplex C}
@@ -531,6 +562,21 @@ structure DoubleComplexSecondResolutionHypotheses
   augmentation_kernel_iso : ∀ q : ℤ,
     ∃ e : K.X q ≅ kernel (A.d1 0 q),
       e.hom ≫ kernel.ι (A.d1 0 q) = augmentation.f q
+
+theorem doubleComplex_second_resolution_augmentation_cycle
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {K : CochainComplex C ℤ} {A : DoubleComplex C}
+    (h : DoubleComplexSecondResolutionHypotheses K A) (q : ℤ) :
+    h.augmentation.f q ≫ A.d1 0 q = 0 := by
+  obtain ⟨e, he⟩ := h.augmentation_kernel_iso q
+  calc
+    h.augmentation.f q ≫ A.d1 0 q =
+        (e.hom ≫ kernel.ι (A.d1 0 q)) ≫ A.d1 0 q := by
+      rw [he]
+      rfl
+    _ = e.hom ≫ (kernel.ι (A.d1 0 q) ≫ A.d1 0 q) :=
+      Category.assoc _ _ _
+    _ = 0 := by rw [kernel.condition, comp_zero]
 
 noncomputable def doubleComplexSecondResolutionMap
     {C : Type u} [Category.{v} C] [Abelian C]

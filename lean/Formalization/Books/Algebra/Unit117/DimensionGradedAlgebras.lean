@@ -1,7 +1,7 @@
 import Formalization.Books.Algebra.Unit59.NoetherianLocalRings
 import Formalization.Books.Algebra.Unit114.DimensionFiniteTypeAlgebras
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
-import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
+import Mathlib.RingTheory.GradedAlgebra.Radical
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Polynomial.Basic

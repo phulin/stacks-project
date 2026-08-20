@@ -536,7 +536,7 @@ def regularModuleFpScalar (A : Type u) [CommRing A] (a : A) :
 def moduleActionOfFinitelyPresentedFunctor
     (A : Type u) [CommRing A]
     (B : Type u') [Category.{v'} B] [Preadditive B]
-    (F : FinitelyPresentedModuleCat.{u, u} A ⥤ B) :
+    (F : FinitelyPresentedModuleCat.{u, u} A ⥤ B) [Functor.Additive F] :
     ModuleActionObject A B where
   carrier := F.obj (regularModuleFp A)
   action :=
@@ -551,7 +551,15 @@ def evaluationOnFinitelyPresentedModules
     (B : Type u') [Category.{v'} B] [AdditiveCategory B] [HasCokernels B] :
     RightExactFunctorCat (FinitelyPresentedModuleCat.{u, u} A) B ⥤
       ModuleActionCat A B where
-  obj F := moduleActionOfFinitelyPresentedFunctor A B F.1
+  obj F := by
+    letI : HasZeroObject (FinitelyPresentedModuleCat.{u, u} A) :=
+      hasZeroObject_of_hasInitial_object
+    letI : HasBinaryBiproducts (FinitelyPresentedModuleCat.{u, u} A) :=
+      HasBinaryBiproducts.of_hasBinaryCoproducts
+    letI : Functor.Additive F.1 := by
+      exact rightExactFunctor_le_additiveFunctor
+        (FinitelyPresentedModuleCat.{u, u} A) B F.1 F.2
+    exact moduleActionOfFinitelyPresentedFunctor A B F.1
   map f :=
     { hom := f.hom.app (regularModuleFp A)
       comm := by sorry }

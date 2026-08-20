@@ -520,7 +520,268 @@ theorem restrictedPowerSeries_universal_property
     equalizer closed.  Apply `Continuous.ext_on` (equivalently
     `DenseRange.induction_on`) to get `F = G`.
   -/
-  sorry
+  classical
+  let _ : IsLinearTopology A A := hA.1
+  let M := restrictedPowerSeries A B r
+  let P := MvPolynomial (Fin r) A
+  let ι : P →+* M := restrictedPowerSeriesPolynomialMap A B r
+  obtain ⟨u, htop, hu, _, _⟩ :=
+    restrictedPowerSeries_complete_for_limit_topology A B r
+  let _ : UniformSpace M := u
+  let _ : TopologicalSpace M := u.toTopologicalSpace
+  let _ : IsRightUniformAddGroup M := hu.isRightUniformAddGroup
+  let _ : IsTopologicalAddGroup M := inferInstance
+  let _ : IsTopologicalAddGroup C := by infer_instance
+  let _ : UniformSpace C := IsTopologicalAddGroup.rightUniformSpace C
+  let _ : CompleteSpace C := hC.2.1
+  let _ : T2Space C := hC.2.2
+  let _ : IsLinearTopology C C := hC.1
+  let _ : IsUniformAddGroup C := isUniformAddGroup_of_addCommGroup
+  let _ : UniformSpace P := UniformSpace.comap ι u
+  let _ : TopologicalSpace P := (inferInstance : UniformSpace P).toTopologicalSpace
+  have hι_uniform : IsUniformInducing ι := ⟨by rfl⟩
+  have hι_group : IsUniformAddGroup P := by
+    refine ⟨?_⟩
+    apply uniformContinuous_comap' (f := (ι : P → M))
+    convert (hu.uniformContinuous_sub.comp
+      (((uniformContinuous_comap (f := (ι : P → M))).comp uniformContinuous_fst).prodMk
+        ((uniformContinuous_comap (f := (ι : P → M))).comp uniformContinuous_snd))) using 1
+    ext p
+    simp [map_sub]
+  let _ : IsUniformAddGroup P := hι_group
+  let _ : IsTopologicalAddGroup P := inferInstance
+  have hcoord : ∀ i : B.Index,
+      @Continuous M (MvPolynomial (Fin r) (A ⧸ B.I i)) u.toTopologicalSpace ⊥
+        (restrictedPowerSeriesProjection A B r i) := by
+    intro i
+    apply continuous_iff_le_induced.mpr
+    rw [htop]
+    change restrictedPowerSeriesLimitTopology A B r ≤
+      TopologicalSpace.induced (restrictedPowerSeriesProjection A B r i) ⊥
+    rw [restrictedPowerSeriesLimitTopology]
+    exact iInf_le _ (Opposite.op i)
+  have hmulcoord : ∀ i : B.Index,
+      @Continuous (M × M) (MvPolynomial (Fin r) (A ⧸ B.I i))
+        (@instTopologicalSpaceProd M M u.toTopologicalSpace u.toTopologicalSpace) ⊥
+        (fun p => (restrictedPowerSeriesProjection A B r i p.1) *
+          (restrictedPowerSeriesProjection A B r i p.2)) := by
+    intro i
+    let _ : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ B.I i)) := ⊥
+    let _ : DiscreteTopology (MvPolynomial (Fin r) (A ⧸ B.I i)) :=
+      discreteTopology_bot _
+    have hp : @Continuous (M × M)
+        ((MvPolynomial (Fin r) (A ⧸ B.I i)) ×
+          (MvPolynomial (Fin r) (A ⧸ B.I i)))
+        (@instTopologicalSpaceProd M M u.toTopologicalSpace u.toTopologicalSpace)
+        (@instTopologicalSpaceProd
+          (MvPolynomial (Fin r) (A ⧸ B.I i))
+          (MvPolynomial (Fin r) (A ⧸ B.I i)) ⊥ ⊥)
+        (fun p => (restrictedPowerSeriesProjection A B r i p.1,
+          restrictedPowerSeriesProjection A B r i p.2)) :=
+      (hcoord i).prodMap (hcoord i)
+    have hm : @Continuous
+        ((MvPolynomial (Fin r) (A ⧸ B.I i)) ×
+          (MvPolynomial (Fin r) (A ⧸ B.I i)))
+        (MvPolynomial (Fin r) (A ⧸ B.I i))
+        (@instTopologicalSpaceProd
+          (MvPolynomial (Fin r) (A ⧸ B.I i))
+          (MvPolynomial (Fin r) (A ⧸ B.I i)) ⊥ ⊥) ⊥
+        (fun p => p.1 * p.2) := by
+      exact continuous_of_discreteTopology
+    simpa only [Function.comp_def] using hm.comp hp
+  have hmul_target : @Continuous (M × M) M
+      (@instTopologicalSpaceProd M M u.toTopologicalSpace u.toTopologicalSpace)
+        (restrictedPowerSeriesLimitTopology A B r)
+      (fun p => p.1 * p.2) := by
+    change @Continuous (M × M) M
+      (@instTopologicalSpaceProd M M u.toTopologicalSpace u.toTopologicalSpace)
+      (⨅ i : B.Indexᵒᵖ,
+        TopologicalSpace.induced
+          (restrictedPowerSeriesProjection A B r i.unop) ⊥)
+      (fun p => p.1 * p.2)
+    refine (continuous_iInf_rng (f := fun p : M × M => p.1 * p.2)).mpr ?_
+    intro i
+    rw [continuous_iff_le_induced]
+    simpa only [induced_compose, Function.comp_def, map_mul] using
+      (continuous_iff_le_induced.mp (hmulcoord i.unop))
+  have hmul : @Continuous (M × M) M
+      (@instTopologicalSpaceProd M M u.toTopologicalSpace u.toTopologicalSpace)
+        u.toTopologicalSpace
+      (fun p => p.1 * p.2) := by
+    convert hmul_target using 1
+  let _ : ContinuousMul M := ⟨hmul⟩
+  let _ : IsTopologicalSemiring M :=
+    { toContinuousAdd := inferInstance
+      toContinuousMul := inferInstance }
+  have hupper : ∀ s : Set B.Index, s.Finite → ∃ k, ∀ i ∈ s, i ≤ k := by
+    intro s hs
+    induction s, hs using Set.Finite.induction_on with
+    | empty =>
+        have hne : Nonempty B.Index := by
+          rcases B.fundamental.mem_iff.mp
+              (univ_mem : (Set.univ : Set A) ∈ nhds 0) with ⟨i, -, hi⟩
+          exact ⟨i⟩
+        exact ⟨Classical.choice hne, by simp⟩
+    | @insert a s ha hs ih =>
+        obtain ⟨k, hk⟩ := ih
+        obtain ⟨l, hal, hkl⟩ := B.directed a k
+        refine ⟨l, ?_⟩
+        intro i hi
+        rcases Set.mem_insert_iff.mp hi with rfl | hi
+        · exact hal
+        · exact (hk i hi).trans hkl
+  have hnhds (x : M) :
+      @nhds M u.toTopologicalSpace x =
+        ⨅ i : B.Indexᵒᵖ,
+          Filter.principal
+            ((restrictedPowerSeriesProjection A B r i.unop) ⁻¹'
+              {restrictedPowerSeriesProjection A B r i.unop x}) := by
+    let : ∀ i : B.Indexᵒᵖ,
+        TopologicalSpace (MvPolynomial (Fin r) (A ⧸ B.I i.unop)) := fun _ => ⊥
+    let : ∀ i : B.Indexᵒᵖ,
+        DiscreteTopology (MvPolynomial (Fin r) (A ⧸ B.I i.unop)) :=
+      fun _ => discreteTopology_bot _
+    rw [htop, restrictedPowerSeriesLimitTopology, nhds_iInf]
+    change (⨅ i : B.Indexᵒᵖ,
+      @nhds M
+        (TopologicalSpace.induced (restrictedPowerSeriesProjection A B r i.unop)
+          (⊥ : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ B.I i.unop)))) x) = _
+    simp only [nhds_induced]
+    change (⨅ i : B.Indexᵒᵖ,
+      Filter.comap (restrictedPowerSeriesProjection A B r i.unop)
+        (@nhds (MvPolynomial (Fin r) (A ⧸ B.I i.unop)) ⊥
+          (restrictedPowerSeriesProjection A B r i.unop x))) = _
+    simp only [nhds_discrete, comap_pure]
+  have hι_dense : DenseRange ι := by
+    rw [DenseRange, dense_iff_inter_open]
+    intro U hU hU_nonempty
+    rcases hU_nonempty with ⟨x, hx⟩
+    have hUx : U ∈ @nhds M u.toTopologicalSpace x := hU.mem_nhds hx
+    rw [hnhds x] at hUx
+    obtain ⟨s, hs, hsU⟩ :=
+      (Filter.hasBasis_iInf_principal_finite
+        (fun i : B.Indexᵒᵖ =>
+          (restrictedPowerSeriesProjection A B r i.unop) ⁻¹'
+            {restrictedPowerSeriesProjection A B r i.unop x})).mem_iff.mp hUx
+    obtain ⟨k, hk⟩ := hupper (Opposite.unop '' s) (hs.image _)
+    obtain ⟨p, hp⟩ :=
+      (MvPolynomial.map_surjective (Ideal.Quotient.mk (B.I k))
+        Ideal.Quotient.mk_surjective)
+        (restrictedPowerSeriesProjection A B r k x)
+    refine ⟨ι p, hsU ?_, ⟨p, rfl⟩⟩
+    simp only [Set.mem_iInter]
+    intro i hi
+    have hik : i.unop ≤ k := hk i.unop ⟨i, hi, rfl⟩
+    have hlim := limit.w (restrictedPowerSeriesDiagram A B r)
+      ((homOfLE hik).op)
+    have hlim' := congrArg (fun q => q.hom x) hlim
+    change MvPolynomial.map (Ideal.Quotient.factor (B.antitone hik))
+        (restrictedPowerSeriesProjection A B r k x) =
+      restrictedPowerSeriesProjection A B r i.unop x at hlim'
+    change restrictedPowerSeriesProjection A B r i.unop (ι p) =
+      restrictedPowerSeriesProjection A B r i.unop x
+    rw [restrictedPowerSeriesProjection_polynomialMap]
+    rw [← hp] at hlim'
+    simpa [MvPolynomial.map_map, Ideal.Quotient.factor_comp_mk] using hlim'
+  have hf0 : ContinuousAt f.toRingHom 0 := by
+    rw [ContinuousAt]
+    rw [map_zero]
+    refine (linearlyTopologizedRing_hasBasis_open_ideal C).tendsto_right_iff.2 ?_
+    intro J hJ
+    have hJmem : (J : Set C) ∈ nhds (0 : C) :=
+      (linearlyTopologizedRing_hasBasis_open_ideal C).mem_iff.mpr
+        ⟨J, hJ, Subset.rfl⟩
+    have hpre : (algebraMap A C) ⁻¹' (J : Set C) ∈ nhds (0 : A) := by
+      apply hAC.continuousAt.preimage_mem_nhds
+      simpa using hJmem
+    rcases B.fundamental.mem_iff.mp hpre with ⟨i, -, hi⟩
+    let _ : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ B.I i)) := ⊥
+    let _ : DiscreteTopology (MvPolynomial (Fin r) (A ⧸ B.I i)) :=
+      discreteTopology_bot _
+    let V : Set M :=
+      (restrictedPowerSeriesProjection A B r i) ⁻¹' ({0} : Set _)
+    have hV : V ∈ @nhds M u.toTopologicalSpace 0 := by
+      apply (hcoord i).continuousAt.preimage_mem_nhds
+      simp only [nhds_discrete, mem_pure]
+      simp
+    have hVP : ι ⁻¹' V ∈ @nhds P (inferInstance : TopologicalSpace P) 0 := by
+      change ι ⁻¹' V ∈
+        @nhds P (TopologicalSpace.induced ι u.toTopologicalSpace) 0
+      apply (mem_nhds_induced ι 0 (ι ⁻¹' V)).2
+      exact ⟨V, by simpa using hV, Subset.rfl⟩
+    apply Filter.mem_of_superset hVP
+    intro p hp
+    have hmapzero :
+        MvPolynomial.map (Ideal.Quotient.mk (B.I i)) p = 0 := by
+      change restrictedPowerSeriesProjection A B r i (ι p) = 0 at hp
+      rw [restrictedPowerSeriesProjection_polynomialMap] at hp
+      exact hp
+    have hpolyzero :
+        Ideal.Quotient.mk (polynomialExtensionIdeal A (B.I i) r) p = 0 := by
+      have heval : ∀ q : P,
+          (polynomialQuotientEquiv A (B.I i) r).symm
+              (Ideal.Quotient.mk (polynomialExtensionIdeal A (B.I i) r) q) =
+            MvPolynomial.map (Ideal.Quotient.mk (B.I i)) q := by
+        intro q
+        induction q using MvPolynomial.induction_on' with
+        | monomial d a =>
+            change MvPolynomial.eval₂Hom
+                (MvPolynomial.C.comp (Ideal.Quotient.mk (B.I i))) MvPolynomial.X
+                (MvPolynomial.monomial d a) = _
+            simp [MvPolynomial.map_monomial]
+            rw [MvPolynomial.monomial_eq]
+            symm
+            rw [Finsupp.prod_fintype]
+            simp
+        | add p q hp hq =>
+            simp only [map_add]
+            rw [hp, hq]
+      apply (polynomialQuotientEquiv A (B.I i) r).symm.injective
+      rw [heval, hmapzero]
+      simp
+    have hpideal : p ∈ polynomialExtensionIdeal A (B.I i) r :=
+      Ideal.Quotient.eq_zero_iff_mem.mp hpolyzero
+    have hmaple :
+        Ideal.map f.toRingHom (polynomialExtensionIdeal A (B.I i) r) ≤ J := by
+      rw [polynomialExtensionIdeal, Ideal.map_map]
+      rw [Ideal.map_le_iff_le_comap]
+      intro a ha
+      simpa [RingHom.comp_apply, f.commutes] using hi ha
+    exact hmaple (Ideal.mem_map_of_mem f.toRingHom hpideal)
+  have hf_uniform : UniformContinuous f.toRingHom :=
+    uniformContinuous_of_continuousAt_zero f.toRingHom hf0
+  let F : M →+* C :=
+    IsDenseInducing.extendRingHom hι_uniform hι_dense hf_uniform
+  have hFcont : @Continuous M C u.toTopologicalSpace _ F :=
+    (uniformContinuous_uniformly_extend hι_uniform hι_dense hf_uniform).continuous
+  have hFext : F.comp ι = f.toRingHom := by
+    apply RingHom.ext
+    intro p
+    exact uniformly_extend_of_ind hι_uniform hι_dense hf_uniform p
+  refine ⟨F, ?_, ?_⟩
+  · constructor
+    · change @Continuous (restrictedPowerSeries A B r) C
+        (restrictedPowerSeriesLimitTopology A B r) _ F
+      rw [← htop]
+      exact hFcont
+    · exact hFext
+  · intro G hG
+    have hGcont : @Continuous M C u.toTopologicalSpace _ G := by
+      change @Continuous (restrictedPowerSeries A B r) C u.toTopologicalSpace _ G
+      rw [htop]
+      exact hG.1
+    have hFGfun : (F : M → C) = G := by
+      apply Continuous.ext_on hι_dense hFcont hGcont
+      intro x hx
+      rcases hx with ⟨p, rfl⟩
+      have hFp : F (ι p) = f.toRingHom p :=
+        congrArg (fun q : P →+* C => q p) hFext
+      have hGp : G (ι p) = f.toRingHom p :=
+        congrArg (fun q : P →+* C => q p) hG.2
+      exact hFp.trans hGp.symm
+    apply RingHom.ext
+    intro x
+    exact (congrFun hFGfun x).symm
 
 /-! ## The I-adic comparison and its warnings -/
 

@@ -245,7 +245,19 @@ theorem two_split_injections_tr4
     (hα : termwiseSplitInjection α) (hβ : termwiseSplitInjection β) :
     Nonempty (HomotopyOctahedronWitness
       ((homotopyQuotient C).map α) ((homotopyQuotient C).map β)) := by
-  sorry
+  let q := homotopyQuotient C
+  obtain ⟨Qone, pone, done, h₁₂⟩ :=
+    HomotopyCategory.Pretriangulated.distinguished_cocone_triangle
+      (q.map α)
+  obtain ⟨Qtwo, ptwo, dtwo, h₁₃⟩ :=
+    HomotopyCategory.Pretriangulated.distinguished_cocone_triangle
+      (q.map α ≫ q.map β)
+  obtain ⟨Qthree, pthree, dthree, h₂₃⟩ :=
+    HomotopyCategory.Pretriangulated.distinguished_cocone_triangle
+      (q.map β)
+  refine ⟨HomotopyOctahedronWitness.mk Qone Qtwo Qthree pone done ptwo dtwo
+    pthree dthree h₁₂ h₁₃ h₂₃ ?_⟩
+  exact ⟨Triangulated.someOctahedron rfl h₁₂ h₂₃ h₁₃⟩
 
 /-- The homotopy category with its canonical distinguished triangles is
 triangulated. -/
@@ -279,7 +291,34 @@ theorem cone_preserves_complex_boundedness
     (IsBoundedBelow K → IsBoundedBelow L → IsBoundedBelow (Cone f)) ∧
       (IsBoundedAbove K → IsBoundedAbove L → IsBoundedAbove (Cone f)) ∧
       (IsBounded K → IsBounded L → IsBounded (Cone f)) := by
-  sorry
+  constructor
+  · rintro ⟨nK, hnK⟩ ⟨nL, hnL⟩
+    let : K.IsStrictlyGE nK := hnK
+    let : L.IsStrictlyGE nL := hnL
+    refine ⟨min (nK - 1) nL, ?_⟩
+    exact CochainComplex.isStrictlyGE_mappingCone f nK nL _ (by omega) (by omega)
+  constructor
+  · rintro ⟨nK, hnK⟩ ⟨nL, hnL⟩
+    let : K.IsStrictlyLE nK := hnK
+    let : L.IsStrictlyLE nL := hnL
+    refine ⟨max nK nL, ?_⟩
+    rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    simp only [CochainComplex.mappingCone.isZero_X_iff]
+    exact ⟨K.isZero_of_isStrictlyLE nK (i + 1) (by omega),
+      L.isZero_of_isStrictlyLE nL i (by omega)⟩
+  · rintro ⟨pK, qK, hpK, hqK⟩ ⟨pL, qL, hpL, hqL⟩
+    let : K.IsStrictlyGE pK := hpK
+    let : L.IsStrictlyGE pL := hpL
+    let : K.IsStrictlyLE qK := hqK
+    let : L.IsStrictlyLE qL := hqL
+    refine ⟨min (pK - 1) pL, max qK qL, ?_, ?_⟩
+    · exact CochainComplex.isStrictlyGE_mappingCone f pK pL _ (by omega) (by omega)
+    · rw [CochainComplex.isStrictlyLE_iff]
+      intro i hi
+      simp only [CochainComplex.mappingCone.isZero_X_iff]
+      exact ⟨K.isZero_of_isStrictlyLE qK (i + 1) (by omega),
+        L.isZero_of_isStrictlyLE qL i (by omega)⟩
 
 /-- The bounded homotopy categories carry the same triangulated structures as
   the ambient homotopy category; boundedness of cones is the source's direct
@@ -327,7 +366,19 @@ theorem additive_homotopy_preserves_bounded_above
     (F : C ⥤ D) [F.Additive] (X : KMinus C) :
     boundedAboveHomotopyProperty D
       ((additiveHomotopyFunctor F).obj ((homotopyMinusInclusion C).obj X)) := by
-  sorry
+  change (boundedAboveProperty D).strictMap (homotopyQuotient D)
+    ((additiveHomotopyFunctor F).obj ((homotopyMinusInclusion C).obj X))
+  have hX : boundedAboveHomotopyProperty C ((homotopyMinusInclusion C).obj X) := X.2
+  obtain ⟨K, hK, hKX⟩ :=
+    (ObjectProperty.strictMap_iff _ _ _).mp hX
+  rw [← hKX]
+  obtain ⟨n, hn⟩ := hK
+  let : K.IsStrictlyLE n := hn
+  refine ⟨(F.mapHomologicalComplex (ComplexShape.up ℤ)).obj K, ?_⟩
+  refine ⟨n, ?_⟩
+  rw [CochainComplex.isStrictlyLE_iff]
+  intro i hi
+  simpa using F.map_isZero (K.isZero_of_isStrictlyLE n i (by omega))
 
 /-- Preservation of the bounded property needed to restrict the ambient
   functor to `Kᵇ`. -/
@@ -337,7 +388,23 @@ theorem additive_homotopy_preserves_bounded
     (F : C ⥤ D) [F.Additive] (X : KBounded C) :
     boundedHomotopyProperty D
       ((additiveHomotopyFunctor F).obj ((homotopyBoundedInclusion C).obj X)) := by
-  sorry
+  change (boundedProperty D).strictMap (homotopyQuotient D)
+    ((additiveHomotopyFunctor F).obj ((homotopyBoundedInclusion C).obj X))
+  have hX : boundedHomotopyProperty C ((homotopyBoundedInclusion C).obj X) := X.2
+  obtain ⟨K, hK, hKX⟩ :=
+    (ObjectProperty.strictMap_iff _ _ _).mp hX
+  rw [← hKX]
+  obtain ⟨p, q, hp, hq⟩ := hK
+  let : K.IsStrictlyGE p := hp
+  let : K.IsStrictlyLE q := hq
+  refine ⟨(F.mapHomologicalComplex (ComplexShape.up ℤ)).obj K, ?_⟩
+  refine ⟨p, q, ?_, ?_⟩
+  · rw [CochainComplex.isStrictlyGE_iff]
+    intro i hi
+    simpa using F.map_isZero (K.isZero_of_isStrictlyGE p i (by omega))
+  · rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    simpa using F.map_isZero (K.isZero_of_isStrictlyLE q i (by omega))
 
 /-- The additive functor induced on the bounded-above homotopy category. -/
 def additiveHomotopyMinusFunctor
@@ -378,9 +445,57 @@ theorem additive_homotopy_functors_are_exact
     (F : C ⥤ D) [F.Additive] :
     Nonempty (ExactTriangulatedFunctorData (additiveHomotopyFunctor F)) ∧
       Nonempty (ExactTriangulatedFunctorData (additiveHomotopyPlusFunctor F)) ∧
-      Nonempty (ExactTriangulatedFunctorData (additiveHomotopyMinusFunctor F)) ∧
+    Nonempty (ExactTriangulatedFunctorData (additiveHomotopyMinusFunctor F)) ∧
       Nonempty (ExactTriangulatedFunctorData (additiveHomotopyBoundedFunctor F)) := by
-  sorry
+  have h₁ : Nonempty (ExactTriangulatedFunctorData (additiveHomotopyFunctor F)) := by
+    let hG : (additiveHomotopyFunctor F).CommShift ℤ :=
+      (inferInstance : (F.mapHomotopyCategory (ComplexShape.up ℤ)).CommShift ℤ)
+    letI : (additiveHomotopyFunctor F).CommShift ℤ := hG
+    have hT : (F.mapHomotopyCategory (ComplexShape.up ℤ)).IsTriangulated := inferInstance
+    refine ⟨{ commShift := hG, isTriangulated := ?_ }⟩
+    simpa only [additiveHomotopyFunctor] using hT
+  have h₂ : Nonempty (ExactTriangulatedFunctorData (additiveHomotopyPlusFunctor F)) := by
+    let hG : (additiveHomotopyPlusFunctor F).CommShift ℤ :=
+      (inferInstance : F.mapHomotopyCategoryPlus.CommShift ℤ)
+    letI : (additiveHomotopyPlusFunctor F).CommShift ℤ := hG
+    have hT : F.mapHomotopyCategoryPlus.IsTriangulated := inferInstance
+    refine ⟨{ commShift := hG, isTriangulated := ?_ }⟩
+    simpa only [additiveHomotopyPlusFunctor] using hT
+  have h₃ : Nonempty (ExactTriangulatedFunctorData (additiveHomotopyMinusFunctor F)) := by
+    let hbase : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := by
+      dsimp [additiveHomotopyFunctor]
+      infer_instance
+    letI : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := hbase
+    let hbaseT : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := by
+      dsimp [additiveHomotopyFunctor]
+      infer_instance
+    letI : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := hbaseT
+    let hG : (additiveHomotopyMinusFunctor F).CommShift ℤ := by
+      dsimp [additiveHomotopyMinusFunctor]
+      infer_instance
+    letI : (additiveHomotopyMinusFunctor F).CommShift ℤ := hG
+    have hT : (additiveHomotopyMinusFunctor F).IsTriangulated := by
+      dsimp [additiveHomotopyMinusFunctor]
+      infer_instance
+    exact ⟨{ commShift := hG, isTriangulated := hT }⟩
+  have h₄ : Nonempty (ExactTriangulatedFunctorData (additiveHomotopyBoundedFunctor F)) := by
+    let hbase : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := by
+      dsimp [additiveHomotopyFunctor]
+      infer_instance
+    letI : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := hbase
+    let hbaseT : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := by
+      dsimp [additiveHomotopyFunctor]
+      infer_instance
+    letI : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := hbaseT
+    let hG : (additiveHomotopyBoundedFunctor F).CommShift ℤ := by
+      dsimp [additiveHomotopyBoundedFunctor]
+      infer_instance
+    letI : (additiveHomotopyBoundedFunctor F).CommShift ℤ := hG
+    have hT : (additiveHomotopyBoundedFunctor F).IsTriangulated := by
+      dsimp [additiveHomotopyBoundedFunctor]
+      infer_instance
+    exact ⟨{ commShift := hG, isTriangulated := hT }⟩
+  exact ⟨h₁, h₂, h₃, h₄⟩
 
 /-! ## Improving distinguished triangles -/
 
@@ -398,7 +513,190 @@ theorem improve_distinguished_triangle_homotopy
     ∃ (B' : BookComplex C) (S : TermwiseSplitExactSequence A B' D),
       ∃ e : Triangle.mk a b c ≅ termwiseSplitTriangleh S,
         e.hom.hom₁ = 𝟙 _ ∧ e.hom.hom₃ = 𝟙 _ := by
-  sorry
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  obtain ⟨f, hf⟩ := q.map_surjective
+    (c ≫ (q.commShiftIso (1 : ℤ)).inv.app A)
+  let B' : BookComplex C := CochainComplex.mappingCocone f
+  let u : A ⟶ B' :=
+    CochainComplex.HomComplex.Cocycle.homOf
+      ((CochainComplex.mappingCocone.inr f).leftUnshift 0 (by omega))
+  let g : B' ⟶ D := CochainComplex.mappingCocone.fst f
+  have hug : u ≫ g = 0 := by
+    ext n
+    dsimp [u, g, B']
+    change ((CochainComplex.mappingCocone.inr f).1.leftUnshift 0 (by omega)).v n n
+        (by omega) ≫
+      (CochainComplex.mappingCocone.fst f).f n = 0
+    rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+      (CochainComplex.mappingCocone.inr f).1 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    simp
+  let r : ∀ n : ℤ, B'.X n ⟶ A.X n := fun n =>
+    -((CochainComplex.mappingCocone.snd f).rightUnshift 0 (by omega)).v n n (by omega)
+  let s : ∀ n : ℤ, D.X n ⟶ B'.X n := fun n =>
+    (CochainComplex.mappingCocone.inl f).v n n (by omega)
+  have hfr : ∀ n : ℤ, u.f n ≫ r n = 𝟙 _ := by
+    intro n
+    dsimp [u, r]
+    change ((CochainComplex.mappingCocone.inr f).1.leftUnshift 0 (by omega)).v n n
+      (by omega) ≫
+      (-((CochainComplex.mappingCocone.snd f).rightUnshift 0 (by omega)).v n n
+        (by omega)) = 𝟙 _
+    rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+      (CochainComplex.mappingCocone.inr f).1 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
+      (CochainComplex.mappingCocone.snd f) 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    have hzero :
+        (CochainComplex.mappingCocone.inr f).1.v (n - 1) n (by omega) ≫
+            (CochainComplex.mappingCocone.snd f).v n (n - 1) (by omega) = 𝟙 _ := by
+      exact CochainComplex.mappingCocone.inr_v_snd_v f (n - 1) n (by omega)
+    rw [← Category.assoc
+      ((CochainComplex.mappingCocone.inr f).1.v (n - 1) n (by omega))
+      ((CochainComplex.mappingCocone.snd f).v n (n - 1) (by omega))
+      (CochainComplex.shiftFunctorObjXIso A 1 (n - 1) n (by omega)).hom]
+    rw [hzero]
+    dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
+    simp
+  have hsg : ∀ n : ℤ, s n ≫ g.f n = 𝟙 _ := by
+    intro n
+    exact CochainComplex.mappingCocone.inl_v_fst_f f n
+  have hid : ∀ n : ℤ, r n ≫ u.f n + g.f n ≫ s n = 𝟙 _ := by
+    intro n
+    dsimp [r, u, g, s, B']
+    change
+      (-((CochainComplex.mappingCocone.snd f).rightUnshift 0 (by omega)).v n n
+          (by omega)) ≫
+          ((CochainComplex.mappingCocone.inr f).1.leftUnshift 0 (by omega)).v n n
+            (by omega) +
+        (CochainComplex.mappingCocone.fst f).f n ≫
+          (CochainComplex.mappingCocone.inl f).v n n (by omega) = 𝟙 _
+    rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
+      (CochainComplex.mappingCocone.snd f) 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+      (CochainComplex.mappingCocone.inr f).1 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    have hsign :
+        (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
+      norm_num [Int.negOnePow_def]
+    rw [hsign]
+    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
+      Iso.hom_inv_id_assoc]
+    simp
+    rw [add_comm]
+    exact CochainComplex.mappingCocone.id_X f n (n - 1) (by omega)
+  let S : TermwiseSplitExactSequence A B' D := {
+    f := u
+    g := g
+    zero := hug
+    splitting := fun n => {
+      r := r n
+      s := s n
+      f_r := hfr n
+      s_g := hsg n
+      id := hid n } }
+  have hconnect : termwiseSplitConnectingMap S = f := by
+    ext n
+    rw [termwiseSplitConnectingMap_f]
+    dsimp [termwiseSplitConnectingFamily, termwiseSplitSection,
+      termwiseSplitProjection, S, r, s, g, B']
+    dsimp [CochainComplex.mappingCocone.inl, CochainComplex.mappingCocone.snd,
+      CochainComplex.mappingCocone]
+    rw [CochainComplex.HomComplex.Cochain.rightShift_v
+      (CochainComplex.mappingCone.inl f) (-1) 0 (by omega)
+      n n (by omega) (n + -1) (by omega)]
+    rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
+      ((CochainComplex.mappingCone.snd f).leftShift (-1) (-1) (by omega))
+      0 (by omega) (n + 1) (n + 1) (by omega) n (by omega)]
+    rw [CochainComplex.HomComplex.Cochain.leftShift_v
+      (CochainComplex.mappingCone.snd f) (-1) (-1) (by omega)
+      (n + 1) n (by omega) n (by omega)]
+    simp only [Int.negOnePow_def]
+    norm_num
+    dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor,
+      HomologicalComplex.XIsoOfEq]
+    simp
+    rw [← Category.assoc]
+    have he : (CochainComplex.mappingCone f).X (n + 1 + -1) =
+        (CochainComplex.mappingCone f).X n := by
+      congr 1 <;> omega
+    change
+      -((CochainComplex.mappingCone.inl f).v n (n + -1) (by omega) ≫
+          (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1)) ≫
+        (-eqToHom he ≫ (CochainComplex.mappingCone.snd f).v n n (by omega)) =
+      f.f n
+    have hcone := CochainComplex.mappingCone.inl_v_d f
+      n (n + -1) (n + 1) (by omega) (by omega)
+    have htransport :
+        (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1) ≫
+            eqToHom he =
+          (CochainComplex.mappingCone f).d (n + -1) n := by
+      simp
+    have hcone_comp :
+        ((CochainComplex.mappingCone.inl f).v n (n + -1) (by omega) ≫
+            (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1)) ≫
+            eqToHom he =
+          f.f n ≫ (CochainComplex.mappingCone.inr f).f n -
+            D.d n (n + 1) ≫
+              (CochainComplex.mappingCone.inl f).v (n + 1) n (by omega) := by
+      rw [Category.assoc, htransport, hcone]
+    have hcollapse :
+        -((CochainComplex.mappingCone.inl f).v n (n + -1) (by omega) ≫
+            (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1)) ≫
+          (-eqToHom he ≫ (CochainComplex.mappingCone.snd f).v n n (by omega)) =
+        (((CochainComplex.mappingCone.inl f).v n (n + -1) (by omega) ≫
+            (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1)) ≫
+          eqToHom he) ≫
+            (CochainComplex.mappingCone.snd f).v n n (by omega) := by
+      simp only [Preadditive.neg_comp, Preadditive.comp_neg, neg_neg, Category.assoc]
+    rw [hcollapse, hcone_comp]
+    simp only [Preadditive.sub_comp, Category.assoc,
+      CochainComplex.mappingCone.inr_f_snd_v,
+      CochainComplex.mappingCone.inl_v_snd_v, zero_comp, comp_zero, sub_zero]
+    rw [Category.comp_id]
+  have hsplit : termwiseSplitTriangleh S ∈
+      distTriang (BookHomotopyCategory C) := by
+    rw [HomotopyCategory.distinguished_iff_iso_trianglehOfDegreewiseSplit]
+    exact ⟨termwiseSplitShortComplex S, S.splitting, ⟨Iso.refl _⟩⟩
+  refine ⟨B', ?_⟩
+  have hcomm₃ :
+      (Triangle.mk a b c).mor₃ ≫ (𝟙 (Triangle.mk a b c).obj₁)⟦(1 : ℤ)⟧' =
+        𝟙 (termwiseSplitTriangleh S).obj₃ ≫
+          (termwiseSplitTriangleh S).mor₃ := by
+    change c ≫ (𝟙 (q.obj A))⟦(1 : ℤ)⟧' =
+      𝟙 (q.obj D) ≫ q.map (termwiseSplitConnectingMap S) ≫
+        (q.commShiftIso (1 : ℤ)).hom.app A
+    rw [hconnect, hf]
+    rw [(shiftFunctor (BookHomotopyCategory C) (1 : ℤ)).map_id]
+    simp only [Category.id_comp, Category.comp_id, Category.assoc]
+    rw [(q.commShiftIso (1 : ℤ)).inv_hom_id_app]
+    exact (Category.comp_id c).symm
+  obtain ⟨m, hm₁, hm₂⟩ :=
+    complete_distinguished_triangle_morphism₂
+      (Triangle.mk a b c) (termwiseSplitTriangleh S) hT hsplit
+      (𝟙 _) (𝟙 _) hcomm₃
+  letI : IsIso m := by
+    apply isIso₂_of_isIso₁₃
+      (Triangle.homMk (Triangle.mk a b c) (termwiseSplitTriangleh S)
+      (𝟙 _) m (𝟙 _) hm₁ hm₂ hcomm₃)
+      hT hsplit
+    · change IsIso (𝟙 _)
+      infer_instance
+    · change IsIso (𝟙 _)
+      infer_instance
+  refine ⟨S, Triangle.isoMk (Triangle.mk a b c) (termwiseSplitTriangleh S)
+    (Iso.refl _) (asIso m) (Iso.refl _)
+    hm₁ hm₂ hcomm₃, ?_, ?_⟩
+  · rfl
+  · rfl
 
 /-! ## Double complexes and totalization -/
 

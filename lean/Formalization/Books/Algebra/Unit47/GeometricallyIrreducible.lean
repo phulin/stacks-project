@@ -551,7 +551,141 @@ theorem isGeometricallyIrreducible_directLimit
   equivalence, not a ring equivalence.  Use it only to transfer zero
   equalities; do all powers and products through `phi`.
   -/
-  sorry
+  classical
+  intro K _ _
+  rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+  let fL : ∀ i j, i ≤ j → A i →ₗ[k] A j :=
+    fun i j h => (f i j h).toLinearMap
+  let _ : DirectedSystem A (fL · · ·) := {
+    map_self := fun {i} x => by
+      simpa [fL] using
+        ((inferInstance : DirectedSystem A (fun i j h => f i j h)).map_self x)
+    map_map := fun {k j i} hij hjk x => by
+      simpa [fL] using
+        ((inferInstance : DirectedSystem A (fun i j h => f i j h)).map_map hij hjk x) }
+  let ea : Module.DirectLimit A fL ≃ₗ[k] DirectLimit A f :=
+    Module.DirectLimit.linearEquiv (R := k) (ι := ι) (G := A) fL
+  let e := TensorProduct.directLimitRight fL K
+  let et := TensorProduct.congr (LinearEquiv.refl k K) ea
+  let F := e.symm.trans et
+  let φ : ∀ i, (K ⊗[k] A i) →ₐ[K] (K ⊗[k] DirectLimit A f) :=
+    fun i => Algebra.TensorProduct.map 1 (DirectLimit.Algebra.of A f i)
+  have hφ : ∀ i y,
+      F.symm (φ i y) = Module.DirectLimit.of k ι (fun i => K ⊗[k] A i)
+        (fun i j h => LinearMap.lTensor K (fL i j h)) i y := by
+    intro i y
+    refine y.induction_on ?_ ?_ ?_
+    · simp [F, et, e, φ]
+    · intro a b
+      have hbe : ea.symm (DirectLimit.Algebra.of A f i b) =
+          Module.DirectLimit.of k ι A fL i b := by
+        rfl
+      change e (a ⊗ₜ[k] ea.symm (DirectLimit.Algebra.of A f i b)) = _
+      rw [hbe]
+      simp [e]
+    · intro x y hx hy
+      rw [map_add, map_add, hx, hy, map_add]
+  have hφf : ∀ i j (hij : i ≤ j) (y : K ⊗[k] A i),
+      φ j (Algebra.TensorProduct.map (AlgHom.id K K) (f i j hij) y) = φ i y := by
+    intro i j hij y
+    refine y.induction_on ?_ ?_ ?_
+    · simp [φ]
+    · intro a b
+      simp [φ]
+    · intro x y hx hy
+      rw [map_add, map_add, hx, hy]
+      exact (map_add (φ i) x y).symm
+  have hrep : ∀ x : K ⊗[k] DirectLimit A f, ∃ i y, φ i y = x := by
+    intro x
+    refine x.induction_on ?_ ?_ ?_
+    · let i := Classical.arbitrary ι
+      exact ⟨i, 0, by simp [φ]⟩
+    · intro a b
+      obtain ⟨i, b, hb⟩ := DirectLimit.exists_eq_mk f b
+      refine ⟨i, a ⊗ₜ[k] b, ?_⟩
+      simp [φ, hb]
+    · rintro x y ⟨i, xi, hxi⟩ ⟨j, yj, hyj⟩
+      obtain ⟨l, hil, hjl⟩ := exists_ge_ge i j
+      refine ⟨l,
+        Algebra.TensorProduct.map (AlgHom.id K K) (f i l hil) xi +
+          Algebra.TensorProduct.map (AlgHom.id K K) (f j l hjl) yj, ?_⟩
+      rw [map_add, hφf, hφf, hxi, hyj]
+  have hne : nilradical (K ⊗[k] DirectLimit A f) ≠ ⊤ := by
+    intro htop
+    have h1mem : (1 : K ⊗[k] DirectLimit A f) ∈
+        nilradical (K ⊗[k] DirectLimit A f) := by
+      rw [htop]
+      simp
+    obtain ⟨n, hn⟩ := (mem_nilradical.mp h1mem)
+    let i := Classical.arbitrary ι
+    let u : K ⊗[k] A i := 1 ⊗ₜ[k] (1 : A i)
+    have hφu : φ i u = (1 : K ⊗[k] DirectLimit A f) := by
+      change (1 : K) ⊗ₜ[k] (DirectLimit.Algebra.of A f i (1 : A i)) = 1
+      simp only [map_one]
+      rw [← Algebra.TensorProduct.one_def]
+    have hzero : φ i (u ^ n) = 0 := by
+      rw [map_pow, hφu]
+      exact hn
+    have hdlzero := congrArg F.symm hzero
+    rw [hφ i (u ^ n)] at hdlzero
+    obtain ⟨j, hij, hjy⟩ := Module.DirectLimit.of.zero_exact hdlzero
+    let g : (K ⊗[k] A i) →ₐ[K] (K ⊗[k] A j) :=
+      Algebra.TensorProduct.map (AlgHom.id K K) (f i j hij)
+    have hpow : (g u) ^ n = 0 := by
+      rw [← map_pow]
+      exact hjy
+    have hgu : g u = (1 : K ⊗[k] A j) := by
+      simp only [g, u, Algebra.TensorProduct.map_tmul, AlgHom.id_apply, map_one]
+      rw [← Algebra.TensorProduct.one_def]
+    have hprime : (nilradical (K ⊗[k] A j)).IsPrime :=
+      PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hA j K)
+    have hnilone : IsNilpotent (1 : K ⊗[k] A j) := by
+      refine ⟨n, ?_⟩
+      rw [← hgu]
+      exact hpow
+    exact hprime.ne_top ((Ideal.eq_top_iff_one _).mpr
+      ((mem_nilradical).mpr hnilone))
+  refine ⟨hne, ?_⟩
+  intro x y hxy
+  obtain ⟨i, xi, hxi⟩ := hrep x
+  obtain ⟨j, yj, hyj⟩ := hrep y
+  obtain ⟨l, hil, hjl⟩ := exists_ge_ge i j
+  let gx : (K ⊗[k] A i) →ₐ[K] (K ⊗[k] A l) :=
+    Algebra.TensorProduct.map (AlgHom.id K K) (f i l hil)
+  let gy : (K ⊗[k] A j) →ₐ[K] (K ⊗[k] A l) :=
+    Algebra.TensorProduct.map (AlgHom.id K K) (f j l hjl)
+  have hx : φ l (gx xi) = x := by
+    rw [hφf i l hil, hxi]
+  have hy : φ l (gy yj) = y := by
+    rw [hφf j l hjl, hyj]
+  obtain ⟨n, hn⟩ := hxy
+  have hzero : φ l ((gx xi * gy yj) ^ n) = 0 := by
+    rw [map_pow, map_mul, hx, hy]
+    exact hn
+  have hdlzero := congrArg F.symm hzero
+  rw [hφ l ((gx xi * gy yj) ^ n)] at hdlzero
+  obtain ⟨q, hlq, hqzero⟩ := Module.DirectLimit.of.zero_exact hdlzero
+  let g : (K ⊗[k] A l) →ₐ[K] (K ⊗[k] A q) :=
+    Algebra.TensorProduct.map (AlgHom.id K K) (f l q hlq)
+  have hpow : (g (gx xi * gy yj)) ^ n = 0 := by
+    rw [← map_pow]
+    exact hqzero
+  have hprime : (nilradical (K ⊗[k] A q)).IsPrime :=
+    PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hA q K)
+  have hprod : IsNilpotent (g (gx xi) * g (gy yj)) := by
+    rw [← map_mul]
+    exact ⟨n, hpow⟩
+  rcases hprime.2 hprod with hxnil | hynil
+  · left
+    change IsNilpotent (g (gx xi)) at hxnil
+    have hnil := hxnil.map (φ q)
+    rw [hφf l q hlq, hx] at hnil
+    exact hnil
+  · right
+    change IsNilpotent (g (gy yj)) at hynil
+    have hnil := hynil.map (φ q)
+    rw [hφf l q hlq, hy] at hnil
+    exact hnil
 
 /-! ## Irreducible components after base change -/
 

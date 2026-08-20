@@ -79,10 +79,13 @@ noncomputable def integralClosureEtaleBaseChangeEquiv
 abbrev fourierBaseRing (p : ℕ) : Type :=
   Localization.Away (p : ℤ)
 
-/-- The canonical cyclotomic presentation of the polynomial appearing in the
-Fourier example. -/
+/-- The geometric-sum polynomial appearing in the Fourier example.
+
+For prime `p` this is the `p`-th cyclotomic polynomial, but the source
+example is presented using the displayed geometric sum, so that is the
+definition used here. -/
 def fourierPolynomial (p : ℕ) (R : Type u) [CommRing R] : Polynomial R :=
-  Polynomial.cyclotomic p R
+  ∑ i ∈ Finset.range p, (Polynomial.X : Polynomial R) ^ i
 
 /-- The extension Z[1/p][x]/(x^(p-1) + ... + x + 1). -/
 abbrev fourierExtension (p : ℕ) : Type :=
@@ -116,19 +119,23 @@ roots. -/
 abbrev fourierRationalExtension (p : ℕ) : Type :=
   AdjoinRoot (fourierPolynomial p ℚ)
 
-/-- For a prime index, the cyclotomic polynomial is the displayed geometric
-sum. -/
+/-- The chosen presentation is the displayed geometric sum. -/
 theorem fourierPolynomial_eq_geometric_sum
-    (p : ℕ) [Fact p.Prime] (R : Type u) [CommRing R] :
+    (p : ℕ) (R : Type u) [CommRing R] :
     fourierPolynomial p R =
       ∑ i ∈ Finset.range p, (Polynomial.X : Polynomial R) ^ i := by
-  simpa [fourierPolynomial] using Polynomial.cyclotomic_prime R p
+  rfl
 
 /-- The rational polynomial in the Fourier example is irreducible. -/
 theorem fourierPolynomial_rat_irreducible
     (p : ℕ) (hp : Nat.Prime p) :
     Irreducible (fourierPolynomial p ℚ) := by
-  simpa [fourierPolynomial] using Polynomial.cyclotomic.irreducible_rat hp.pos
+  letI : Fact p.Prime := ⟨hp⟩
+  have hpoly : fourierPolynomial p ℚ = Polynomial.cyclotomic p ℚ := by
+    rw [fourierPolynomial_eq_geometric_sum p ℚ]
+    exact (Polynomial.cyclotomic_prime ℚ p).symm
+  rw [hpoly]
+  exact Polynomial.cyclotomic.irreducible_rat hp.pos
 
 /-- The rational cyclotomic quotient is a field. -/
 theorem fourierRationalExtension_isField

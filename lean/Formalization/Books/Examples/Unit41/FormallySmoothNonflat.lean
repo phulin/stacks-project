@@ -658,12 +658,24 @@ theorem rationalGroupAlgebraNonflatWitness_maps_to_zero
     (k : Type u) [Field k] :
     (rationalGroupAlgebraAugmentation k).toRingHom
         (rationalGroupAlgebraNonflatWitness k) = 0 := by
-  sorry
+  exact rationalGroupAlgebra_basisElement_sub_one_mem_kernel k (2 : ℚ)
 
 /-- The augmentation is not flat. -/
 theorem rationalGroupAlgebraAugmentation_not_flat (k : Type u) [Field k] :
     ¬ RingHom.Flat (rationalGroupAlgebraAugmentation k).toRingHom := by
-  sorry
+  exact
+    letI : Algebra (rationalGroupAlgebra k) k :=
+      (rationalGroupAlgebraAugmentation k).toRingHom.toAlgebra
+    fun hflat =>
+      have hreg : IsSMulRegular k (rationalGroupAlgebraNonflatWitness k) :=
+        @Module.Flat.isSMulRegular_of_isRegular
+          (rationalGroupAlgebra k) k _ _ _ (rationalGroupAlgebraNonflatWitness k)
+          (rationalGroupAlgebraNonflatWitness_isRegular k) hflat
+      have hone : (1 : k) = 0 := hreg (by
+        simpa only [Algebra.smul_def, mul_one, mul_zero,
+          RingHom.algebraMap_toAlgebra] using
+          (rationalGroupAlgebraNonflatWitness_maps_to_zero k))
+      one_ne_zero hone
 
 /-- A concrete instance of the formally smooth, non-flat ring map. -/
 theorem exists_formallySmooth_nonflat_ringMap :

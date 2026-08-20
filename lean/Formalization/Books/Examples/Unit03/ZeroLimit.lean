@@ -118,7 +118,20 @@ theorem vMap_surjective {I : Type u} [Preorder I] {S : I → Type v}
     [InverseSystem f] {i j : I} (h : i ≤ j)
     (hf : Function.Surjective (f h)) :
     Function.Surjective (vMap f K h) := by
-  sorry
+  classical
+  intro y
+  induction y using DirectSum.induction_on with
+  | zero =>
+      exact ⟨0, by simp⟩
+  | of s x =>
+      obtain ⟨t, rfl⟩ := hf s
+      refine ⟨basisVector K j t x, ?_⟩
+      rw [vMap_lof]
+      rfl
+  | add y z hy hz =>
+      obtain ⟨y', hy'⟩ := hy
+      obtain ⟨z', hz'⟩ := hz
+      exact ⟨y' + z', by simp [hy', hz']⟩
 
 /-- The type of compatible families in the direct-sum inverse system. -/
 abbrev VLimit {I : Type u} [Preorder I] {S : I → Type v}
@@ -252,7 +265,22 @@ theorem coordinateSum_unique {I : Type u} {S : I → Type v}
     (K : Type w) [Field K] (i : I) (φ : V K S i →ₗ[K] K)
     (hφ : ∀ s : S i, φ (basisVector K i s 1) = 1) :
     φ = coordinateSum (S := S) K i := by
-  sorry
+  classical
+  apply DirectSum.linearMap_ext
+  intro s
+  apply LinearMap.ext
+  intro x
+  calc
+    φ (basisVector K i s x) =
+        x * φ (basisVector K i s 1) := by
+          rw [show basisVector K i s x = x • basisVector K i s 1 by
+            change DirectSum.lof K (S i) (fun _ => K) s x =
+              x • DirectSum.lof K (S i) (fun _ => K) s (1 : K)
+            rw [DirectSum.lof_eq_of, DirectSum.lof_eq_of, ← DirectSum.of_smul]
+            simp, map_smul, smul_eq_mul]
+    _ = x * 1 := by rw [hφ s]
+    _ = coordinateSum (S := S) K i (basisVector K i s x) := by
+      simp
 
 /-- The subspace `W_i` in the source. -/
 noncomputable def W {I : Type u} {S : I → Type v} (K : Type w) [Field K] (i : I) :
@@ -263,7 +291,16 @@ theorem coordinateSum_comp_vMap {I : Type u} [Preorder I] {S : I → Type v}
     (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
     [InverseSystem f] {i j : I} (h : i ≤ j) :
     (coordinateSum (S := S) K i).comp (vMap f K h) = coordinateSum (S := S) K j := by
-  sorry
+  classical
+  apply DirectSum.linearMap_ext
+  intro s
+  apply LinearMap.ext
+  intro x
+  change coordinateSum (S := S) K i
+      (vMap f K h (basisVector K j s x)) =
+    coordinateSum (S := S) K j (basisVector K j s x)
+  rw [vMap_lof]
+  simp
 
 /-- The restricted transition map on the kernels `W_i`. -/
 noncomputable def wMap {I : Type u} [Preorder I] {S : I → Type v}
@@ -314,7 +351,20 @@ theorem wMap_surjective {I : Type u} [Preorder I] {S : I → Type v}
     [InverseSystem f] {i j : I} (h : i ≤ j)
     (hf : Function.Surjective (f h)) :
     Function.Surjective (wMap f K h) := by
-  sorry
+  intro y
+  obtain ⟨z, hz⟩ := vMap_surjective f K h hf y.1
+  have hzcoord : coordinateSum (S := S) K j z = 0 := by
+    calc
+      coordinateSum (S := S) K j z =
+          coordinateSum (S := S) K i (vMap f K h z) := by
+            simpa using congrArg (fun g : V K S j →ₗ[K] K => g z)
+              (coordinateSum_comp_vMap f K h).symm
+      _ = coordinateSum (S := S) K i y.1 := by rw [hz]
+      _ = 0 := y.2
+  let z' : W (S := S) K j := ⟨z, hzcoord⟩
+  refine ⟨z', ?_⟩
+  apply Subtype.ext
+  exact hz
 
 /-- The type of compatible families in the kernel inverse system. -/
 abbrev WLimit {I : Type u} [Preorder I] {S : I → Type v}

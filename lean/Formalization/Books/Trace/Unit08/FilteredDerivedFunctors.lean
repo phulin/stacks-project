@@ -1,184 +1,76 @@
 import Mathlib.Algebra.Homology.SpectralSequence.Basic
-import Formalization.Books.Homology.Unit20.FilteredComplexes
+import Formalization.Books.Trace.Unit07.FilteredDerivedCategory
 import Formalization.Books.Trace.Unit06.DerivedCategories
 
 /-!
 # The Trace Formula, Chapter 8: filtered derived functors
 
-The filtered-object and filtered-complex constructions are supplied by the
-Homology book.  The source's filtered derived category is not a canonical
-Mathlib construction, so the data below records the categories, comparison
-equivalences, localizations, and graded/forgetful functors used by the source.
-This makes the two displayed diagrams and the spectral-sequence assertion
-usable without introducing a competing derived-category implementation.
+The filtered derived categories and their localization functors are the
+canonical constructions from Chapter 7.  This file records the additional
+filtered-derived-functor interfaces and the spectral sequence asserted in
+the source section.
 -/
 
 noncomputable section
 
 open CategoryTheory
 open Formalization.Books.Categories.Unit23
-open Formalization.Books.Homology.Unit19
-open Formalization.Books.Trace.Unit06
 
-universe u v u' v' w w' x y
+universe u v u' v' w w'
 
 namespace Formalization.Books.Trace.Unit08
 
-/-! ## The finite filtered objects used by the source -/
+/-! ## Filtered derived-category functors -/
 
-/-- The source's `Fil^f(A)`: filtered objects with a finite filtration. -/
-def finiteFilteredProperty {A : Type u} [Category.{v} A] [Abelian A] :
-    ObjectProperty (FilteredObject A) :=
-  fun F => F.IsFinite
+abbrev filteredPlusLocalizationFunctor
+    (A : Type u) [Category.{v} A] [Abelian A] :
+    Formalization.Books.Trace.Unit07.FilteredHomotopyCategoryPlus A ⥤
+      Formalization.Books.Trace.Unit07.DFPlus A :=
+  (Formalization.Books.Trace.Unit07.filteredQuasiIsoPlus A).Q
 
-abbrev FiniteFilteredObject {A : Type u} [Category.{v} A] [Abelian A] :=
-  (finiteFilteredProperty (A := A)).FullSubcategory
+abbrev filteredMinusLocalizationFunctor
+    (A : Type u) [Category.{v} A] [Abelian A] :
+    Formalization.Books.Trace.Unit07.FilteredHomotopyCategoryMinus A ⥤
+      Formalization.Books.Trace.Unit07.DFMinus A :=
+  (Formalization.Books.Trace.Unit07.filteredQuasiIsoMinus A).Q
 
-/-- Filtered injective objects, restricted to finite filtrations. -/
-def filteredInjectiveProperty {A : Type u} [Category.{v} A] [Abelian A] :
-    ObjectProperty (FilteredObject A) :=
-  fun F => F.IsFinite ∧ Injective F
-
-abbrev FilteredInjectiveObject {A : Type u} [Category.{v} A] [Abelian A] :=
-  (filteredInjectiveProperty (A := A)).FullSubcategory
-
-/-- Filtered projective objects, restricted to finite filtrations. -/
-def filteredProjectiveProperty {A : Type u} [Category.{v} A] [Abelian A] :
-    ObjectProperty (FilteredObject A) :=
-  fun F => F.IsFinite ∧ Projective F
-
-abbrev FilteredProjectiveObject {A : Type u} [Category.{v} A] [Abelian A] :=
-  (filteredProjectiveProperty (A := A)).FullSubcategory
-
-/-! ## The filtered derived-category interface -/
-
-/--
-The category-level data used for `DF⁺(A)` and `DF⁻(A)`.
-
-The fields `plus_equivalence` and `minus_equivalence` formalize the preceding
-identifications with homotopy categories of filtered injectives and
-projectives.  The `filtered_plus` and `filtered_minus` categories are the
-categories denoted `K⁺(Fil^f(A))` and `K⁻(Fil^f(A))` in the source, while the
-two localization functors formalize the upward arrows in its diagrams.
+/-!
+The source uses the graded-piece and forgetful functors out of the filtered
+derived category.  Their construction through the localization is the
+content of the filtered-derived-category API; this structure packages the
+two functors needed by the comparison and spectral-sequence statements.
 -/
 structure FilteredDerivedCategoryData
     (A : Type u) [Category.{v} A] [Abelian A]
     [HasDerivedCategory.{w} A] where
-  plus : Type x
-  plus_category : Category.{y} plus
-  minus : Type x
-  minus_category : Category.{y} minus
-  injective_plus : Type x
-  injective_plus_category : Category.{y} injective_plus
-  projective_minus : Type x
-  projective_minus_category : Category.{y} projective_minus
-  filtered_plus : Type x
-  filtered_plus_category : Category.{y} filtered_plus
-  filtered_minus : Type x
-  filtered_minus_category : Category.{y} filtered_minus
-  plus_equivalence :
-    @CategoryTheory.Equivalence plus injective_plus plus_category
-      injective_plus_category
-  minus_equivalence :
-    @CategoryTheory.Equivalence minus projective_minus minus_category
-      projective_minus_category
-  localization_plus :
-    @CategoryTheory.Functor filtered_plus filtered_plus_category plus plus_category
-  localization_minus :
-    @CategoryTheory.Functor filtered_minus filtered_minus_category minus minus_category
-  graded_plus :
-    ℤ → @CategoryTheory.Functor plus plus_category (DPlus A) inferInstance
+  graded_plus : ℤ →
+    Formalization.Books.Trace.Unit07.DFPlus A ⥤
+      Formalization.Books.Trace.Unit06.DPlus A
   forget_plus :
-    @CategoryTheory.Functor plus plus_category (DPlus A) inferInstance
-
-instance filteredDerivedPlusCategory
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) : Category.{y} d.plus :=
-  d.plus_category
-
-instance filteredDerivedMinusCategory
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) : Category.{y} d.minus :=
-  d.minus_category
-
-instance filteredDerivedInjectivePlusCategory
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) : Category.{y} d.injective_plus :=
-  d.injective_plus_category
-
-instance filteredDerivedProjectiveMinusCategory
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) : Category.{y} d.projective_minus :=
-  d.projective_minus_category
-
-instance filteredDerivedFilteredPlusCategory
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) : Category.{y} d.filtered_plus :=
-  d.filtered_plus_category
-
-instance filteredDerivedFilteredMinusCategory
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) : Category.{y} d.filtered_minus :=
-  d.filtered_minus_category
-
-abbrev DFPlus
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) := d.plus
-
-abbrev DFMinus
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) := d.minus
-
-abbrev KPlusFilteredInjectives
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) :=
-  d.injective_plus
-
-abbrev KMinusFilteredProjectives
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) :=
-  d.projective_minus
-
-abbrev KPlusFilteredObjects
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) :=
-  d.filtered_plus
-
-abbrev KMinusFilteredObjects
-    {A : Type u} [Category.{v} A] [Abelian A]
-    [HasDerivedCategory.{w} A]
-    (d : FilteredDerivedCategoryData A) :=
-  d.filtered_minus
+    Formalization.Books.Trace.Unit07.DFPlus A ⥤
+      Formalization.Books.Trace.Unit06.DPlus A
 
 /-! ## Filtered right-derived functors -/
 
-/-- Data expressing the first displayed diagram in the source. -/
+/- The first diagram in the source, with the Chapter 7 equivalence made
+   explicit in the comparison isomorphism. -/
 structure FilteredRightDerivedFunctorData
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (T : A ⥤ B) (hT : IsLeftExact T)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) where
+    [EnoughInjectives A] where
   filtered_functor :
-    @CategoryTheory.Functor dA.injective_plus dA.injective_plus_category
-      dB.filtered_plus dB.filtered_plus_category
+    Formalization.Books.Trace.Unit06.KPlus
+        (Formalization.Books.Trace.Unit07.FilteredInjectiveSubcategory A) ⥤
+      Formalization.Books.Trace.Unit07.FilteredHomotopyCategoryPlus B
   functor :
-    @CategoryTheory.Functor dA.plus dA.plus_category dB.plus dB.plus_category
+    Formalization.Books.Trace.Unit07.DFPlus A ⥤
+      Formalization.Books.Trace.Unit07.DFPlus B
   comparison :
-    filtered_functor ⋙ dB.localization_plus ≅
-      dA.plus_equivalence.inverse ⋙ functor
+    filtered_functor ⋙ filteredPlusLocalizationFunctor B ≅
+      (Formalization.Books.Trace.Unit07.filteredDerivedCategory_plus_equiv_filteredInjectiveHomotopy A).inverse ⋙
+        functor
 
 /-- The well-definedness assertion for the filtered right-derived functor. -/
 theorem filteredRightDerivedFunctorData_exists
@@ -186,10 +78,8 @@ theorem filteredRightDerivedFunctorData_exists
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughInjectives A]
-    (T : A ⥤ B) (hT : IsLeftExact T)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    Nonempty (FilteredRightDerivedFunctorData T hT dA dB) := by
+    (T : A ⥤ B) (hT : IsLeftExact T) :
+    Nonempty (FilteredRightDerivedFunctorData T hT) := by
   sorry
 
 noncomputable def filteredRightDerivedFunctorData
@@ -197,11 +87,9 @@ noncomputable def filteredRightDerivedFunctorData
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughInjectives A]
-    (T : A ⥤ B) (hT : IsLeftExact T)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    FilteredRightDerivedFunctorData T hT dA dB :=
-  Classical.choice (filteredRightDerivedFunctorData_exists T hT dA dB)
+    (T : A ⥤ B) (hT : IsLeftExact T) :
+    FilteredRightDerivedFunctorData T hT :=
+  Classical.choice (filteredRightDerivedFunctorData_exists T hT)
 
 /-- The filtered derived functor `RT : DF⁺(A) ⥤ DF⁺(B)`. -/
 noncomputable def filteredRightDerivedFunctor
@@ -209,45 +97,45 @@ noncomputable def filteredRightDerivedFunctor
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughInjectives A]
-    (T : A ⥤ B) (hT : IsLeftExact T)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    @CategoryTheory.Functor dA.plus dA.plus_category dB.plus dB.plus_category :=
-  (filteredRightDerivedFunctorData T hT dA dB).functor
+    (T : A ⥤ B) (hT : IsLeftExact T) :
+    Formalization.Books.Trace.Unit07.DFPlus A ⥤
+      Formalization.Books.Trace.Unit07.DFPlus B :=
+  (filteredRightDerivedFunctorData T hT).functor
 
-/-- The comparison isomorphism recording the defining diagram for `RT`. -/
+/-- The comparison isomorphism defining the filtered right-derived functor. -/
 noncomputable def filteredRightDerivedFunctor_comparison
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughInjectives A]
-    (T : A ⥤ B) (hT : IsLeftExact T)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    (filteredRightDerivedFunctorData T hT dA dB).filtered_functor ⋙
-        dB.localization_plus ≅
-      dA.plus_equivalence.inverse ⋙
-        filteredRightDerivedFunctor T hT dA dB :=
-  (filteredRightDerivedFunctorData T hT dA dB).comparison
+    (T : A ⥤ B) (hT : IsLeftExact T) :
+    (filteredRightDerivedFunctorData T hT).filtered_functor ⋙
+        filteredPlusLocalizationFunctor B ≅
+      (Formalization.Books.Trace.Unit07.filteredDerivedCategory_plus_equiv_filteredInjectiveHomotopy A).inverse ⋙
+        filteredRightDerivedFunctor T hT :=
+  (filteredRightDerivedFunctorData T hT).comparison
 
 /-! ## Filtered left-derived functors -/
 
-/-- Data expressing the second displayed diagram in the source. -/
+/- The second diagram in the source, with the Chapter 7 projective
+   equivalence made explicit in the comparison isomorphism. -/
 structure FilteredLeftDerivedFunctorData
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (G : A ⥤ B) (hG : IsRightExact G)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) where
+    [EnoughProjectives A] where
   filtered_functor :
-    @CategoryTheory.Functor dA.projective_minus dA.projective_minus_category
-      dB.filtered_minus dB.filtered_minus_category
+    Formalization.Books.Trace.Unit06.KMinus
+        (Formalization.Books.Trace.Unit07.FilteredProjectiveSubcategory A) ⥤
+      Formalization.Books.Trace.Unit07.FilteredHomotopyCategoryMinus B
   functor :
-    @CategoryTheory.Functor dA.minus dA.minus_category dB.minus dB.minus_category
+    Formalization.Books.Trace.Unit07.DFMinus A ⥤
+      Formalization.Books.Trace.Unit07.DFMinus B
   comparison :
-    filtered_functor ⋙ dB.localization_minus ≅
-      dA.minus_equivalence.inverse ⋙ functor
+    filtered_functor ⋙ filteredMinusLocalizationFunctor B ≅
+      (Formalization.Books.Trace.Unit07.filteredDerivedCategory_minus_equiv_filteredProjectiveHomotopy A).inverse ⋙
+        functor
 
 /-- The well-definedness assertion for the filtered left-derived functor. -/
 theorem filteredLeftDerivedFunctorData_exists
@@ -255,10 +143,8 @@ theorem filteredLeftDerivedFunctorData_exists
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughProjectives A]
-    (G : A ⥤ B) (hG : IsRightExact G)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    Nonempty (FilteredLeftDerivedFunctorData G hG dA dB) := by
+    (G : A ⥤ B) (hG : IsRightExact G) :
+    Nonempty (FilteredLeftDerivedFunctorData G hG) := by
   sorry
 
 noncomputable def filteredLeftDerivedFunctorData
@@ -266,60 +152,57 @@ noncomputable def filteredLeftDerivedFunctorData
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughProjectives A]
-    (G : A ⥤ B) (hG : IsRightExact G)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    FilteredLeftDerivedFunctorData G hG dA dB :=
-  Classical.choice (filteredLeftDerivedFunctorData_exists G hG dA dB)
+    (G : A ⥤ B) (hG : IsRightExact G) :
+    FilteredLeftDerivedFunctorData G hG :=
+  Classical.choice (filteredLeftDerivedFunctorData_exists G hG)
 
 /-- The filtered derived functor `LG : DF⁻(A) ⥤ DF⁻(B)`. -/
 noncomputable def filteredLeftDerivedFunctor
     {A : Type u} [Category.{v} A] [Abelian A]
-    {B : Type v} [Category.{w} B] [Abelian B]
-    [HasDerivedCategory.{x} A] [HasDerivedCategory.{y} B]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughProjectives A]
-    (G : A ⥤ B) (hG : IsRightExact G)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    @CategoryTheory.Functor dA.minus dA.minus_category dB.minus dB.minus_category :=
-  (filteredLeftDerivedFunctorData G hG dA dB).functor
+    (G : A ⥤ B) (hG : IsRightExact G) :
+    Formalization.Books.Trace.Unit07.DFMinus A ⥤
+      Formalization.Books.Trace.Unit07.DFMinus B :=
+  (filteredLeftDerivedFunctorData G hG).functor
 
-/-- The comparison isomorphism recording the defining diagram for `LG`. -/
+/-- The comparison isomorphism defining the filtered left-derived functor. -/
 noncomputable def filteredLeftDerivedFunctor_comparison
     {A : Type u} [Category.{v} A] [Abelian A]
-    {B : Type v} [Category.{w} B] [Abelian B]
-    [HasDerivedCategory.{x} A] [HasDerivedCategory.{y} B]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughProjectives A]
-    (G : A ⥤ B) (hG : IsRightExact G)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) :
-    (filteredLeftDerivedFunctorData G hG dA dB).filtered_functor ⋙
-        dB.localization_minus ≅
-      dA.minus_equivalence.inverse ⋙
-        filteredLeftDerivedFunctor G hG dA dB :=
-  (filteredLeftDerivedFunctorData G hG dA dB).comparison
+    (G : A ⥤ B) (hG : IsRightExact G) :
+    (filteredLeftDerivedFunctorData G hG).filtered_functor ⋙
+        filteredMinusLocalizationFunctor B ≅
+      (Formalization.Books.Trace.Unit07.filteredDerivedCategory_minus_equiv_filteredProjectiveHomotopy A).inverse ⋙
+        filteredLeftDerivedFunctor G hG :=
+  (filteredLeftDerivedFunctorData G hG).comparison
 
 /-! ## Graded comparison and the spectral sequence -/
 
-/-- The source's commuting square, expressed by its canonical natural isomorphism. -/
+/-- The source's commuting square, expressed by its canonical isomorphism. -/
 theorem filteredRightDerivedFunctor_graded_comparison
     {A : Type u} [Category.{v} A] [Abelian A]
-    {B : Type v} [Category.{w} B] [Abelian B]
-    [HasDerivedCategory.{x} A] [HasDerivedCategory.{y} B]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughInjectives A]
     (T : A ⥤ B) (hT : IsLeftExact T)
     (dA : FilteredDerivedCategoryData A)
     (dB : FilteredDerivedCategoryData B) (p : ℤ) :
     Nonempty
-      (filteredRightDerivedFunctor T hT dA dB ⋙ dB.graded_plus p ≅
-        dA.graded_plus p ⋙ totalRightDerivedFunctor A B T hT) := by
+      (filteredRightDerivedFunctor T hT ⋙ dB.graded_plus p ≅
+        dA.graded_plus p ⋙
+          Formalization.Books.Trace.Unit06.totalRightDerivedFunctor A B T hT) := by
   sorry
 
-/-- A filtered derived spectral sequence attached to an object of `DF⁺(B)`. -/
+/-- A filtered-derived spectral sequence attached to an object of `DF⁺(B)`. -/
 structure FilteredDerivedSpectralSequence
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w'} B]
-    (dB : FilteredDerivedCategoryData B) (K : dB.plus) where
+    (dB : FilteredDerivedCategoryData B)
+    (K : Formalization.Books.Trace.Unit07.DFPlus B) where
   spectral_sequence :
     CategoryTheory.CohomologicalSpectralSequence B 0
   first_page :
@@ -328,27 +211,29 @@ structure FilteredDerivedSpectralSequence
         ((spectral_sequence.page 1).X (p, q) ≅
           (DerivedCategory.Plus.homologyFunctor B (p + q)).obj
             ((dB.graded_plus p).obj K))
-  abutment : ℤ → FilteredObject B
+  abutment : ℤ → B
   abutment_iso :
     ∀ n : ℤ,
       Nonempty
-        ((abutment n).carrier ≅
+        (abutment n ≅
           (DerivedCategory.Plus.homologyFunctor B n).obj
             ((dB.forget_plus).obj K))
 
-/-- Every object of the bounded-below filtered derived category has the source's
-spectral sequence, with `E₁^{p,q} = H^{p+q}(gr^p K)` and the stated abutment. -/
+/-- Every bounded-below filtered-derived object has the source's spectral
+sequence, with `E₁^{p,q} = H^{p+q}(gr^p K)` and the stated abutment. -/
 theorem filteredDerivedSpectralSequence_exists
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w'} B]
-    (dB : FilteredDerivedCategoryData B) (K : dB.plus) :
+    (dB : FilteredDerivedCategoryData B)
+    (K : Formalization.Books.Trace.Unit07.DFPlus B) :
     Nonempty (FilteredDerivedSpectralSequence dB K) := by
   sorry
 
 noncomputable def filteredDerivedSpectralSequence
-    {B : Type v} [Category.{w} B] [Abelian B]
-    [HasDerivedCategory.{x} B]
-    (dB : FilteredDerivedCategoryData B) (K : dB.plus) :
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w'} B]
+    (dB : FilteredDerivedCategoryData B)
+    (K : Formalization.Books.Trace.Unit07.DFPlus B) :
     FilteredDerivedSpectralSequence dB K :=
   Classical.choice (filteredDerivedSpectralSequence_exists dB K)
 

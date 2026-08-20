@@ -996,9 +996,13 @@ private def simplicialCommGroupKernel
     SimplicialObject CommGrpCat.{u} where
   obj n := CommGrpCat.of ((f.app n).hom.ker)
   map α := CommGrpCat.ofHom
-    { toFun := fun x => ⟨X.map α x, by /- old proof
+    { toFun := fun x => ⟨X.map α x, by
         have h := congrArg (fun g => g x) (f.naturality α)
-        simpa using h.symm.trans (by simp [x.property]) -/ sorry⟩
+        change (ConcreteCategory.hom (X.map α ≫ f.app _)) x = 1
+        rw [h]
+        change (Y.map α) ((f.app _).hom (x : X.obj _)) = 1
+        rw [x.property]
+        simp⟩
       map_one' := by
         ext
         simp
@@ -1010,14 +1014,12 @@ private def simplicialCommGroupKernel
     intro n
     apply CommGrpCat.ext
     intro x
-    /- old proof rfl -/
-    sorry
+    simp
   map_comp := by
     intro n m l α β
     apply CommGrpCat.ext
     intro x
-    /- old proof rfl -/
-    sorry
+    simp
 
 private def simplicialCommGroupKernelι
     {X Y : SimplicialObject CommGrpCat.{u}} (f : X ⟶ Y) :
@@ -1033,7 +1035,9 @@ private theorem termwiseSurjective_simplicialCommGroup_kanFibration
     {X Y : SimplicialObject CommGrpCat.{u}} (f : X ⟶ Y)
     (hf : ∀ n : ℕ,
       Function.Surjective (f.app (op (SimplexCategory.mk n)))) :
-    KanFibration (underlyingSimplicialGroupMap f) := /- old proof
+    KanFibration (underlyingSimplicialGroupMap f) := by
+  let X' := X
+  let Y' := Y
   change HomotopicalAlgebra.Fibration (underlyingSimplicialGroupMap f)
   rw [SSet.modelCategoryQuillen.fibration_iff]
   intro A B i hi
@@ -1042,86 +1046,180 @@ private theorem termwiseSurjective_simplicialCommGroup_kanFibration
   obtain ⟨n, ⟨k⟩⟩ := hi
   refine ⟨fun {a} {b} sq => ?_⟩
   let aFace : ∀ (j : Fin (n + 2)) (_ : j ≠ k),
-      X.obj (op (SimplexCategory.mk n)) := fun j hj =>
+      X'.obj (op (SimplexCategory.mk n)) := fun j hj =>
     SSet.yonedaEquiv (SSet.horn.ι k j hj ≫ a)
-  let x : Y.obj (op (SimplexCategory.mk (n + 1))) :=
+  let x : Y'.obj (op (SimplexCategory.mk (n + 1))) :=
     SSet.yonedaEquiv b
   obtain ⟨x₀, hx₀⟩ := hf (n + 1) x
+  have map_yoneda : ∀ {r : ℕ}
+      (p : Δ[r] ⟶ underlyingSimplicialGroup X'),
+      SSet.yonedaEquiv (p ≫ underlyingSimplicialGroupMap f) =
+        f.app (op (SimplexCategory.mk r)) (SSet.yonedaEquiv p) := by
+    intro r p
+    change SSet.yonedaEquiv
+        (p ≫ underlyingSimplicialGroupMap f) =
+      (f.app (op (SimplexCategory.mk r))).hom (SSet.yonedaEquiv p)
+    rw [SSet.yonedaEquiv_comp]
+    rfl
+  have yonedaFace : ∀ (Z : SimplicialObject CommGrpCat.{u}) {r : ℕ}
+      (j : Fin (r + 2))
+      (p : Δ[r + 1] ⟶ underlyingSimplicialGroup Z),
+      SSet.yonedaEquiv (SSet.stdSimplex.δ j ≫ p) =
+        Z.δ j (SSet.yonedaEquiv p) := by
+    intro Z r j p
+    have hp : p = SSet.yonedaEquiv.symm (SSet.yonedaEquiv p) := by
+      exact (SSet.yonedaEquiv.symm_apply_eq.mpr rfl).symm
+    conv_lhs => rw [hp]
+    change SSet.yonedaEquiv
+        (SSet.stdSimplex.map (SimplexCategory.δ j) ≫
+          SSet.yonedaEquiv.symm (SSet.yonedaEquiv p)) = _
+    rw [SSet.yonedaEquiv_symm_naturality_left]
+    rw [SSet.yonedaEquiv.apply_symm_apply]
+    change (underlyingSimplicialGroup Z).map
+        (SimplexCategory.δ j).op (SSet.yonedaEquiv p) = _
+    rfl
   have hfa : ∀ (j : Fin (n + 2)) (hj : j ≠ k),
-      f.app (op (SimplexCategory.mk n)) (aFace j hj) = Y.δ j x := by
+      f.app (op (SimplexCategory.mk n)) (aFace j hj) = Y'.δ j x := by
     intro j hj
+    change (f.app (op (SimplexCategory.mk n))).hom (aFace j hj) =
+      (Y'.δ j).hom x
     have h := congrArg SSet.yonedaEquiv
       (congrArg (fun g => SSet.horn.ι k j hj ≫ g) sq.w)
-    simpa [aFace, x, SSet.yonedaEquiv_comp, underlyingSimplicialGroupMap,
-      underlyingSimplicialGroup] using h
+    have h' : SSet.yonedaEquiv
+        (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialGroupMap f) =
+        SSet.yonedaEquiv (SSet.stdSimplex.δ j ≫ b) := by
+      simpa only [Category.assoc, SSet.horn.ι_ι_assoc] using h
+    have hleft :
+        (f.app (op (SimplexCategory.mk n))).hom (aFace j hj) =
+          SSet.yonedaEquiv
+            (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialGroupMap f) := by
+      have hm := map_yoneda (SSet.horn.ι k j hj ≫ a)
+      change SSet.yonedaEquiv
+          (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialGroupMap f) =
+        (f.app (op (SimplexCategory.mk n))).hom
+          (SSet.yonedaEquiv (SSet.horn.ι k j hj ≫ a)) at hm
+      simpa [aFace, underlyingSimplicialGroup,
+        SimplicialObject.whiskering] using hm.symm
+    have hmid :
+        SSet.yonedaEquiv
+            (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialGroupMap f) =
+          (Y'.δ j).hom x := by
+      simpa [x, underlyingSimplicialGroup, SimplicialObject.whiskering] using
+        h'.trans (yonedaFace Y' j b)
+    exact hleft.trans hmid
   have hδf : ∀ (j : Fin (n + 2)),
-      f.app (op (SimplexCategory.mk n)) (X.δ j x₀) = Y.δ j x := by
+      f.app (op (SimplexCategory.mk n)) (X'.δ j x₀) = Y'.δ j x := by
     intro j
-    have h := congrArg (fun g => g x₀) (X.δ_naturality f j)
-    simpa [hx₀] using h
+    have h := congrArg (fun g => (ConcreteCategory.hom g) x₀)
+      (SimplicialObject.δ_naturality f j)
+    change (f.app (op (SimplexCategory.mk n))).hom (X'.δ j x₀) =
+      (Y'.δ j).hom ((f.app (op (SimplexCategory.mk (n + 1)))).hom x₀) at h
+    simpa [X', Y', hx₀] using h
   let K := simplicialCommGroupKernel f
   let d : ∀ (j : Fin (n + 2)) (hj : j ≠ k), K.obj (op (SimplexCategory.mk n)) :=
-    fun j hj => ⟨(X.δ j x₀)⁻¹ * aFace j hj, by
-      rw [(f.app (op (SimplexCategory.mk n))).map_mul,
-        (f.app (op (SimplexCategory.mk n))).map_inv, hδf, hfa]
+    fun j hj => ⟨(X'.δ j x₀)⁻¹ * aFace j hj, by
+      change (f.app (op (SimplexCategory.mk n))).hom
+        ((X'.δ j x₀)⁻¹ * aFace j hj) = 1
+      rw [map_mul, map_inv, hδf, hfa]
       simp⟩
   let g : ∀ (j : Fin (n + 2)) (hj : j ≠ k),
       Δ[n] ⟶ underlyingSimplicialGroup K := fun j hj =>
     SSet.yonedaEquiv.symm (d j hj)
   have hA := SSet.horn.IsCompatible.of_hom a
-  have hX := SSet.horn.IsCompatible.of_hom
-    (SSet.yonedaEquiv.symm x₀ : Δ[n + 1] ⟶ underlyingSimplicialGroup X)
   have hg : SSet.horn.IsCompatible g := by
-    intro j l hj hl hjl
-    apply SSet.yonedaEquiv.injective
-    apply Subtype.ext
-    have hAjl := congrArg SSet.yonedaEquiv (hA.δ_pred_comp j l hj hl hjl)
-    have hXjl := congrArg SSet.yonedaEquiv (hX.δ_pred_comp j l hj hl hjl)
-    have hAjl' : X.δ (l.pred (Fin.ne_zero_of_lt hjl)) (aFace j hj) =
-        X.δ (j.castPred (Fin.ne_last_of_lt hjl)) (aFace l hl) := by
-      simpa [aFace, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using hAjl
-    have hXjl' : X.δ (l.pred (Fin.ne_zero_of_lt hjl)) (X.δ j x₀) =
-        X.δ (j.castPred (Fin.ne_last_of_lt hjl)) (X.δ l x₀) := by
-      simpa [SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using hXjl
-    change X.δ (l.pred (Fin.ne_zero_of_lt hjl)) (d j hj) =
-      X.δ (j.castPred (Fin.ne_last_of_lt hjl)) (d l hl)
-    rw [(X.δ (l.pred (Fin.ne_zero_of_lt hjl))).map_mul,
-      (X.δ (j.castPred (Fin.ne_last_of_lt hjl))).map_mul,
-      hXjl', hAjl']
+    rcases n with _ | n
+    · trivial
+    · intro j l hj hl hjl
+      apply SSet.yonedaEquiv.injective
+      apply Subtype.ext
+      have hAjl := congrArg SSet.yonedaEquiv (hA.δ_pred_comp j l hj hl hjl)
+      have hAjl' : X'.δ (l.pred (Fin.ne_zero_of_lt hjl)) (aFace j hj) =
+          X'.δ (j.castPred (Fin.ne_last_of_lt hjl)) (aFace l hl) := by
+        exact (yonedaFace X' (l.pred (Fin.ne_zero_of_lt hjl))
+          (SSet.horn.ι k j hj ≫ a)).symm.trans
+          (hAjl.trans (yonedaFace X' (j.castPred (Fin.ne_last_of_lt hjl))
+            (SSet.horn.ι k l hl ≫ a)))
+      have hXjl' : X'.δ (l.pred (Fin.ne_zero_of_lt hjl)) (X'.δ j x₀) =
+          X'.δ (j.castPred (Fin.ne_last_of_lt hjl)) (X'.δ l x₀) := by
+        have hle : j ≤ Fin.castSucc (l.pred (Fin.ne_zero_of_lt hjl)) := by
+          apply Fin.le_iff_val_le_val.mpr
+          simp only [Fin.val_castSucc, Fin.val_pred]
+          omega
+        have h := X'.δ_comp_δ'' (i := j)
+          (j := l.pred (Fin.ne_zero_of_lt hjl)) hle
+        have h' := congrArg (fun g => (ConcreteCategory.hom g) x₀) h.symm
+        have hcast : j.castLT (by omega) =
+            j.castPred (Fin.ne_last_of_lt hjl) := by
+          apply Fin.ext
+          rfl
+        simpa [hcast] using h'
+      change (K.δ (l.pred (Fin.ne_zero_of_lt hjl)) (d j hj)).val =
+        (K.δ (j.castPred (Fin.ne_last_of_lt hjl)) (d l hl)).val
+      change X'.δ (l.pred (Fin.ne_zero_of_lt hjl)) (d j hj).val =
+        X'.δ (j.castPred (Fin.ne_last_of_lt hjl)) (d l hl).val
+      rw [map_mul, map_mul, map_inv, map_inv]
+      rw [congrArg (fun t => t⁻¹) hXjl', hAjl']
   obtain ⟨φ, hφ⟩ :=
     (SSet.KanComplex.iff.mp (simplicialGroup_kanComplex K)) g hg
   let z₀ : K.obj (op (SimplexCategory.mk (n + 1))) :=
     SSet.yonedaEquiv φ
-  let z : X.obj (op (SimplexCategory.mk (n + 1))) :=
+  let z : (underlyingSimplicialGroup X').obj
+      (op (SimplexCategory.mk (n + 1))) :=
     x₀ * (simplicialCommGroupKernelι f).app
       (op (SimplexCategory.mk (n + 1))) z₀
-  refine ⟨SSet.yonedaEquiv.symm z, ?_⟩
-  constructor
-  · apply horn.hom_ext'
+  refine ⟨⟨{ l := SSet.yonedaEquiv.symm z, fac_left := ?_, fac_right := ?_ }⟩⟩
+  · apply SSet.horn.hom_ext'
     intro j hj
     apply SSet.yonedaEquiv.injective
     have hφj := congrArg SSet.yonedaEquiv (hφ j hj)
-    change X.δ j z = aFace j hj
-    rw [z, (X.δ j).map_mul]
-    have hι : X.δ j ((simplicialCommGroupKernelι f).app
+    change X'.δ j z = aFace j hj
+    dsimp [z]
+    rw [map_mul]
+    have hι : X'.δ j ((simplicialCommGroupKernelι f).app
         (op (SimplexCategory.mk (n + 1))) z₀) =
         (simplicialCommGroupKernelι f).app
           (op (SimplexCategory.mk n)) (K.δ j z₀) := by
-      have h := congrArg (fun g => g z₀) (X.δ_naturality
-        (simplicialCommGroupKernelι f) j)
-      simpa using h.symm
-    rw [hι, ← hφj]
-    change X.δ j x₀ * ((X.δ j x₀)⁻¹ * aFace j hj) = _
+      have h := congrArg (fun g => (ConcreteCategory.hom g) z₀)
+        (SimplicialObject.δ_naturality (simplicialCommGroupKernelι f) j)
+      change ((X'.δ j).hom)
+          (((simplicialCommGroupKernelι f).app
+            (op (SimplexCategory.mk (n + 1)))).hom z₀) =
+        (((simplicialCommGroupKernelι f).app
+          (op (SimplexCategory.mk n))).hom (K.δ j z₀)) at h
+      exact h.symm
+    have hKj : K.δ j z₀ = d j hj := by
+      apply Subtype.ext
+      have hK := yonedaFace K j φ
+      have hd : SSet.yonedaEquiv (g j hj) = d j hj := by
+        dsimp [g]
+        exact SSet.yonedaEquiv.apply_symm_apply _
+      have hkd : K.δ j (SSet.yonedaEquiv φ) = d j hj := by
+        apply Subtype.ext
+        exact congrArg Subtype.val (hK.symm.trans (hφj.trans hd))
+      simpa [z₀] using congrArg Subtype.val hkd
+    rw [hι, hKj]
+    dsimp [d]
+    change X'.δ j x₀ * ((X'.δ j x₀)⁻¹ * aFace j hj) = _
     simp
   · apply SSet.yonedaEquiv.injective
-    change (f.app (op (SimplexCategory.mk (n + 1)))) z = x
-    rw [z, (f.app (op (SimplexCategory.mk (n + 1)))).map_mul, hx₀]
-    have hz₀ : (f.app (op (SimplexCategory.mk (n + 1))))
-        ((simplicialCommGroupKernelι f).app
-          (op (SimplexCategory.mk (n + 1))) z₀) = 1 := by
-      exact z₀.property
-    rw [hz₀]
-    simp -/ by sorry
+    have hz : (f.app (op (SimplexCategory.mk (n + 1)))) z = x := by
+      dsimp [z]
+      rw [map_mul, hx₀]
+      have hz₀ : (f.app (op (SimplexCategory.mk (n + 1))))
+          ((simplicialCommGroupKernelι f).app
+            (op (SimplexCategory.mk (n + 1))) z₀) = 1 := by
+        exact z₀.property
+      rw [hz₀]
+      simp
+    have hzm : (f.app (op (SimplexCategory.mk (n + 1)))).hom
+        (SSet.yonedaEquiv
+          ((SSet.yonedaEquiv (X := underlyingSimplicialGroup X')).symm z)) =
+        SSet.yonedaEquiv b := by
+      have he := (SSet.yonedaEquiv
+        (X := underlyingSimplicialGroup X')).apply_symm_apply z
+      exact (he.symm ▸ hz).trans (by rfl)
+    exact (map_yoneda ((SSet.yonedaEquiv
+      (X := underlyingSimplicialGroup X')).symm z)).trans hzm
 
 private theorem simplicialAddCommGroupKernel_associated_acyclic
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
@@ -1130,22 +1228,20 @@ private theorem simplicialAddCommGroupKernel_associated_acyclic
     (hquasi : QuasiIso
       (Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f)) :
     (Formalization.Books.Simplicial.Unit23.associatedChainComplex
-      (simplicialAddCommGroupKernel f)).Acyclic := /- old proof
+      (simplicialAddCommGroupKernel f)).Acyclic := by
   let ι := simplicialAddCommGroupKernelι f
   let α := Formalization.Books.Simplicial.Unit23.associatedChainComplexMap ι
   let β := Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f
   have hcomp : α ≫ β = 0 := by
-    ext n
-    apply AddCommGrpCat.ext
-    intro x
+    ext n x
     exact x.property
-  let S : ShortComplex (ChainComplex AddCommGrpCat.{u}) :=
+  let S : ShortComplex (ChainComplex AddCommGrpCat.{u} ℕ) :=
     ShortComplex.mk α β hcomp
   have hS : S.ShortExact := by
-    apply HomologicalComplex.shortExact_of_degreewise_shortExact S
+    refine HomologicalComplex.shortExact_of_degreewise_shortExact S ?_
     intro n
     change (ShortComplex.mk (ι.app (op (SimplexCategory.mk n)))
-      (f.app (op (SimplexCategory.mk n))) _) .ShortExact
+      (f.app (op (SimplexCategory.mk n))) _).ShortExact
     apply ShortComplex.ShortExact.mk'
     · rw [ShortComplex.exact_iff_epi_kernel_lift]
       let hzero : ι.app (op (SimplexCategory.mk n)) ≫
@@ -1159,13 +1255,26 @@ private theorem simplicialAddCommGroupKernel_associated_acyclic
             (op (SimplexCategory.mk n)))).inv := by
         apply (cancel_mono (Limits.kernel.ι
           (f.app (op (SimplexCategory.mk n))))).1
-        rw [Limits.kernel.lift_ι, ← AddCommGrpCat.kernelIsoKer_inv_comp_ι]
+        rw [Limits.kernel.lift_ι]
+        change AddCommGrpCat.ofHom
+            (AddSubgroup.subtype ((f.app
+              (op (SimplexCategory.mk n))).hom.ker)) =
+          (AddCommGrpCat.kernelIsoKer (f.app
+            (op (SimplexCategory.mk n)))).inv ≫
+            Limits.kernel.ι (f.app (op (SimplexCategory.mk n)))
+        rw [← AddCommGrpCat.kernelIsoKer_inv_comp_ι]
       rw [hkernel]
+      let e := AddCommGrpCat.kernelIsoKer
+        (f.app (op (SimplexCategory.mk n)))
+      change Epi e.inv
+      letI : IsIso e.inv := e.isIso_inv
       infer_instance
-    · infer_instance
-    · rw [AddCommGrpCat.epi_iff_surjective]
-      exact hf n
-  exact CategoryTheory.ShortComplex.ShortExact.acyclic_X₁ hS hquasi -/ by sorry
+    · dsimp [ι, simplicialAddCommGroupKernelι]
+      apply ConcreteCategory.mono_of_injective
+      intro x y h
+      exact Subtype.ext h
+    · exact ConcreteCategory.epi_of_surjective _ (hf n)
+  exact CategoryTheory.ShortComplex.ShortExact.acyclic_X₁ hS hquasi
 
 private theorem simplicialAddCommGroupKernel_normalized_acyclic
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
@@ -1346,7 +1455,7 @@ private theorem termwiseSurjective_simplicialAddCommGroup_kanFibration
     {P Q : SimplicialObject AddCommGrpCat.{u}} (f : P ⟶ Q)
     (hf : ∀ n : ℕ,
       Function.Surjective (f.app (op (SimplexCategory.mk n)))) :
-    KanFibration (underlyingSimplicialAbelianGroupMap f) := /- old proof
+    KanFibration (underlyingSimplicialAbelianGroupMap f) := by
   change HomotopicalAlgebra.Fibration (underlyingSimplicialAbelianGroupMap f)
   rw [SSet.modelCategoryQuillen.fibration_iff]
   intro A B i hi
@@ -1360,47 +1469,114 @@ private theorem termwiseSurjective_simplicialAddCommGroup_kanFibration
   let x : Q.obj (op (SimplexCategory.mk (n + 1))) :=
     SSet.yonedaEquiv b
   obtain ⟨x₀, hx₀⟩ := hf (n + 1) x
+  have map_yoneda : ∀ {r : ℕ}
+      (p : Δ[r] ⟶ underlyingSimplicialAbelianGroup P),
+      SSet.yonedaEquiv (p ≫ underlyingSimplicialAbelianGroupMap f) =
+        f.app (op (SimplexCategory.mk r)) (SSet.yonedaEquiv p) := by
+    intro r p
+    change SSet.yonedaEquiv
+        (p ≫ underlyingSimplicialAbelianGroupMap f) =
+      (f.app (op (SimplexCategory.mk r))).hom (SSet.yonedaEquiv p)
+    rw [SSet.yonedaEquiv_comp]
+    rfl
+  have yonedaFace : ∀ (Z : SimplicialObject AddCommGrpCat.{u}) {r : ℕ}
+      (j : Fin (r + 2))
+      (p : Δ[r + 1] ⟶ underlyingSimplicialAbelianGroup Z),
+      SSet.yonedaEquiv (SSet.stdSimplex.δ j ≫ p) =
+        Z.δ j (SSet.yonedaEquiv p) := by
+    intro Z r j p
+    have hp : p = SSet.yonedaEquiv.symm (SSet.yonedaEquiv p) := by
+      exact (SSet.yonedaEquiv.symm_apply_eq.mpr rfl).symm
+    conv_lhs => rw [hp]
+    change SSet.yonedaEquiv
+        (SSet.stdSimplex.map (SimplexCategory.δ j) ≫
+          SSet.yonedaEquiv.symm (SSet.yonedaEquiv p)) = _
+    rw [SSet.yonedaEquiv_symm_naturality_left]
+    rw [SSet.yonedaEquiv.apply_symm_apply]
+    change (underlyingSimplicialAbelianGroup Z).map
+        (SimplexCategory.δ j).op (SSet.yonedaEquiv p) = _
+    rfl
   have hfa : ∀ (j : Fin (n + 2)) (hj : j ≠ k),
       f.app (op (SimplexCategory.mk n)) (aFace j hj) = Q.δ j x := by
     intro j hj
+    change (f.app (op (SimplexCategory.mk n))).hom (aFace j hj) =
+      (Q.δ j).hom x
     have h := congrArg SSet.yonedaEquiv
       (congrArg (fun g => SSet.horn.ι k j hj ≫ g) sq.w)
-    simpa [aFace, x, SSet.yonedaEquiv_comp,
-      underlyingSimplicialAbelianGroupMap,
-      underlyingSimplicialAbelianGroup] using h
+    have h' : SSet.yonedaEquiv
+        (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialAbelianGroupMap f) =
+        SSet.yonedaEquiv (SSet.stdSimplex.δ j ≫ b) := by
+      simpa only [Category.assoc, SSet.horn.ι_ι_assoc] using h
+    have hleft :
+        (f.app (op (SimplexCategory.mk n))).hom (aFace j hj) =
+          SSet.yonedaEquiv
+            (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialAbelianGroupMap f) := by
+      have hm := map_yoneda (SSet.horn.ι k j hj ≫ a)
+      change SSet.yonedaEquiv
+          (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialAbelianGroupMap f) =
+        (f.app (op (SimplexCategory.mk n))).hom
+          (SSet.yonedaEquiv (SSet.horn.ι k j hj ≫ a)) at hm
+      simpa [aFace, underlyingSimplicialAbelianGroup,
+        SimplicialObject.whiskering] using hm.symm
+    have hmid :
+        SSet.yonedaEquiv
+            (SSet.horn.ι k j hj ≫ a ≫ underlyingSimplicialAbelianGroupMap f) =
+          (Q.δ j).hom x := by
+      simpa [x, underlyingSimplicialAbelianGroup,
+        SimplicialObject.whiskering] using
+        h'.trans (yonedaFace Q j b)
+    exact hleft.trans hmid
   have hδf : ∀ (j : Fin (n + 2)),
       f.app (op (SimplexCategory.mk n)) (P.δ j x₀) = Q.δ j x := by
     intro j
-    have h := congrArg (fun g => g x₀) (f.δ_naturality j)
+    have h := congrArg (fun g => (ConcreteCategory.hom g) x₀)
+      (SimplicialObject.δ_naturality f j)
+    change (f.app (op (SimplexCategory.mk n))).hom (P.δ j x₀) =
+      (Q.δ j).hom ((f.app (op (SimplexCategory.mk (n + 1)))).hom x₀) at h
     simpa [hx₀] using h
   let K := simplicialAddCommGroupKernel f
   let d : ∀ (j : Fin (n + 2)) (hj : j ≠ k),
       K.obj (op (SimplexCategory.mk n)) := fun j hj =>
     ⟨aFace j hj - P.δ j x₀, by
-      rw [map_sub, hfa,
-        hδf, sub_self]⟩
+      change (f.app (op (SimplexCategory.mk n))).hom
+          (aFace j hj - P.δ j x₀) = 0
+      rw [map_sub, hfa, hδf, sub_self]⟩
   let g : ∀ (j : Fin (n + 2)) (hj : j ≠ k),
       Δ[n] ⟶ underlyingSimplicialAbelianGroup K := fun j hj =>
     SSet.yonedaEquiv.symm (d j hj)
   have hA := SSet.horn.IsCompatible.of_hom a
   have hg : SSet.horn.IsCompatible g := by
-    intro j l hj hl hjl
-    apply SSet.yonedaEquiv.injective
-    apply Subtype.ext
-    have hAjl := congrArg SSet.yonedaEquiv (hA.δ_pred_comp j l hj hl hjl)
-    have hAjl' : P.δ (l.pred (Fin.ne_zero_of_lt hjl)) (aFace j hj) =
-        P.δ (j.castPred (Fin.ne_last_of_lt hjl)) (aFace l hl) := by
-      simpa [aFace, SSet.yonedaEquiv_comp,
-        underlyingSimplicialAbelianGroup] using hAjl
-    have hXjl' : P.δ (l.pred (Fin.ne_zero_of_lt hjl)) (P.δ j x₀) =
-        P.δ (j.castPred (Fin.ne_last_of_lt hjl)) (P.δ l x₀) := by
-      have h := P.δ_comp_δ' (i := j) (j := l) (by omega)
-      simpa [Category.assoc] using congrArg (fun g => g x₀) h
-    change P.δ (l.pred (Fin.ne_zero_of_lt hjl)) (d j hj) =
-      P.δ (j.castPred (Fin.ne_last_of_lt hjl)) (d l hl)
-    rw [(P.δ (l.pred (Fin.ne_zero_of_lt hjl))).map_sub,
-      (P.δ (j.castPred (Fin.ne_last_of_lt hjl))).map_sub,
-      hXjl', hAjl']
+    rcases n with _ | n
+    · trivial
+    · intro j l hj hl hjl
+      apply SSet.yonedaEquiv.injective
+      apply Subtype.ext
+      have hAjl := congrArg SSet.yonedaEquiv (hA.δ_pred_comp j l hj hl hjl)
+      have hAjl' : P.δ (l.pred (Fin.ne_zero_of_lt hjl)) (aFace j hj) =
+          P.δ (j.castPred (Fin.ne_last_of_lt hjl)) (aFace l hl) := by
+        exact (yonedaFace P (l.pred (Fin.ne_zero_of_lt hjl))
+          (SSet.horn.ι k j hj ≫ a)).symm.trans
+          (hAjl.trans (yonedaFace P (j.castPred (Fin.ne_last_of_lt hjl))
+            (SSet.horn.ι k l hl ≫ a)))
+      have hXjl' : P.δ (l.pred (Fin.ne_zero_of_lt hjl)) (P.δ j x₀) =
+          P.δ (j.castPred (Fin.ne_last_of_lt hjl)) (P.δ l x₀) := by
+        have hle : j ≤ Fin.castSucc (l.pred (Fin.ne_zero_of_lt hjl)) := by
+          apply Fin.le_iff_val_le_val.mpr
+          simp only [Fin.val_castSucc, Fin.val_pred]
+          omega
+        have h := P.δ_comp_δ'' (i := j)
+          (j := l.pred (Fin.ne_zero_of_lt hjl)) hle
+        have h' := congrArg (fun g => (ConcreteCategory.hom g) x₀) h.symm
+        have hcast : j.castLT (by omega) =
+            j.castPred (Fin.ne_last_of_lt hjl) := by
+          apply Fin.ext
+          rfl
+        simpa [hcast] using h'
+      change (K.δ (l.pred (Fin.ne_zero_of_lt hjl)) (d j hj)).val =
+        (K.δ (j.castPred (Fin.ne_last_of_lt hjl)) (d l hl)).val
+      change P.δ (l.pred (Fin.ne_zero_of_lt hjl)) (d j hj).val =
+        P.δ (j.castPred (Fin.ne_last_of_lt hjl)) (d l hl).val
+      rw [map_sub, map_sub, hXjl', hAjl']
   obtain ⟨φ, hφ⟩ :=
     (SSet.KanComplex.iff.mp (simplicialAddCommGroup_kanComplex K)) g hg
   let z₀ : K.obj (op (SimplexCategory.mk (n + 1))) :=
@@ -1408,33 +1584,60 @@ private theorem termwiseSurjective_simplicialAddCommGroup_kanFibration
   let z : P.obj (op (SimplexCategory.mk (n + 1))) :=
     x₀ + (simplicialAddCommGroupKernelι f).app
       (op (SimplexCategory.mk (n + 1))) z₀
-  refine ⟨SSet.yonedaEquiv.symm z, ?_⟩
-  constructor
+  refine ⟨⟨{ l := SSet.yonedaEquiv.symm z, fac_left := ?_, fac_right := ?_ }⟩⟩
   · apply SSet.horn.hom_ext'
     intro j hj
     apply SSet.yonedaEquiv.injective
     have hφj := congrArg SSet.yonedaEquiv (hφ j hj)
     change P.δ j z = aFace j hj
-    rw [z, (P.δ j).map_add]
+    dsimp [z]
+    rw [map_add]
     have hι : P.δ j ((simplicialAddCommGroupKernelι f).app
         (op (SimplexCategory.mk (n + 1))) z₀) =
         (simplicialAddCommGroupKernelι f).app
           (op (SimplexCategory.mk n)) (K.δ j z₀) := by
-      have h := congrArg (fun g => g z₀)
-        ((simplicialAddCommGroupKernelι f).δ_naturality j)
-      simpa using h.symm
-    rw [hι, ← hφj]
+      have h := congrArg (fun g => (ConcreteCategory.hom g) z₀)
+        (SimplicialObject.δ_naturality (simplicialAddCommGroupKernelι f) j)
+      change ((P.δ j).hom)
+          (((simplicialAddCommGroupKernelι f).app
+            (op (SimplexCategory.mk (n + 1)))).hom z₀) =
+        (((simplicialAddCommGroupKernelι f).app
+          (op (SimplexCategory.mk n))).hom (K.δ j z₀)) at h
+      exact h.symm
+    have hKj : K.δ j z₀ = d j hj := by
+      apply Subtype.ext
+      have hK := yonedaFace K j φ
+      have hd : SSet.yonedaEquiv (g j hj) = d j hj := by
+        dsimp [g]
+        exact SSet.yonedaEquiv.apply_symm_apply _
+      have hkd : K.δ j (SSet.yonedaEquiv φ) = d j hj := by
+        apply Subtype.ext
+        exact congrArg Subtype.val (hK.symm.trans (hφj.trans hd))
+      simpa [z₀] using congrArg Subtype.val hkd
+    rw [hι, hKj]
+    dsimp [d]
     change P.δ j x₀ + (aFace j hj - P.δ j x₀) = _
     abel
   · apply SSet.yonedaEquiv.injective
-    change (f.app (op (SimplexCategory.mk (n + 1)))) z = x
-    rw [z, (f.app (op (SimplexCategory.mk (n + 1)))).map_add, hx₀]
-    have hz₀ : (f.app (op (SimplexCategory.mk (n + 1))))
+    have hz : (f.app (op (SimplexCategory.mk (n + 1)))).hom z = x := by
+      dsimp [z]
+      rw [map_add, hx₀]
+      have hz₀ : (f.app (op (SimplexCategory.mk (n + 1))))
         ((simplicialAddCommGroupKernelι f).app
           (op (SimplexCategory.mk (n + 1))) z₀) = 0 := by
-      exact z₀.property
-    rw [hz₀]
-    simp -/ by sorry
+        exact z₀.property
+      rw [hz₀]
+      simp
+    have hzm : (f.app (op (SimplexCategory.mk (n + 1)))).hom
+        (SSet.yonedaEquiv
+          ((SSet.yonedaEquiv
+            (X := underlyingSimplicialAbelianGroup P)).symm z)) =
+        SSet.yonedaEquiv b := by
+      have he := (SSet.yonedaEquiv
+        (X := underlyingSimplicialAbelianGroup P)).apply_symm_apply z
+      exact (he.symm ▸ hz).trans (by rfl)
+    exact (map_yoneda ((SSet.yonedaEquiv
+      (X := underlyingSimplicialAbelianGroup P)).symm z)).trans hzm
 
 /- A termwise-surjective map of simplicial abelian groups is a Kan
 fibration on underlying simplicial sets. -/

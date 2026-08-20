@@ -192,7 +192,7 @@ theorem complex_injective_resolution_exists_with_mono
     CochainComplex.Plus.modelCategoryQuillen.exists_mono_quasiIso_injective K (a - 1) a
   let _ : L.IsStrictlyGE (a - 1) := hL
   let _ : Mono i := hi
-  letI : HasDerivedCategory A := HasDerivedCategory.standard A
+  let _ : HasDerivedCategory A := HasDerivedCategory.standard A
   let _ : QuasiIso i := hqi
   have hLGE : L.IsGE a := by
     have hKGE : K.IsGE a := inferInstance
@@ -345,7 +345,7 @@ theorem quasiIso_mapping_cone_is_acyclic
     {A : Type u} [Category.{v} A] [Abelian A]
     {K L : BookComplex A} (f : K ⟶ L) (hf : QuasiIso f) :
     (CochainComplex.mappingCone f).Acyclic := by
-  letI : HasDerivedCategory A := HasDerivedCategory.standard A
+  let _ : HasDerivedCategory A := HasDerivedCategory.standard A
   let _ : QuasiIso f := hf
   apply (Formalization.Books.Homology.Unit13.cochain_acyclic_iff_cohomology_isZero _).2
   intro n

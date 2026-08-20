@@ -307,16 +307,44 @@ theorem rationalGroupAlgebraCotangent_exists_finite_linear_combination
     (k : Type u) [Field k] (z : rationalGroupAlgebraCotangent k) :
     ∃ c : ℚ →₀ k,
       z = c.sum (fun α a => a • rationalGroupAlgebraCotangentGenerator k α) := by
-  sorry
+  have hz : z ∈ Submodule.span k (Set.range (rationalGroupAlgebraCotangentGenerator k)) := by
+    rw [rationalGroupAlgebraCotangent_span_generators]
+    exact Submodule.mem_top
+  obtain ⟨c, hc⟩ :=
+    (Finsupp.mem_span_range_iff_exists_finsupp).mp hz
+  exact ⟨c, hc.symm⟩
 
 /-! ## Characteristic computations -/
+
+private theorem rationalGroupAlgebraCotangentGenerator_nsmul
+    (k : Type u) [Field k] (n : ℕ) (β : ℚ) :
+    n • rationalGroupAlgebraCotangentGenerator k β =
+      rationalGroupAlgebraCotangentGenerator k (n • β) := by
+  induction n with
+  | zero =>
+      unfold rationalGroupAlgebraCotangentGenerator
+      have hzero :
+          (⟨rationalGroupAlgebraBasisElement k 0 - 1,
+            rationalGroupAlgebra_basisElement_sub_one_mem_kernel k 0⟩ :
+              rationalGroupAlgebraKernel k) = 0 := by
+        simp
+      rw [zero_nsmul, hzero, map_zero]
+  | succ n ih =>
+      rw [succ_nsmul, ih, succ_nsmul,
+        rationalGroupAlgebraCotangentGenerator_add]
 
 /-- The displayed characteristic-`p` step, with `p > 0`. -/
 theorem rationalGroupAlgebraCotangentGenerator_charP_step
     (k : Type u) [Field k] (p : ℕ) (hp : 0 < p) [CharP k p] (α : ℚ) :
     (p : k) • rationalGroupAlgebraCotangentGenerator k (α / (p : ℚ)) =
       rationalGroupAlgebraCotangentGenerator k α := by
-  sorry
+  have hpq : (p : ℚ) ≠ 0 := by
+    exact_mod_cast hp.ne'
+  have hdiv : p • (α / (p : ℚ)) = α := by
+    rw [nsmul_eq_mul]
+    field_simp [hpq]
+  rw [Nat.cast_smul_eq_nsmul,
+    rationalGroupAlgebraCotangentGenerator_nsmul, hdiv]
 
 /- The source's chain `0 = p z_(α/p) = z_α` is covered by this step
    together with the next vanishing theorem and `CharP.cast_eq_zero`. -/
@@ -324,13 +352,22 @@ theorem rationalGroupAlgebraCotangentGenerator_charP_step
 theorem rationalGroupAlgebraCotangentGenerator_eq_zero_of_charP
     (k : Type u) [Field k] (p : ℕ) (hp : 0 < p) [CharP k p] (α : ℚ) :
     rationalGroupAlgebraCotangentGenerator k α = 0 := by
-  sorry
+  rw [← rationalGroupAlgebraCotangentGenerator_charP_step k p hp α,
+    CharP.cast_eq_zero, zero_smul]
 
 /-- In positive characteristic, `J / J²` is the zero module. -/
 theorem rationalGroupAlgebraCotangent_subsingleton_of_charP
     (k : Type u) [Field k] (p : ℕ) (hp : 0 < p) [CharP k p] :
     Subsingleton (rationalGroupAlgebraCotangent k) := by
-  sorry
+  have hzero : ∀ z : rationalGroupAlgebraCotangent k, z = 0 := by
+    intro z
+    obtain ⟨c, hc⟩ :=
+      rationalGroupAlgebraCotangent_exists_finite_linear_combination k z
+    calc
+      z = c.sum (fun α a => a • rationalGroupAlgebraCotangentGenerator k α) := hc
+      _ = 0 := by
+        simp [rationalGroupAlgebraCotangentGenerator_eq_zero_of_charP k p hp]
+  exact ⟨fun z₁ z₂ => (hzero z₁).trans (hzero z₂).symm⟩
 
 /-- The tensor-product model appearing in characteristic zero. -/
 /- By symmetry of the tensor product, this is the source's `ℚ ⊗[ℤ] k` model

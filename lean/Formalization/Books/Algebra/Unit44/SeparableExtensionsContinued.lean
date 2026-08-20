@@ -87,6 +87,42 @@ theorem exists_isSeparatingTranscendenceBasis_of_mini_separability
 `AdjoinPthRoots k`, which also handles the characteristic-zero case using
 the field's exponential characteristic. -/
 
+private theorem tensorProduct_coeff_eq_zero_of_linearIndependent
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (s : Finset K) (hs : LinearIndepOn k id (s : Set K))
+    (a : s → AdjoinPthRoots k)
+    (ha : (∑ i : s, (i : K) ⊗ₜ[k] a i) = 0) :
+    ∀ i, a i = 0 := by
+  have hli : LinearIndependent k (fun i : s => (i : K)) :=
+    hs.linearIndependent
+  let ι' : Set K := hli.linearIndepOn_id.extend (Set.subset_univ _)
+  let b' : Module.Basis ι' k K := Module.Basis.extend hli.linearIndepOn_id
+  let q : s → ι' := fun i =>
+    ⟨(i : K), hli.linearIndepOn_id.subset_extend _
+      (Set.mem_range_self i)⟩
+  have hq : Function.Injective q := by
+    intro i j hij
+    apply Subtype.ext
+    simpa [q] using congrArg (fun z : ι' => (z : K)) hij
+  have hbq (i : s) : b' (q i) = (i : K) := by
+    change (Module.Basis.extend hli.linearIndepOn_id) (q i) = (i : K)
+    rw [Module.Basis.extend_apply_self]
+  have hb : LinearIndependent (AdjoinPthRoots k)
+      (fun i : s => b'.baseChange (AdjoinPthRoots k) (q i)) :=
+    (b'.baseChange (AdjoinPthRoots k)).linearIndependent.comp q hq
+  have heq :
+      (∑ i : s, a i • b'.baseChange (AdjoinPthRoots k) (q i)) =
+        ∑ i : s, (0 : AdjoinPthRoots k) •
+          b'.baseChange (AdjoinPthRoots k) (q i) := by
+    have hcomm :
+        (∑ i : s, a i ⊗ₜ[k] (i : K)) = 0 := by
+      simpa using congrArg (TensorProduct.comm k K (AdjoinPthRoots k)) ha
+    simpa [Module.Basis.baseChange_apply, hbq,
+      ← TensorProduct.smul_tmul', Algebra.smul_def] using hcomm
+  have hzero := (Fintype.linearIndependent_iffₛ.mp hb)
+    (fun i => a i) (fun _ => 0) heq
+  exact fun i => hzero i
+
 private theorem hpow_of_isReduced_tensorProduct_adjoinPthRoots
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (p : ℕ) (hp : Nat.Prime p) [CharP k p]
@@ -160,41 +196,6 @@ private theorem hpow_of_isReduced_tensorProduct_adjoinPthRoots
     apply eq_zero_of_pow_eq_zero
     rw [sub_pow_char, hm_pow, hm_pow, hzw]
     simp
-  have hcoeff :
-      ∀ (s : Finset K) (hs : LinearIndepOn k id (s : Set K))
-        (a : s → AdjoinPthRoots k),
-        (∑ i : s, (i : K) ⊗ₜ[k] a i = 0) →
-          ∀ i, a i = 0 := by
-    intro s hs a ha
-    have hli : LinearIndependent k (fun i : s => (i : K)) :=
-      hs.linearIndependent
-    let ι' : Set K := hli.linearIndepOn_id.extend (Set.subset_univ _)
-    let b' : Module.Basis ι' k K := Module.Basis.extend hli.linearIndepOn_id
-    let q : s → ι' := fun i =>
-      ⟨(i : K), hli.linearIndepOn_id.subset_extend _
-        (Set.mem_range_self i)⟩
-    have hq : Function.Injective q := by
-      intro i j hij
-      apply Subtype.ext
-      simpa [q] using congrArg (fun z : ι' => (z : K)) hij
-    have hbq (i : s) : b' (q i) = (i : K) := by
-      change (Module.Basis.extend hli.linearIndepOn_id) (q i) = (i : K)
-      rw [Module.Basis.extend_apply_self]
-    have hb : LinearIndependent (AdjoinPthRoots k)
-        (fun i : s => b'.baseChange (AdjoinPthRoots k) (q i)) :=
-      (b'.baseChange (AdjoinPthRoots k)).linearIndependent.comp q hq
-    have heq :
-        (∑ i : s, a i • b'.baseChange (AdjoinPthRoots k) (q i)) =
-          ∑ i : s, (0 : AdjoinPthRoots k) •
-            b'.baseChange (AdjoinPthRoots k) (q i) := by
-      have hcomm :
-          (∑ i : s, a i ⊗ₜ[k] (i : K)) = 0 := by
-        simpa using congrArg (TensorProduct.comm k K (AdjoinPthRoots k)) ha
-      simpa [Module.Basis.baseChange_apply, hbq,
-        ← TensorProduct.smul_tmul', Algebra.smul_def] using hcomm
-    have hzero := (Fintype.linearIndependent_iffₛ.mp hb)
-      (fun i => a i) (fun _ => 0) heq
-    exact fun i => hzero i
   intro s hs
   rw [linearIndepOn_finset_iffₛ]
   intro f g hfg i hi
@@ -229,7 +230,7 @@ private theorem hpow_of_isReduced_tensorProduct_adjoinPthRoots
                 (AdjoinPthRoots.root k) (g (q : K)))) = 0 := by
         simpa [zf, zg, ← Finset.sum_sub_distrib, TensorProduct.tmul_sub] using
           sub_eq_zero.mpr hzfzg
-      exact (hcoeff s hs (fun q =>
+      exact (tensorProduct_coeff_eq_zero_of_linearIndependent s hs (fun q =>
         (AdjoinPthRoots.root k) (f (q : K)) -
           (AdjoinPthRoots.root k) (g (q : K))) hdiff) j
     exact sub_eq_zero.mp hzero

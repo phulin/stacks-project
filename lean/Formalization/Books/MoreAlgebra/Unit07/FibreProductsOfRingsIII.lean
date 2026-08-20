@@ -233,7 +233,25 @@ theorem relative_big_diagram_commutes
         (relativeAToC S).comp S.base.fromA') ∧
       (relativeBaseToA S =
         S.base.fromA'.comp (fibreProductToA' S.base)) := by
-  sorry
+  let _algD' : Algebra (relativeFibreProductRing S) D' := S.toD'.toAlgebra
+  let _algB : Algebra (relativeFibreProductRing S) B :=
+    (fibreProductToB S.base).toAlgebra
+  let _algA' : Algebra (relativeFibreProductRing S) A' :=
+    (fibreProductToA' S.base).toAlgebra
+  let _algA : Algebra (relativeFibreProductRing S) A :=
+    (relativeBaseToA S).toAlgebra
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simpa [relativeD'ToD, relativeBToD, Algebra.TensorProduct.algebraMap_def,
+      RingHom.algebraMap_toAlgebra] using
+      (Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+        (R := relativeFibreProductRing S) (A := D') (B := B))
+  · simpa [relativeD'ToC', relativeA'ToC', Algebra.TensorProduct.algebraMap_def,
+      RingHom.algebraMap_toAlgebra] using
+      (Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+        (R := relativeFibreProductRing S) (A := D') (B := A'))
+  · ext x
+    simp [relativeC'ToC, relativeA'ToC', relativeAToC]
+  · exact relativeBaseToA_eq_via_A' S
 
 /-- The canonical map from `D'` to the pullback of its two base changes. -/
 def relativeD'ToBaseChangePullback
@@ -375,7 +393,41 @@ theorem relativeModule_recovery_exists
         ((ModuleCat.extendScalars (relativeD'ToC' S)).obj
           ((relativeModuleRightAdjoint S).obj X) ≅
         moduleGluingRightObj (D := relativeRingSquare S) (X := X))) := by
-  sorry
+  let e := relativeModule_composition_iso S
+  let eX := e.app X
+  let leftIso :
+      (ModuleCat.extendScalars (relativeD'ToD S)).obj
+          ((relativeModuleRightAdjoint S).obj X) ≅
+        moduleGluingLeftObj (D := relativeRingSquare S) (X := X) :=
+    { hom := eX.hom.hom.left
+      inv := eX.inv.hom.left
+      hom_inv_id := by
+        change eX.hom.hom.left ≫ eX.inv.hom.left = 𝟙 _
+        have h := congrArg (fun f => f.hom.left) eX.hom_inv_id
+        change eX.hom.hom.left ≫ eX.inv.hom.left = 𝟙 _ at h
+        exact h
+      inv_hom_id := by
+        change eX.inv.hom.left ≫ eX.hom.hom.left = 𝟙 _
+        have h := congrArg (fun f => f.hom.left) eX.inv_hom_id
+        change eX.inv.hom.left ≫ eX.hom.hom.left = 𝟙 _ at h
+        exact h }
+  let rightIso :
+      (ModuleCat.extendScalars (relativeD'ToC' S)).obj
+          ((relativeModuleRightAdjoint S).obj X) ≅
+        moduleGluingRightObj (D := relativeRingSquare S) (X := X) :=
+    { hom := eX.hom.hom.right
+      inv := eX.inv.hom.right
+      hom_inv_id := by
+        change eX.hom.hom.right ≫ eX.inv.hom.right = 𝟙 _
+        have h := congrArg (fun f => f.hom.right) eX.hom_inv_id
+        change eX.hom.hom.right ≫ eX.inv.hom.right = 𝟙 _ at h
+        exact h
+      inv_hom_id := by
+        change eX.inv.hom.right ≫ eX.hom.hom.right = 𝟙 _
+        have h := congrArg (fun f => f.hom.right) eX.inv_hom_id
+        change eX.inv.hom.right ≫ eX.hom.hom.right = 𝟙 _ at h
+        exact h }
+  exact ⟨leftIso, rightIso⟩
 
 /-- A chosen pair of componentwise recovery isomorphisms. -/
 noncomputable def relativeModule_recovery
@@ -431,7 +483,13 @@ theorem relative_surjection_ideals
     (S : RelativeFibreProductSituation A A' B D') :
     Ideal.map (relativeD'ToC' S) (relativeIdealJD' S) =
       relativeIdealIC' S := by
-  sorry
+  change Ideal.map (relativeD'ToC' S)
+      (Ideal.map S.toD' (RingHom.ker (fibreProductToB S.base))) =
+    Ideal.map (relativeA'ToC' S) (RingHom.ker S.base.fromA')
+  rw [Ideal.map_map]
+  rw [(relative_big_diagram_commutes S).2.1]
+  rw [← Ideal.map_map (fibreProductToA' S.base) (relativeA'ToC' S)]
+  exact congrArg (Ideal.map (relativeA'ToC' S)) (fibreProduct_kernel_map S.base)
 
 /-- The `B`-module obtained from the left component of a relative triple. -/
 abbrev relativeLeftModuleOverB

@@ -739,14 +739,13 @@ theorem EtaleSurjectiveExtensionData.residueFieldEquiv
     Ideal.algEquivResidueFieldOfField (⊥ : Ideal L)
   exact ⟨e₁.trans e₂.symm⟩
 
-/-- The induced residue-field equivalence agrees with the original quotient
-map on the base algebra. -/
-theorem EtaleSurjectiveExtensionData.residueFieldEquiv_with_algebraMap
-    {A : Type u} {L : Type v}
-    [CommRing A] [IsLocalRing A] [Field L]
-    {r : A →+* (IsLocalRing.ResidueField A)}
-    [Algebra (IsLocalRing.ResidueField A) L]
-    (D : EtaleSurjectiveExtensionData A (IsLocalRing.ResidueField A) L r) :
+/-- The induced residue-field equivalence agrees with the quotient map on
+elements coming from the base ring. -/
+theorem EtaleSurjectiveExtensionData.residueFieldEquiv_with_baseMap
+    {A k : Type u} {L : Type v}
+    [CommRing A] [Field k] [Field L]
+    {r : A →+* k} [Algebra k L]
+    (D : EtaleSurjectiveExtensionData A k L r) :
     let _ : CommRing D.S := D.commRingS
     let _ : Algebra A D.S := D.algebraAS
     ∃ e : D.prime.asIdeal.ResidueField ≃+* L,
@@ -780,6 +779,21 @@ theorem EtaleSurjectiveExtensionData.residueFieldEquiv_with_algebraMap
   rw [Ideal.ResidueField.map_algebraMap]
   rw [← Ideal.algEquivResidueFieldOfField_apply]
   exact (Ideal.algEquivResidueFieldOfField (⊥ : Ideal L)).symm_apply_apply _
+
+/-- The induced residue-field equivalence agrees with the original quotient
+map on the base algebra. -/
+theorem EtaleSurjectiveExtensionData.residueFieldEquiv_with_algebraMap
+    {A : Type u} {L : Type v}
+    [CommRing A] [IsLocalRing A] [Field L]
+    {r : A →+* (IsLocalRing.ResidueField A)}
+    [Algebra (IsLocalRing.ResidueField A) L]
+    (D : EtaleSurjectiveExtensionData A (IsLocalRing.ResidueField A) L r) :
+    let _ : CommRing D.S := D.commRingS
+    let _ : Algebra A D.S := D.algebraAS
+    ∃ e : D.prime.asIdeal.ResidueField ≃+* L,
+      ∀ a : A, e (algebraMap A D.prime.asIdeal.ResidueField a) =
+        D.map (algebraMap A D.S a) := by
+  simpa using D.residueFieldEquiv_with_baseMap
 
 /-- A finite separable extension of a residue field is a quotient of an
 étale algebra over the local ring. -/

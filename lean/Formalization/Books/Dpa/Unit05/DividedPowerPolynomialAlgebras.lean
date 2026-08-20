@@ -279,12 +279,13 @@ def dividedPowerPolynomialCoefficientHom (A : DividedPowerRing.{u}) (t : ℕ)
     (δ : DividedPowers (dividedPowerPolynomialIdeal (A : Type u) A.ideal t))
     (hδ : CoefficientDpowCompatible A t δ) :
     DividedPowerRing.Hom A (dividedPowerPolynomialRing A t δ) :=
-  { hom := algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t)
-    ideal_map := by
+  DividedPowerRing.Hom.ofRingHom
+    (algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t))
+    (by
       intro x hx
       exact Ideal.mem_sup_left (Ideal.mem_map_of_mem
-        (algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t)) hx)
-    dpow_comm := hδ }
+        (algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t)) hx))
+    hδ
 
 /-- Data on the target of the universal property: a divided-power-ring map
 from the coefficient ring and one element of the target ideal per variable. -/
@@ -511,6 +512,17 @@ noncomputable def primeLocalizedFactorialInverse
     localizedUnitInverse (factorial_isUnit_of_lt_prime p hp hA hn)
   else 0
 
+/-- The interpretation in a `Z_(p)`-algebra of the coefficient
+`(n^p - n) / p!` occurring in the Ryo--Suzuki calculation.  The numerator
+is divisible by `p`, while `(p - 1)!` is a unit, so this is the corresponding
+element of `A` even though the displayed rational number need not be an
+integer. -/
+noncomputable def primePowerCoefficient
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) (n : ℕ) : A :=
+  (Nat.div (n ^ p - n) p : A) *
+    primeLocalizedFactorialInverse p hp hA (p - 1)
+
 /-- The divided-power operation on the ideal itself, for a positive index. -/
 def dividedPowerOnIdeal {A : Type u} [CommRing A] {I : Ideal A}
     (γ : DividedPowers I) (n : ℕ) (hn : n ≠ 0) : I → I :=
@@ -598,7 +610,7 @@ theorem primeOperation_nat_multiple_formula
     (hδ : IsPrimeDividedPowerOperationWithoutPower p hp hA I δ)
     (n : ℕ) (hn : 1 ≤ n) {x : A} (hx : x ∈ I) :
     δ.op (n • x) = n • δ.op x +
-      ((Nat.div (n ^ p - n) (Nat.factorial p) : A) * x ^ p) := by
+      (primePowerCoefficient p hp hA n * x ^ p) := by
   sorry
 
 /-- For a prime `p`, some integer fails the congruence `n^p = n mod p^2`. -/

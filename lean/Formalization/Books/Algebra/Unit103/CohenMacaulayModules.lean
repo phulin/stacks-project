@@ -573,7 +573,98 @@ theorem isCohenMacaulay_quotient_by_element
       IsSMulRegular M g ∧
       IsCohenMacaulay R (QuotSMulTop g M) ∧
       localDepth R (QuotSMulTop g M) = localDepth R M - 1 := by
-  sorry
+  have hMdim : ((localDepth R M : ℕ∞) : WithBot ℕ∞) =
+      Module.supportDim R M := by
+    exact hM
+  let : Nontrivial M := by
+    rw [← Module.supportDim_ne_bot_iff_nontrivial R, ← hMdim]
+    exact WithBot.coe_ne_bot
+  have hmax : IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) ≠ ⊤ :=
+    smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
+      (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+  have hlt : localDepth R M < ⊤ :=
+    depth_lt_top_of_noetherian (IsLocalRing.maximalIdeal R) M hmax
+  let : Nontrivial (QuotSMulTop g M) :=
+    nontrivial_quotSMulTop_of_mem_maximalIdeal M hg
+  cases hdepth : localDepth R M with
+  | top =>
+      rw [hdepth] at hlt
+      exact (lt_irrefl _ hlt).elim
+  | coe n =>
+      cases n with
+      | zero =>
+          have hcut0 := hcut
+          rw [← hMdim, hdepth] at hcut0
+          rw [← supportDim_quotSMulTop_eq_supportCutDim_singleton] at hcut0
+          have hbot : Module.supportDim R (QuotSMulTop g M) = ⊥ :=
+            (ENat.WithBot.add_one_le_zero_iff _).mp (le_of_eq hcut0)
+          have hne : Module.supportDim R (QuotSMulTop g M) ≠ ⊥ :=
+            (Module.supportDim_ne_bot_iff_nontrivial R
+              (QuotSMulTop g M)).mpr inferInstance
+          exact (hne hbot).elim
+      | succ n =>
+          have hcut' := hcut
+          rw [← hMdim, hdepth] at hcut'
+          rw [← supportDim_quotSMulTop_eq_supportCutDim_singleton] at hcut'
+          have hQdim : Module.supportDim R (QuotSMulTop g M) =
+              (((n : ℕ∞) : WithBot ℕ∞)) :=
+            supportDim_eq_cast_of_add_one_eq (R := R)
+              (N := QuotSMulTop g M) n
+              (Module.supportDim R (QuotSMulTop g M))
+              ((Module.supportDim_ne_bot_iff_nontrivial R
+                (QuotSMulTop g M)).mpr inferInstance) hcut'
+          have hreg : IsSMulRegular M g := by
+            by_contra hreg
+            change ¬ Function.Injective ((g • ·) : M → M) at hreg
+            rw [Function.not_injective_iff] at hreg
+            rcases hreg with ⟨a, b, hzero, hab⟩
+            have hne : a - b ≠ 0 := sub_ne_zero.mpr hab
+            have hkill : g • (a - b) = 0 := by
+              rw [smul_sub, hzero, sub_self]
+            have hmem : g ∈
+                (⋃ p : {p : PrimeSpectrum R // p ∈
+                  Formalization.Books.Algebra.Unit63.associatedPrimes R M},
+                  (p.1.asIdeal : Set R)) := by
+              rw [Formalization.Books.Algebra.Unit63.iUnion_associatedPrimes_eq_module_zeroDivisors]
+              exact ⟨a - b, hne, hkill⟩
+            obtain ⟨p, hp⟩ := Set.mem_iUnion.mp hmem
+            have hpQ : p.1 ∈ Module.support R (QuotSMulTop g M) := by
+              rw [Module.support_quotSMulTop]
+              refine ⟨Formalization.Books.Algebra.Unit63.ass_subset_support
+                p.2, ?_⟩
+              rw [PrimeSpectrum.mem_zeroLocus]
+              intro r hr
+              have hr' : r = g := by simpa using hr
+              rw [hr']
+              exact hp
+            have hdepthle :=
+              localDepth_le_dim_of_associatedPrime (R := R) (M := M)
+                p.1 p.2
+            have hdimle :=
+              dim_quotient_le_supportDim_of_mem_support
+                (R := R) (M := QuotSMulTop g M) p.1 hpQ
+            have hchain : (((n + 1 : ℕ∞) : WithBot ℕ∞)) ≤
+                Module.supportDim R (QuotSMulTop g M) := by
+              rw [hdepth] at hdepthle
+              exact hdepthle.trans hdimle
+            rw [hQdim] at hchain
+            have hnat : n + 1 ≤ n := by
+              exact_mod_cast hchain
+            exact (Nat.not_succ_le_self n hnat).elim
+          have hdrop := localDepth_drops_by_one
+            (R := R) (M := M) g hg hreg
+          have hdropQ : localDepth R (QuotSMulTop g M) = (n : ℕ∞) := by
+            calc
+              localDepth R (QuotSMulTop g M) =
+                  (↑(n + 1) : ℕ∞) - 1 := by
+                simpa [hdepth] using hdrop
+              _ = (n : ℕ∞) := by
+                rw [ENat.natCast_add]
+                exact (ENat.addLECancellable_of_ne_top ENat.one_ne_top).add_tsub_cancel_right
+          have hCMQ : IsCohenMacaulay R (QuotSMulTop g M) := by
+            unfold IsCohenMacaulay
+            rw [hdropQ, hQdim]
+          exact ⟨hreg, hCMQ, by simpa [hdepth] using hdrop⟩
 
 /-! ## Regular sequences cut out by the expected dimension -/
 

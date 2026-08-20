@@ -164,6 +164,19 @@ theorem etale_baseChange
     Algebra.Etale R' (R' ⊗[R] S) := by
   infer_instance
 
+/-- A standard étale presentation has at most `|T|` algebra maps to a
+finite target `T`: every map is determined by the distinguished generator. -/
+theorem card_algHom_le_of_isStandardEtale
+    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    [Algebra R S] [Algebra R T] [Fintype T] [Fintype (S →ₐ[R] T)]
+    (hS : Algebra.IsStandardEtale R S) :
+    Fintype.card (S →ₐ[R] T) ≤ Fintype.card T := by
+  let _ : Algebra.IsStandardEtale R S := hS
+  let P : StandardEtalePresentation R S :=
+    Algebra.IsStandardEtale.nonempty_standardEtalePresentation.some
+  exact Fintype.card_le_of_injective (fun f : S →ₐ[R] T ↦ f P.x)
+    (fun _ _ h ↦ P.hom_ext h)
+
 /-- Étaleness is local on the target for a finite basic-open cover. -/
 theorem etale_local_on_target
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]

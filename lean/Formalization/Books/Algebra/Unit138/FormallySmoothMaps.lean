@@ -719,11 +719,11 @@ theorem smooth_finite_type_descent
 
 theorem smooth_descends_through_colimit
     {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B)
-    (D : Formalization.Books.Algebra.Unit127.DirectedRingMapColimit f)
+    (D : Formalization.Books.Algebra.Unit127.DirectedFinitePresentationApproximation f)
     (hf : f.Smooth) :
-    ∃ i : D.index,
-      (D.stageMap i).Smooth ∧
-        Nonempty (directedStageBaseChangeRing D i ≃+* B) := by
+    ∃ i : D.base.colimit.index,
+      (D.base.colimit.stageMap i).Smooth ∧
+        Nonempty (directedStageBaseChangeRing D.base.colimit i ≃+* B) := by
   sorry
 
 theorem formallySmooth_iff_faithfullyFlat_baseChange

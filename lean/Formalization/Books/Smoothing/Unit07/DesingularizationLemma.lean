@@ -269,7 +269,8 @@ theorem desingularizationAuxiliaryRing_mod_pi_equiv
     have hq : (powerQuotientMk π 1) π = 0 := by
       apply Ideal.Quotient.eq_zero_iff_mem.2
       change π ∈ Ideal.span ({π ^ 1} : Set R)
-      simpa using (Ideal.subset_span (Set.mem_singleton π))
+      rw [pow_one]
+      exact Ideal.subset_span (Set.mem_singleton π)
     change (MvPolynomial.C : A →+* W) ((powerQuotientMk π 1) π) = 0
     rw [hq]
     exact (MvPolynomial.C : A →+* W).map_zero
@@ -287,10 +288,7 @@ theorem desingularizationAuxiliaryRing_mod_pi_equiv
       ∑ i : Fin n,
         MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
           MvPolynomial.X i = 0
-    simpa [coeff] using
-      (neg_add_cancel (∑ i : Fin n,
-        MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
-          MvPolynomial.X i))
+    exact neg_add_cancel _
   have hp_correction : ∀ j : Fin c, pmap (corrections j) = 0 := by
     intro j
     have hzero := show pmap (corrections j -
@@ -321,7 +319,7 @@ theorem desingularizationAuxiliaryRing_mod_pi_equiv
       intro a ha
       rw [Ideal.mem_span_singleton'] at ha
       rcases ha with ⟨r, rfl⟩
-      simp only [map_mul, RingHom.map_pow, pow_one]
+      simp only [map_mul, pow_one]
       simp [hfB_pi])
   let coeffA : A →+*
       powerQuotient (P ⧸ I) (algebraMap R (P ⧸ I) π) 1 :=
@@ -512,7 +510,7 @@ theorem desingularizationAuxiliaryRing_smoothAt_of_pi_mem
                 MvPolynomial.C (linearCoefficients j k) *
                   MvPolynomial.X (Sum.inr k)) =
           (if i = j then 1 else 0) := by
-      simp [MvPolynomial.pderiv_C_mul, Pi.single_apply, eq_comm]
+      simp [Pi.single_apply, eq_comm]
     have hprod : MvPolynomial.pderiv (Sum.inl i) (r * MvPolynomial.C π) ∈ K := by
       rw [MvPolynomial.pderiv_mul, MvPolynomial.pderiv_C, mul_zero, add_zero]
       exact K.mul_mem_left _ hCπ
@@ -632,8 +630,8 @@ theorem desingularizationAuxiliaryRing_smoothAt_of_pi_mem
         exact hu
       exact hu'.mul hQ
   }
-  letI : Algebra.IsStandardSmooth R (Localization.Away g) := C.isStandardSmooth
-  exact ⟨g, hg, Formalization.Books.Algebra.Unit137.standard_smooth_is_smooth⟩
+  exact ⟨g, hg, @Formalization.Books.Algebra.Unit137.standard_smooth_is_smooth
+    R (Localization.Away g) _ _ _ C.isStandardSmooth⟩
 
 /-- The finitely presented ring `B` displayed in the proof. -/
 abbrev desingularizationConstructionRing
@@ -819,8 +817,8 @@ theorem desingularizationAuxiliaryRelationQuotient_equiv
             (Ideal.Quotient.mk I exprP)
           simp only [map_add, map_mul, map_sum, MvPolynomial.aeval_C,
             MvPolynomial.aeval_X, desingularizationLiftVW, MvPolynomial.rename_X]
-          simp only [exprP, MvPolynomial.C_eq_algebraMap, Ideal.Quotient.mk_algebraMap]
-          simp only [map_add, map_mul, map_sum, Ideal.Quotient.mk_algebraMap]
+          simp only [exprP, MvPolynomial.C_eq_algebraMap]
+          simp only [map_add, map_mul, map_sum]
           have hmk (r : R) :
               Ideal.Quotient.mk I (algebraMap R P r) = algebraMap R (P ⧸ I) r :=
             Ideal.Quotient.mk_algebraMap R I r

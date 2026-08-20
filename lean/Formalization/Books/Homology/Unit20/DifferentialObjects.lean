@@ -954,12 +954,14 @@ structure SelfMapPageDifferentialRule {C : Type u} [Category.{v} C]
   differential_squared : differential ≫ differential = 0
   rule : ∀ {T : C}
     (z : T ⟶ (selfMapCyclePlus α r : C))
+    (x : T ⟶ A.carrier)
     (y : T ⟶ A.carrier)
     (yCycle : T ⟶ (selfMapCyclePlus α r : C))
+    (_hz : z ≫ (selfMapCyclePlus α r).arrow =
+      x ≫ cokernel.π α.hom.hom)
+    (_h : x ≫ A.d = y ≫ selfMapAlphaPow α r)
     (_hy : yCycle ≫ (selfMapCyclePlus α r).arrow =
-      y ≫ cokernel.π α.hom.hom)
-    (_h : z ≫ (selfMapCyclePlus α r).arrow ≫ differentialSelfMapD₀ α =
-      y ≫ selfMapAlphaPow α r ≫ cokernel.π α.hom.hom),
+      y ≫ cokernel.π α.hom.hom),
     selfMapPageClassOfCycle α r z ≫ differential =
       selfMapPageClassOfCycle α r yCycle
 

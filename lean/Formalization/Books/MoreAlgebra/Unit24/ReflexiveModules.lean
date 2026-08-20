@@ -406,7 +406,7 @@ theorem dualEval_surjective_of_discreteValuationRing
   let hpid :=
     (IsDiscreteValuationRing.iff_pid_with_one_nonzero_prime R).mp
       (inferInstance : IsDiscreteValuationRing R)
-  letI : IsPrincipalIdealRing R := hpid.1
+  let _ : IsPrincipalIdealRing R := hpid.1
   let T := Submodule.torsion R M
   let Q := M ⧸ T
   let q : M →ₗ[R] Q := T.mkQ
@@ -609,8 +609,8 @@ theorem reflexive_localization_iff
        ∀ m : MaximalSpectrum R,
          Reflexive (Localization.AtPrime m.asIdeal)
            (LocalizedModule.AtPrime m.asIdeal M)] := by
-  letI : Module.FinitePresentation R M := finitePresentation_of_finite R M
-  letI : Module.FinitePresentation R (Module.Dual R M) :=
+  let _ : Module.FinitePresentation R M := finitePresentation_of_finite R M
+  let _ : Module.FinitePresentation R (Module.Dual R M) :=
     finitePresentation_of_finite R (Module.Dual R M)
   apply List.tfae_of_forall (Reflexive R M)
   intro a ha

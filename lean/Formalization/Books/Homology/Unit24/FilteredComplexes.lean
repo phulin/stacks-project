@@ -495,7 +495,7 @@ structure FilteredComplexSpectralSequence {C : Type u}
               dsimp [f, d]
               rw [Category.assoc]
               convert hsq using 1
-              · congr 1; ring
+              · congr 1; ring_nf
               · let ht : (bigradedShift r (-r + 1)).obj (page r) (p, q) =
                     (bigradedShift r (-r + 1)).obj (page r)
                       (r + (p - r), (-r + 1) + (q + r - 1)) :=

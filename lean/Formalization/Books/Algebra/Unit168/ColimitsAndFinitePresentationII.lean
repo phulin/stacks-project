@@ -6,6 +6,7 @@ import Mathlib.RingTheory.RingHom.Finite
 import Mathlib.RingTheory.RingHom.FiniteType
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.RingHom.Smooth
+import Mathlib.RingTheory.Unramified.Basic
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 import Formalization.Books.Algebra.Unit136.SyntomicMorphisms
 
@@ -249,25 +250,26 @@ theorem colimitSurjective
 
 /-- Unramifiedness of a base-changed algebra map is detected at a finite stage.
 -/
-/- Mathlib exposes formal unramifiedness directly; the finite-type conjunction
-is the standard ring-map notion used by the source. -/
-def IsUnramified
-    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
-  RingHom.FiniteType f ∧ RingHom.FormallyUnramified f
-
 theorem colimitUnramified
     {A₀ A B₀ C₀ : Type u}
     [CommRing A₀] [CommRing A] [CommRing B₀] [CommRing C₀]
     [Algebra A₀ B₀] [Algebra A₀ C₀]
     (f : A₀ →+* A) (D : DirectedAlgebraColimitWithZero f)
     (φ₀ : B₀ →ₐ[A₀] C₀)
-    (hunramified : IsUnramified
-      (directedAlgebraTensorMapTarget f φ₀).toRingHom)
+    (hunramified :
+      letI : Algebra (directedAlgebraTensorTarget f B₀)
+          (directedAlgebraTensorTarget f C₀) :=
+        (directedAlgebraTensorMapTarget f φ₀).toRingHom.toAlgebra
+      Algebra.Unramified (directedAlgebraTensorTarget f B₀)
+        (directedAlgebraTensorTarget f C₀))
     (hfiniteType : RingHom.FiniteType φ₀.toRingHom) :
     letI : Preorder D.base.index := D.base.indexPreorder
     ∃ i, D.zero ≤ i ∧
-      IsUnramified
-        (directedAlgebraTensorMapStage D.base i φ₀).toRingHom := by
+      letI : Algebra (directedAlgebraTensorStage D.base B₀ i)
+          (directedAlgebraTensorStage D.base C₀ i) :=
+        (directedAlgebraTensorMapStage D.base i φ₀).toRingHom.toAlgebra
+      Algebra.Unramified (directedAlgebraTensorStage D.base B₀ i)
+        (directedAlgebraTensorStage D.base C₀ i) := by
   sorry
 
 /-- An isomorphism after base change is detected at a finite stage when the

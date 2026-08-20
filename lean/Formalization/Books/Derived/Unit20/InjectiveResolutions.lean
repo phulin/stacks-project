@@ -233,7 +233,47 @@ theorem injective_rightAcyclic
     [HasDerivedCategory.{w} B]
     (F : A ⥤ B) [F.Additive] (I : A) [Injective I] :
     RightAcyclic F I := by
-  sorry
+  let _ : HasDerivedCategory A := HasDerivedCategory.standard A
+  let : AdditiveCategory (DPlus B) := {
+    toPreadditive := inferInstance,
+    toHasFiniteProducts := inferInstance }
+  let hF : Nonempty (ExactTriangulatedFunctorData (rightDerivedSourceFunctor F)) := by
+    have hP : Nonempty (ExactTriangulatedFunctorData F.mapHomotopyCategoryPlus) :=
+      (additive_homotopy_functors_are_exact F).2.1
+    obtain ⟨hP⟩ := hP
+    let : F.mapHomotopyCategoryPlus.CommShift ℤ := hP.commShift
+    have hPT : F.mapHomotopyCategoryPlus.IsTriangulated := hP.isTriangulated
+    let : F.mapHomotopyCategoryPlus.IsTriangulated := hPT
+    let hG : (rightDerivedSourceFunctor F).CommShift ℤ := by
+      dsimp [rightDerivedSourceFunctor]
+      infer_instance
+    let : (rightDerivedSourceFunctor F).CommShift ℤ := hG
+    have hT : (rightDerivedSourceFunctor F).IsTriangulated := by
+      dsimp [rightDerivedSourceFunctor]
+      infer_instance
+    exact ⟨{ commShift := hG, isTriangulated := hT }⟩
+  let K : CompPlus A :=
+    ⟨(CochainComplex.singleFunctor A 0).obj I, ⟨0, inferInstance⟩⟩
+  have hK : IsTermwiseInjectiveComplex K := by
+    intro n
+    by_cases hn : n = 0
+    · subst n
+      change Injective I
+      infer_instance
+    · exact (HomologicalComplex.isZero_single_obj_X (ComplexShape.up ℤ) 0 I n hn).injective
+  have h := termwiseInjectiveComplex_computes (rightDerivedSourceFunctor F) hF K hK
+  have hobj :
+      (HomotopyCategory.Plus.quotient A).obj K =
+        (HomotopyCategory.Plus.singleFunctor A 0).obj I := by
+    congr 1
+  change ComputesRightDerived (quasiIsoPlusProperty A)
+    (boundedQuasiIsoProperty_properties A).1 (rightDerivedSourceFunctor F)
+    ((HomotopyCategory.Plus.quotient A).obj K) at h
+  rw [hobj] at h
+  change ComputesRightDerived (quasiIsoPlusProperty A)
+    (boundedQuasiIsoProperty_properties A).1 (rightDerivedSourceFunctor F)
+    ((HomotopyCategory.Plus.singleFunctor A 0).obj I)
+  exact h
 
 /-! ## Enough injectives -/
 
@@ -247,7 +287,48 @@ theorem rightDerived_everywhere_defined_of_enoughInjectives
     (F : KPlus A ⥤ D) (hF : Nonempty (ExactTriangulatedFunctorData F)) :
     RightDerivable (quasiIsoPlusProperty A)
       (boundedQuasiIsoProperty_properties A).1 F := by
-  sorry
+  obtain ⟨hExact⟩ := hF
+  let : F.CommShift ℤ := hExact.commShift
+  let hTri : F.IsTriangulated := hExact.isTriangulated
+  let : F.IsTriangulated := hTri
+  let S : MorphismProperty (KPlus A) := quasiIsoPlusProperty A
+  let hS : SaturatedMultiplicativeSystem S := by
+    simpa [S] using (boundedQuasiIsoProperty_properties A).1
+  let _ : LeftMultiplicativeSystem S := hS.1.1
+  let _ : RightMultiplicativeSystem S := hS.1.2
+  let _ : Formalization.Books.Derived.Unit05.CompatibleWithTriangulation S := by
+    change MorphismProperty.IsCompatibleWithTriangulation
+      (HomotopyCategory.Plus.quasiIso A)
+    rw [HomotopyCategory.Plus.quasiIso_eq_subcategoryAcyclic_trW]
+    infer_instance
+  apply rightDerived_everywhere_of_computing_replacements
+    (S := S) (hS := hS) (F := F)
+  intro X
+  obtain ⟨K, hK⟩ := X
+  obtain ⟨K, rfl⟩ := HomotopyCategory.quotient_obj_surjective K
+  simp only [HomotopyCategory.plus_quotient_obj_iff] at hK
+  obtain ⟨n, hn⟩ := hK
+  let K' : CompPlus A := ⟨K, ⟨n, hn⟩⟩
+  let _ : K'.obj.IsStrictlyGE n := hn
+  obtain ⟨L, hL, i, hi⟩ :=
+    CochainComplex.Plus.exists_quasiIso_injective K' n
+  let X' : KPlus A :=
+    (HomotopyCategory.Plus.quotient A).obj
+      ((InjectiveObject.ι A).mapCochainComplexPlus.obj L)
+  let s : (HomotopyCategory.Plus.quotient A).obj K' ⟶ X' :=
+    (HomotopyCategory.Plus.quotient A).map i
+  refine ⟨X', s, ?_, ?_⟩
+  · change HomotopyCategory.Plus.quasiIso A s
+    rw [HomotopyCategory.Plus.quasiIso_iff]
+    exact (HomotopyCategory.quotient_map_mem_quasiIso_iff
+      ((CochainComplex.Plus.ι A).map i)).2 hi
+  · have hcomp := termwiseInjectiveComplex_computes
+      F ⟨hExact⟩
+      ((InjectiveObject.ι A).mapCochainComplexPlus.obj L) (by
+        intro n
+        change Injective ((InjectiveObject.ι A).obj (L.obj.X n))
+        infer_instance)
+    simpa [X', S, ComputesRightDerivedComplex] using hcomp
 
 /-- For an additive functor between abelian categories, Mathlib's canonical
 bounded-below right-derived functor is defined everywhere when the source has

@@ -1,6 +1,8 @@
 import Formalization.Books.Derived.Unit20.InjectiveResolutions
+import Formalization.Books.Derived.Unit04.ElementaryResults
 import Formalization.Books.Derived.Unit12.CanonicalDeltaFunctor
 import Formalization.Books.Derived.Unit03.Definitions
+import Mathlib.CategoryTheory.Abelian.ShortExact
 
 /-!
 # Derived Categories, Chapter 20: properties of right derived functors
@@ -69,7 +71,243 @@ theorem rightDerivedFunctorPlus_isExact
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (F : A ⥤ B) [F.Additive] :
     Nonempty (ExactTriangulatedFunctorData F.rightDerivedFunctorPlus) := by
-  sorry
+  let : Formalization.Books.Homology.Unit03.AdditiveCategory (DPlus B) := {
+    toPreadditive := inferInstance,
+    toHasFiniteProducts := inferInstance }
+  let : Formalization.Books.Homology.Unit03.AdditiveCategory (DPlus A) := {
+    toPreadditive := inferInstance,
+    toHasFiniteProducts := inferInstance }
+  let hF : Nonempty (ExactTriangulatedFunctorData (rightDerivedSourceFunctor F)) := by
+    have hP : Nonempty (ExactTriangulatedFunctorData F.mapHomotopyCategoryPlus) :=
+      (additive_homotopy_functors_are_exact F).2.1
+    obtain ⟨hP⟩ := hP
+    let : F.mapHomotopyCategoryPlus.CommShift ℤ := hP.commShift
+    have hPT : F.mapHomotopyCategoryPlus.IsTriangulated := hP.isTriangulated
+    let : F.mapHomotopyCategoryPlus.IsTriangulated := hPT
+    let hG : (rightDerivedSourceFunctor F).CommShift ℤ := by
+      dsimp [rightDerivedSourceFunctor]
+      infer_instance
+    let : (rightDerivedSourceFunctor F).CommShift ℤ := hG
+    have hT : (rightDerivedSourceFunctor F).IsTriangulated := by
+      dsimp [rightDerivedSourceFunctor]
+      infer_instance
+    exact ⟨{ commShift := hG, isTriangulated := hT }⟩
+  obtain ⟨hF⟩ := hF
+  let : (rightDerivedSourceFunctor F).CommShift ℤ := hF.commShift
+  let hFT : (rightDerivedSourceFunctor F).IsTriangulated := hF.isTriangulated
+  let : (rightDerivedSourceFunctor F).IsTriangulated := hFT
+  let hS : Formalization.Books.Categories.Unit27.SaturatedMultiplicativeSystem
+      (quasiIsoPlusProperty A) := (boundedQuasiIsoProperty_properties A).1
+  let _ : Formalization.Books.Categories.Unit27.LeftMultiplicativeSystem
+      (quasiIsoPlusProperty A) := hS.1.1
+  let _ : Formalization.Books.Categories.Unit27.RightMultiplicativeSystem
+      (quasiIsoPlusProperty A) := hS.1.2
+  let _ : Formalization.Books.Derived.Unit05.CompatibleWithTriangulation
+      (quasiIsoPlusProperty A) := by
+    change MorphismProperty.IsCompatibleWithTriangulation
+      (HomotopyCategory.Plus.quasiIso A)
+    rw [HomotopyCategory.Plus.quasiIso_eq_subcategoryAcyclic_trW]
+    infer_instance
+  have hDef : Formalization.Books.Derived.Unit14.RightDerivable
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F) :=
+    rightDerived_everywhere_defined_of_enoughInjectives
+      (rightDerivedSourceFunctor F) ⟨hF⟩
+  obtain ⟨hP, hG⟩ := Formalization.Books.Derived.Unit14.rightDerivedFunctor_isExact hS
+    (rightDerivedSourceFunctor F)
+  obtain ⟨hG, hGT0⟩ := hG
+  let P := Formalization.Books.Derived.Unit14.rightDerivedProperty
+    (quasiIsoPlusProperty A) hS
+    (rightDerivedSourceFunctor F)
+  let J : (KPlus A) ⥤ P.FullSubcategory :=
+    P.lift (𝟭 (KPlus A)) hDef
+  let eJ : J ⋙ P.ι ≅ 𝟭 (KPlus A) := P.liftCompιIso (𝟭 _) hDef
+  let hJ : J.CommShift ℤ := by
+    let : P.ι.CommShift ℤ := inferInstance
+    let : (𝟭 (KPlus A)).CommShift ℤ := inferInstance
+    exact Functor.CommShift.ofComp eJ ℤ
+  let : P.IsTriangulated := hP
+  let : J.CommShift ℤ := hJ
+  let : NatTrans.CommShift eJ.hom ℤ := Functor.CommShift.ofComp_compatibility eJ ℤ
+  have hJT : J.IsTriangulated := by
+    have hcomp : (J ⋙ P.ι).IsTriangulated := by
+      rw [Functor.isTriangulated_iff_of_iso eJ]
+      infer_instance
+    constructor
+    intro T hT
+    rw [← P.ι.map_distinguished_iff]
+    exact isomorphic_distinguished _ (hcomp.map_distinguished T hT) _
+      ((Functor.mapTriangleCompIso J P.ι).app T).symm
+  let hG' : (J ⋙ Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)).CommShift ℤ := by
+    let : (Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)).CommShift ℤ := hG
+    infer_instance
+  let : (J ⋙ Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)).CommShift ℤ := hG'
+  have hGT : (J ⋙ Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)).IsTriangulated := by
+    let : P.IsTriangulated := hP
+    let : (Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)).CommShift ℤ := hG
+    let : (Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)).IsTriangulated := hGT0
+    infer_instance
+  let G0 : KPlus A ⥤ DPlus B :=
+    J ⋙ Formalization.Books.Derived.Unit14.rightDerivedFunctor
+      (quasiIsoPlusProperty A) hS
+      (rightDerivedSourceFunctor F)
+  have hG0 : Nonempty (ExactTriangulatedFunctorData G0) :=
+    ⟨{ commShift := hG', isTriangulated := hGT }⟩
+  obtain ⟨hG0⟩ := hG0
+  let : G0.CommShift ℤ := hG0.commShift
+  let hG0T : G0.IsTriangulated := hG0.isTriangulated
+  let : G0.IsTriangulated := hG0T
+  let β : rightDerivedSourceFunctor F ⟶ G0 := {
+    app := fun X => Formalization.Books.Derived.Unit14.rightDerivedCanonicalMap
+      (quasiIsoPlusProperty A) hS (rightDerivedSourceFunctor F) X (hDef X)
+    naturality := by
+      intro X Y f
+      dsimp [G0, J, P, Formalization.Books.Derived.Unit14.rightDerivedFunctor,
+        Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor]
+      let q : Formalization.Books.Derived.Unit14.RightDerivedSquare
+          (quasiIsoPlusProperty A) f := {
+        source := Formalization.Books.Derived.Unit14.rightDerivedIdentityIndex
+          (quasiIsoPlusProperty A) X
+        target := Formalization.Books.Derived.Unit14.rightDerivedIdentityIndex
+          (quasiIsoPlusProperty A) Y
+        dotted := f
+        comm := by
+          change (𝟙 X) ≫ f = f ≫ (𝟙 Y)
+          simp }
+      have hJobj (Z : KPlus A) :
+          ((P.lift (𝟭 (KPlus A)) hDef).obj Z).obj = Z := by
+        rfl
+      have hJmap {Z W : KPlus A} (g : Z ⟶ W) :
+          ((P.lift (𝟭 (KPlus A)) hDef).map g).hom = g := by
+        rfl
+      convert (Formalization.Books.Derived.Unit14.rightDerivedMap_condition hS
+        (rightDerivedSourceFunctor F) f (hDef X) (hDef Y) q) using 1 <;>
+        simp [Formalization.Books.Derived.Unit14.rightDerivedCanonicalMap,
+          Formalization.Books.Derived.Unit14.rightDerivedValue,
+          Formalization.Books.Derived.Unit14.rightDerivedDiagram,
+          Formalization.Books.Derived.Unit14.rightDerivedIdentityIndex,
+          Formalization.Books.Derived.Unit14.rightDerivedFunctor,
+          J, P, G0, q, MorphismProperty.Under.mk] <;>
+        constructor <;> intro h <;>
+          simpa [hJobj, hJmap, J, P, G0,
+            Formalization.Books.Derived.Unit14.rightDerivedFunctor,
+            Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor] using h }
+  have hβ : ∀ (Y : HomotopyCategory.Plus (InjectiveObject A)),
+      IsIso (β.app ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj Y)) := by
+    intro Y
+    let _ : Formalization.Books.Homology.Unit03.AdditiveCategory (InjectiveObject A) := {
+      toPreadditive := inferInstance,
+      toHasFiniteProducts := inferInstance }
+    obtain ⟨I, rfl⟩ := HomotopyCategory.Plus.quotient_obj_surjective Y
+    have hI : IsTermwiseInjectiveComplex
+        ((InjectiveObject.ι A).mapCochainComplexPlus.obj I) := by
+      intro n
+      change Injective ((InjectiveObject.ι A).obj (I.obj.X n))
+      infer_instance
+    obtain ⟨hX, hXiso⟩ := termwiseInjectiveComplex_computes
+      (rightDerivedSourceFunctor F) ⟨hF⟩
+      ((InjectiveObject.ι A).mapCochainComplexPlus.obj I) hI
+    have hobj :
+        (HomotopyCategory.Plus.quotient A).obj
+            ((InjectiveObject.ι A).mapCochainComplexPlus.obj I) =
+          (InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
+            ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I) := by
+      rfl
+    have hXiso' : IsIso (Formalization.Books.Derived.Unit14.rightDerivedCanonicalMap
+        (quasiIsoPlusProperty A) hS (rightDerivedSourceFunctor F)
+        ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
+          ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I))
+        (hDef ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
+          ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I)))) := by
+      rw [← hobj]
+      simpa only using hXiso
+    simpa [β, G0, J, P, Formalization.Books.Derived.Unit14.rightDerivedFunctor,
+      Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor,
+      Functor.mapHomotopyCategoryPlus] using hXiso'
+  have hInv : (quasiIsoPlusProperty A).IsInvertedBy G0 := by
+    have hInv0 := Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor_inverts
+      hS (rightDerivedSourceFunctor F) hDef
+    intro X Y f hf
+    dsimp [G0, J, P, Formalization.Books.Derived.Unit14.rightDerivedFunctor,
+      Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor]
+    exact hInv0 f hf
+  let H : DPlus A ⥤ DPlus B :=
+    Localization.lift G0 hInv (DerivedCategory.Plus.Qh (C := A))
+  let eH : DerivedCategory.Plus.Qh (C := A) ⋙ H ≅ G0 :=
+    Localization.Lifting.iso (DerivedCategory.Plus.Qh (C := A))
+      (quasiIsoPlusProperty A) G0 H
+  let hHC : H.CommShift ℤ := by
+    let : G0.CommShift ℤ := hG0.commShift
+    exact Functor.commShiftOfLocalization
+      (DerivedCategory.Plus.Qh (C := A)) (quasiIsoPlusProperty A) ℤ G0 H
+  let : H.CommShift ℤ := hHC
+  letI : ∀ n : ℤ, (shiftFunctor (DPlus A) n).Additive := by
+    intro n
+    have := Functor.additive_of_iso
+      ((ObjectProperty.ι ((DerivedCategory.TStructure.t (C := A)).plus)).commShiftIso n).symm
+    apply Functor.additive_of_comp_faithful
+      (shiftFunctor (DPlus A) n)
+      (ObjectProperty.ι ((DerivedCategory.TStructure.t (C := A)).plus))
+  let : NatTrans.CommShift eH.hom ℤ := by
+    dsimp [eH]
+    infer_instance
+  have hHT : H.IsTriangulated := by
+    let : G0.IsTriangulated := hG0T
+    apply Functor.isTriangulated_of_precomp_iso eH
+  let α : rightDerivedSourceFunctor F ⟶
+      DerivedCategory.Plus.Qh (C := A) ⋙ H := β ≫ eH.inv
+  have hHright : H.IsRightDerivedFunctor
+      (F := rightDerivedSourceFunctor F)
+      (L := DerivedCategory.Plus.Qh (C := A)) α
+        (quasiIsoPlusProperty A) := by
+    apply (HomotopyCategory.Plus.localizerMorphism_derives
+      (rightDerivedSourceFunctor F)).isRightDerivedFunctor_of_isIso α
+    intro Y
+    dsimp [α]
+    letI : IsIso (β.app ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj Y)) := hβ Y
+    infer_instance
+  let S : MorphismProperty (KPlus A) := quasiIsoPlusProperty A
+  have hHrightS : H.IsRightDerivedFunctor
+      (F := rightDerivedSourceFunctor F)
+      (L := DerivedCategory.Plus.Qh (C := A)) α
+        S := by simpa [S] using hHright
+  haveI instHright : H.IsRightDerivedFunctor
+      (F := rightDerivedSourceFunctor F)
+      (L := DerivedCategory.Plus.Qh (C := A)) α S := hHrightS
+  haveI : H.IsRightDerivedFunctor α S := hHrightS
+  haveI instCanonical : F.rightDerivedFunctorPlus.IsRightDerivedFunctor
+      F.rightDerivedFunctorPlusUnit S := by infer_instance
+  haveI : F.rightDerivedFunctorPlus.IsRightDerivedFunctor
+      (F := rightDerivedSourceFunctor F)
+      (L := DerivedCategory.Plus.Qh (C := A)) F.rightDerivedFunctorPlusUnit S := by
+    simpa [rightDerivedSourceFunctor] using instCanonical
+  let eRF : F.rightDerivedFunctorPlus ≅ H :=
+    Functor.rightDerivedUnique (F := rightDerivedSourceFunctor F)
+      (L := DerivedCategory.Plus.Qh (C := A)) F.rightDerivedFunctorPlus H
+      F.rightDerivedFunctorPlusUnit α S
+  let hRF : F.rightDerivedFunctorPlus.CommShift ℤ :=
+    Functor.CommShift.ofIso eRF.symm ℤ
+  let : F.rightDerivedFunctorPlus.CommShift ℤ := hRF
+  let : NatTrans.CommShift eRF.symm.hom ℤ :=
+    Functor.CommShift.ofIso_compatibility eRF.symm ℤ
+  let : NatTrans.CommShift eRF.hom ℤ :=
+    NatTrans.CommShift.of_iso_inv eRF.symm ℤ
+  have hRFT : F.rightDerivedFunctorPlus.IsTriangulated := by
+    rw [Functor.isTriangulated_iff_of_iso eRF]
+    exact hHT
+  exact ⟨{ commShift := hRF, isTriangulated := hRFT }⟩
 
 /-- The right-derived functor induces an exact functor from `K⁺(A)` to
 `D⁺(B)`. -/
@@ -79,7 +317,11 @@ theorem rightDerivedHomotopyFunctor_isExact
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (F : A ⥤ B) [F.Additive] :
     Nonempty (ExactTriangulatedFunctorData (rightDerivedHomotopyFunctor F)) := by
-  sorry
+  obtain ⟨hF⟩ := rightDerivedFunctorPlus_isExact F
+  let : F.rightDerivedFunctorPlus.CommShift ℤ := hF.commShift
+  let hT : F.rightDerivedFunctorPlus.IsTriangulated := hF.isTriangulated
+  let : F.rightDerivedFunctorPlus.IsTriangulated := hT
+  exact ⟨{ commShift := by infer_instance, isTriangulated := by infer_instance }⟩
 
 /-- The right-derived functor on bounded-below complexes carries the
 canonical δ-functor structure. -/
@@ -89,7 +331,40 @@ theorem rightDerivedComplexFunctor_isDeltaFunctor
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (F : A ⥤ B) [F.Additive] :
     Nonempty (DeltaFunctor (rightDerivedComplexFunctor F)) := by
-  sorry
+  obtain ⟨hRF⟩ := rightDerivedFunctorPlus_isExact F
+  let : F.rightDerivedFunctorPlus.CommShift ℤ := hRF.commShift
+  let : F.rightDerivedFunctorPlus.IsTriangulated := hRF.isTriangulated
+  let d := Classical.choice
+    (Formalization.Books.Derived.Unit12.canonicalPlusFunctor_isDeltaFunctor A)
+  refine ⟨{
+    delta := fun S hS =>
+      F.rightDerivedFunctorPlus.map (d.delta S hS) ≫
+        (F.rightDerivedFunctorPlus.commShiftIso (1 : ℤ)).hom.app
+          ((DerivedCategory.Plus.Q (C := A)).obj S.X₁)
+    distinguished := by
+      intro S hS
+      change Triangle.mk
+          (F.rightDerivedFunctorPlus.map ((DerivedCategory.Plus.Q (C := A)).map S.f))
+          (F.rightDerivedFunctorPlus.map ((DerivedCategory.Plus.Q (C := A)).map S.g))
+          (F.rightDerivedFunctorPlus.map (d.delta S hS) ≫
+            (F.rightDerivedFunctorPlus.commShiftIso (1 : ℤ)).hom.app
+              ((DerivedCategory.Plus.Q (C := A)).obj S.X₁)) ∈
+        distTriang (DPlus B)
+      exact F.rightDerivedFunctorPlus.map_distinguished
+        (Triangle.mk ((DerivedCategory.Plus.Q (C := A)).map S.f)
+          ((DerivedCategory.Plus.Q (C := A)).map S.g) (d.delta S hS))
+        (d.distinguished S hS)
+    naturality := by
+      intro S₁ S₂ φ h₁ h₂
+      dsimp
+      rw [← Category.assoc, ← F.rightDerivedFunctorPlus.map_comp,
+        d.naturality φ h₁ h₂, F.rightDerivedFunctorPlus.map_comp]
+      rw [Category.assoc]
+      have hcomm := (F.rightDerivedFunctorPlus.commShiftIso (1 : ℤ)).hom.naturality
+        ((DerivedCategory.Plus.Q (C := A)).map φ.τ₁)
+      simpa [Category.assoc] using congrArg
+        (fun k => F.rightDerivedFunctorPlus.map (d.delta S₁ h₁) ≫ k) hcomm
+  }⟩
 
 /-- The right-derived functor on objects carries the induced δ-functor
 structure. -/
@@ -99,6 +374,76 @@ theorem rightDerivedObjectFunctor_isDeltaFunctor
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (F : A ⥤ B) [F.Additive] :
     Nonempty (DeltaFunctor (rightDerivedObjectFunctor F)) := by
-  sorry
+  obtain ⟨d⟩ := rightDerivedComplexFunctor_isDeltaFunctor F
+  let K : A ⥤ CompPlus A :=
+    (CochainComplex.plus A).lift (CochainComplex.singleFunctor A 0) (by
+      intro X
+      exact ⟨0, inferInstance⟩)
+  letI : K.PreservesZeroMorphisms := by
+    dsimp [K, ObjectProperty.lift]
+    constructor
+    intro X Y
+    simpa [K, ObjectProperty.lift] using
+      congrArg (fun f => ObjectProperty.homMk f)
+        (Functor.map_zero (CochainComplex.singleFunctor A 0) X Y)
+  have hmap : ∀ (S : ShortComplex A), S.ShortExact →
+      (S.map K).ShortExact := by
+    intro S hS
+    dsimp [K, ObjectProperty.lift]
+    let _ : PreservesFiniteLimits (CochainComplex.singleFunctor A 0) := by
+      dsimp [CochainComplex.singleFunctor, CochainComplex.singleFunctors]
+      infer_instance
+    let _ : PreservesFiniteColimits (CochainComplex.singleFunctor A 0) := by
+      dsimp [CochainComplex.singleFunctor, CochainComplex.singleFunctors]
+      infer_instance
+    apply CategoryTheory.ShortExact.reflects_shortExact_of_faithful
+      (CochainComplex.plus A).ι
+    simpa [K, ObjectProperty.lift, ShortComplex.map] using
+      hS.map_of_exact (CochainComplex.singleFunctor A 0)
+  let e : K ⋙ DerivedCategory.Plus.Q (C := A) ≅
+      DerivedCategory.Plus.singleFunctor A 0 := by
+    refine NatIso.ofComponents (fun X => ?_) ?_
+    · apply DerivedCategory.Plus.ι.preimageIso
+      exact ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm
+    intro X Y f
+    apply (DerivedCategory.Plus.ι).map_injective
+    simp only [Functor.map_comp]
+    have hY :
+        (DerivedCategory.Plus.ι).map
+            ((DerivedCategory.Plus.ι).preimageIso
+              ((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm).hom =
+          ((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm.hom := by
+      change (DerivedCategory.Plus.ι).map
+          ((DerivedCategory.Plus.ι).preimage
+            (((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm.hom)) =
+        ((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm.hom
+      exact CategoryTheory.Functor.map_preimage _
+    have hX :
+        (DerivedCategory.Plus.ι).map
+            ((DerivedCategory.Plus.ι).preimageIso
+              ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm).hom =
+          ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm.hom := by
+      change (DerivedCategory.Plus.ι).map
+          ((DerivedCategory.Plus.ι).preimage
+            (((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm.hom)) =
+        ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm.hom
+      exact CategoryTheory.Functor.map_preimage _
+    rw [hY, hX]
+    simpa [K, ObjectProperty.lift] using
+      (DerivedCategory.Plus.singleFunctorιIso A 0).inv.naturality f
+  let dK : DeltaFunctor (K ⋙ rightDerivedComplexFunctor F) := {
+    delta := fun S hS => d.delta (S.map K) (hmap S hS)
+    distinguished := by
+      intro S hS
+      exact d.distinguished (S.map K) (hmap S hS)
+    naturality := by
+      intro S₁ S₂ φ h₁ h₂
+      exact d.naturality ((Functor.mapShortComplex K).map φ)
+        (hmap S₁ h₁) (hmap S₂ h₂) }
+  have hfun : K ⋙ rightDerivedComplexFunctor F =
+      rightDerivedObjectFunctor F := by
+    dsimp [rightDerivedComplexFunctor, rightDerivedObjectFunctor]
+    sorry
+  exact ⟨hfun ▸ dK⟩
 
 end Formalization.Books.Derived.Unit20

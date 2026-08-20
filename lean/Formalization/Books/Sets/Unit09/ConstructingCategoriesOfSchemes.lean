@@ -94,17 +94,17 @@ def IsRepresentedAt (c : SchemeCoding.{u}) (α : Ordinal.{u}) (X : Scheme.{u}) :
 
 /- The source's countability hypothesis is Mathlib's canonical
 `CategoryTheory.CountableCategory`, whose fields record countable objects and
-countable hom types. -/
+countable hom types.  Cone and cocone existence are expressed directly by
+their standard `Nonempty` interfaces.  These abbreviations remain as the
+stable names consumed by the following Sets chapter. -/
 
-/-- Existence of a limit cone, without choosing a global `HasLimit` instance. -/
-def HasLimitCone {C : Type u} [Category C] {I : Type v} [Category I]
-    (F : I ⥤ C) : Prop :=
-  Nonempty (LimitCone F)
+/-- Compatibility name for existence of a limit cone. -/
+abbrev HasLimitCone {C : Type u} [Category C] {I : Type v} [Category I]
+    (F : I ⥤ C) : Prop := Nonempty (LimitCone F)
 
-/-- Existence of a colimit cocone, without choosing a global `HasColimit` instance. -/
-def HasColimitCocone {C : Type u} [Category C] {I : Type v} [Category I]
-    (F : I ⥤ C) : Prop :=
-  Nonempty (ColimitCocone F)
+/-- Compatibility name for existence of a colimit cocone. -/
+abbrev HasColimitCocone {C : Type u} [Category C] {I : Type v} [Category I]
+    (F : I ⥤ C) : Prop := Nonempty (ColimitCocone F)
 
 /-- The source's phrase “isomorphic to the ambient limit” for a chosen subcategory cone. -/
 def LimitConeAgreesWithAmbient {c : SchemeCoding.{u}} {α : Ordinal.{u}}
@@ -159,12 +159,13 @@ theorem lemma_construct_category (c : SchemeCoding.{u}) (S₀ : Set Scheme.{u}) 
         schemeSize T ≤ Bound (schemeSize S.obj) → IsRepresentedAt c α T) ∧
       (∀ {I : Type u} [Category.{u} I] [CountableCategory I]
         (F : I ⥤ Sch c α),
-        HasLimitCone (F ⋙ schInclusion c α) ↔ HasLimitCone F) ∧
+        Nonempty (LimitCone (F ⋙ schInclusion c α)) ↔ Nonempty (LimitCone F)) ∧
       (∀ {I : Type u} [Category.{u} I] [CountableCategory I]
         (F : I ⥤ Sch c α), LimitConeAgreesWithAmbient F) ∧
       (∀ {I : Type u} [Category.{u} I] [CountableCategory I]
         (F : I ⥤ Sch c α),
-        HasColimitCocone (F ⋙ schInclusion c α) ↔ HasColimitCocone F) ∧
+        Nonempty (ColimitCocone (F ⋙ schInclusion c α)) ↔
+          Nonempty (ColimitCocone F)) ∧
       (∀ {I : Type u} [Category.{u} I] [CountableCategory I]
         (F : I ⥤ Sch c α), ColimitCoconeAgreesWithAmbient F) := by
   sorry
@@ -233,14 +234,11 @@ theorem exists_locallyOfFiniteType_monomorphism_not_size_bounded :
 def IsFiniteTypeSchemeMorphism {X Y : Scheme.{u}} (f : X ⟶ Y) : Prop :=
   QuasiCompact f ∧ LocallyOfFiniteType f
 
-/-- An affine-open cover with a prescribed cardinality bound. -/
-def HasAffineOpenCoverOfCardinalAtMost (X : Scheme.{u}) (κ : Cardinal.{u}) : Prop :=
-  ∃ 𝒰 : X.OpenCover, Cardinal.mk 𝒰.I₀ ≤ κ ∧ ∀ i, IsAffine (𝒰.X i)
-
 /-- Pullbacks of objects of `Sch α` remain in `Sch α` and are ambient pullbacks. -/
 theorem scheme_category_has_pullbacks {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     (hα : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
-      (F : I ⥤ Sch c α), HasLimitCone (F ⋙ schInclusion c α) ↔ HasLimitCone F)
+      (F : I ⥤ Sch c α), Nonempty (LimitCone (F ⋙ schInclusion c α)) ↔
+        Nonempty (LimitCone F))
     (hαIso : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c α), LimitConeAgreesWithAmbient F)
     {X Y S : Sch c α} (f : X ⟶ S) (g : Y ⟶ S) :
@@ -254,7 +252,8 @@ theorem scheme_category_has_pullbacks {c : SchemeCoding.{u}} {α : Ordinal.{u}}
 /-- Countable coproducts of objects of `Sch α` remain in `Sch α`. -/
 theorem scheme_category_has_countable_coproducts {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     (hα : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
-      (F : I ⥤ Sch c α), HasColimitCocone (F ⋙ schInclusion c α) ↔ HasColimitCocone F)
+      (F : I ⥤ Sch c α), Nonempty (ColimitCocone (F ⋙ schInclusion c α)) ↔
+        Nonempty (ColimitCocone F))
     (hαIso : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c α), ColimitCoconeAgreesWithAmbient F)
     {I : Type u} [Countable I] (S : I → Sch c α) :
@@ -431,37 +430,27 @@ theorem residueFieldProduct_binarySequence_not_self_power :
 
 /-! ### fpqc and fppf bounds -/
 
-/-- A presieve factors through a morphism. -/
-def PresieveFactorsThrough {X Y : Scheme.{u}} (R : Presieve Y) (f : X ⟶ Y) : Prop :=
-  ∀ ⦃Z : Scheme.{u}⦄ (g : Z ⟶ Y), R g → ∃ h : Z ⟶ X, h ≫ f = g
-
 /-- The fpqc covering bound. -/
 theorem schemeSize_le_of_fpqc_covering {X Y : Scheme.{u}} (f : X ⟶ Y)
     (R : Presieve Y) (hR : R ∈ Scheme.fpqcPrecoverage Y)
-    (hfactor : PresieveFactorsThrough R f) :
+    (hfactor : R.FactorsThru (Presieve.singleton f)) :
     schemeSize Y ≤ schemeSize X := by
   sorry
 
-/-- An fppf covering family in the form used by the source. -/
-structure FppfCover (X : Scheme.{u}) where
-  I : Type u
-  Y : I → Scheme.{u}
-  f : ∀ i, Y i ⟶ X
-  isCover : Presieve.ofArrows Y f ∈ Scheme.fppfPrecoverage X
+/- Mathlib's zero-hypercover is the established interface for a covering
+family, and its morphisms are exactly componentwise refinements. -/
+abbrev FppfCover (X : Scheme.{u}) : Type _ :=
+  Scheme.Cover.{u} Scheme.fppfPrecoverage X
 
-/-- A refinement of fppf covering families. -/
-structure FppfRefinement {X : Scheme.{u}} (𝒰 𝒲 : FppfCover X) where
-  indexMap : 𝒲.I → 𝒰.I
-  maps : ∀ j, 𝒲.Y j ⟶ 𝒰.Y (indexMap j)
-  commutes : ∀ j, maps j ≫ 𝒰.f (indexMap j) = 𝒲.f j
+abbrev FppfRefinement {X : Scheme.{u}} (𝒰 𝒲 : FppfCover X) : Type _ :=
+  CategoryTheory.PreZeroHypercover.Hom
+    𝒲.toPreZeroHypercover 𝒰.toPreZeroHypercover
 
-/-- An fppf refinement whose coproduct has small size. -/
+/- An fppf refinement whose coproduct has small size. -/
 structure SmallFppfRefinement {X : Scheme.{u}} (𝒰 : FppfCover X) where
   refinement : FppfCover X
   witness : FppfRefinement 𝒰 refinement
-  coproduct : Scheme.{u}
-  coproductIso : Nonempty (coproduct ≅ colimit (Discrete.functor refinement.Y))
-  size_le : schemeSize coproduct ≤ schemeSize X
+  size_le : schemeSize (colimit (Discrete.functor refinement.X)) ≤ schemeSize X
 
 /-- Every fppf cover admits a refinement with coproduct of size at most the base. -/
 theorem exists_small_fppf_refinement {X : Scheme.{u}} (𝒰 : FppfCover X) :

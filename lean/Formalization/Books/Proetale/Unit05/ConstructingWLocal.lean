@@ -783,7 +783,7 @@ theorem strata_pairwise_disjoint_and_cover
     | mk pnv pv hdisj hunion =>
       cases q with
       | mk qnv qv hdisj' hunion' =>
-        simp_all only [hpnv, hpv]
+        simp_all only
   · ext x
     constructor
     · intro _
@@ -870,7 +870,7 @@ localized spectra. -/
 theorem exists_stageSpectrumEquiv
     {A : Type u} [CommRing A] (E : Finset A) :
     Nonempty (stageSpectrum E ≃ₜ PrimeSpectrum (stageRing E)) := by
-  letI : Finite (StratumPartition E) := by
+  let : Finite (StratumPartition E) := by
     let encode : StratumPartition E → Set E := fun p =>
       {a | a.1 ∈ p.nonvanishing}
     apply Finite.of_injective encode
@@ -929,7 +929,7 @@ theorem exists_stageSpectrumEquiv
     | mk pnv pv hdisj hunion =>
       cases q with
       | mk qnv qv hdisj' hunion' =>
-        simp_all only [hnv, hpv]
+        simp_all only
   let e : stageRing E ≃+* (∀ p : StratumPartition E, stratumFactor p) :=
     (Pi.isoLimit (stratumFactorDiagram E)).symm.commRingCatIsoToRingEquiv.trans
       (RingEquiv.piEquivPi (fun p : StratumPartition E => stratumFactor p))

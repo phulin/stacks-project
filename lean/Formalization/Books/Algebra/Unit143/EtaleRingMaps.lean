@@ -710,8 +710,7 @@ theorem EtaleSurjectiveExtensionData.comap_prime
   change D.map (algebraMap A D.S a) = 0 ↔ r a = 0
   rw [show D.map (algebraMap A D.S a) = algebraMap k L (r a) by
     exact DFunLike.congr_fun D.commutes a]
-  simpa using
-    (RingHom.injective (algebraMap k L)).eq_iff (a := r a) (b := 0)
+  simp
 
 /-- The quotient map induces the canonical residue-field ring equivalence. -/
 theorem EtaleSurjectiveExtensionData.residueFieldEquiv

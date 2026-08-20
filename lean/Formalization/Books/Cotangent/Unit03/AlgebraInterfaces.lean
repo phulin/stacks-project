@@ -72,9 +72,20 @@ noncomputable def polynomialFreeAdjunction :
     { homEquiv := fun E C => by
         exact polynomialFreeHomEquiv A E C
       homEquiv_naturality_left_symm := by
-        sorry
+        intro X' X Y f g
+        apply CommAlgCat.hom_ext
+        apply MvPolynomial.algHom_ext
+        intro e
+        change MvPolynomial.aeval (R := A) (fun e : X' => g (f e)) (MvPolynomial.X e) =
+          MvPolynomial.aeval (R := A) (fun e : X => g e)
+            (MvPolynomial.rename (R := A) f (MvPolynomial.X e))
+        simp
       homEquiv_naturality_right := by
-        sorry }
+        intro X Y Y' f g
+        apply ConcreteCategory.hom_ext
+        intro e
+        change g.hom (f.hom (MvPolynomial.X e)) = g.hom (f.hom (MvPolynomial.X e))
+        rfl }
 
 /-- A proposition recording the free-forgetful adjunction. -/
 def PolynomialFreeForgetfulAdjunction : Prop :=
@@ -124,7 +135,67 @@ noncomputable def variantFreeHomEquiv (A B : Type u) [CommRing A] [CommRing B]
     [Algebra A B] (X : AlgebraArrowCategory A B) (Y : SetArrowCategory B) :
     ((variantFree A B).obj Y ⟶ X) ≃
       (Y ⟶ (variantForgetful A B).obj X) := by
-  sorry
+  exact
+    { toFun := fun f =>
+        CostructuredArrow.homMk
+          (polynomialFreeHomEquiv A Y.left X.left f.left) (by
+            apply ConcreteCategory.hom_ext
+            intro e
+            change (ConcreteCategory.hom
+                ((𝟭 (CommAlgCat A)).map f.left ≫ X.hom)) (MvPolynomial.X e) = Y.hom e
+            have h := congrArg (fun k => k (MvPolynomial.X e)) (CostructuredArrow.w f)
+            calc
+              (ConcreteCategory.hom
+                  ((𝟭 (CommAlgCat A)).map f.left ≫ X.hom)) (MvPolynomial.X e) =
+                  ((variantFree A B).obj Y).hom (MvPolynomial.X e) := by
+                exact h
+              _ = Y.hom e := by
+                change MvPolynomial.aeval (R := A) (fun b : B => b)
+                  (MvPolynomial.rename (R := A) Y.hom (MvPolynomial.X e)) = Y.hom e
+                simp)
+      invFun := fun g =>
+        CostructuredArrow.homMk
+          ((polynomialFreeHomEquiv A Y.left X.left).symm g.left) (by
+            apply CommAlgCat.hom_ext
+            apply MvPolynomial.algHom_ext
+            intro e
+            have h := congrArg (fun k => k e) (CostructuredArrow.w g)
+            change X.hom.hom (g.left e) = Y.hom e at h
+            calc
+              (CommAlgCat.Hom.hom
+                  ((𝟭 (CommAlgCat A)).map
+                      ((polynomialFreeHomEquiv A Y.left X.left).symm g.left) ≫
+                    X.hom)) (MvPolynomial.X e) = X.hom.hom (g.left e) := by
+                let g' : Y.left ⟶ (polynomialForget A).obj X.left := g.left
+                simp only [Functor.id_map, CommAlgCat.hom_comp, AlgHom.comp_apply,
+                  Function.comp_apply]
+                have hx := congrArg (fun k => k e)
+                  (Equiv.apply_symm_apply
+                    (polynomialFreeHomEquiv A Y.left X.left) g')
+                change (polynomialFreeHomEquiv A Y.left X.left).symm g'
+                    (MvPolynomial.X e) = g' e at hx
+                have hx' := congrArg (fun z => X.hom.hom z) hx
+                change X.hom.hom
+                    ((polynomialFreeHomEquiv A Y.left X.left).symm g'
+                      (MvPolynomial.X e)) = X.hom.hom (g' e)
+                exact hx'
+              _ = Y.hom e := h
+              _ = ((variantFree A B).obj Y).hom (MvPolynomial.X e) := by
+                change Y.hom e = MvPolynomial.aeval (R := A) (fun b : B => b)
+                  (MvPolynomial.rename (R := A) Y.hom (MvPolynomial.X e))
+                simp)
+      left_inv := by
+        intro f
+        apply CostructuredArrow.hom_ext
+        change (polynomialFreeHomEquiv A Y.left X.left).symm
+            (polynomialFreeHomEquiv A Y.left X.left f.left) = f.left
+        exact Equiv.symm_apply_apply _ _
+      right_inv := by
+        intro g
+        apply CostructuredArrow.hom_ext
+        change (polynomialFreeHomEquiv A Y.left X.left
+            ((polynomialFreeHomEquiv A Y.left X.left).symm g.left)) = g.left
+        exact Equiv.apply_symm_apply _ _ }
 
 theorem variant_projection_commutes (A B : Type u) [CommRing A] [CommRing B]
     [Algebra A B] (X : AlgebraArrowCategory A B) :

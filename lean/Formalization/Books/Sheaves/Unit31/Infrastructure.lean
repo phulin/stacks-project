@@ -1833,7 +1833,28 @@ theorem openAlgebraicSheafExtension_restrict_iso (C : Type u) [Category.{v} C]
     (F : TopCat.Sheaf C (openSubspace U)) :
     Nonempty ((openSheafRestriction C U).obj
       ((openSheafExtensionByInitial C U).obj F) ≅ F) := by
-  sorry
+  classical
+  let hf := U.isOpenEmbedding
+  letI : hf.functor.IsContinuous
+      (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X) := hf.functor_isContinuous
+  let adj₀ := hf.isOpenMap.adjunction
+  let adj₂ : openSheafRestriction C U ⊣ openSheafDirectImage C U :=
+    adj₀.sheafPushforwardContinuous
+      (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X)
+  rcases openSheafDirectImage_fullFaithful C U with ⟨hD⟩
+  letI : (openSheafDirectImage C U).Full := hD.full
+  letI : (openSheafDirectImage C U).Faithful := hD.faithful
+  let t : Adjunction.Triple (openSheafExtensionByInitial C U)
+      (openSheafRestriction C U) (openSheafDirectImage C U) :=
+    { adj₁ := openSheafExtensionAdjunction C U
+      adj₂ := adj₂ }
+  have hunit : IsIso t.adj₁.unit := by
+    rw [t.isIso_unit_iff_isIso_counit]
+    infer_instance
+  letI := hunit
+  exact ⟨(asIso (t.adj₁.unit.app F)).symm⟩
 
 /-- The set-valued Hom correspondence for extension by the empty set. -/
 noncomputable abbrev openSetSheafExtensionHomEquiv {X : TopCat.{v}} (U : Opens X)
@@ -1848,7 +1869,32 @@ theorem openSetSheafExtension_stalk_empty {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)]
     (F : TopCat.Sheaf (Type v) (openSubspace U)) (x : X) (hx : x ∉ U) :
     IsEmpty (((openSetSheafExtensionByEmpty U).obj F).presheaf.stalk x) := by
-  sorry
+  classical
+  let P := (openPresheafExtensionByInitial (Type v) U).obj F.presheaf
+  have hP : IsEmpty (P.stalk x) := by
+    constructor
+    intro t
+    rcases P.exists_germ_eq t with ⟨V, hxV, s, hs⟩
+    by_cases hV : V ≤ U
+    · exact hx (hV hxV)
+    · have hE : IsEmpty (P.obj (op V)) := by
+        change IsEmpty
+          (if h : V ≤ U then
+            F.presheaf.obj (op ((Opens.map (openInclusion U)).obj V))
+          else ⊥_ (Type v))
+        rw [dif_neg hV]
+        exact (Types.initial_iff_empty (⊥_ (Type v))).mp ⟨initialIsInitial⟩
+      exact hE.false s
+  have hIso := TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+    x (Type v) P
+  obtain ⟨g, hfg, hgf⟩ := hIso.out
+  let e : P.stalk x ≅ ((openSetSheafExtensionByEmpty U).obj F).presheaf.stalk x :=
+    { hom := (TopCat.Presheaf.stalkFunctor (Type v) x).map
+        (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P)
+      inv := g
+      hom_inv_id := hfg
+      inv_hom_id := hgf }
+  exact ⟨fun t => hP.false (e.inv t)⟩
 
 /-- On the open, extension by the empty set has the original stalk. -/
 theorem openSetSheafExtension_stalk_iso {X : TopCat.{v}} (U : Opens X)
@@ -1856,7 +1902,22 @@ theorem openSetSheafExtension_stalk_iso {X : TopCat.{v}} (U : Opens X)
     (F : TopCat.Sheaf (Type v) (openSubspace U)) (x : X) (hx : x ∈ U) :
     Nonempty (((openSetSheafExtensionByEmpty U).obj F).presheaf.stalk x ≃
       F.presheaf.stalk ⟨x, hx⟩) := by
-  sorry
+  classical
+  let P := (openPresheafExtensionByInitial (Type v) U).obj F.presheaf
+  rcases openPresheafExtension_restrict_iso (Type v) U F.presheaf with ⟨r⟩
+  let u : openSubspace U := ⟨x, hx⟩
+  let e₁ := TopCat.Presheaf.stalkPullbackIso (Type v) (openInclusion U) P u
+  let e₂ := (TopCat.Presheaf.stalkFunctor (Type v) u).mapIso r
+  have hIso := TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+    x (Type v) P
+  obtain ⟨g, hfg, hgf⟩ := hIso.out
+  let e₃ : P.stalk x ≅ ((openSetSheafExtensionByEmpty U).obj F).presheaf.stalk x :=
+    { hom := (TopCat.Presheaf.stalkFunctor (Type v) x).map
+        (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P)
+      inv := g
+      hom_inv_id := hfg
+      inv_hom_id := hgf }
+  exact ⟨(e₃.symm ≪≫ e₁ ≪≫ e₂).toEquiv⟩
 
 /-- Restricting an extension by the empty set recovers the original sheaf. -/
 theorem openSetSheafExtension_restrict_iso {X : TopCat.{v}} (U : Opens X)
@@ -1864,7 +1925,7 @@ theorem openSetSheafExtension_restrict_iso {X : TopCat.{v}} (U : Opens X)
     (F : TopCat.Sheaf (Type v) (openSubspace U)) :
     Nonempty ((openSheafRestriction (Type v) U).obj
       ((openSetSheafExtensionByEmpty U).obj F) ≅ F) := by
-  sorry
+  exact openAlgebraicSheafExtension_restrict_iso (Type v) U F
 
 /-! ## Algebraic structures and modules -/
 
@@ -1898,7 +1959,13 @@ theorem openAlgebraicSheafExtension_stalk_iso (C : Type u) [Category.{v} C]
     (F : TopCat.Sheaf C (openSubspace U)) (x : X) (hx : x ∈ U) :
     Nonempty (((openAlgebraicSheafExtensionFunctor C U).obj F).presheaf.stalk x ≅
       F.presheaf.stalk ⟨x, hx⟩) := by
-  sorry
+  let E := (openAlgebraicSheafExtensionFunctor C U).obj F
+  rcases openAlgebraicSheafExtension_restrict_iso C U F with ⟨r⟩
+  let u : openSubspace U := ⟨x, hx⟩
+  rcases openSheafRestriction_stalk_iso C U E u with ⟨s⟩
+  let t := (TopCat.Presheaf.stalkFunctor C u).mapIso
+    ((TopCat.Sheaf.forget C (openSubspace U)).mapIso r)
+  exact ⟨s.symm ≪≫ t⟩
 
 /-- Abelian sheaf extension by zero. -/
 noncomputable abbrev openAbelianSheafExtensionFunctor {X : TopCat.{v}} (U : Opens X)

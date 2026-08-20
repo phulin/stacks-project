@@ -4277,6 +4277,68 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     exact ⟨hm0, hm1, hm2, hm3⟩
 
 /-! The five-by-five path classification. -/
+private theorem fiveByFive_no_triangle
+    (D : LocalNumericalData 5)
+    (hDdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hDsym : ∀ i j, D.a i j = D.a j i)
+    (hDpos : ∀ i, 0 < D.w i)
+    (hBpos : (show Matrix (Fin 5) (Fin 5) ℝ from
+      fun i j => -((D.a i j : ℤ) : ℝ)).PosDef)
+    (hlower : ∀ i j : Fin 5, 0 < D.a i j →
+      (D.w i : ℝ) ≤ D.a i j ∧ (D.w j : ℝ) ≤ D.a i j) :
+    ∀ (e : Fin 3 → Fin 5), Function.Injective e →
+      0 < D.a (e 0) (e 1) → 0 < D.a (e 0) (e 2) →
+      0 < D.a (e 1) (e 2) → False := by
+  intro e he ha01 ha02 ha12
+  let A3 : Matrix (Fin 3) (Fin 3) ℝ :=
+    fun i j => (D.a (e i) (e j) : ℝ)
+  have hB3 := Matrix.PosDef.det_pos (hBpos.submatrix he)
+  have hdetA3 : Matrix.det A3 < 0 := by
+    have hrel : (show Matrix (Fin 5) (Fin 5) ℝ from
+        fun i j => -((D.a i j : ℤ) : ℝ)).submatrix e e = -A3 := by
+      ext i j
+      rfl
+    have hneg := Matrix.det_neg A3
+    norm_num at hneg
+    rw [hrel, hneg] at hB3
+    linarith
+  have hdetformula : Matrix.det A3 =
+      -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
+        2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
+        2 * (D.a (e 0) (e 2) : ℝ) ^ 2 * D.w (e 1) +
+        2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) +
+        2 * (D.a (e 0) (e 1) : ℝ) * D.a (e 0) (e 2) * D.a (e 1) (e 2) := by
+    have h00R : (D.a (e 0) (e 0) : ℝ) = -2 * D.w (e 0) := by
+      exact_mod_cast hDdiag (e 0)
+    have h11R : (D.a (e 1) (e 1) : ℝ) = -2 * D.w (e 1) := by
+      exact_mod_cast hDdiag (e 1)
+    have h22R : (D.a (e 2) (e 2) : ℝ) = -2 * D.w (e 2) := by
+      exact_mod_cast hDdiag (e 2)
+    have h10R : (D.a (e 1) (e 0) : ℝ) = D.a (e 0) (e 1) := by
+      exact_mod_cast hDsym (e 1) (e 0)
+    have h20R : (D.a (e 2) (e 0) : ℝ) = D.a (e 0) (e 2) := by
+      exact_mod_cast hDsym (e 2) (e 0)
+    have h21R : (D.a (e 2) (e 1) : ℝ) = D.a (e 1) (e 2) := by
+      exact_mod_cast hDsym (e 2) (e 1)
+    rw [Matrix.det_fin_three]
+    simp [A3, h00R, h11R, h22R, h10R, h20R, h21R]
+    ring
+  have hdetI :
+      -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
+        2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
+        2 * (D.a (e 0) (e 2) : ℝ) ^ 2 * D.w (e 1) +
+        2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) +
+        2 * (D.a (e 0) (e 1) : ℝ) * D.a (e 0) (e 2) * D.a (e 1) (e 2) < 0 := by
+    rw [← hdetformula]
+    exact hdetA3
+  exact no_triangle_from_det _ _ _ _ _ _
+    (by exact_mod_cast hDpos (e 0))
+    (by exact_mod_cast hDpos (e 1))
+    (by exact_mod_cast hDpos (e 2))
+    (by exact_mod_cast ha01) (by exact_mod_cast ha02) (by exact_mod_cast ha12)
+    (hlower (e 0) (e 1) ha01) (hlower (e 0) (e 2) ha02)
+    (hlower (e 1) (e 2) ha12) hdetI
+
 theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     (hn : 5 < T.n)
     (hedges : hasEdgeAt (localData S) 0 1 ∧ hasEdgeAt (localData S) 1 2 ∧
@@ -4345,58 +4407,7 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
   have hthree : ∀ (e : Fin 3 → Fin 5), Function.Injective e →
       0 < D.a (e 0) (e 1) → 0 < D.a (e 0) (e 2) →
       0 < D.a (e 1) (e 2) → False := by
-    intro e he ha01 ha02 ha12
-    let A3 : Matrix (Fin 3) (Fin 3) ℝ :=
-      fun i j => (D.a (e i) (e j) : ℝ)
-    have hB3 := Matrix.PosDef.det_pos (hBpos.submatrix he)
-    have hdetA3 : Matrix.det A3 < 0 := by
-      have hrel : B5.submatrix e e = -A3 := by
-        ext i j
-        rfl
-      have hneg := Matrix.det_neg A3
-      norm_num at hneg
-      rw [hrel, hneg] at hB3
-      linarith
-    have hdetformula : Matrix.det A3 =
-        -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
-          2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
-          2 * (D.a (e 0) (e 2) : ℝ) ^ 2 * D.w (e 1) +
-          2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) +
-          2 * (D.a (e 0) (e 1) : ℝ) * D.a (e 0) (e 2) * D.a (e 1) (e 2) := by
-      have h00 := hDdiag (e 0)
-      have h11 := hDdiag (e 1)
-      have h22 := hDdiag (e 2)
-      have h10 := hDsym (e 1) (e 0)
-      have h20 := hDsym (e 2) (e 0)
-      have h21 := hDsym (e 2) (e 1)
-      have h00R : (D.a (e 0) (e 0) : ℝ) = -2 * D.w (e 0) := by exact_mod_cast h00
-      have h11R : (D.a (e 1) (e 1) : ℝ) = -2 * D.w (e 1) := by exact_mod_cast h11
-      have h22R : (D.a (e 2) (e 2) : ℝ) = -2 * D.w (e 2) := by exact_mod_cast h22
-      have h10R : (D.a (e 1) (e 0) : ℝ) = D.a (e 0) (e 1) := by exact_mod_cast h10
-      have h20R : (D.a (e 2) (e 0) : ℝ) = D.a (e 0) (e 2) := by exact_mod_cast h20
-      have h21R : (D.a (e 2) (e 1) : ℝ) = D.a (e 1) (e 2) := by exact_mod_cast h21
-      rw [Matrix.det_fin_three]
-      simp [A3, h00R, h11R, h22R, h10R, h20R, h21R]
-      ring
-    have hdetI :
-        -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
-          2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
-          2 * (D.a (e 0) (e 2) : ℝ) ^ 2 * D.w (e 1) +
-          2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) +
-          2 * (D.a (e 0) (e 1) : ℝ) * D.a (e 0) (e 2) * D.a (e 1) (e 2) < 0 := by
-      rw [← hdetformula]
-      exact hdetA3
-    have hl01 := hlower (e 0) (e 1) ha01
-    have hl02 := hlower (e 0) (e 2) ha02
-    have hl12 := hlower (e 1) (e 2) ha12
-    have hw0 : (0 : ℝ) < D.w (e 0) := by exact_mod_cast hDpos (e 0)
-    have hw1 : (0 : ℝ) < D.w (e 1) := by exact_mod_cast hDpos (e 1)
-    have hw2 : (0 : ℝ) < D.w (e 2) := by exact_mod_cast hDpos (e 2)
-    have ha01' : (0 : ℝ) < D.a (e 0) (e 1) := by exact_mod_cast ha01
-    have ha02' : (0 : ℝ) < D.a (e 0) (e 2) := by exact_mod_cast ha02
-    have ha12' : (0 : ℝ) < D.a (e 1) (e 2) := by exact_mod_cast ha12
-    exact no_triangle_from_det _ _ _ _ _ _ hw0 hw1 hw2 ha01' ha02' ha12'
-      hl01 hl02 hl12 hdetI
+    exact fiveByFive_no_triangle D hDdiag hDsym hDpos (by simpa [B5]) hlower
   rcases hedges with ⟨he01, he12, he23, he34⟩
   have ha01 := hEdge 0 1 he01
   have ha12 := hEdge 1 2 he12

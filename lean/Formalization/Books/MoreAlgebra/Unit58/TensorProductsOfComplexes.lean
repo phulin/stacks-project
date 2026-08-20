@@ -1,5 +1,4 @@
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Symmetric
-import Mathlib.Algebra.Category.ModuleCat.Monoidal.Closed
 import Mathlib.Algebra.Homology.BifunctorHomotopy
 import Mathlib.Algebra.Homology.HomotopyCategory.Triangulated
 import Mathlib.Algebra.Homology.Monoidal
@@ -7,8 +6,8 @@ import Mathlib.Algebra.Homology.TotalComplexSymmetry
 import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.CategoryTheory.Monoidal.Limits.Preserves
 import Mathlib.CategoryTheory.Monoidal.Preadditive
-import Mathlib.CategoryTheory.Triangulated.Functor
 import Formalization.Books.Derived.Unit10.DistinguishedTriangles
+import Formalization.Books.MoreAlgebra.Unit56.DerivedCategoriesOfModules
 
 /-!
 # More on Algebra, Chapter 58: Tensor products of complexes
@@ -34,11 +33,12 @@ namespace Formalization.Books.MoreAlgebra.Unit58
 
 /-- The source's category `Comp(R)` of integer-indexed cochain complexes of
 `R`-modules. -/
-abbrev Comp (R : Type u) [CommRing R] := CochainComplex (ModuleCat.{u} R) ℤ
+abbrev Comp (R : Type u) [CommRing R] :=
+  Formalization.Books.MoreAlgebra.Unit56.Comp R
 
 /-- The homotopy category `K(R)` of complexes of `R`-modules. -/
 abbrev K (R : Type u) [CommRing R] :=
-  HomotopyCategory (ModuleCat.{u} R) (.up ℤ)
+  Formalization.Books.MoreAlgebra.Unit56.K R
 
 /-- The bifunctor whose value is the total tensor product of two cochain
 complexes. -/
@@ -101,9 +101,10 @@ theorem tensorProductComplex_differential_formula
   sorry
 
 /- The sign appearing in the commutativity constraint is the Koszul sign
-   `(-1)^(pq)` on the summand in degrees `p` and `q`.  This is distinct from
-   `ComplexShape.σ`, whose role is to compare the two total-complex index
-   conventions and which is `1` for the canonical symmetric total shape. -/
+   `(-1)^(pq)` on the summand in degrees `p` and `q`.  Mathlib also has a
+   `ComplexShape.σ` field for total-complex shape symmetries; the source's
+   component formula is recorded explicitly here rather than identified with
+   that implementation detail. -/
 abbrev koszulSign (p q : ℤ) : ℤˣ :=
   (p * q).negOnePow
 
@@ -178,6 +179,13 @@ theorem cochainComplex_symmetric_monoidal
     Nonempty (SymmetricMonoidalCategoryData (Comp R)) := by
   sorry
 
+/-- A chosen symmetric-monoidal package for complexes, for downstream uses
+that need to access the structure rather than only its existence. -/
+noncomputable def cochainComplexSymmetricMonoidalData
+    (R : Type u) [CommRing R] :
+    SymmetricMonoidalCategoryData (Comp R) :=
+  Classical.choice (cochainComplex_symmetric_monoidal R)
+
 /-- Homotopic maps remain homotopic after tensoring with a fixed complex. -/
 /- The source's explicit `H^n` and the displayed identity
 `Tot(α ⊗ id) = Tot(β ⊗ id) + dH + Hd` are represented by the returned
@@ -190,6 +198,15 @@ theorem tensorProduct_preserves_homotopies
       ((tensorRightComplexFunctor R P).map β)) := by
   sorry
 
+/-- A chosen homotopy witnessing preservation under right tensoring. -/
+noncomputable def tensorProduct_homotopy
+    (R : Type u) [CommRing R] (P : Comp R)
+    {L M : Comp R} (α β : L ⟶ M) (h : Homotopy α β) :
+    Homotopy
+      ((tensorRightComplexFunctor R P).map α)
+      ((tensorRightComplexFunctor R P).map β) :=
+  Classical.choice (tensorProduct_preserves_homotopies R P α β h)
+
 theorem tensorProduct_left_preserves_homotopies
     (R : Type u) [CommRing R] (P : Comp R)
     {L M : Comp R} (α β : L ⟶ M) (h : Homotopy α β) :
@@ -197,6 +214,15 @@ theorem tensorProduct_left_preserves_homotopies
       ((tensorLeftComplexFunctor R P).map α)
       ((tensorLeftComplexFunctor R P).map β)) := by
   sorry
+
+/-- A chosen homotopy witnessing preservation under left tensoring. -/
+noncomputable def tensorProduct_left_homotopy
+    (R : Type u) [CommRing R] (P : Comp R)
+    {L M : Comp R} (α β : L ⟶ M) (h : Homotopy α β) :
+    Homotopy
+      ((tensorLeftComplexFunctor R P).map α)
+      ((tensorLeftComplexFunctor R P).map β) :=
+  Classical.choice (tensorProduct_left_preserves_homotopies R P α β h)
 
 /-- Tensoring with `P` therefore descends to an endofunctor of `K(R)`. -/
 noncomputable abbrev tensorRightHomotopyFunctor
@@ -209,7 +235,7 @@ noncomputable abbrev tensorRightHomotopyFunctor
       intro L M α β h
       obtain ⟨h⟩ := h
       exact HomotopyCategory.eq_of_homotopy _ _
-        (Classical.choice (tensorProduct_preserves_homotopies R P α β h)))
+        (tensorProduct_homotopy R P α β h))
 
 /-- The left tensoring functor descends to the homotopy category as well. -/
 noncomputable abbrev tensorLeftHomotopyFunctor
@@ -222,13 +248,19 @@ noncomputable abbrev tensorLeftHomotopyFunctor
       intro L M α β h
       obtain ⟨h⟩ := h
       exact HomotopyCategory.eq_of_homotopy _ _
-        (Classical.choice (tensorProduct_left_preserves_homotopies R P α β h)))
+        (tensorProduct_left_homotopy R P α β h))
 
 /-- The homotopy category `K(R)` inherits the symmetric monoidal structure. -/
 theorem homotopyCategory_symmetric_monoidal
     (R : Type u) [CommRing R] :
     Nonempty (SymmetricMonoidalCategoryData (K R)) := by
   sorry
+
+/-- A chosen symmetric-monoidal package on `K(R)`. -/
+noncomputable def homotopyCategorySymmetricMonoidalData
+    (R : Type u) [CommRing R] :
+    SymmetricMonoidalCategoryData (K R) :=
+  Classical.choice (homotopyCategory_symmetric_monoidal R)
 
 /-! ## Exactness -/
 
@@ -240,6 +272,13 @@ theorem tensorLeftHomotopyFunctor_is_triangulated
       (tensorLeftHomotopyFunctor R P)) := by
   sorry
 
+/-- A chosen exact-triangulated structure for left tensoring. -/
+noncomputable def tensorLeftHomotopyFunctor_exactData
+    (R : Type u) [CommRing R] (P : Comp R) :
+    Formalization.Books.Derived.Unit10.ExactTriangulatedFunctorData
+      (tensorLeftHomotopyFunctor R P) :=
+  Classical.choice (tensorLeftHomotopyFunctor_is_triangulated R P)
+
 /-- Tensoring on the right by a fixed complex is an exact (triangulated)
 functor of homotopy categories. -/
 theorem tensorRightHomotopyFunctor_is_triangulated
@@ -247,5 +286,12 @@ theorem tensorRightHomotopyFunctor_is_triangulated
     Nonempty (Formalization.Books.Derived.Unit10.ExactTriangulatedFunctorData
       (tensorRightHomotopyFunctor R P)) := by
   sorry
+
+/-- A chosen exact-triangulated structure for right tensoring. -/
+noncomputable def tensorRightHomotopyFunctor_exactData
+    (R : Type u) [CommRing R] (P : Comp R) :
+    Formalization.Books.Derived.Unit10.ExactTriangulatedFunctorData
+      (tensorRightHomotopyFunctor R P) :=
+  Classical.choice (tensorRightHomotopyFunctor_is_triangulated R P)
 
 end Formalization.Books.MoreAlgebra.Unit58

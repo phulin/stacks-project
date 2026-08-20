@@ -108,11 +108,15 @@ theorem hasPropertyP_iff_finiteProjective_conditions
 
 /-! ### The countable square-zero example -/
 
+/-! The source indexes the variables and basis vectors by the positive
+integers; this file uses `ℕ`, reindexing the first source index to `0`. -/
+
 /-- The polynomial relations imposing `x_i ^ 2 = 0` for every variable. -/
 def squareZeroRelations (k : Type u) [CommRing k] : Set (MvPolynomial ℕ k) :=
   Set.range (fun i : ℕ => (MvPolynomial.X i : MvPolynomial ℕ k) ^ 2)
 
-/-- The polynomial ring `k[x_1, x_2, ...]/(x_i^2)`. -/
+/-- The polynomial ring `k[x_1, x_2, ...]/(x_i^2)`, with the source's positive
+indices reindexed by `ℕ`. -/
 abbrev squareZeroRing (k : Type u) [CommRing k] :=
   MvPolynomial ℕ k ⧸ Ideal.span (squareZeroRelations k)
 
@@ -131,7 +135,7 @@ def squareZeroResidueMap (k : Type u) [CommRing k] : squareZeroRing k →+* k :=
       simp)
 
 /-- The map on the countable free module sending `e_i` to
-`f_i - x_i f_(i+1)`. -/
+`f_i - x_i f_(i+1)` (with the source's positive indices reindexed by `ℕ`). -/
 def squareZeroMap (k : Type u) [CommRing k] :
     (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k] (ℕ →₀ squareZeroRing k) :=
   Finsupp.linearCombination (squareZeroRing k)

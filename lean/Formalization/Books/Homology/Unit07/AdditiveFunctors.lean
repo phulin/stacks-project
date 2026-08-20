@@ -717,8 +717,6 @@ theorem mapExtensionClassOfExact_add
     (x y : Ext B A) :
     mapExtensionClassOfExact F hF (x + y) =
       mapExtensionClassOfExact F hF x + mapExtensionClassOfExact F hF y := by
-  sorry
-/-
   letI : PreservesFiniteLimits F := hF.1
   letI : PreservesFiniteColimits F := hF.2
   letI : F.Additive := left_or_right_exact_additive F (Or.inl hF.1)
@@ -850,44 +848,115 @@ theorem mapExtensionClassOfExact_add
     exact biprod.add_eq_lift_desc_id
       (F.map (biprod.fst : A ⊞ A ⟶ A))
       (F.map (biprod.snd : A ⊞ A ⟶ A))
-  let pMiddle : F.obj P.middle ⟶ P'.middle :=
-    (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv ≫
-      pushout.map (F.map (biprodCodiagonal A)) (F.map DS.inclusion)
-        (biprodCodiagonal (F.obj A)) DS'.inclusion
-        (𝟙 _) eM.hom eA.hom (by
-          rw [biprodCodiagonal, biprod.desc_eq, F.map_add,
-            F.map_comp, F.map_comp]
-          simp only [F.map_id, Category.comp_id]
-          dsimp [eA]
-          rw [F.mapBiprod_hom]
-          exact hCodiag) (by
-          apply biprod.hom_ext
-          · change (F.map DS.inclusion ≫ eM.hom) ≫
-                fstM =
-              (eA.hom ≫ DS'.inclusion) ≫
-                fstM
-            dsimp [DS, DS', directSumExtension, eA, eM, fstM, fstDS, fstA,
-              fstFA, mapExtensionOfExact]
-            change
-              (F.map (biprod.map E₁.inclusion E₂.inclusion) ≫
-                  (F.mapBiprod E₁.middle E₂.middle).hom) ≫ biprod.fst =
-                ((F.mapBiprod A A).hom ≫
-                  biprod.map (F.map E₁.inclusion) (F.map E₂.inclusion)) ≫
-                  biprod.fst
-            rw [hF_map_biprod]
-          · change (F.map DS.inclusion ≫ eM.hom) ≫
-                sndM =
-              (eA.hom ≫ DS'.inclusion) ≫
-                sndM
-            dsimp [DS, DS', directSumExtension, eA, eM, sndM, sndDS, sndA,
-              sndFA, mapExtensionOfExact]
-            change
-              (F.map (biprod.map E₁.inclusion E₂.inclusion) ≫
-                  (F.mapBiprod E₁.middle E₂.middle).hom) ≫ biprod.snd =
-                ((F.mapBiprod A A).hom ≫
-                  biprod.map (F.map E₁.inclusion) (F.map E₂.inclusion)) ≫
-                  biprod.snd
-            rw [hF_map_biprod])
+  letI : IsIso eM.hom := by infer_instance
+  letI : IsIso eA.hom := by infer_instance
+  have hPushout_left :
+      F.map (biprodCodiagonal A) ≫ (𝟙 (F.obj A)) =
+        eA.hom ≫ biprodCodiagonal (F.obj A) := by
+    rw [biprodCodiagonal, biprod.desc_eq, F.map_add,
+      F.map_comp, F.map_comp]
+    simp only [F.map_id, Category.comp_id]
+    dsimp [eA]
+    rw [F.mapBiprod_hom]
+    exact hCodiag
+  have hPushout_right :
+      F.map DS.inclusion ≫ eM.hom = eA.hom ≫ DS'.inclusion := by
+    apply biprod.hom_ext
+    · change (F.map DS.inclusion ≫ eM.hom) ≫
+          fstM =
+        (eA.hom ≫ DS'.inclusion) ≫
+          fstM
+      dsimp [DS, DS', directSumExtension, eA, eM, fstM, fstDS, fstA,
+        fstFA, mapExtensionOfExact]
+      change
+        (F.map (biprod.map E₁.inclusion E₂.inclusion) ≫
+            (F.mapBiprod E₁.middle E₂.middle).hom) ≫ biprod.fst =
+          ((F.mapBiprod A A).hom ≫
+            biprod.map (F.map E₁.inclusion) (F.map E₂.inclusion)) ≫
+            biprod.fst
+      rw [hF_map_biprod]
+    · change (F.map DS.inclusion ≫ eM.hom) ≫
+          sndM =
+        (eA.hom ≫ DS'.inclusion) ≫
+          sndM
+      dsimp [DS, DS', directSumExtension, eA, eM, sndM, sndDS, sndA,
+        sndFA, mapExtensionOfExact]
+      change
+        (F.map (biprod.map E₁.inclusion E₂.inclusion) ≫
+            (F.mapBiprod E₁.middle E₂.middle).hom) ≫ biprod.snd =
+          ((F.mapBiprod A A).hom ≫
+            biprod.map (F.map E₁.inclusion) (F.map E₂.inclusion)) ≫
+            biprod.snd
+      rw [hF_map_biprod]
+  let pMap :
+      pushout (F.map (biprodCodiagonal A)) (F.map DS.inclusion) ⟶
+        pushout (biprodCodiagonal (F.obj A)) DS'.inclusion :=
+    pushout.map (F.map (biprodCodiagonal A)) (F.map DS.inclusion)
+      (biprodCodiagonal (F.obj A)) DS'.inclusion
+      (𝟙 _) eM.hom eA.hom hPushout_left hPushout_right
+  letI : IsIso pMap := by
+    change IsIso (pushout.map (F.map (biprodCodiagonal A))
+      (F.map DS.inclusion) (biprodCodiagonal (F.obj A)) DS'.inclusion
+      (𝟙 _) eM.hom eA.hom hPushout_left hPushout_right)
+    apply pushout.map_isIso
+  let pMiddle : F.obj P.middle ⟶ P'.middle := by
+    simpa [P, P', pushoutExtension] using
+        (show F.obj (pushout (biprodCodiagonal A) DS.inclusion) ⟶
+          pushout (biprodCodiagonal (F.obj A)) DS'.inclusion from
+        (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv ≫ pMap)
+  let pProj :
+      pushout (biprodCodiagonal A) DS.inclusion ⟶ B ⊞ B :=
+    pushout.desc 0 DS.projection (by simp [DS.zero])
+  let pProj' :
+      pushout (biprodCodiagonal (F.obj A)) DS'.inclusion ⟶
+        F.obj B ⊞ F.obj B :=
+    pushout.desc 0 DS'.projection (by simp [DS'.zero])
+  have hDirectSum_projection :
+      eM.hom ≫ DS'.projection = F.map DS.projection ≫ eB.hom := by
+    change
+      (F.mapBiprod E₁.middle E₂.middle).hom ≫
+          biprod.map (F.map E₁.projection) (F.map E₂.projection) =
+        F.map (biprod.map E₁.projection E₂.projection) ≫
+          (F.mapBiprod B B).hom
+    apply biprod.hom_ext
+    · rw [F.mapBiprod_hom, F.mapBiprod_hom]
+      rw [Category.assoc, biprod.map_fst]
+      rw [← Category.assoc, biprod.lift_fst]
+      rw [Category.assoc, biprod.lift_fst]
+      rw [← F.map_comp, ← F.map_comp, biprod.map_fst]
+    · rw [F.mapBiprod_hom, F.mapBiprod_hom]
+      rw [Category.assoc, biprod.map_snd]
+      rw [← Category.assoc, biprod.lift_snd]
+      rw [Category.assoc, biprod.lift_snd]
+      rw [← F.map_comp, ← F.map_comp, biprod.map_snd]
+  have hM_left_raw :
+      F.map (pushout.inl (biprodCodiagonal A) DS.inclusion) ≫
+          ((PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv ≫ pMap) =
+        pushout.inl (biprodCodiagonal (F.obj A)) DS'.inclusion := by
+    rw [← Category.assoc, PreservesPushout.inl_iso_inv]
+    simp [pMap, pushout.map]
+    rw [pushout.inl_desc]
+  have hM_right_raw :
+      ((PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv ≫ pMap) ≫
+          pProj' = F.map pProj ≫ eB.hom := by
+    rw [Category.assoc]
+    rw [← (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv_hom_id_assoc
+      (F.map pProj ≫ eB.hom)]
+    apply (cancel_epi
+      (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv).2
+    apply pushout.hom_ext
+    · simp [pMap, pushout.map, pProj, pProj', PreservesPushout.inl_iso_hom,
+        ← F.map_comp]
+      rw [← Category.assoc, pushout.inl_desc]
+      rw [← Category.assoc, pushout.inl_desc]
+      rw [pushout.inl_desc]
+      simp
+    · simp [pMap, pushout.map, pProj, pProj', PreservesPushout.inr_iso_hom,
+        hDirectSum_projection, ← F.map_comp]
+      rw [← Category.assoc, pushout.inr_desc]
+      rw [Category.assoc, pushout.inr_desc]
+      rw [← Category.assoc, pushout.inr_desc]
+      exact hDirectSum_projection
   let m : ExtensionMorphism (mapExtensionOfExact F hF P) P' :=
     { left := 𝟙 _
       middle := pMiddle
@@ -895,19 +964,15 @@ theorem mapExtensionClassOfExact_add
       comm_left := by
         rw [Category.id_comp]
         change F.map P.inclusion ≫ pMiddle = P'.inclusion
-        dsimp [P, P', pMiddle, pushoutExtension]
-        rw [← Category.assoc, PreservesPushout.inl_iso_inv]
-        rw [pushout.inl_desc, Category.id_comp]
+        simpa [P, P', pMiddle, pushoutExtension] using hM_left_raw
       comm_right := by
         change pMiddle ≫ P'.projection = F.map P.projection ≫ eB.hom
-        dsimp [P, pushoutExtension, pMiddle]
-        rw [← (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv_hom_id_assoc]
-        apply (cancel_epi
-          (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv).1
-        simp [P, P', DS, DS', eA, eB, eM, directSumExtension, ← F.map_comp] }
+        simpa [pMiddle, pProj, pProj', P, P', pushoutExtension] using hM_right_raw }
   letI : IsIso pMiddle := by
-    dsimp [pMiddle]
-    infer_instance
+    have h : IsIso
+        ((PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv ≫ pMap) := by
+      exact IsIso.comp_isIso
+    simpa [pMiddle, P, P', pushoutExtension] using h
   let δ : B ⟶ B ⊞ B := biprodDiagonal B
   let δ' : F.obj B ⟶ F.obj B ⊞ F.obj B :=
     biprodDiagonal (F.obj B)
@@ -929,9 +994,10 @@ theorem mapExtensionClassOfExact_add
   let qMiddle' : F.obj (pullback P.projection δ) ⟶
       pullback P'.projection δ' :=
     (PreservesPullback.iso F P.projection δ).hom ≫ qMap
-  letI : IsIso qMiddle' := by
+  have hqMiddle' : IsIso qMiddle' := by
     dsimp [qMiddle']
     exact IsIso.comp_isIso
+  letI : IsIso qMiddle' := hqMiddle'
   let n : ExtensionHom
       (mapExtensionOfExact F hF (pullbackExtension P δ))
       (pullbackExtension P' δ') :=
@@ -976,27 +1042,54 @@ theorem mapExtensionClassOfExact_add
       comm_right := by
         change qMiddle' ≫ (pullbackExtension P' δ').projection =
           F.map (pullbackExtension P δ).projection
-        simp [qMiddle', qMap, pullback.map, pullbackExtension, δ, δ',
-          Category.assoc, ← F.map_comp] }
+        simp only [qMiddle', qMap, pullback.map, pullbackExtension,
+          mapExtensionOfExact, Category.assoc]
+        rw [pullback.lift_snd]
+        simpa only [Category.assoc, Category.comp_id] using
+          (PreservesPullback.iso_hom_snd F P.projection δ) }
   have hn : Nonempty
       (mapExtensionOfExact F hF (pullbackExtension P δ) ≅
         pullbackExtension P' δ') := by
+    have hn_left_raw :
+        F.map (pullbackExtension P δ).inclusion ≫ qMiddle' =
+          (pullbackExtension P' δ').inclusion := by
+      simpa [n, qMiddle', mapExtensionOfExact, pullbackExtension] using n.comm_left
+    have hn_right_raw :
+        qMiddle' ≫ (pullbackExtension P' δ').projection =
+          F.map (pullbackExtension P δ).projection := by
+      simpa [n, qMiddle', mapExtensionOfExact, pullbackExtension] using n.comm_right
+    have hn_inv_left_raw :
+        (pullbackExtension P' δ').inclusion ≫
+            inv (I := hqMiddle') qMiddle' =
+          F.map (pullbackExtension P δ).inclusion := by
+      dsimp [pullbackExtension]
+      apply (cancel_mono qMiddle').1
+      rw [Category.assoc, IsIso.inv_hom_id (I := hqMiddle'), Category.comp_id]
+      exact hn_left_raw.symm
+    have hn_inv_right_raw :
+        inv (I := hqMiddle') qMiddle' ≫
+            F.map (pullbackExtension P δ).projection =
+          (pullbackExtension P' δ').projection := by
+      dsimp [pullbackExtension]
+      apply (cancel_epi qMiddle').1
+      rw [← Category.assoc, IsIso.hom_inv_id (I := hqMiddle'), Category.id_comp]
+      exact hn_right_raw.symm
     let nInv : ExtensionHom
         (pullbackExtension P' δ')
         (mapExtensionOfExact F hF (pullbackExtension P δ)) :=
-      { middle := inv qMiddle'
+      { middle := by
+          simpa [pullbackExtension, mapExtensionOfExact] using
+            (inv (I := hqMiddle') qMiddle')
         comm_left := by
-          apply (cancel_mono qMiddle').1
-          simp [n.comm_left]
+          simpa [pullbackExtension, mapExtensionOfExact] using hn_inv_left_raw
         comm_right := by
-          apply (cancel_epi qMiddle').1
-          simp [n.comm_right] }
+          simpa [pullbackExtension, mapExtensionOfExact] using hn_inv_right_raw }
     exact ⟨
       { hom := n
         inv := nInv
-        hom_inv_id := ExtensionHom.ext _ _ (IsIso.hom_inv_id qMiddle')
-        inv_hom_id := ExtensionHom.ext _ _ (IsIso.inv_hom_id qMiddle') }⟩
-  exact Quotient.sound hn -/
+        hom_inv_id := ExtensionHom.ext _ _ (IsIso.hom_inv_id (I := hqMiddle') qMiddle')
+        inv_hom_id := ExtensionHom.ext _ _ (IsIso.inv_hom_id (I := hqMiddle') qMiddle') }⟩
+  exact Quotient.sound hn
 
 /-- The abelian-group homomorphism on extension classes induced by an exact functor. -/
 noncomputable def exactFunctorExtMap

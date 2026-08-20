@@ -48,9 +48,9 @@ def IsCompleteLocalFlatteningIdeal
     [IsLocalRing R] [AddCommGroup M] [Module S M]
     (f : R →+* S) (I : Ideal R) : Prop :=
   I ≤ IsLocalRing.maximalIdeal R ∧
-    flatAtPrimesOverQuotient (M := M) f (IsLocalRing.maximalIdeal R) I ∧
+    flatAtPrimesOverQuotient (M := M) f I (IsLocalRing.maximalIdeal R) ∧
       ∀ J : Ideal R,
-        flatAtPrimesOverQuotient (M := M) f (IsLocalRing.maximalIdeal R) J → I ≤ J
+        flatAtPrimesOverQuotient (M := M) f J (IsLocalRing.maximalIdeal R) → I ≤ J
 
 /-! ## Flattening over a complete local Noetherian ring -/
 

@@ -6,6 +6,7 @@ import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.LinearAlgebra.Dual.Basis
 import Mathlib.LinearAlgebra.StdBasis
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.RingTheory.TensorProduct.Free
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Localization.FractionRing
@@ -767,6 +768,44 @@ theorem reflexive_iff_finiteFree_presentation
     · exact ⟨Module.bijective_dual_eval R (Fin n →₀ R)⟩
     · exact hQ
 
+private theorem finiteFree_presentation_of_reflexive
+    {R M : Type*} [CommRing R] [IsDomain R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (hM : Reflexive R M) :
+    ∃ n : ℕ, ∃ f : M →ₗ[R] (Fin n →₀ R),
+      Function.Injective f ∧
+        Module.IsTorsionFree R
+          ((Fin n →₀ R) ⧸ LinearMap.range f) := by
+  obtain ⟨n, p₀, hp₀⟩ := Module.Finite.exists_fin' R (Module.Dual R M)
+  let u := Finsupp.linearEquivFunOnFinite R R (Fin n)
+  let p : (Fin n →₀ R) →ₗ[R] Module.Dual R M := p₀.comp u.toLinearMap
+  have hp : Function.Surjective p := by
+    intro φ
+    obtain ⟨v, hv⟩ := hp₀ φ
+    refine ⟨u.symm v, ?_⟩
+    simpa [p, u] using hv
+  let b := (Finsupp.basisSingleOne (R := R) (ι := Fin n)).dualBasis
+  let d : Module.Dual R (Fin n →₀ R) ≃ₗ[R] (Fin n →₀ R) :=
+    b.equivFun.trans u.symm
+  let j := reflexivityMap (R := R) (M := M)
+  let q := d.toLinearMap.comp p.dualMap
+  let f := q.comp j
+  have hf : Function.Injective f := by
+    exact (d.injective.comp (LinearMap.dualMap_injective_of_surjective hp)).comp
+      hM.bijective_dual_eval'.injective
+  have hrange : LinearMap.range f = LinearMap.range q := by
+    apply le_antisymm
+    · rintro _ ⟨m, rfl⟩
+      exact ⟨j m, rfl⟩
+    · rintro _ ⟨z, rfl⟩
+      obtain ⟨m, hm⟩ := hM.bijective_dual_eval'.surjective z
+      refine ⟨m, ?_⟩
+      rw [← hm]
+      rfl
+  refine ⟨n, f, hf, ?_⟩
+  rw [hrange]
+  exact linearEquiv_comp_dualMap_cokernel_isTorsionFree_of_surjective p hp d
+
 /-- Flat base change of a finite reflexive module between Noetherian domains
 is finite and reflexive. -/
 theorem reflexive_flat_baseChange
@@ -777,7 +816,73 @@ theorem reflexive_flat_baseChange
     (hM : Reflexive R M) :
     Module.Finite R' (R' ⊗[R] M) ∧
       Reflexive R' (R' ⊗[R] M) := by
-  sorry
+  obtain ⟨n, f, hf, hQ⟩ := finiteFree_presentation_of_reflexive hM
+  let q := (LinearMap.range f).mkQ
+  have hq : Function.Exact (f : M → (Fin n →₀ R)) (q : _ → _) :=
+    LinearMap.exact_iff.mpr (by rw [Submodule.ker_mkQ])
+  let f' : R' ⊗[R] M →ₗ[R'] R' ⊗[R] (Fin n →₀ R) :=
+    TensorProduct.AlgebraTensorModule.lTensor (R := R) R' R' f
+  let q' : R' ⊗[R] (Fin n →₀ R) →ₗ[R']
+      R' ⊗[R] ((Fin n →₀ R) ⧸ LinearMap.range f) :=
+    TensorProduct.AlgebraTensorModule.lTensor (R := R) R' R' q
+  have hf' : Function.Injective f' := by
+    intro x y hxy
+    apply (Module.Flat.lTensor_preserves_injective_linearMap (M := R') f hf)
+    change (f.lTensor R') x = (f.lTensor R') y
+    exact hxy
+  have hq' : Function.Exact (f' : R' ⊗[R] M → _)
+      (q' : R' ⊗[R] (Fin n →₀ R) → _) := by
+    change Function.Exact (f.lTensor R') (q.lTensor R')
+    exact Module.Flat.lTensor_exact (M := R') hq
+  have hmid : Reflexive R' (R' ⊗[R] (Fin n →₀ R)) := by
+    letI : Module.Free R' (R' ⊗[R] (Fin n →₀ R)) := by infer_instance
+    exact Module.IsReflexive.of_finite_of_free R' (R' ⊗[R] (Fin n →₀ R))
+  have hright : Module.IsTorsionFree R'
+      (R' ⊗[R] ((Fin n →₀ R) ⧸ LinearMap.range f)) :=
+    Formalization.Books.MoreAlgebra.Unit22.flat_baseChange_isTorsionFree
+      (R := R) (R' := R')
+      (M := (Fin n →₀ R) ⧸ LinearMap.range f)
+  exact ⟨inferInstance,
+    reflexive_of_exact
+      (R := R') (M := R' ⊗[R] M)
+      (M' := R' ⊗[R] (Fin n →₀ R))
+      (M'' := R' ⊗[R] ((Fin n →₀ R) ⧸ LinearMap.range f))
+      f' q' hf' hq' hmid hright⟩
+
+private theorem finite_pi_reflexive
+    {R X : Type*} [CommRing R] [AddCommGroup X] [Module R X]
+    (hX : Reflexive R X) (n : ℕ) :
+    Reflexive R (Fin n → X) := by
+  refine Module.pi_induction' R
+    (motive := fun Y _ _ => Reflexive R Y)
+    (motive' := fun Y _ _ => Reflexive R Y)
+    (equiv := ?_)
+    (equiv' := ?_)
+    (unit := by infer_instance)
+    (prod := ?_) (fun _ : Fin n => X) ?_
+  · intro Y Y' _ _ _ _ e h
+    exact @Module.equiv R Y Y' _ _ _ _ _ h e
+  · intro Y Y' _ _ _ _ e h
+    exact @Module.equiv R Y Y' _ _ _ _ _ h e
+  · intro Y Y' _ _ _ _ hY hY'
+    exact @Prod.instModuleIsReflexive R Y Y' _ _ _ _ _ hY hY'
+  · intro i
+    exact hX
+
+private theorem hom_from_fin_pi_reflexive
+    {R N : Type*} [CommRing R] [AddCommGroup N] [Module R N]
+    (hN : Reflexive R N) (n : ℕ) :
+    Reflexive R ((Fin n → R) →ₗ[R] N) := by
+  let eSum : (Fin n → (R →ₗ[R] N)) ≃ₗ[R] ((Fin n →₀ R) →ₗ[R] N) :=
+    Finsupp.lsum R
+  let eDom : (Fin n →₀ R) ≃ₗ[R] (Fin n → R) :=
+    Finsupp.linearEquivFunOnFinite R R (Fin n)
+  let eCoord : (Fin n → (R →ₗ[R] N)) ≃ₗ[R] (Fin n → N) :=
+    LinearEquiv.piCongrRight (fun _ => LinearMap.ringLmapEquivSelf R R N)
+  let e : ((Fin n → R) →ₗ[R] N) ≃ₗ[R] (Fin n → N) :=
+    ((eDom.arrowCongr (LinearEquiv.refl R N)).symm.trans eSum.symm).trans eCoord
+  exact @Module.equiv R (Fin n → N) ((Fin n → R) →ₗ[R] N)
+    _ _ _ _ _ (finite_pi_reflexive hN n) e.symm
 
 /-- The Hom module into a finite reflexive module is reflexive. -/
 theorem hom_into_reflexive_isReflexive
@@ -786,7 +891,68 @@ theorem hom_into_reflexive_isReflexive
     [AddCommGroup N] [Module R N] [Module.Finite R N]
     (hN : Reflexive R N) :
     Reflexive R (M →ₗ[R] N) := by
-  sorry
+  let _ : Module.FinitePresentation R M := finitePresentation_of_finite R M
+  obtain ⟨n, m, p, q, hp, hpq⟩ :=
+    Module.FinitePresentation.exists_fin' R M
+  let i : (M →ₗ[R] N) →ₗ[R] ((Fin n → R) →ₗ[R] N) :=
+    { toFun := fun a => a.comp p
+      map_add' := by intro a b; ext x; simp
+      map_smul' := by intro r a; ext x; simp }
+  let j : ((Fin n → R) →ₗ[R] N) →ₗ[R] ((Fin m → R) →ₗ[R] N) :=
+    { toFun := fun b => b.comp q
+      map_add' := by intro a b; ext x; simp
+      map_smul' := by intro r a; ext x; simp }
+  have hi : Function.Injective i := by
+    intro a b hab
+    apply LinearMap.ext
+    intro x
+    obtain ⟨y, hy⟩ := hp x
+    have h := congrArg (fun k : (Fin n → R) →ₗ[R] N => k y) hab
+    simpa [i, hy] using h
+  have hqp : p.comp q = 0 := hpq.linearMap_comp_eq_zero
+  have hij : Function.Exact (i : (M →ₗ[R] N) → ((Fin n → R) →ₗ[R] N))
+      (j : ((Fin n → R) →ₗ[R] N) → ((Fin m → R) →ₗ[R] N)) := by
+    apply LinearMap.exact_iff.mpr
+    apply le_antisymm
+    · intro b hb
+      have hbq : b.comp q = 0 := by
+        simpa [j] using hb
+      have hker : LinearMap.ker p ≤ LinearMap.ker b := by
+        intro x hx
+        have hx' : x ∈ LinearMap.range q := by
+          rw [← LinearMap.exact_iff.mp hpq]
+          exact hx
+        obtain ⟨y, hy⟩ := hx'
+        rw [← hy]
+        change b (q y) = 0
+        rw [← LinearMap.comp_apply, hbq, LinearMap.zero_apply]
+      let l := (LinearMap.ker p).liftQ b hker
+      let e := p.quotKerEquivOfSurjective hp
+      let a := l.comp e.symm.toLinearMap
+      have hcomp : a.comp p = b := by
+        apply LinearMap.ext
+        intro x
+        change l (e.symm (p x)) = b x
+        rw [LinearMap.quotKerEquivOfSurjective_symm_apply]
+        exact congrArg (fun k : (Fin n → R) →ₗ[R] N => k x)
+          ((LinearMap.ker p).liftQ_mkQ b hker)
+      exact ⟨a, hcomp⟩
+    · rintro _ ⟨a, rfl⟩
+      apply LinearMap.mem_ker.mpr
+      apply LinearMap.ext
+      intro y
+      change a (p (q y)) = 0
+      have : p (q y) = 0 := by
+        change (p.comp q) y = 0
+        rw [hqp, LinearMap.zero_apply]
+      rw [this, map_zero]
+  exact reflexive_of_exact
+    (R := R) (M := M →ₗ[R] N)
+    (M' := (Fin n → R) →ₗ[R] N)
+    (M'' := (Fin m → R) →ₗ[R] N)
+    i j hi hij
+    (hom_from_fin_pi_reflexive hN n)
+    (reflexive_torsionFree (hom_from_fin_pi_reflexive hN m))
 
 /-! ## Reflexive hull -/
 
@@ -802,7 +968,10 @@ theorem reflexiveHull_isReflexive
     {R M : Type*} [CommRing R] [IsDomain R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     Reflexive R (reflexiveHull (R := R) (M := M)) := by
-  sorry
+  let _ : Module.FinitePresentation R (Module.Dual R M) :=
+    finitePresentation_of_finite R (Module.Dual R M)
+  exact hom_into_reflexive_isReflexive (R := R) (M := Module.Dual R M) (N := R)
+    (by infer_instance)
 
 /-- The map induced on reflexive hulls by a module map. -/
 def reflexiveHullMap
@@ -817,7 +986,7 @@ def reflexiveHullMap
 theorem reflexiveHullMap_id
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] :
     reflexiveHullMap (LinearMap.id : M →ₗ[R] M) = LinearMap.id := by
-  sorry
+  simp [reflexiveHullMap]
 
 theorem reflexiveHullMap_comp
     {R M N P : Type*} [CommRing R]

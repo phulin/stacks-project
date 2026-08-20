@@ -1,10 +1,6 @@
-import Mathlib.Algebra.Category.Ring.FilteredColimits
-import Mathlib.AlgebraicGeometry.Scheme
-import Mathlib.CategoryTheory.Comma.Over.Basic
-import Mathlib.CategoryTheory.Filtered.Basic
-import Mathlib.RingTheory.LocalIso
-import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Formalization.Books.Algebra.Unit14.BaseChange
+import Formalization.Books.Algebra.Unit154.FilteredColimitsEtale
+import Formalization.Books.Proetale.Unit03.LocalIsomorphisms
 
 /-!
 # Pro-étale Cohomology, Chapter 4: Ind-Zariski algebra
@@ -22,28 +18,6 @@ open CategoryTheory CategoryTheory.Limits
 
 universe u
 
-/-! ## The preceding local-ring interfaces -/
-
-/-- The source's local-isomorphism predicate for an arbitrary ring map.
-
-`Algebra.IsLocalIso` is Mathlib's canonical formulation.  This wrapper
-algebraizes a bare ring homomorphism, which is the form used by the source.
--/
-def IsLocalIsomorphism {A B : Type u} [CommRing A] [CommRing B]
-    (f : A →+* B) : Prop :=
-  letI : Algebra A B := f.toAlgebra
-  Algebra.IsLocalIso A B
-
-/-- The canonical map between the localizations at corresponding primes is
-an isomorphism of local rings.  Bijectivity records precisely that assertion
-without choosing a separate ring-equivalence witness.
--/
-def IdentifiesLocalRings {A B : Type u} [CommRing A] [CommRing B]
-    (f : A →+* B) : Prop :=
-  ∀ q : PrimeSpectrum B,
-    Function.Bijective
-      (Localization.localRingHom (q.asIdeal.comap f) q.asIdeal f rfl)
-
 /-! ## Filtered colimit presentations -/
 
 /-- A filtered colimit presentation of an `A`-algebra whose stages are local
@@ -55,15 +29,11 @@ that category and therefore identifies the induced map on the colimit with
 the specified ring map `f`.
 -/
 structure IndZariskiPresentation
-    {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B) where
-  index : Type u
-  [indexCategory : Category.{u} index]
-  [indexFiltered : IsFiltered index]
-  diagram : index ⥤ Under (CommRingCat.of A)
-  stagesLocalIsomorphism : ∀ i, IsLocalIsomorphism (diagram.obj i).hom.hom
-  cocone : Cocone diagram
-  isColimit : IsColimit cocone
-  targetIso : cocone.pt ≅ Under.mk (CommRingCat.ofHom f)
+    {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B)
+    extends Formalization.Books.Algebra.Unit154.FilteredColimitData f where
+  stagesLocalIsomorphism : ∀ i,
+    Formalization.Books.Proetale.Unit03.IsLocalIsomorphism
+      (diagram.obj i).hom.hom
 
 /-- A ring map is ind-Zariski when its target is a filtered colimit of
 `A`-algebras whose structure maps are local isomorphisms.
@@ -121,7 +91,7 @@ theorem isIndZariski_filteredColimit
     (F : J ⥤ Under (CommRingCat.of A))
     (hF : ∀ j, IsIndZariski (F.obj j).hom.hom)
     (c : Cocone F) (hc : IsColimit c)
-    (e : c.pt ≅ Under.mk (CommRingCat.ofHom f)) :
+    (e : c.pt ≅ Formalization.Books.Algebra.Unit127.underRingHom f) :
     IsIndZariski f := by
   sorry
 
@@ -129,7 +99,7 @@ theorem isIndZariski_filteredColimit
 theorem isIndZariski_identifiesLocalRings
     {A B : Type u} [CommRing A] [CommRing B]
     (f : A →+* B) (hf : IsIndZariski f) :
-    IdentifiesLocalRings f := by
+    Formalization.Books.Proetale.Unit03.IdentifiesLocalRings f := by
   sorry
 
 end Formalization.Books.Proetale.Unit04

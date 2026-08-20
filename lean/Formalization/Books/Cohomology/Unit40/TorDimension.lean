@@ -12,11 +12,11 @@ import Mathlib.Order.Interval.Set.Basic
 
 This file formalizes the Tor-amplitude statements for derived categories of
 modules on a ringed space.  The derived tensor product and flat-complex
-interfaces are those of Cohomology Chapter 19.  The three derived functors
-which the source uses (restriction to an open, pullback, and taking a stalk)
-are exposed through the usual derived-functor data records; their
-construction from the corresponding exact functors is left for the proof
-stage.
+interfaces are exposed locally for the ringed-space module model.  The three
+derived functors which the source uses (restriction to an open, pullback, and
+taking a stalk) are exposed through the usual derived-functor data records;
+their construction from the corresponding exact functors is left for the
+proof stage.
 -/
 
 noncomputable section
@@ -54,15 +54,15 @@ abbrev Comp (X : RingedSpace.{v}) :=
   CochainComplex (Mod X) ℤ
 
 abbrev D (X : RingedSpace.{v}) :=
-  DerivedCategory (Mod X)
+  Formalization.Books.Cohomology.Unit03.ringedSpaceModuleD X
 
 noncomputable abbrev derivedQuotient (X : RingedSpace.{v}) :
     CochainComplex (Mod X) ℤ ⥤ DerivedCategory (Mod X) :=
   DerivedCategory.Q (C := Mod X)
 
 noncomputable abbrev derivedCohomology (X : RingedSpace.{v}) (i : ℤ) :
-    D X ⥤ Mod X :=
-  DerivedCategory.homologyFunctor (Mod X) i
+  D X ⥤ Mod X :=
+  Formalization.Books.Derived.Unit11.derivedCohomologyFunctor (Mod X) i
 
 noncomputable abbrev moduleObject {X : RingedSpace.{v}}
     (F : Mod X) : D X :=

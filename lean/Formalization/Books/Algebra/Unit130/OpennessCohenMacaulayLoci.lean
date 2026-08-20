@@ -115,6 +115,75 @@ def IsFlatFinitePresentationWithCohenMacaulayEquidimensionalFibres
 
 /-! ## Flatness and the Cohen--Macaulay condition -/
 
+private theorem flatAtPrimeOverBase_iff_localizedFlat
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (q : PrimeSpectrum S) :
+    flatAtPrimeOverBaseRingHom (R := R) (S := S) (M := S) f q ↔
+      RingHom.Flat
+        (Localization.localRingHom
+          (PrimeSpectrum.comap f q).asIdeal q.asIdeal f
+          (by
+            simpa [PrimeSpectrum.comap_asIdeal] using
+              (rfl : PrimeSpectrum.comap f q = PrimeSpectrum.comap f q))) := by
+  letI : Algebra R S := f.toAlgebra
+  let p := PrimeSpectrum.comap f q
+  letI : p.asIdeal.IsPrime := p.isPrime
+  letI : q.asIdeal.IsPrime := q.isPrime
+  have hqp : q.asIdeal.comap f = p.asIdeal := by
+    simpa [p, PrimeSpectrum.comap_asIdeal]
+  let g := Localization.localRingHom p.asIdeal q.asIdeal f hqp
+  algebraize [Localization.localRingHom p.asIdeal q.asIdeal f hqp]
+  have hST : IsScalarTower R (Localization.AtPrime p.asIdeal)
+      (Localization.AtPrime q.asIdeal) :=
+    IsScalarTower.of_algebraMap_eq fun r => by
+      calc
+        algebraMap R (Localization.AtPrime q.asIdeal) r =
+            algebraMap S (Localization.AtPrime q.asIdeal) (f r) := by
+              simpa [RingHom.algebraMap_toAlgebra] using
+                (IsScalarTower.algebraMap_apply R S
+                  (Localization.AtPrime q.asIdeal) r)
+        _ = g (algebraMap R (Localization.AtPrime p.asIdeal) r) := by
+          exact (Localization.localRingHom_to_map p.asIdeal q.asIdeal f hqp r).symm
+  simp only [flatAtPrimeOverBaseRingHom,
+    Formalization.Books.Algebra.Unit99.flatAtPrimeOverBase]
+  change @Module.Flat R (Localization.AtPrime q.asIdeal) _ _
+      (Module.compHom (Localization.AtPrime q.asIdeal)
+        (algebraMap R (Localization.AtPrime q.asIdeal))) ↔ RingHom.Flat g
+  rw [RingHom.Flat]
+  change @Module.Flat R (Localization.AtPrime q.asIdeal) _ _
+      (Module.compHom (Localization.AtPrime q.asIdeal)
+        (algebraMap R (Localization.AtPrime q.asIdeal))) ↔
+    @Module.Flat (Localization.AtPrime p.asIdeal)
+      (Localization.AtPrime q.asIdeal) _ _ Algebra.toModule
+  have hmodR :
+      Module.compHom (Localization.AtPrime q.asIdeal)
+          (algebraMap R (Localization.AtPrime q.asIdeal)) =
+        (Algebra.toModule : Module R (Localization.AtPrime q.asIdeal)) := by
+    apply Module.ext'
+    intro r x
+    change (algebraMap R (Localization.AtPrime q.asIdeal) r) • x = r • x
+    rw [smul_eq_mul, Algebra.smul_def]
+  have hflatiff :
+      Module.Flat (Localization.AtPrime p.asIdeal)
+          (Localization.AtPrime q.asIdeal) ↔
+        Module.Flat R (Localization.AtPrime q.asIdeal) :=
+    @Module.flat_iff_of_isLocalization R
+      (Localization.AtPrime p.asIdeal)
+      (inferInstance : CommSemiring R)
+      (inferInstance : CommSemiring (Localization.AtPrime p.asIdeal))
+      (inferInstance : Algebra R (Localization.AtPrime p.asIdeal))
+      p.asIdeal.primeCompl
+      (inferInstance : IsLocalization p.asIdeal.primeCompl
+        (Localization.AtPrime p.asIdeal))
+      (Localization.AtPrime q.asIdeal)
+      (inferInstance : AddCommMonoid (Localization.AtPrime q.asIdeal))
+      (Algebra.toModule : Module R (Localization.AtPrime q.asIdeal))
+      (Algebra.toModule : Module (Localization.AtPrime p.asIdeal)
+        (Localization.AtPrime q.asIdeal))
+      hST
+  rw [hmodR]
+  exact hflatiff.symm
+
 /- The polynomial ring in the source is represented by `MvPolynomial (Fin d)
    k`.  Its map is an `AlgHom`, which records the compatibility with the
    given `k`-algebra structure on `S` needed by the relative-dimension claim. -/

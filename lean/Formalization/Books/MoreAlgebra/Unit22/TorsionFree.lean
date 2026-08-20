@@ -4,6 +4,7 @@ import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.Algebra.Module.Torsion.Free
 import Mathlib.LinearAlgebra.FreeModule.PID
+import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.RingTheory.Flat.TorsionFree
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Localization.FractionRing
@@ -163,7 +164,46 @@ theorem torsion_eq_ker_fractionFieldTensorMap
     Submodule.torsion R M =
       LinearMap.ker
         (fractionFieldTensorMap (R := R) (M := M) (K := K)) := by
-  sorry
+  apply le_antisymm
+  · intro x hx
+    rw [mem_torsion_iff_exists_smul_eq_zero] at hx
+    change fractionFieldTensorMap (R := R) (M := M) (K := K) x = 0
+    obtain ⟨r, hr, hrx⟩ := hx
+    let g : M →ₗ[R] K ⊗[R] M := TensorProduct.mk R K M 1
+    have hmap : fractionFieldTensorMap (R := R) (M := M) (K := K) =
+        (TensorProduct.comm R K M).toLinearMap.comp g := by
+      ext m
+      rfl
+    have hsmul : algebraMap R K r • g x = 0 := by
+      rw [algebraMap_smul K]
+      rw [← g.map_smul]
+      simpa [hrx]
+    have hg : g x = 0 :=
+      (smul_eq_zero.mp hsmul).resolve_left
+        (fun h => hr (IsFractionRing.injective R K (by simpa using h)))
+    rw [hmap]
+    exact congrArg (TensorProduct.comm R K M) hg
+  · intro x hx
+    change fractionFieldTensorMap (R := R) (M := M) (K := K) x = 0 at hx
+    rw [mem_torsion_iff_exists_smul_eq_zero]
+    let S := nonZeroDivisors R
+    let g : M →ₗ[R] K ⊗[R] M := TensorProduct.mk R K M 1
+    let e : LocalizedModule S M ≃ₗ[R] K ⊗[R] M :=
+      IsLocalizedModule.linearEquiv S (LocalizedModule.mkLinearMap S M) g
+    have hcomm : Function.Injective (TensorProduct.comm R K M) :=
+      (TensorProduct.comm R K M).injective
+    have hxg : g x = 0 := by
+      apply hcomm
+      simpa [fractionFieldTensorMap, g] using hx
+    have hm : LocalizedModule.mk x (1 : S) = 0 := by
+      have heq := congrArg e.symm hxg
+      simpa [e] using heq
+    have hm' : LocalizedModule.mk x (1 : S) = LocalizedModule.mk 0 (1 : S) := by
+      simpa using hm
+    obtain ⟨u, hu⟩ := (LocalizedModule.mk_eq (S := S)).mp hm'
+    have hu0 : (u : R) ≠ 0 := nonZeroDivisors.ne_zero u.property
+    refine ⟨(u : R), hu0, ?_⟩
+    simpa [Submonoid.smul_def] using hu
 
 /-- Quotienting by the torsion submodule produces a torsion-free module. -/
 theorem quotient_by_torsion_isTorsionFree
@@ -187,7 +227,44 @@ theorem flat_baseChange_isTorsionFree
     [AddCommGroup M] [Module R M] [Module.Flat R R']
     [Module.IsTorsionFree R M] :
     Module.IsTorsionFree R' (R' ⊗[R] M) := by
-  sorry
+  let K := FractionRing R
+  let V := K ⊗[R] M
+  let A := R' ⊗[R] K
+  letI : Algebra K A := Algebra.TensorProduct.rightAlgebra
+  letI : Algebra R' A := Algebra.TensorProduct.leftAlgebra
+  letI : Module.IsTorsionFree R' A := by
+    infer_instance
+  letI : Module.IsTorsionFree A (A ⊗[K] V) := by
+    infer_instance
+  have hD : Module.IsTorsionFree R' (A ⊗[K] V) := by
+    exact Module.IsTorsionFree.trans A
+  let e₁ : A ⊗[K] V ≃ₗ[R'] A ⊗[R] M :=
+    (TensorProduct.AlgebraTensorModule.cancelBaseChange R K A A M).restrictScalars R'
+  let e₂ : A ⊗[R] M ≃ₗ[R'] R' ⊗[R] V :=
+    TensorProduct.AlgebraTensorModule.assoc R R R' R' K M
+  let e : A ⊗[K] V ≃ₗ[R'] R' ⊗[R] V := e₁.trans e₂
+  letI : Module.IsTorsionFree R' (A ⊗[K] V) := hD
+  letI : Module.IsTorsionFree R' (R' ⊗[R] V) := by
+    exact e.symm.injective.moduleIsTorsionFree _ (by simp)
+  let g : M →ₗ[R] V := TensorProduct.mk R K M 1
+  have hg : Function.Injective g := by
+    have hf : Function.Injective
+        (fractionFieldTensorMap (R := R) (M := M) (K := K)) :=
+      (torsionFree_iff_fractionFieldTensorMap_injective (R := R) (M := M)
+        (K := K)).mp inferInstance
+    have hmap : fractionFieldTensorMap (R := R) (M := M) (K := K) =
+        (TensorProduct.comm R K M).toLinearMap.comp g := by
+      ext m
+      rfl
+    intro x y hxy
+    apply hf
+    rw [hmap]
+    exact congrArg (TensorProduct.comm R K M) hxy
+  let gb : R' ⊗[R] M →ₗ[R'] R' ⊗[R] V :=
+    TensorProduct.AlgebraTensorModule.lTensor R' R' g
+  have hbase : Function.Injective gb :=
+    Module.Flat.lTensor_preserves_injective_linearMap g hg
+  exact hbase.moduleIsTorsionFree _ (fun r x ↦ gb.map_smul r x)
 
 /-! ## Extensions, local tests, and finite modules -/
 
@@ -203,7 +280,26 @@ theorem shortExact_middle_isTorsionFree
     (hg : Function.Surjective g)
     [Module.IsTorsionFree R M] [Module.IsTorsionFree R M''] :
     Module.IsTorsionFree R M' := by
-  sorry
+  apply Module.IsTorsionFree.of_smul_eq_zero
+  intro r x hrx
+  by_cases hr : r = 0
+  · exact Or.inl hr
+  · right
+    have hgx_smul : r • g x = 0 := by
+      rw [← g.map_smul, hrx]
+      simp
+    have hgx : g x = 0 :=
+      (Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance r (g x) hgx_smul).resolve_left hr
+    obtain ⟨y, hy⟩ := (h_exact x).mp hgx
+    have hsy : r • f y = 0 := by
+      rw [hy]
+      exact hrx
+    have hry : r • y = 0 := by
+      apply hf
+      simpa using hsy
+    have hy0 : y = 0 :=
+      (Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance r y hry).resolve_left hr
+    simpa [hy0] using hy.symm
 
 /-- Torsion-freeness can be checked after localizing at every maximal ideal.
 The points are represented by the canonical `MaximalSpectrum` type. -/
@@ -214,7 +310,57 @@ theorem torsionFree_iff_localized_at_maximal
       ∀ m : MaximalSpectrum R,
         Module.IsTorsionFree (Localization.AtPrime m.asIdeal)
           (LocalizedModule.AtPrime m.asIdeal M) := by
-  sorry
+  constructor
+  · intro h m
+    letI : Module.IsTorsionFree R M := h
+    exact localizedModule_isTorsionFree m.asIdeal.primeCompl
+  · intro h
+    apply Module.IsTorsionFree.of_smul_eq_zero
+    intro r x hrx
+    by_cases hr : r = 0
+    · exact Or.inl hr
+    · right
+      by_contra hx
+      let I : Ideal R :=
+        { carrier := {a | a • x = 0}
+          zero_mem' := by simp
+          add_mem' := by
+            intro a b ha hb
+            change (a + b) • x = 0
+            rw [add_smul, ha, hb, add_zero]
+          smul_mem' := by
+            intro a b hb
+            change (a * b) • x = 0
+            rw [mul_smul, hb, smul_zero] }
+      have hI_top : I ≠ ⊤ := by
+        intro htop
+        have hone : (1 : R) ∈ I := htop ▸ (show (1 : R) ∈ (⊤ : Ideal R) from trivial)
+        exact hx (by simpa [I] using hone)
+      obtain ⟨m, hm, hIm⟩ := Ideal.exists_le_maximal I hI_top
+      let p : MaximalSpectrum R := ⟨m, hm⟩
+      letI : Module.IsTorsionFree (Localization.AtPrime p.asIdeal)
+          (LocalizedModule.AtPrime p.asIdeal M) := h p
+      let S := p.asIdeal.primeCompl
+      have hrp : algebraMap R (Localization S) r ≠ 0 := by
+        intro hzero
+        apply hr
+        apply FaithfulSMul.algebraMap_injective R (Localization S)
+        simpa using hzero
+      have hsmul : algebraMap R (Localization S) r •
+          (LocalizedModule.mk x (1 : S)) = 0 := by
+        rw [algebraMap_smul (Localization S)]
+        change r • (LocalizedModule.mkLinearMap S M x) = 0
+        rw [← (LocalizedModule.mkLinearMap S M).map_smul]
+        simpa [hrx]
+      have hmk : LocalizedModule.mk x (1 : S) = 0 :=
+        (Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance
+          (algebraMap R (Localization S) r) (LocalizedModule.mk x (1 : S)) hsmul).resolve_left hrp
+      have hmk' : LocalizedModule.mk x (1 : S) = LocalizedModule.mk 0 (1 : S) := by
+        simpa using hmk
+      obtain ⟨u, hu⟩ := (LocalizedModule.mk_eq (S := S)).mp hmk'
+      have huI : (u : R) ∈ I := by
+        simpa [I, Submonoid.smul_def] using hu
+      exact u.property (hIm huI)
 
 /-- A finite torsion-free module over a domain embeds in a finite free module.
 The finite free module is represented canonically by a finite Finsupp type. -/

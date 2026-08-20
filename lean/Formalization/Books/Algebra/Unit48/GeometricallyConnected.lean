@@ -123,6 +123,14 @@ def IsGeometricallyConnected (k : Type u) (S : Type v) [Field k]
   ∀ (K : Type w) [Field K] [Algebra k K],
     ConnectedSpace (PrimeSpectrum (K ⊗[k] S))
 
+/-- Specializing geometric connectedness at a field in the same universe. -/
+theorem IsGeometricallyConnected.connectedSpace_tensorProduct
+    {k : Type u} {S : Type v} {K : Type w} [Field k] [CommRing S]
+    [Algebra k S] [Field K] [Algebra k K]
+    (hS : IsGeometricallyConnected.{u, v, w} k S) :
+    ConnectedSpace (PrimeSpectrum (K ⊗[k] S)) := by
+  exact hS K
+
 /-- Geometric connectedness can be tested after finite separable extensions of
 the base field. -/
 theorem isGeometricallyConnected_iff_finiteSeparable

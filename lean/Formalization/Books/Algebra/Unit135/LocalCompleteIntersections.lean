@@ -100,12 +100,138 @@ theorem global_complete_intersection_maximal_localizations
     (hker : P.ker = Ideal.ofList (List.ofFn f))
     (hc : c ≤ n)
     (hdim : ringKrullDim S = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞))
-    (m : MaximalSpectrum S) :
-    ringKrullDim (Localization.AtPrime m.asIdeal) =
+    (m : MaximalSpectrum S) [IsNoetherianRing S] :
+      ringKrullDim (Localization.AtPrime m.asIdeal) =
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) ∧
       Formalization.Books.Topology.Unit10.Equidimensional
         (X := PrimeSpectrum S) := by
-  sorry
+  have hmaxdim : ∀ m : MaximalSpectrum S,
+      ringKrullDim (Localization.AtPrime m.asIdeal) =
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+    intro m
+    let _ : Algebra.FiniteType k S := P.finiteType
+    let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+    let q : PrimeSpectrum S := MaximalSpectrum.toPrimeSpectrum m
+    let q' : PrimeSpectrum P.Ring := PrimeSpectrum.comap (algebraMap P.Ring S) q
+    let _ : q.asIdeal.IsMaximal := m.isMaximal
+    have hq' : q'.asIdeal.IsMaximal := by
+      rw [show q'.asIdeal = Ideal.comap (algebraMap P.Ring S) q.asIdeal by rfl]
+      exact Ideal.comap_isMaximal_of_surjective
+        (f := algebraMap P.Ring S) P.algebraMap_surjective
+    have hq'height : q'.asIdeal.height = (((n : ℕ∞) : WithBot ℕ∞)) := by
+      let m' : MaximalSpectrum P.Ring := ⟨q'.asIdeal, hq'⟩
+      have hdim' := Formalization.Books.Algebra.Unit114.dim_affine_space n m'
+      exact (IsLocalization.AtPrime.ringKrullDim_eq_height q'.asIdeal _).symm.trans hdim'.2.1
+    have hspan : Ideal.span (Set.range f) = P.ker := by
+      rw [hker]
+      congr 1
+      ext x
+      simp
+    have hsubset : Set.range f ⊆ q'.asIdeal := by
+      rintro _ ⟨i, rfl⟩
+      change algebraMap P.Ring S (f i) ∈ q.asIdeal
+      rw [P.algebraMap_apply]
+      have hfi : f i ∈ P.ker := hker.symm ▸ Ideal.subset_span (by simp)
+      rw [P.aeval_val_eq_zero hfi]
+      exact Ideal.zero_mem q.asIdeal
+    have hkerle : P.ker ≤ q'.asIdeal := by
+      rw [← hspan]
+      exact Ideal.span_le.mpr hsubset
+    have hheight_le := Ideal.height_le_height_add_encard_of_subset (p := q'.asIdeal)
+      (s := Set.range f) hsubset
+    have hkerP : P.ker = RingHom.ker (MvPolynomial.aeval (R := k) P.val) :=
+      P.ker_eq_ker_aeval_val
+    have hqmap : (q'.asIdeal.map (Ideal.Quotient.mk P.ker)).height = q.asIdeal.height := by
+      let e₀ := Ideal.quotientKerAlgEquivOfSurjective
+        (f := MvPolynomial.aeval (R := k) P.val) P.aeval_val_surjective
+      let e : (P.Ring ⧸ P.ker) ≃ₐ[k] S :=
+        (Ideal.quotientEquivAlgOfEq k hkerP).trans e₀
+      have hcomp : e.toRingEquiv.toRingHom.comp (Ideal.Quotient.mk P.ker) =
+          algebraMap P.Ring S := by
+        apply RingHom.ext
+        intro x
+        simp [e, e₀, P.algebraMap_eq]
+      have heq : q'.asIdeal.map (Ideal.Quotient.mk P.ker) =
+          q.asIdeal.comap e.toRingEquiv := by
+        apply (Ideal.comap_injective_of_surjective (Ideal.Quotient.mk P.ker)
+          Ideal.Quotient.mk_surjective)
+        rw [Ideal.comap_map_of_surjective _ Ideal.Quotient.mk_surjective]
+        change q'.asIdeal ⊔ RingHom.ker (Ideal.Quotient.mk P.ker) =
+          q.asIdeal.comap (e.toRingEquiv.toRingHom.comp (Ideal.Quotient.mk P.ker))
+        rw [Ideal.mk_ker, sup_eq_left.mpr hkerle, hcomp]
+        rfl
+      rw [heq, RingEquiv.height_comap]
+    have hrange : (Set.range f).encard ≤ c := by
+      calc
+        (Set.range f).encard = (f '' (Set.univ : Set (Fin c))).encard := by rw [Set.image_univ]
+        _ ≤ (Set.univ : Set (Fin c)).encard := Set.encard_image_le _ _
+        _ = c := by simp
+    rw [hspan] at hheight_le
+    have hheight : (((n : ℕ∞) : WithBot ℕ∞)) ≤
+        (((q.asIdeal.height : ℕ∞) : ℕ∞) : WithBot ℕ∞) + c := by
+      rw [← hq'height]
+      calc
+        (((q'.asIdeal.height : ℕ∞) : ℕ∞) : WithBot ℕ∞) ≤
+            (((Ideal.map (Ideal.Quotient.mk P.ker) q'.asIdeal).height : ℕ∞) : WithBot ℕ∞) +
+              (Set.range f).encard := by exact_mod_cast hheight_le
+        _ = (((q.asIdeal.height : ℕ∞) : ℕ∞) : WithBot ℕ∞) + (Set.range f).encard := by rw [hqmap]
+        _ ≤ (((q.asIdeal.height : ℕ∞) : ℕ∞) : WithBot ℕ∞) + c := by
+          gcongr
+          exact_mod_cast hrange
+    have hupper : ringKrullDim (Localization.AtPrime m.asIdeal) ≤
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+      rw [← Formalization.Books.Algebra.Unit114.dimension_closed_point_finite_type_field
+        (k := k) (S := S) m]
+      calc
+        krullDimensionAt q ≤ topologicalKrullDim (Set.univ : Set (PrimeSpectrum S)) :=
+          krullDimensionAt_le q isOpen_univ (mem_univ q)
+        _ = topologicalKrullDim (PrimeSpectrum S) :=
+          IsHomeomorph.topologicalKrullDim_eq _ (Homeomorph.Set.univ (PrimeSpectrum S)).isHomeomorph
+        _ = ringKrullDim S := PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim S
+        _ = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := hdim
+    have hlower : (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) ≤
+        ringKrullDim (Localization.AtPrime m.asIdeal) := by
+      rw [IsLocalization.AtPrime.ringKrullDim_eq_height m.asIdeal
+        (Localization.AtPrime m.asIdeal)]
+      apply WithBot.coe_le_coe.mpr
+      rw [ENat.natCast_sub]
+      change (n : ℕ∞) - c ≤ q.asIdeal.height
+      exact (tsub_le_iff_right).2 (WithBot.coe_le_coe.mp hheight)
+    exact le_antisymm hupper hlower
+  haveI : Algebra.FiniteType k S := P.finiteType
+  haveI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  refine ⟨hmaxdim m, ?_⟩
+  refine ⟨(((n - c : ℕ) : ℕ∞) : WithBot ℕ∞), ?_⟩
+  intro C hC
+  let x : genericPoints (PrimeSpectrum S) :=
+    genericPoints.ofComponent ⟨C, hC⟩
+  have hpoint :=
+    Formalization.Books.Algebra.Unit114.dimension_at_a_point_finite_type_over_field
+      (k := k) (S := S) (p := x.1.asIdeal) (hp := x.1.2)
+  dsimp at hpoint
+  obtain ⟨d, hdx, hdcomp, hdmax⟩ := hpoint
+  have hgeneric : IsGenericPoint x.1 C := by
+    exact genericPoints.isGenericPoint_ofComponent ⟨C, hC⟩
+  have hcomp_only : ∀ Z : Set (PrimeSpectrum S),
+      Z ∈ irreducibleComponents (PrimeSpectrum S) →
+      x.1 ∈ Z → Z = C := by
+    intro Z hZ hxZ
+    have hclosed : IsClosed Z := isClosed_of_mem_irreducibleComponents Z hZ
+    have hsub : C ⊆ Z := by
+      rw [← hgeneric]
+      exact closure_minimal (by simpa using hxZ) hclosed
+    exact Set.Subset.antisymm (hC.2 hZ.1 hsub) hsub
+  have hdim_comp : d = topologicalKrullDim C := by
+    rcases hdcomp.1 with ⟨Z, hZ, hxZ, hZd⟩
+    have hZeq : Z = C := hcomp_only Z hZ hxZ
+    calc
+      d = topologicalKrullDim Z := hZd.symm
+      _ = topologicalKrullDim C :=
+        congrArg (fun T : Set (PrimeSpectrum S) => topologicalKrullDim T) hZeq
+  have hd_target : d = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+    rcases hdmax.1 with ⟨m', _, hm'⟩
+    exact hm'.symm.trans (hmaxdim m')
+  exact hdim_comp.symm.trans hd_target
 
 theorem presentation_codimension_eq_local_dimension
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -229,13 +355,428 @@ theorem global_complete_intersection_localize
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
     (hS : IsGlobalCompleteIntersection k S) (g : S) :
     IsGlobalCompleteIntersection k (Localization.Away g) := by
-  sorry
+  rcases hS with ⟨hft, hcase⟩
+  rcases hcase with hsub | ⟨n, c, P, f, hker, hc, hdim⟩
+  · let _ : Subsingleton S := hsub
+    let _ : Subsingleton (Localization.Away g) := by infer_instance
+    let Q : PolynomialPresentation k (Localization.Away g) 0 :=
+      Algebra.Generators.ofSurjective
+        (fun i : Fin 0 => nomatch i)
+        (by
+          intro x
+          exact ⟨0, Subsingleton.elim _ _⟩)
+    exact ⟨RingHom.finiteType_algebraMap.mpr Q.finiteType, Or.inl inferInstance⟩
+  · let _ : Algebra.FiniteType k S := RingHom.finiteType_algebraMap.mp hft
+    let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+    let _ : IsJacobsonRing S := isJacobsonRing_of_finiteType (A := k) (B := S)
+    let T := Localization.Away g
+    let Q : Formalization.Books.Algebra.Unit134.Presentation k T (Sum Unit (Fin n)) :=
+      Formalization.Books.Algebra.Unit134.principalLocalizationPresentation
+        (T := T) g P
+    let hftT : RingHom.FiniteType (algebraMap k T) :=
+      RingHom.finiteType_algebraMap.mpr Q.finiteType
+    have hmax := global_complete_intersection_maximal_localizations
+      n c P f hker hc hdim
+    have hupper : ringKrullDim T ≤
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+      rw [ringKrullDim_le_iff_isMaximal_height_le]
+      intro J hJ
+      have hJM := (IsLocalization.isMaximal_iff_isMaximal_disjoint T g J).mp hJ
+      let m : MaximalSpectrum S := ⟨J.under S, hJM.1⟩
+      have hheight : J.height = m.asIdeal.height := by
+        rw [← IsLocalization.height_under (Submonoid.powers g) J]
+      rw [hheight, ← IsLocalization.AtPrime.ringKrullDim_eq_height m.asIdeal
+        (Localization.AtPrime m.asIdeal)]
+      exact le_of_eq (hmax m).1
+    by_cases hT : Nontrivial T
+    · letI : Nontrivial T := hT
+      have hdimT : ringKrullDim T =
+          (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+        apply le_antisymm hupper
+        obtain ⟨J, hJ⟩ := Ideal.exists_maximal T
+        have hJprime : J.IsPrime := hJ.isPrime
+        have hheight : J.height = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+          have hJM := (IsLocalization.isMaximal_iff_isMaximal_disjoint T g J).mp hJ
+          let m : MaximalSpectrum S := ⟨J.under S, hJM.1⟩
+          rw [← IsLocalization.height_under (Submonoid.powers g) J]
+          rw [← IsLocalization.AtPrime.ringKrullDim_eq_height m.asIdeal
+            (Localization.AtPrime m.asIdeal)]
+          exact (hmax m).1
+        rw [← hheight]
+        letI : J.IsPrime := hJprime
+        exact Ideal.height_le_ringKrullDim_of_isPrime
+      let e : Fin (n + 1) ≃ Sum Unit (Fin n) :=
+        (finCongr (by simp [Fintype.card_sum, Nat.add_comm])).trans
+          (Fintype.equivFin (Sum Unit (Fin n))).symm
+      let P' : PolynomialPresentation k T (n + 1) := Q.reindex e
+      let er : P'.Ring ≃ₐ[k] Q.Ring := MvPolynomial.renameEquiv k e
+      have hker_reindex : P'.ker = Q.ker.comap er.toRingHom := by
+        rw [P'.ker_eq_ker_aeval_val, Q.ker_eq_ker_aeval_val]
+        ext z
+        change MvPolynomial.aeval (Q.val ∘ e) z = 0 ↔
+          MvPolynomial.aeval Q.val (MvPolynomial.rename e z) = 0
+        rw [MvPolynomial.aeval_rename]
+      let g' : P.Ring := P.σ g
+      have hg' : algebraMap P.Ring S g' = g := by simp [g']
+      let L := Algebra.Generators.localizationAway T g
+      let qcomp := L.toComp P
+      let rel : Q.Ring :=
+        MvPolynomial.rename Sum.inr g' * MvPolynomial.X (Sum.inl ()) - 1
+      let fQ : Sum (Fin c) Unit → Q.Ring :=
+        Sum.elim (fun i => qcomp.toAlgHom (f i)) (fun _ => rel)
+      let ef : Fin (c + 1) ≃ Sum (Fin c) Unit :=
+        (finCongr (by simp [Fintype.card_sum, Nat.add_comm])).trans
+          (Fintype.equivFin (Sum (Fin c) Unit)).symm
+      let f' : Fin (c + 1) → P'.Ring :=
+        fun i => er.symm (fQ (ef i))
+      have hspanP : Ideal.span (Set.range f) = P.ker := by
+        rw [hker]
+        congr 1
+        ext x
+        simp
+      have hmap : Ideal.map qcomp.toAlgHom P.ker =
+          Ideal.span (Set.range (qcomp.toAlgHom ∘ f)) := by
+        rw [← hspanP, Ideal.map_span]
+        congr 1
+        ext x
+        simp [Function.comp_def]
+      have hspanQ : Ideal.span (Set.range fQ) = Q.ker := by
+        have hrange : Set.range fQ =
+            Set.range (qcomp.toAlgHom ∘ f) ∪ {rel} := by
+          ext x
+          simp [fQ, Function.comp_def]
+        rw [hrange, Ideal.span_union, ← hmap]
+        exact (Formalization.Books.Algebra.Unit134.principal_localization_kernel_generated
+          g P g' hg').symm
+      have himage : er.toRingHom '' Set.range f' = Set.range fQ := by
+        ext z
+        constructor
+        · rintro ⟨x, ⟨i, rfl⟩, rfl⟩
+          exact ⟨ef i, by simp [f', er]⟩
+        · rintro ⟨i, rfl⟩
+          refine ⟨f' (ef.symm i), ⟨ef.symm i, rfl⟩, ?_⟩
+          simp [f', er]
+      have hmapspan : Ideal.map er.toRingHom (Ideal.span (Set.range f')) =
+          Ideal.span (Set.range fQ) := by
+        rw [Ideal.map_span]
+        rw [himage]
+      have hspan_reindex : Ideal.span (Set.range f') =
+          (Ideal.span (Set.range fQ)).comap er.toRingHom := by
+        apply le_antisymm
+        · rw [← Ideal.map_le_iff_le_comap]
+          exact hmapspan.le
+        · rw [Ideal.comap_le_iff_le_map er.toRingHom er.bijective]
+          exact hmapspan.ge
+      have hkerP' : P'.ker = Ideal.span (Set.range f') := by
+        rw [hker_reindex, hspan_reindex, hspanQ]
+      have hker' : P'.ker = Ideal.ofList (List.ofFn f') := by
+        rw [hkerP']
+        symm
+        apply congrArg Ideal.span
+        ext x
+        simp
+        constructor
+        · rintro (rfl | ⟨i, hi⟩)
+          · exact ⟨0, rfl⟩
+          · exact ⟨i.succ, hi⟩
+        · rintro ⟨y, hy⟩
+          rcases Fin.eq_zero_or_eq_succ y with rfl | ⟨i, rfl⟩
+          · exact Or.inl hy.symm
+          · exact Or.inr ⟨i, hy⟩
+      have hc' : c + 1 ≤ n + 1 := Nat.add_le_add_right hc 1
+      have hdiff : n + 1 - (c + 1) = n - c := by omega
+      have hdimT' : ringKrullDim T =
+          (((n + 1 - (c + 1) : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+        simpa [hdiff] using hdimT
+      exact ⟨hftT, Or.inr ⟨n + 1, c + 1, P', f', hker', hc', hdimT'⟩⟩
+    · have hsubT : Subsingleton T := not_nontrivial_iff_subsingleton.mp hT
+      let _ : Subsingleton T := hsubT
+      exact ⟨hftT, Or.inl hsubT⟩
+
+private theorem isGlobalCompleteIntersection_of_algEquiv
+    {k A B : Type u} [Field k] [CommRing A] [CommRing B]
+    [Algebra k A] [Algebra k B] (e : A ≃ₐ[k] B)
+    (hA : IsGlobalCompleteIntersection k A) :
+    IsGlobalCompleteIntersection k B := by
+  rcases hA with ⟨hft, hcase⟩
+  rcases hcase with hsub | ⟨n, c, P, f, hker, hc, hdim⟩
+  · let hsubB : Subsingleton B :=
+      ⟨fun x y => e.symm.injective (hsub.elim _ _)⟩
+    let Q : PolynomialPresentation k B 0 :=
+      Algebra.Generators.ofSurjective
+        (fun i : Fin 0 => nomatch i)
+        (by
+          intro x
+          exact ⟨0, hsubB.elim _ _⟩)
+    exact ⟨RingHom.finiteType_algebraMap.mpr Q.finiteType, Or.inl hsubB⟩
+  · let P' : PolynomialPresentation k B n := P.ofAlgEquiv e
+    have hker' : P'.ker = P.ker := by
+      rw [P'.ker_eq_ker_aeval_val, P.ker_eq_ker_aeval_val]
+      ext z
+      change MvPolynomial.aeval (e ∘ P.val) z = 0 ↔
+        MvPolynomial.aeval P.val z = 0
+      have heval : e (MvPolynomial.aeval P.val z) =
+          MvPolynomial.aeval (e ∘ P.val) z := by
+        simpa [Function.comp_def] using
+          (MvPolynomial.comp_aeval_apply (R := k) (f := P.val) e.toAlgHom z)
+      rw [← heval]
+      constructor
+      · intro hz
+        apply e.injective
+        simpa using hz
+      · intro hz
+        rw [← e.map_zero]
+        exact congrArg e hz
+    have hdim' : ringKrullDim B =
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+      rw [← ringKrullDim_eq_of_ringEquiv e.toRingEquiv]
+      exact hdim
+    exact ⟨RingHom.finiteType_algebraMap.mpr P'.finiteType, Or.inr
+      ⟨n, c, P', f, hker'.trans hker, hc, hdim'⟩⟩
 
 theorem local_complete_intersection_localize
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
     (hS : IsLocalCompleteIntersection k S) (g : S) :
     IsLocalCompleteIntersection k (Localization.Away g) := by
-  sorry
+  rcases hS with ⟨hft, n, gs, hopen, hloc⟩
+  let T := Localization.Away g
+  let hftT : RingHom.FiniteType (algebraMap k T) := by
+    have hTS : RingHom.FiniteType (algebraMap S T) :=
+      RingHom.finiteType_algebraMap.mpr
+        (IsLocalization.finiteType_of_monoid_fg (Submonoid.powers g) T)
+    simpa only [IsScalarTower.algebraMap_eq k S T] using hTS.comp hft
+  refine ⟨hftT, n, (fun i => algebraMap S T (gs i)), ?_, ?_⟩
+  · ext q
+    simp only [Set.mem_iUnion, Set.mem_univ, iff_true]
+    have hq : PrimeSpectrum.comap (algebraMap S T) q ∈
+        ⋃ i : Fin n, (PrimeSpectrum.basicOpen (gs i) : Set (PrimeSpectrum S)) := by
+      rw [hopen]
+      trivial
+    rcases Set.mem_iUnion.mp hq with ⟨i, hi⟩
+    refine ⟨i, ?_⟩
+    change gs i ∉ (PrimeSpectrum.comap (algebraMap S T) q).asIdeal at hi
+    change algebraMap S T (gs i) ∉ q.asIdeal
+    exact hi
+  · intro i
+    let U := Localization.Away (gs i)
+    let V := Localization.Away (algebraMap S T (gs i))
+    let eS : Localization.Away (algebraMap S U g) ≃ₐ[S] V :=
+      IsLocalization.algEquiv (Submonoid.powers (g * gs i))
+        (Localization.Away (algebraMap S U g)) V
+    exact isGlobalCompleteIntersection_of_algEquiv
+      (eS.restrictScalars k) (global_complete_intersection_localize
+        (hloc i) (algebraMap S U g))
+
+private theorem isCohenMacaulayLocalRing_of_ringEquiv
+    {R S : Type u} [CommRing R] [CommRing S]
+    [IsLocalRing R] [IsLocalRing S] [IsNoetherianRing R] [IsNoetherianRing S]
+    (e : R ≃+* S)
+    (hR : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing R) :
+    Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing S := by
+  obtain ⟨xs, hmem, hreg, hzero⟩ :=
+    (Formalization.Books.Algebra.Unit104.isCohenMacaulayLocalRing_iff_exists_regularSequence R).mp hR
+  let ys : List S := xs.map e
+  have hmem' : ∀ y ∈ ys, y ∈ IsLocalRing.maximalIdeal S := by
+    intro y hy
+    rcases List.mem_map.mp hy with ⟨x, hx, rfl⟩
+    have hxmem := hmem x hx
+    rw [IsLocalRing.mem_maximalIdeal, mem_nonunits_iff] at hxmem ⊢
+    simpa using hxmem
+  have hreg' : RingTheory.Sequence.IsRegular S ys := by
+    apply (e.toAddEquiv.isRegular_congr
+      (List.forall₂_map_right_iff.mpr <|
+        List.forall₂_same.mpr fun r _ x => e.map_mul r x)).mp
+    simpa [ys] using hreg
+  have hideal : Ideal.ofList ys = (Ideal.ofList xs).map e := by
+    simp [ys, Ideal.ofList, Ideal.map_span]
+    congr 1
+  have hzero' : ringKrullDim (S ⧸ (Ideal.ofList ys : Ideal S)) = 0 := by
+    let eq : (R ⧸ (Ideal.ofList xs : Ideal R)) ≃+*
+        (S ⧸ (Ideal.ofList ys : Ideal S)) :=
+      Ideal.quotientEquiv (Ideal.ofList xs) (Ideal.ofList ys) e hideal
+    rw [← ringKrullDim_eq_of_ringEquiv eq]
+    exact hzero
+  exact (Formalization.Books.Algebra.Unit104.isCohenMacaulayLocalRing_iff_exists_regularSequence S).mpr
+    ⟨ys, hmem', hreg', hzero'⟩
+
+private theorem global_complete_intersection_at_maximal_isCohenMacaulay
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    (n c : ℕ) (P : PolynomialPresentation k S n)
+    (f : Fin c → P.Ring)
+    (hker : P.ker = Ideal.ofList (List.ofFn f))
+    (hc : c ≤ n)
+    (hdim : ringKrullDim S = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞))
+    (m : MaximalSpectrum S) :
+    letI : Algebra.FiniteType k S := P.finiteType
+    letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+    letI : IsNoetherianRing (Localization.AtPrime m.asIdeal) :=
+      Formalization.Books.Algebra.Unit31.localization_isNoetherian m.asIdeal.primeCompl
+    Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing
+      (Localization.AtPrime m.asIdeal) := by
+  let _ : Algebra.FiniteType k S := P.finiteType
+  let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  let q : PrimeSpectrum S := MaximalSpectrum.toPrimeSpectrum m
+  let q' : PrimeSpectrum P.Ring := PrimeSpectrum.comap (algebraMap P.Ring S) q
+  let _ : q.asIdeal.IsMaximal := m.isMaximal
+  have hq' : q'.asIdeal.IsMaximal := by
+    rw [show q'.asIdeal = Ideal.comap (algebraMap P.Ring S) q.asIdeal by rfl]
+    exact Ideal.comap_isMaximal_of_surjective
+      (f := algebraMap P.Ring S) P.algebraMap_surjective
+  let R := Localization.AtPrime q'.asIdeal
+  let T := Localization.AtPrime q.asIdeal
+  let f₀ : P.Ring →+* S := algebraMap P.Ring S
+  have hsub : Submonoid.map f₀ q'.asIdeal.primeCompl = q.asIdeal.primeCompl := by
+    change Submonoid.map (algebraMap P.Ring S) q'.asIdeal.primeCompl = q.asIdeal.primeCompl
+    exact Ideal.map_primeCompl_comap_of_surjective (algebraMap P.Ring S)
+      P.algebraMap_surjective q.asIdeal
+  let locMap : R →+* T :=
+    IsLocalization.map T f₀ (hsub.symm ▸ Submonoid.le_comap_map q'.asIdeal.primeCompl)
+  have hsurj : Function.Surjective locMap := by
+    intro z
+    obtain ⟨⟨s, t⟩, hst⟩ := IsLocalization.mk'_surjective q.asIdeal.primeCompl z
+    obtain ⟨x, hx⟩ := P.algebraMap_surjective s
+    have ht : (t : S) ∈ Submonoid.map f₀ q'.asIdeal.primeCompl := by
+      rw [hsub]
+      exact t.property
+    rcases Submonoid.mem_map.mp ht with ⟨u, hu, hfu⟩
+    let u' : q'.asIdeal.primeCompl := ⟨u, hu⟩
+    refine ⟨IsLocalization.mk' R x u', ?_⟩
+    change IsLocalization.map T f₀ _ (IsLocalization.mk' R x u') = z
+    have hle : q'.asIdeal.primeCompl ≤ Submonoid.comap f₀ q.asIdeal.primeCompl :=
+      hsub.symm ▸ Submonoid.le_comap_map q'.asIdeal.primeCompl
+    rw [IsLocalization.map_mk' hle]
+    rw [hx]
+    rw [← hst]
+    congr 1
+    apply Subtype.ext
+    exact hfu
+  have hkerloc : RingHom.ker locMap =
+      P.ker.map (algebraMap P.Ring R) := by
+    change RingHom.ker locMap =
+      (RingHom.ker (algebraMap P.Ring S)).map (algebraMap P.Ring R)
+    simpa [locMap, f₀] using
+      (IsLocalization.ker_map T f₀ hsub)
+  let fR : Fin c → R := fun i => algebraMap P.Ring R (f i)
+  have hspanR : Ideal.span (Set.range fR) =
+      P.ker.map (algebraMap P.Ring R) := by
+    rw [hker, Ideal.map_span]
+    congr 1
+    ext x
+    simp [fR]
+  have hkerEq : Ideal.span (Set.range fR) = RingHom.ker locMap :=
+    hspanR.trans hkerloc.symm
+  let eQuot : (R ⧸ (Ideal.span (Set.range fR) : Ideal R)) ≃+* T :=
+    (Ideal.quotientEquivAlgOfEq R hkerEq).toRingEquiv.trans
+      (RingHom.quotientKerEquivOfSurjective hsurj)
+  have hdimQuot : ringKrullDim (R ⧸ (Ideal.span (Set.range fR) : Ideal R)) =
+      (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+    rw [ringKrullDim_eq_of_ringEquiv eQuot]
+    exact (global_complete_intersection_maximal_localizations
+      n c P f hker hc hdim m).1
+  have hfieldCM : Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing k := by
+    intro p
+    have hpbot : p.asIdeal = (⊥ : Ideal k) :=
+      Ideal.eq_bot_of_prime (I := p.asIdeal)
+    have hp : p = (⟨(⊥ : Ideal k), Ideal.isPrime_bot⟩ : PrimeSpectrum k) := by
+      apply PrimeSpectrum.ext
+      exact hpbot
+    subst p
+    apply (Formalization.Books.Algebra.Unit104.isCohenMacaulayLocalRing_iff_exists_regularSequence
+      (Localization.AtPrime (⊥ : Ideal k))).mpr
+    refine ⟨[], ?_, RingTheory.Sequence.IsRegular.nil _ _, ?_⟩
+    · simp
+    · let L := Localization.AtPrime (⊥ : Ideal k)
+      have hunitzero : ∀ z : L, IsUnit z ∨ z = 0 := by
+        intro z
+        obtain ⟨⟨a, s⟩, hz⟩ :=
+          IsLocalization.mk'_surjective (⊥ : Ideal k).primeCompl z
+        by_cases ha : a = 0
+        · right
+          rw [← hz]
+          simp [ha]
+        · left
+          rw [← hz]
+          apply isUnit_of_mul_isUnit_left
+          rw [IsLocalization.mk'_spec]
+          exact IsUnit.map (algebraMap k L) (isUnit_iff_ne_zero.mpr ha)
+      letI : Field L := Field.ofIsUnitOrEqZero hunitzero
+      let ebot := RingHom.quotientKerEquivOfSurjective
+        (f := RingHom.id L) Function.surjective_id
+      have hzeroIdeal : (Ideal.ofList [] : Ideal L) = RingHom.ker (RingHom.id L) := by
+        ext x
+        simp [Ideal.ofList]
+      calc
+        ringKrullDim (L ⧸ (Ideal.ofList [] : Ideal L)) = ringKrullDim L := by
+          rw [hzeroIdeal]
+          exact ringKrullDim_eq_of_ringEquiv ebot
+        _ = 0 := ringKrullDim_eq_zero_of_isField (Field.toIsField L)
+  have hpolyCM := Formalization.Books.Algebra.Unit104.isCohenMacaulayRing_mPolynomial
+    k hfieldCM n
+  have hRcm : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing R :=
+    hpolyCM q'
+  have hdimR : ringKrullDim R = (((n : ℕ∞) : WithBot ℕ∞)) := by
+    let m' : MaximalSpectrum P.Ring := ⟨q'.asIdeal, hq'⟩
+    simpa [R] using (Formalization.Books.Algebra.Unit114.dim_affine_space n m' |>.2.1)
+  have hMdim : Module.supportDim R R = (((n : ℕ∞) : ℕ∞) : WithBot ℕ∞) := by
+    rw [Module.supportDim_self_eq_ringKrullDim, hdimR]
+  have hmemR : ∀ i, fR i ∈ IsLocalRing.maximalIdeal R := by
+    intro i
+    apply (IsLocalization.AtPrime.to_map_mem_maximal_iff R q'.asIdeal (f i)).mpr
+    change algebraMap P.Ring S (f i) ∈ q.asIdeal
+    rw [P.algebraMap_apply]
+    have hfi : f i ∈ P.ker := hker.symm ▸ Ideal.subset_span (by simp)
+    rw [P.aeval_val_eq_zero hfi]
+    exact Ideal.zero_mem q.asIdeal
+  have hquotdim : Module.supportDim R (Formalization.Books.Algebra.Unit103.quotientByList R
+      (List.ofFn fR)) = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+    have hI : (Ideal.ofList (List.ofFn fR) : Ideal R) • (⊤ : Submodule R R) =
+        Ideal.span (Set.range fR) := by
+      rw [Ideal.smul_top_eq_map]
+      simp [Ideal.ofList]
+      congr 1
+    rw [Module.supportDim_quotient_eq_ringKrullDim]
+    rw [hI]
+    simpa [Formalization.Books.Algebra.Unit103.quotientByList] using hdimQuot
+  have hregR : RingTheory.Sequence.IsRegular R (List.ofFn fR) :=
+    (Formalization.Books.Algebra.Unit103.regularSequence_of_supportDim_quotient_eq
+      n c hRcm fR hc hMdim hmemR hquotdim).1
+  by_cases hzero : c = 0
+  · subst c
+    have hspan0 : Ideal.span (Set.range fR) =
+        RingHom.ker (RingHom.id R) := by
+      ext x
+      simp [fR, Ideal.ofList]
+    have eQuot0 : (R ⧸ RingHom.ker (RingHom.id R)) ≃+* T := by
+      rw [← hspan0]
+      exact eQuot
+    let e0 : R ≃+* T :=
+      (RingHom.quotientKerEquivOfSurjective (f := RingHom.id R)
+        Function.surjective_id).symm.trans eQuot0
+    exact isCohenMacaulayLocalRing_of_ringEquiv e0 hRcm
+  · obtain ⟨ys, hreg, _, hmax⟩ :=
+      Formalization.Books.Algebra.Unit104.regularSequence_extend_and_quotients_are_CohenMacaulay
+        R hRcm (List.ofFn fR)
+        (by
+          intro x hx
+          simp only [List.mem_ofFn] at hx
+          obtain ⟨i, rfl⟩ := hx
+          exact hmemR i) hregR
+    let i : Fin (List.ofFn fR).length := ⟨c - 1, by simp; omega⟩
+    have htake : (List.ofFn fR).take (i.1 + 1) = List.ofFn fR := by
+      simp [i]
+      omega
+    obtain ⟨hcmQ, _⟩ := hmax i
+    obtain ⟨hlocalQ, hcmQ⟩ := hcmQ
+    letI : IsLocalRing
+        (R ⧸ (Ideal.ofList ((List.ofFn fR).take (i.1 + 1)) : Ideal R)) := hlocalQ
+    have hideal : Ideal.ofList ((List.ofFn fR).take (i.1 + 1) : List R) =
+        Ideal.span (Set.range fR) := by
+      rw [htake]
+      simp [Ideal.ofList]
+      congr 1
+    let eTake : (R ⧸ (Ideal.ofList ((List.ofFn fR).take (i.1 + 1)) : Ideal R)) ≃+* T :=
+      (Ideal.quotientEquivAlgOfEq R hideal).toRingEquiv.trans eQuot
+    exact isCohenMacaulayLocalRing_of_ringEquiv eTake hcmQ
 
 theorem local_complete_intersection_isCohenMacaulay
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -244,7 +785,126 @@ theorem local_complete_intersection_isCohenMacaulay
       (RingHom.finiteType_algebraMap.mp hS.1)
     letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
     Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S := by
-  sorry
+  letI : Algebra.FiniteType k S := RingHom.finiteType_algebraMap.mp hS.1
+  letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  letI : IsJacobsonRing S := isJacobsonRing_of_finiteType (A := k) (B := S)
+  rcases hS with ⟨_, n, gs, hcover, hloc⟩
+  intro p
+  have hpnotop : p.asIdeal ≠ (⊤ : Ideal S) := p.isPrime.ne_top
+  obtain ⟨M, hM, hpM⟩ := Ideal.ne_top_iff_exists_maximal.mp hpnotop
+  let m : MaximalSpectrum S := ⟨M, hM⟩
+  have hmcover : m.toPrimeSpectrum ∈
+      ⋃ i : Fin n, (PrimeSpectrum.basicOpen (gs i) : Set (PrimeSpectrum S)) := by
+    rw [hcover]
+    exact Set.mem_univ _
+  obtain ⟨i, hi⟩ := Set.mem_iUnion.mp hmcover
+  have hgi : gs i ∉ m.asIdeal :=
+    (PrimeSpectrum.mem_basicOpen (gs i) m.toPrimeSpectrum).mp hi
+  let U := Localization.Away (gs i)
+  have hglobal : IsGlobalCompleteIntersection k U := hloc i
+  rcases hglobal with ⟨_, hcase⟩
+  rcases hcase with hsub | ⟨n', c', P, f, hker, hc, hdim⟩
+  · exfalso
+    letI : Subsingleton U := hsub
+    let J : Ideal U := m.asIdeal.map (algebraMap S U)
+    have hpow : Submonoid.powers (gs i) ≤ m.asIdeal.primeCompl :=
+      Submonoid.powers_le.mpr (Ideal.mem_primeCompl_iff.mpr hgi)
+    have hdisj : Disjoint (Submonoid.powers (gs i) : Set S)
+        (m.asIdeal : Set S) := by
+      rw [Set.disjoint_left]
+      intro x hxS hxM
+      exact (Ideal.mem_primeCompl_iff.mp (hpow hxS)) hxM
+    have hJprime : J.IsPrime := by
+      simpa [J] using IsLocalization.isPrime_of_isPrime_disjoint
+        (Submonoid.powers (gs i)) U m.asIdeal m.isMaximal.isPrime hdisj
+    have htop : J = (⊤ : Ideal U) := by
+      apply top_unique
+      intro x _
+      have hx : x = 0 := Subsingleton.elim _ _
+      rw [hx]
+      exact J.zero_mem
+    exact hJprime.ne_top htop
+  · let J : Ideal U := m.asIdeal.map (algebraMap S U)
+    have hpow : Submonoid.powers (gs i) ≤ m.asIdeal.primeCompl :=
+      Submonoid.powers_le.mpr (Ideal.mem_primeCompl_iff.mpr hgi)
+    have hdisj : Disjoint (Submonoid.powers (gs i) : Set S)
+        (m.asIdeal : Set S) := by
+      rw [Set.disjoint_left]
+      intro x hxS hxM
+      exact (Ideal.mem_primeCompl_iff.mp (hpow hxS)) hxM
+    have hJprime : J.IsPrime := by
+      simpa [J] using IsLocalization.isPrime_of_isPrime_disjoint
+        (Submonoid.powers (gs i)) U m.asIdeal m.isMaximal.isPrime hdisj
+    letI : J.IsPrime := hJprime
+    have hunder : Ideal.under S J = m.asIdeal := by
+      simpa [J] using IsLocalization.under_map_of_isPrime_disjoint
+        (Submonoid.powers (gs i)) U m.isMaximal.isPrime hdisj
+    have hJmax : J.IsMaximal := by
+      exact (IsLocalization.isMaximal_iff_isMaximal_disjoint U (gs i) J).mpr
+        ⟨by rw [hunder]; exact m.isMaximal, by rw [hunder]; exact hgi⟩
+    let mU : MaximalSpectrum U := ⟨J, hJmax⟩
+    have hcmU := global_complete_intersection_at_maximal_isCohenMacaulay
+      n' c' P f hker hc hdim mU
+    let Mloc := Localization.AtPrime m.asIdeal
+    let eUAlg := IsLocalization.localizationLocalizationAtPrimeIsoLocalization
+      (R := S) (M := Submonoid.powers (gs i)) J
+    have hcomapU : J.comap (algebraMap S U) = m.asIdeal := by
+      change Ideal.under S J = m.asIdeal
+      exact hunder
+    have hsubU : (J.comap (algebraMap S U)).primeCompl = m.asIdeal.primeCompl :=
+      by
+        ext x
+        rw [Ideal.mem_primeCompl_iff, Ideal.mem_primeCompl_iff, hcomapU]
+    letI : IsLocalization m.asIdeal.primeCompl
+        (Localization (J.comap (algebraMap S U)).primeCompl) := by
+      rw [hsubU]
+      infer_instance
+    let eU0 : Mloc ≃ₐ[S] Localization (J.comap (algebraMap S U)).primeCompl :=
+      IsLocalization.algEquiv m.asIdeal.primeCompl Mloc
+        (Localization (J.comap (algebraMap S U)).primeCompl)
+    let eU : Mloc ≃+* Localization.AtPrime J :=
+      eU0.toRingEquiv.trans eUAlg.toRingEquiv
+    letI : IsNoetherianRing Mloc :=
+      Formalization.Books.Algebra.Unit31.localization_isNoetherian m.asIdeal.primeCompl
+    have hmcm : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing Mloc :=
+      isCohenMacaulayLocalRing_of_ringEquiv eU.symm hcmU
+    have hp_le_m : p.asIdeal ≤ m.asIdeal := hpM
+    have hdisjP : Disjoint (m.asIdeal.primeCompl : Set S)
+        (p.asIdeal : Set S) := by
+      rw [Set.disjoint_left]
+      intro x hxM hxP
+      exact (Ideal.mem_primeCompl_iff.mp hxM) (hp_le_m hxP)
+    let pMideal : Ideal Mloc := p.asIdeal.map (algebraMap S Mloc)
+    have hpMprime : pMideal.IsPrime := by
+      simpa [pMideal] using IsLocalization.isPrime_of_isPrime_disjoint
+        m.asIdeal.primeCompl Mloc p.asIdeal p.isPrime hdisjP
+    letI : pMideal.IsPrime := hpMprime
+    let pM : PrimeSpectrum Mloc := ⟨pMideal, hpMprime⟩
+    have hunderP : Ideal.under S pMideal = p.asIdeal := by
+      simpa [pMideal] using IsLocalization.under_map_of_isPrime_disjoint
+        m.asIdeal.primeCompl Mloc p.isPrime hdisjP
+    have hcmP := Formalization.Books.Algebra.Unit104.isCohenMacaulayLocalRing_localization
+      Mloc hmcm pM
+    let ePAlg := IsLocalization.localizationLocalizationAtPrimeIsoLocalization
+      (R := S) (M := m.asIdeal.primeCompl) pMideal
+    have hcomapP : pMideal.comap (algebraMap S Mloc) = p.asIdeal := by
+      change Ideal.under S pMideal = p.asIdeal
+      exact hunderP
+    have hsubP : (pMideal.comap (algebraMap S Mloc)).primeCompl = p.asIdeal.primeCompl :=
+      by
+        ext x
+        rw [Ideal.mem_primeCompl_iff, Ideal.mem_primeCompl_iff, hcomapP]
+    letI : IsLocalization p.asIdeal.primeCompl
+        (Localization (pMideal.comap (algebraMap S Mloc)).primeCompl) := by
+      rw [hsubP]
+      infer_instance
+    let eP0 : Localization.AtPrime p.asIdeal ≃ₐ[S]
+        Localization (pMideal.comap (algebraMap S Mloc)).primeCompl :=
+      IsLocalization.algEquiv p.asIdeal.primeCompl (Localization.AtPrime p.asIdeal)
+        (Localization (pMideal.comap (algebraMap S Mloc)).primeCompl)
+    let eP : Localization.AtPrime p.asIdeal ≃+* Localization.AtPrime pMideal :=
+      eP0.toRingEquiv.trans ePAlg.toRingEquiv
+    exact isCohenMacaulayLocalRing_of_ringEquiv eP.symm hcmP
 
 /-! ## The local presentation and its conormal module -/
 

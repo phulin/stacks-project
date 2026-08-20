@@ -39,7 +39,7 @@ theorem smooth_iff_cotangent_criterion
   · intro h
     have hformal : Algebra.FormallySmooth R S := h.formallySmooth
     have hcriterion := (Algebra.formallySmooth_iff R S).mp hformal
-    letI : Algebra.FinitePresentation R S := h.finitePresentation
+    let _ : Algebra.FinitePresentation R S := h.finitePresentation
     refine ⟨h.finitePresentation, ?_⟩
     refine ⟨(inferInstance : Module.Finite S
       (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)), ?_⟩
@@ -202,7 +202,7 @@ theorem characterize_smooth_over_field_overview
   tfae_finish
 
 theorem smooth_over_field_regular_localizations
-    {k S : Type*} [Field k] [CommRing S] [Algebra k S]
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
     [Algebra.Smooth k S] :
     ∀ q : PrimeSpectrum S,
       IsRegularLocalRing (Localization.AtPrime q.asIdeal) := by

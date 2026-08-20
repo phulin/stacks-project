@@ -11,10 +11,12 @@ import Mathlib.LinearAlgebra.Span.Basic
 import Mathlib.LinearAlgebra.Transvection.Generation
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Length
+import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.AsSubring
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
 import Mathlib.RingTheory.Norm.Basic
 import Mathlib.RingTheory.OrderOfVanishing.Basic
+import Mathlib.RingTheory.RingHom.Finite
 import Mathlib.RingTheory.Spectrum.Maximal.Basic
 
 /-!
@@ -192,7 +194,7 @@ theorem lattice_free_over_dvr
     [CommRing R] [IsDomain R] [IsDiscreteValuationRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (M : Submodule R V)
+    [IsScalarTower R K V] [Module.Finite K V] (M : Submodule R V)
     (hM : Submodule.IsLattice K M) : Module.Free R (M : Type v) := by
   exact @Submodule.IsLattice.free R _ K _ _ V _ _ _ _ _ _ _ M hM
 
@@ -225,7 +227,7 @@ theorem lattice_comparison_upper
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hMM' : M ≤ M') :
     List.TFAE
       [ Submodule.IsLattice K M',
@@ -238,7 +240,7 @@ theorem lattice_comparison_lower
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hM'M : M' ≤ M) :
     Submodule.IsLattice K M' ↔ latticeQuotientHasFiniteLength R M' M := by
   sorry
@@ -248,7 +250,7 @@ theorem lattice_intersection_and_sum
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') :
     Submodule.IsLattice K (M ⊓ M') ∧ Submodule.IsLattice K (M ⊔ M') := by
@@ -259,7 +261,7 @@ theorem lattice_length_additive
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' M'' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') (hM'' : Submodule.IsLattice K M'')
     (hMM' : M ≤ M') (hM'M'' : M' ≤ M'') :
@@ -272,7 +274,7 @@ theorem lattice_length_comparison
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' N N' : Submodule R V)
     (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M')
     (hN : Submodule.IsLattice K N) (hN' : Submodule.IsLattice K N')
@@ -296,7 +298,7 @@ theorem latticeDistance_of_le
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') (hM'M : M' ≤ M) :
     latticeDistance R M M' = latticeLengthInt R M' M := by
@@ -307,7 +309,7 @@ theorem latticeDistance_additive
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' M'' : Submodule R V)
     (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M')
     (hM'' : Submodule.IsLattice K M'') :
@@ -320,7 +322,7 @@ theorem latticeDistance_antisymm
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') :
     latticeDistance R M M' = -latticeDistance R M' M := by
@@ -341,7 +343,7 @@ theorem isLattice_latticeMap
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (φ : V ≃ₗ[K] V) (M : Submodule R V) (hM : Submodule.IsLattice K M) :
     Submodule.IsLattice K (latticeMap φ M) := by
   sorry
@@ -351,7 +353,7 @@ theorem latticeDistance_latticeMap_pair
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (φ : V ≃ₗ[K] V) (M M' : Submodule R V)
     (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M') :
     latticeDistance R (latticeMap φ M) (latticeMap φ M') =
@@ -363,7 +365,7 @@ theorem latticeDistance_map_independent
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (φ : V ≃ₗ[K] V) (M M' : Submodule R V)
     (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M') :
     latticeDistance R M (latticeMap φ M) =
@@ -375,7 +377,7 @@ theorem latticeDistance_comp_decomposition
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (φ ψ : V ≃ₗ[K] V) (M : Submodule R V) (hM : Submodule.IsLattice K M) :
     latticeDistance R M (latticeMap (ψ.trans φ) M) =
         latticeDistance R M (latticeMap ψ M) +
@@ -386,9 +388,9 @@ theorem latticeDistance_comp_decomposition
 
 theorem orderOfVanishing_det_comp
     {R : Type u} {K : Type v} {V : Type v}
-    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
-    [AddCommGroup V] [Module K V]
+    [AddCommGroup V] [Module K V] [Module.Finite K V]
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
     (φ ψ : V ≃ₗ[K] V) :
     orderOfVanishing hnoetherian hdim (LinearEquiv.det (ψ.trans φ)) =
@@ -398,7 +400,7 @@ theorem orderOfVanishing_det_comp
 
 theorem latticeDistance_map_eq_orderOfVanishing
     {R : Type u} {K : Type v} {V : Type v}
-    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] [Module.Finite K V]
@@ -424,7 +426,7 @@ theorem exists_fin_basis_equiv
 
 theorem latticeDistance_transvection
     {R : Type u} {K : Type v} {V : Type v}
-    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] [Module.Finite K V]
@@ -525,7 +527,6 @@ theorem finite_extension_order_formula
     (hinjective : Function.Injective f) (hfinite : RingHom.Finite f)
     (hcompat : (algebraMap K L).comp (algebraMap A K) =
       (algebraMap B L).comp f)
-    (hKL : Function.Injective (algebraMap K L))
     (hdim : ringKrullDim A = 1) :
     ∃ hsemilocal : Finite (MaximalSpectrum B),
       letI := hsemilocal

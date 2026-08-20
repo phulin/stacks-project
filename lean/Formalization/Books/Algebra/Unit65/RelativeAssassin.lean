@@ -6,6 +6,7 @@ import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
+import Mathlib.RingTheory.TensorProduct.DirectLimitFG
 
 /-!
 # Commutative Algebra, Chapter 65: relative assassin
@@ -1235,6 +1236,84 @@ private theorem relativeAssassinBFin_subset_AFin'_of_noetherian_of_flat
         · exact h₃ hq
   exact hPall M hq
 
+/-
+Proof roadmap (statement audit: sound).
+
+The two reverse inclusions use the same consequence of
+`[IsNoetherianRing S]`: by `isNoetherianRing_iff_ideal_fg` and
+`Submodule.fg_iff_exists_fin_generating_family` (`Mathlib/RingTheory/Noetherian/Defs.lean`
+and `Mathlib/RingTheory/Finiteness/Defs.lean`), write `q.asIdeal` as the span of
+`g : Fin n → S`.  Keep all arbitrary `B`-witnesses in `Type u`; this is the
+last universe parameter in `relativeAssassinB.{u, v, w, u}`, and submodules of
+such a witness also live in `Type u`.
+
+For `relativeAssassinA ⊆ relativeAssassinAFin`:
+
+1. Fix `q`, put `p := PrimeSpectrum.comap (algebraMap R S) q`,
+   `A := R ⧸ p.asIdeal`, `K := p.asIdeal.ResidueField`, and
+   `M0 := A ⊗[R] N`.  Reuse exactly the localization diagram already built in
+   `relativeAssassinAFin_subset_A`: `f := TensorProduct.mk A K M0 1`, the
+   instance `IsLocalization.tensorProduct_isLocalizedModule
+   (nonZeroDivisors A) K` (`Mathlib/RingTheory/Localization/BaseChange.lean`),
+   `TensorProduct.AlgebraTensorModule.cancelBaseChange`, `TensorProduct.comm`,
+   and the local `quotientTensorEquiv` above.
+2. If `y : N ⊗[R] K` has S-annihilator `q.asIdeal`, let
+   `yA : K ⊗[A] M0` be its inverse image under the cancel-base-change
+   equivalence and apply `IsLocalizedModule.surj` to `yA`.  It gives
+   `x0 : M0` and a denominator `a : nonZeroDivisors A` with
+   `a • yA = f x0`.  Multiplication by the image of `a` is a unit after
+   localization, and the A-action commutes with the S-action, so `f x0` still
+   has exact S-annihilator `q.asIdeal`.  Transport `x0` through
+   `TensorProduct.comm` and `quotientTensorEquiv` to an element `m0` of
+   `N ⧸ pS • ⊤`.
+3. For every generator `g i`, S-linearity gives `g i • f x0 = 0`.  Apply
+   `IsLocalizedModule.eq_zero_iff` from
+   `Mathlib/Algebra/Module/LocalizedModule/Basic.lean` to obtain
+   `a i : nonZeroDivisors A` killing the corresponding source element.  Use
+   `Ideal.Quotient.mk_surjective`, `mem_nonZeroDivisors_iff_ne_zero`, and
+   `Ideal.Quotient.eq_zero_iff_mem` to choose `r i : R` with
+   `r i ∉ p.asIdeal`.  Set `r := ∏ i, r i` and
+   `m := (algebraMap R S r) • m0`.
+4. The span equation for `g` shows `q.asIdeal` annihilates `m`.  Conversely,
+   if `s • m = 0`, map to the fibre: `(algebraMap R S r) * s` annihilates
+   `f x0`, hence lies in `q.asIdeal`.  The product `r` is outside `p`, so its
+   image is outside `q` by the definition of `p`; cancel it with
+   `q.isPrime.mem_or_mem`.  Thus the annihilator of `m` is exactly `q.asIdeal`.
+
+For `relativeAssassinB ⊆ relativeAssassinBFin`:
+
+1. From a witness `M : Type u` and `x : N ⊗[R] M`, use
+   `TensorProduct.exists_finite_submodule_right_of_setFinite`
+   (`Mathlib/LinearAlgebra/TensorProduct/Finiteness.lean`) to get a finite
+   submodule `P0 ≤ M` and a lift `x0 : N ⊗[R] P0`.
+2. Induct over the finite family `g : Fin n → S`, maintaining a finitely
+   generated `Pi ≤ M` and a transported lift `xi`.  The image of
+   `g i • xi` in `N ⊗[R] M` is zero.  Commute the tensor factors and apply
+   `TensorProduct.eq_zero_of_fg_of_subtype_eq_zero`
+   (`Mathlib/RingTheory/TensorProduct/DirectLimitFG.lean`) with
+   `Submodule.FG.of_finite`; it supplies `Pi ≤ Pi+1`, `Pi+1.FG`, and makes this
+   zero relation hold at the enlarged stage.  Transport `xi` with
+   `Submodule.inclusion`; relations handled at earlier stages remain zero.
+3. At the final stage, the generators, hence all of `q.asIdeal`, kill the
+   lifted tensor.  Its annihilator is contained in `q.asIdeal` because the map
+   back to `N ⊗[R] M` sends it to `x`.  Apply `Module.Finite.of_fg` to package
+   the final submodule as the finite witness required by
+   `relativeAssassinBFin`.
+
+Finish both equalities with `Set.Subset.antisymm`: the forward comparison
+directions are `compare_relative_assassins.1` and
+`compare_relative_assassins.2.1`.
+
+Dead ends to avoid: Unit 63's `ass_localize_eq_over_localization` and
+`ass_localize_eq_of_noetherian` concern the literal `LocalizedModule` over one
+base ring; there is no packaged S-linear `IsLocalizedModule` identification
+with `N ⊗[R] K`.  `quotientTensorEquiv` stops before localization, and finite
+tensor-support capture alone does not reflect zero relations.  The latter
+construction is not absent: the `DirectLimitFG` theorem in step B.2 is the
+needed finite-stage relation interface.  Only the packaged relative
+S-annihilator localization theorem is genuinely absent, and steps A.1--A.4
+give the required witness-level replacement.
+-/
 theorem relative_assassins_eq_of_noetherian_target
     {R : Type u} {S : Type v} {N : Type w}
     [CommRing R] [CommRing S] [Algebra R S]
@@ -1245,6 +1324,70 @@ theorem relative_assassins_eq_of_noetherian_target
         relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) := by
   sorry
 
+/-
+Proof roadmap (statement audit: sound).
+
+First install
+`let : Module R N := Module.compHom N (algebraMap R S)`,
+`let : Module.Flat R N := hN`, and the local
+`inducedModule_isScalarTower`.  Put
+`hc := compare_relative_assassins (R := R) (S := S) (N := N)`.
+
+For `relativeAssassinA ⊆ relativeAssassinAFin` (exact S-annihilator descent):
+
+1. For `p := comap (algebraMap R S) q`, set `A := R ⧸ p.asIdeal` and
+   `K := p.asIdeal.ResidueField`.  Let
+   `k : A →ₗ[R] K` be `(Algebra.linearMap A K).restrictScalars R`.
+   `Ideal.injective_algebraMap_quotient_residueField`
+   (`Mathlib/RingTheory/LocalRing/ResidueField/Ideal.lean`) makes `k`
+   injective, so
+   `Module.Flat.lTensor_preserves_injective_linearMap (M := N) k`
+   (`Mathlib/RingTheory/Flat/Basic.lean`) makes
+   `k.lTensor N : N ⊗[R] A →ₗ[R] N ⊗[R] K` injective.  Wrap it with the local
+   `leftTensorMap` when S-linearity is needed.
+2. Use the same `f : (A ⊗[R] N) →ₗ[A] K ⊗[A] (A ⊗[R] N)`, tensor-commutation,
+   and cancel-base-change equivalences as in
+   `relativeAssassinAFin_subset_A`.  The map `f` is conjugate to `k.lTensor N`,
+   hence injective.  `IsLocalizedModule.surj` writes a fibre witness as a unit
+   denominator times `f x0`; canceling that unit shows `f x0` has the same
+   exact S-annihilator.  Injectivity and S-linearity then reflect
+   `s • f x0 = 0` iff `s • x0 = 0`.  Transport `x0` through
+   `TensorProduct.comm` and `quotientTensorEquiv` to obtain the required exact
+   annihilator in `N ⧸ pS • ⊤`.
+3. Combine this reverse inclusion with `hc.1`, the existing
+   `relativeAssassinAFin ⊆ relativeAssassinA`.
+
+For `relativeAssassinAFin' ⊆ relativeAssassinAFin` (identify the contraction):
+
+1. Unpack `q ∈ relativeAssassinAFin'` as a prime `p` and an exact-annihilator
+   witness `x` in `N ⧸ pS • ⊤`, and move it to `N ⊗[R] (R ⧸ p.asIdeal)` using
+   `quotientTensorEquiv.symm`.  The witness is nonzero, since the annihilator
+   of zero is `⊤` whereas `q.isPrime.ne_top`.
+2. Show `p.asIdeal = q.asIdeal.comap (algebraMap R S)`.  The forward inclusion
+   follows because every element of `p` acts by zero on the quotient.  For the
+   reverse inclusion, if `r ∉ p` but `algebraMap R S r ∈ q`, then `r` kills
+   `x`.  Map `x` along the injective `k.lTensor N` from the preceding part;
+   in the fibre, `algebraMap R K r` is nonzero and hence a unit, so its action
+   cannot kill the nonzero image of `x`.  This contradiction forces `r ∈ p`.
+   Use `PrimeSpectrum.ext` to turn the ideal equality into
+   `p = PrimeSpectrum.comap (algebraMap R S) q`, then the original witness is
+   exactly the one required by `relativeAssassinAFin`.
+3. Combine this reverse inclusion with `hc.2.2.1`, the existing
+   `relativeAssassinAFin ⊆ relativeAssassinAFin'`.
+
+For the B equality, no localization work remains: combine
+`relativeAssassinB_subset_BFin_of_flat (R := R) (S := S) (N := N) hN` with
+`hc.2.1` using `Set.Subset.antisymm`, and assemble the three equalities in the
+statement's nesting order.
+
+Dead ends to avoid: `quotientTensorEquiv` by itself does not reach the fibre;
+flat `lTensor` injectivity by itself does not represent an arbitrary localized
+witness, so it must be paired with `IsLocalizedModule.surj` and unit
+cancellation.  A direct use of Unit 63 localization equalities still lacks an
+S-linear relative-localization identification.  No such packaged construction
+is present in the imported project API; the explicit conjugated map in steps
+A.1--A.2 is the intended replacement, not a new upstream declaration.
+-/
 theorem relative_assassins_eq_of_flat
     {R : Type u} {S : Type v} {N : Type w}
     [CommRing R] [CommRing S] [Algebra R S]

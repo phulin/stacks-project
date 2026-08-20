@@ -2,7 +2,13 @@ import Mathlib.Algebra.MonoidAlgebra.Basic
 import Mathlib.Algebra.MonoidAlgebra.NoZeroDivisors
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.Algebra.Algebra.Epi
+import Mathlib.Algebra.Algebra.Rat
+import Mathlib.Algebra.Module.LinearMap.Rat
+import Mathlib.Algebra.TrivSqZeroExt.Ideal
+import Mathlib.Algebra.DualNumber
 import Mathlib.RingTheory.Ideal.Cotangent
+import Mathlib.RingTheory.Extension.ExtendScalars
 import Mathlib.RingTheory.Flat.TorsionFree
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Smooth.Basic
@@ -374,6 +380,173 @@ theorem rationalGroupAlgebraCotangent_subsingleton_of_charP
    with the factors ordered so that its canonical scalar action is by `k`. -/
 abbrev rationalGroupAlgebraCharZeroTensor (k : Type u) [Field k] := k ⊗[ℤ] ℚ
 
+private noncomputable def rationalGroupAlgebraCharZeroTensorEquivFieldAux
+    (k : Type u) [Field k] [CharZero k] :
+    rationalGroupAlgebraCharZeroTensor k ≃ₗ[k] k := by
+  letI := Algebra.TensorProduct.rightAlgebra (R := ℤ) (A := ℚ) (B := k)
+  let eQ : (ℚ ⊗[ℤ] k) ≃ₗ[k] k :=
+    { toFun := TensorProduct.lid' ℤ ℚ k
+      invFun := (TensorProduct.lid' ℤ ℚ k).symm
+      left_inv := (TensorProduct.lid' ℤ ℚ k).left_inv
+      right_inv := (TensorProduct.lid' ℤ ℚ k).right_inv
+      map_add' := (TensorProduct.lid' ℤ ℚ k).map_add
+      map_smul' := by
+        intro c x
+        induction x using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy =>
+            simp only [map_add, smul_add, hx, hy, RingHom.id_apply]
+        | tmul q x =>
+            simp [Algebra.smul_def, Algebra.TensorProduct.right_algebraMap_apply,
+              mul_comm, mul_assoc] }
+  exact (Algebra.TensorProduct.commRight ℤ k ℚ).toLinearEquiv.trans eQ
+
+private def rationalGroupAlgebraCharZeroDualNumberHom
+    (k : Type u) [Field k] [CharZero k] : Multiplicative ℚ →* DualNumber k :=
+  { toFun := fun a => 1 + (a.toAdd : k) • (DualNumber.eps : DualNumber k)
+    map_one' := by simp
+    map_mul' := by
+      intro a b
+      change 1 + ((a.toAdd + b.toAdd : ℚ) : k) • (DualNumber.eps : DualNumber k) =
+        (1 + (a.toAdd : k) • (DualNumber.eps : DualNumber k)) *
+          (1 + (b.toAdd : k) • (DualNumber.eps : DualNumber k))
+      apply TrivSqZeroExt.ext
+      · simp
+      · simp [TrivSqZeroExt.snd_mul]
+        simpa only [Rat.cast_add] using
+          congrArg (fun q : ℚ => (q : k)) (add_comm a.toAdd b.toAdd) }
+
+private def rationalGroupAlgebraCharZeroDualNumberMap
+    (k : Type u) [Field k] [CharZero k] : rationalGroupAlgebra k →ₐ[k] DualNumber k :=
+  AddMonoidAlgebra.lift k (DualNumber k) ℚ
+    (rationalGroupAlgebraCharZeroDualNumberHom k)
+
+private theorem rationalGroupAlgebraCharZeroDualNumberMap_fst
+    (k : Type u) [Field k] [CharZero k] :
+    (TrivSqZeroExt.fstHom k k k).comp
+        (rationalGroupAlgebraCharZeroDualNumberMap k) =
+      rationalGroupAlgebraAugmentation k := by
+  apply AddMonoidAlgebra.algHom_ext
+  · intro α
+    simp [rationalGroupAlgebraCharZeroDualNumberMap,
+      rationalGroupAlgebraAugmentation,
+      rationalGroupAlgebraCharZeroDualNumberHom]
+  · apply AlgHom.ext
+    intro c
+    simp [rationalGroupAlgebraCharZeroDualNumberMap,
+      rationalGroupAlgebraAugmentation]
+
+private theorem rationalGroupAlgebraCotangentGenerator_one_ne_zero
+    (k : Type u) [Field k] [CharZero k] :
+    rationalGroupAlgebraCotangentGenerator k 1 ≠ 0 := by
+  intro hzero
+  let φ := rationalGroupAlgebraCharZeroDualNumberMap k
+  have hkernel : ∀ x : rationalGroupAlgebra k,
+      x ∈ rationalGroupAlgebraKernel k →
+        φ x ∈ TrivSqZeroExt.kerIdeal k k := by
+    intro x hx
+    change (TrivSqZeroExt.fstHom k k k) (φ x) = 0
+    calc
+      (TrivSqZeroExt.fstHom k k k) (φ x) =
+          ((TrivSqZeroExt.fstHom k k k).comp φ) x := rfl
+      _ = (rationalGroupAlgebraAugmentation k) x :=
+        DFunLike.congr_fun (rationalGroupAlgebraCharZeroDualNumberMap_fst k) x
+      _ = 0 := hx
+  have hsq : ∀ x : rationalGroupAlgebra k,
+      x ∈ rationalGroupAlgebraKernel k ^ 2 → φ x = 0 := by
+    intro x hx
+    rw [pow_two] at hx
+    induction hx using Submodule.mul_induction_on' with
+    | mem_mul_mem y hy z hz =>
+        rw [map_mul]
+        have hmem : φ y * φ z ∈
+            TrivSqZeroExt.kerIdeal k k * TrivSqZeroExt.kerIdeal k k :=
+          Ideal.mul_mem_mul (hkernel y hy) (hkernel z hz)
+        have hsqmem : φ y * φ z ∈ TrivSqZeroExt.kerIdeal k k ^ 2 := by
+          rw [pow_two]
+          exact hmem
+        rw [TrivSqZeroExt.kerIdeal_sq, Submodule.mem_bot] at hsqmem
+        exact hsqmem
+    | add y hy z hz hyz hzz =>
+        rw [map_add, hyz, hzz, add_zero]
+  have hmem :
+      (rationalGroupAlgebraBasisElement k 1 - 1) ∈
+        rationalGroupAlgebraKernel k ^ 2 := by
+    exact (Ideal.toCotangent_eq_zero
+      (rationalGroupAlgebraKernel k)
+      ⟨rationalGroupAlgebraBasisElement k 1 - 1,
+        rationalGroupAlgebra_basisElement_sub_one_mem_kernel k 1⟩).mp hzero
+  have hφzero : φ (rationalGroupAlgebraBasisElement k 1 - 1) = 0 :=
+    hsq _ hmem
+  have hφeq : φ (rationalGroupAlgebraBasisElement k 1 - 1) =
+      (DualNumber.eps : DualNumber k) := by
+    simp [φ, rationalGroupAlgebraCharZeroDualNumberMap,
+      rationalGroupAlgebraCharZeroDualNumberHom,
+      rationalGroupAlgebraBasisElement]
+  rw [hφeq] at hφzero
+  have hε : (DualNumber.eps : DualNumber k) ≠ 0 := by
+    intro hε
+    have hsnd := congrArg TrivSqZeroExt.snd hε
+    have hsnd' : (1 : k) = 0 := by
+      simpa only [DualNumber.snd_eps, TrivSqZeroExt.snd_zero] using hsnd
+    exact one_ne_zero hsnd'
+  exact hε hφzero
+
+private theorem rationalGroupAlgebraCotangentGenerator_eq_rat_smul
+    (k : Type u) [Field k] [CharZero k] (α : ℚ) :
+    rationalGroupAlgebraCotangentGenerator k α =
+      (α : k) • rationalGroupAlgebraCotangentGenerator k 1 := by
+  let zHom : ℚ →+ rationalGroupAlgebraCotangent k :=
+    { toFun := rationalGroupAlgebraCotangentGenerator k
+      map_zero' := by
+        unfold rationalGroupAlgebraCotangentGenerator
+        have hzero :
+            (⟨rationalGroupAlgebraBasisElement k 0 - 1,
+              rationalGroupAlgebra_basisElement_sub_one_mem_kernel k 0⟩ :
+                rationalGroupAlgebraKernel k) = 0 := by
+          simp
+        rw [hzero, map_zero]
+      map_add' := rationalGroupAlgebraCotangentGenerator_add k }
+  have h := map_rat_smul zHom α (1 : ℚ)
+  simpa [zHom, Rat.cast_smul_eq_qsmul k α
+    (rationalGroupAlgebraCotangentGenerator k 1)] using h
+
+private noncomputable def rationalGroupAlgebraCotangentEquivFieldAux
+    (k : Type u) [Field k] [CharZero k] :
+    rationalGroupAlgebraCotangent k ≃ₗ[k] k := by
+  letI : Module ℚ (rationalGroupAlgebraCotangent k) :=
+    Module.compHom (rationalGroupAlgebraCotangent k) (algebraMap ℚ k)
+  let z₁ := rationalGroupAlgebraCotangentGenerator k 1
+  let i : k →ₗ[k] rationalGroupAlgebraCotangent k :=
+    { toFun := fun c => c • z₁
+      map_add' := fun c d => add_smul c d z₁
+      map_smul' := by
+        intro c d
+        simp [smul_smul] }
+  have hsurj : Function.Surjective i := by
+    intro z
+    have hz : z ∈ Submodule.span k
+        (Set.range (rationalGroupAlgebraCotangentGenerator k)) := by
+      rw [rationalGroupAlgebraCotangent_span_generators]
+      exact Submodule.mem_top
+    have hle : Submodule.span k
+        (Set.range (rationalGroupAlgebraCotangentGenerator k)) ≤
+        LinearMap.range i := by
+      apply Submodule.span_le.mpr
+      rintro _ ⟨α, rfl⟩
+      exact ⟨(α : k), (rationalGroupAlgebraCotangentGenerator_eq_rat_smul k α).symm⟩
+    rcases hle hz with ⟨c, hc⟩
+    exact ⟨c, hc⟩
+  have hinj : Function.Injective i := by
+    intro c d hcd
+    have hzero : (c - d) • z₁ = 0 := by
+      simpa [i, sub_smul] using sub_eq_zero.mpr hcd
+    have hcd' : c - d = 0 :=
+      (smul_eq_zero.mp hzero).resolve_right
+        (rationalGroupAlgebraCotangentGenerator_one_ne_zero k)
+    exact sub_eq_zero.mp hcd'
+  exact (LinearEquiv.ofBijective i ⟨hinj, hsurj⟩).symm
+
 /- Linear equivalences are data rather than propositions, so the source's
    isomorphism statements are recorded as `Nonempty` theorems. -/
 /-- In characteristic zero, `J / J²` is modeled by `ℚ ⊗_ℤ k`. -/
@@ -381,27 +554,74 @@ theorem rationalGroupAlgebraCotangent_equiv_charZeroTensor
     (k : Type u) [Field k] [CharZero k] :
     Nonempty (rationalGroupAlgebraCotangent k ≃ₗ[k]
       rationalGroupAlgebraCharZeroTensor k) := by
-  sorry
+  exact ⟨(rationalGroupAlgebraCotangentEquivFieldAux k).trans
+    (rationalGroupAlgebraCharZeroTensorEquivFieldAux k).symm⟩
 
 /-- The characteristic-zero tensor-product model is isomorphic to `k`. -/
 theorem rationalGroupAlgebraCharZeroTensor_equiv_field
     (k : Type u) [Field k] [CharZero k] :
     Nonempty (rationalGroupAlgebraCharZeroTensor k ≃ₗ[k] k) := by
-  sorry
+  exact ⟨rationalGroupAlgebraCharZeroTensorEquivFieldAux k⟩
 
 /-- In characteristic zero, `J / J²` is nonzero. -/
 theorem rationalGroupAlgebraCotangent_nontrivial_of_charZero
     (k : Type u) [Field k] [CharZero k] :
     Nontrivial (rationalGroupAlgebraCotangent k) := by
-  sorry
+  exact ⟨⟨rationalGroupAlgebraCotangentGenerator k 1, 0,
+    rationalGroupAlgebraCotangentGenerator_one_ne_zero k⟩⟩
 
 /-! ## Formal smoothness and failure of flatness -/
+
+section AugmentationFormallySmooth
+
+variable (k : Type u) [Field k] (p : ℕ) (hp : 0 < p) [CharP k p]
+
+local instance rationalGroupAlgebraAugmentationAlgebra :
+    Algebra (rationalGroupAlgebra k) k :=
+  (rationalGroupAlgebraAugmentation k).toRingHom.toAlgebra
+
+private theorem rationalGroupAlgebraAugmentation_formallySmooth_aux
+    (p : ℕ) (hp : 0 < p) [CharP k p] :
+    RingHom.FormallySmooth (rationalGroupAlgebraAugmentation k).toRingHom := by
+  let f := (rationalGroupAlgebraAugmentation k).toRingHom
+  let fAlg : rationalGroupAlgebra k →ₐ[rationalGroupAlgebra k] k :=
+    { toRingHom := f
+      commutes' := by intro r; rfl }
+  let P := Algebra.Extension.ofSurjective fAlg
+    (by simpa [f, fAlg] using rationalGroupAlgebraAugmentation_surjective k)
+  have hsurj : Function.Surjective (algebraMap (rationalGroupAlgebra k) k) := by
+    change Function.Surjective f
+    exact rationalGroupAlgebraAugmentation_surjective k
+  have hΩ : Subsingleton (KaehlerDifferential (rationalGroupAlgebra k) k) :=
+    KaehlerDifferential.subsingleton_of_surjective
+      (rationalGroupAlgebra k) k hsurj
+  let i : KaehlerDifferential (rationalGroupAlgebra k) k →ₗ[k] k := 0
+  let s : k →ₗ[k] KaehlerDifferential (rationalGroupAlgebra k) k := 0
+  have his : s.comp i = LinearMap.id := by
+    ext x
+    exact Subsingleton.elim _ _
+  have hprojective :
+      Module.Projective k (KaehlerDifferential (rationalGroupAlgebra k) k) :=
+    Module.Projective.of_split i s his
+  have hcot : Subsingleton P.Cotangent := by
+    change Subsingleton (rationalGroupAlgebraCotangent k)
+    exact rationalGroupAlgebraCotangent_subsingleton_of_charP k p hp
+  have hh1 : Subsingleton
+      (Algebra.H1Cotangent (rationalGroupAlgebra k) k) := by
+    let e := P.h1CotangentEquivCotangent
+    constructor
+    intro x y
+    apply e.injective
+    exact Subsingleton.elim _ _
+  exact ⟨hprojective, hh1⟩
+
+end AugmentationFormallySmooth
 
 /-- The augmentation is formally smooth in positive characteristic. -/
 theorem rationalGroupAlgebraAugmentation_formallySmooth_of_charP
     (k : Type u) [Field k] (p : ℕ) (hp : 0 < p) [CharP k p] :
     RingHom.FormallySmooth (rationalGroupAlgebraAugmentation k).toRingHom := by
-  sorry
+  exact rationalGroupAlgebraAugmentation_formallySmooth_aux k p hp
 
 /-!
 The source's square-zero lifting diagram is the standard lifting criterion
@@ -415,15 +635,23 @@ def rationalGroupAlgebraNonflatWitness (k : Type u) [Field k] : rationalGroupAlg
   rationalGroupAlgebraBasisElement k (2 : ℚ) - 1
 
 /-- The non-flatness witness is a nonzerodivisor. -/
+private theorem rationalGroupAlgebraNonflatWitness_ne_zero_aux
+    (k : Type u) [Field k] :
+    rationalGroupAlgebraNonflatWitness k ≠ 0 := by
+  intro h
+  have h' := congrArg (fun x => x.coeff (2 : ℚ)) h
+  simp [rationalGroupAlgebraNonflatWitness, rationalGroupAlgebraBasisElement,
+    AddMonoidAlgebra.one_def, Finsupp.single_eq_of_ne] at h'
+
 theorem rationalGroupAlgebraNonflatWitness_isRegular
     (k : Type u) [Field k] :
     IsRegular (rationalGroupAlgebraNonflatWitness k) := by
-  sorry
+  exact IsRegular.of_ne_zero' (rationalGroupAlgebraNonflatWitness_ne_zero_aux k)
 
 theorem rationalGroupAlgebraNonflatWitness_ne_zero
     (k : Type u) [Field k] :
     rationalGroupAlgebraNonflatWitness k ≠ 0 := by
-  sorry
+  exact rationalGroupAlgebraNonflatWitness_ne_zero_aux k
 
 /-- The non-flatness witness maps to zero under the augmentation. -/
 theorem rationalGroupAlgebraNonflatWitness_maps_to_zero

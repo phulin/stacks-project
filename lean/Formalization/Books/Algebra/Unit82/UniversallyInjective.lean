@@ -3134,7 +3134,9 @@ theorem universallyInjective_into_flat_iff
       _ = (quotientMapByIdeal I f) y := hxy
       _ = eN ((f.rTensor Q) (eM.symm y)) := by
         simpa using (hcomm_apply (eM.symm y)).symm
-  · sorry
+  · simpa [universallyInjective, quotientMapByIdeal] using
+      (Formalization.Books.Algebra.Unit39.linearMap_rTensor_injective_iff_ideal_quotient_injective
+        f hflat).2
 
 /-! ## Faithfully flat base change -/
 

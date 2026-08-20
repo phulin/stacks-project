@@ -7,6 +7,7 @@ import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Ext.Basic
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+import Mathlib.CategoryTheory.Functor.OfSequence
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.Ideal.Operations
@@ -89,29 +90,23 @@ def idealQuotientMap {A : Type u} [CommRing A]
     rw [map_add]
     exact (idealPowerSubmodule I n N).add_mem hx hy
 
+/-- The adjacent transition map `M/I^(n+1)M ⟶ M/I^nM`. -/
+def idealQuotientTransition {A : Type u} [CommRing A]
+    (I : Ideal A) (M : Mod A) (n : ℕ) :
+    idealQuotientModule I (n + 1) M ⟶ idealQuotientModule I n M := by
+  apply ModuleCat.ofHom
+  apply Submodule.factor
+  refine Submodule.smul_le.mpr ?_
+  intro r hr x hx
+  exact Submodule.smul_mem_smul
+    ((Ideal.pow_le_pow_right (Nat.le_succ n)) hr) hx
+
 /-- The inverse system of the modules `M/I^nM`. -/
 def idealQuotientSystem {A : Type u} [CommRing A]
-    (I : Ideal A) (M : Mod A) : ℕᵒᵖ ⥤ Mod A where
-  obj n := idealQuotientModule I n.unop M
-  map f := by
-    apply ModuleCat.ofHom
-    apply Submodule.factor
-    refine Submodule.smul_le.mpr ?_
-    intro r hr x hx
-    exact Submodule.smul_mem_smul
-      ((Ideal.pow_le_pow_right f.unop.le) hr) hx
-  map_id := by
-    intro n
-    apply ModuleCat.hom_ext
-    apply LinearMap.ext
-    rintro ⟨x⟩
-    rfl
-  map_comp := by
-    intro X Y Z f g
-    apply ModuleCat.hom_ext
-    apply LinearMap.ext
-    rintro ⟨x⟩
-    rfl
+    (I : Ideal A) (M : Mod A) : ℕᵒᵖ ⥤ Mod A :=
+  Functor.ofOpSequence
+    (X := fun n => idealQuotientModule I n M)
+    (idealQuotientTransition I M)
 
 /-- An `I^c`-annihilation assertion for a module. -/
 def annihilatedByIdealPower {A : Type u} [CommRing A]

@@ -112,7 +112,43 @@ theorem section_smooth_conormal_finiteLocallyFree
     [Algebra.Smooth R S] (σ : S →ₐ[R] R) :
     Formalization.Books.Algebra.Unit78.FiniteLocallyFree R
       (sectionConormal σ) := by
-  sorry
+  let P := sectionExtension σ
+  have hσ : Function.Surjective σ := by
+    intro r
+    exact ⟨algebraMap R S r, σ.commutes r⟩
+  have hker : P.ker.FG := by
+    change (RingHom.ker σ.toRingHom).FG
+    exact Algebra.FinitePresentation.ker_fG_of_surjective σ hσ
+  let oldAlg : Algebra R S := inferInstance
+  let oldFormal : @Algebra.FormallySmooth R S _ _ oldAlg := by
+    letI : Algebra R S := oldAlg
+    exact inferInstance
+  have alg_eq : oldAlg = P.algebra₁ := by
+    apply Algebra.algebra_ext
+    intro r
+    rfl
+  let : Algebra R P.Ring := P.algebra₁
+  let : @Algebra.FormallySmooth R P.Ring _ _ P.algebra₁ := by
+    exact alg_eq ▸ oldFormal
+  letI : Algebra S R := P.algebra₂
+  have hfinite : Module.Finite R P.Cotangent :=
+    Algebra.Extension.Cotangent.finite hker
+  letI : Module.Projective R P.CotangentSpace := by
+    change Module.Projective R (R ⊗[S]
+      Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)
+    infer_instance
+  have hsplit : ∃ l : P.CotangentSpace →ₗ[R] P.Cotangent,
+      l.comp P.cotangentComplex = LinearMap.id :=
+    (Algebra.Extension.formallySmooth_iff_split_injection P).mp inferInstance
+  obtain ⟨l, hl⟩ := hsplit
+  have hprojective : Module.Projective R P.Cotangent :=
+    Module.Projective.of_split P.cotangentComplex l hl
+  have hfiniteProjective :
+      Formalization.Books.Algebra.Unit78.FiniteProjective R P.Cotangent :=
+    ⟨hfinite, hprojective⟩
+  simpa [P, sectionConormal] using
+    ((Formalization.Books.Algebra.Unit78.finite_projective_characterization
+      (R := R) (M := P.Cotangent)).out 1 6).mp hfiniteProjective
 
 /- The finite free case of the source's completion statement is expressed by
    a finite index `Fin d`; `MvPowerSeries (Fin d) R` is the canonical Lean

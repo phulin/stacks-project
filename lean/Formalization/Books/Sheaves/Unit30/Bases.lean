@@ -1143,6 +1143,29 @@ theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
 abbrev BasisRingPresheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
   BasisAlgebraicPresheaf B (C := RingCat.{v})
 
+/-- A sheaf of rings on an indexed basis. -/
+def BasisRingSheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (O : BasisRingPresheaf B) : Prop :=
+  BasisAlgebraicSheaf B (CategoryTheory.forget RingCat) O
+
+/-- The sheaf of rings extending a basis sheaf of rings. -/
+noncomputable def basisRingSheafExtension {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : BasisRingPresheaf B) (hO : BasisRingSheaf B O) : RingSheaf X :=
+  basisAlgebraicExtension B hB O hO
+
+/-- Restriction of the ring extension recovers the prescribed basis sheaf. -/
+noncomputable def basisRingSheafExtensionRestrictionIso
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B)) (O : BasisRingPresheaf B)
+    (hO : BasisRingSheaf B O) :
+    (basisAlgebraicRestrictionFunctor (C := RingCat) B hB).obj
+        (basisRingSheafExtension B hB O hO) ≅
+      ⟨O, (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+        (J := basisTopology B) (P' := O)
+        (CategoryTheory.forget RingCat)).2 hO⟩ :=
+  basisAlgebraicExtensionRestrictionIso B hB O hO
+
 /-- A presheaf of modules over a basis ring presheaf. -/
 abbrev BasisModulePresheaf {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (O : BasisRingPresheaf B) :=

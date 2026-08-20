@@ -186,8 +186,8 @@ theorem completion_is_noetherian_of_fg_quotient
         (e.symm.toRingEquiv.trans (Ideal.quotEquivOfEq hKpow.symm))
     exact isNoetherianRing_of_ringEquiv (R ⧸ I) e'
   refine ⟨?_, ?_⟩
-  · letI : IsNoetherianRing ((ringCompletion I) ⧸ K) := hKnoetherian
-    letI : IsAdicComplete K (ringCompletion I) := hKcomplete
+  · let : IsNoetherianRing ((ringCompletion I) ⧸ K) := hKnoetherian
+    let : IsAdicComplete K (ringCompletion I) := hKcomplete
     exact Unit69.isNoetherianRing_of_isAdicComplete_of_fg_quotient K
       (hI.map (algebraMap R (ringCompletion I)))
   · simpa [K] using hKcomplete
@@ -467,16 +467,16 @@ theorem finite_after_completion
          (completion (IsLocalRing.maximalIdeal S) S)) := by
   let K : Ideal S := (IsLocalRing.maximalIdeal R).map (algebraMap R S)
   have hpower : ∃ n : ℕ, (IsLocalRing.maximalIdeal S) ^ n ≤ K := by
-    letI : (IsLocalRing.maximalIdeal R).IsMaximal :=
+    let : (IsLocalRing.maximalIdeal R).IsMaximal :=
       IsLocalRing.maximalIdeal.isMaximal R
-    letI : Field (R ⧸ IsLocalRing.maximalIdeal R) :=
+    let : Field (R ⧸ IsLocalRing.maximalIdeal R) :=
       Ideal.Quotient.field (IsLocalRing.maximalIdeal R)
-    letI : Algebra (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
-    letI : IsScalarTower R (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
-    letI : Module.Finite (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
-    letI : IsArtinian (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) :=
+    let : Algebra (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
+    let : IsScalarTower R (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
+    let : Module.Finite (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
+    let : IsArtinian (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) :=
       isArtinian_of_fg_of_artinian'
-    letI : IsArtinianRing (S ⧸ K) :=
+    let : IsArtinianRing (S ⧸ K) :=
       isArtinian_of_tower (R ⧸ IsLocalRing.maximalIdeal R)
         (inferInstance : IsArtinian (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K))
     obtain ⟨n, hn⟩ := IsLocalRing.exists_maximalIdeal_pow_le_of_isArtinianRing_quotient K
@@ -496,7 +496,7 @@ theorem finite_after_completion
   let A := ringCompletion (IsLocalRing.maximalIdeal R)
   let M := completion (IsLocalRing.maximalIdeal S) S
   let φ : A →+* M := completedLocalMap R S
-  letI : Algebra A M := φ.toAlgebra
+  let : Algebra A M := φ.toAlgebra
   let I : Ideal A := (IsLocalRing.maximalIdeal R).map (algebraMap R A)
   let L : Ideal M := I.map φ
   have hφ_alg (r : R) :
@@ -582,7 +582,7 @@ theorem finite_after_completion
     rw [hIL]
     change algebraMap S M s - x ∈ L
     have hneg := L.neg_mem hxL
-    convert hneg using 1 <;> abel
+    convert hneg using 1; abel
   let σ : (R ⧸ IsLocalRing.maximalIdeal R) →+* (A ⧸ I) :=
     Ideal.Quotient.lift (IsLocalRing.maximalIdeal R)
       ((Ideal.Quotient.mk I).comp (algebraMap R A)) (by
@@ -607,7 +607,7 @@ theorem finite_after_completion
             (φ (algebraMap R A r) * algebraMap S M s)
         rw [hφ_alg]
         rfl }
-  letI : Module.Finite (A ⧸ I) (M ⧸ N) :=
+  let : Module.Finite (A ⧸ I) (M ⧸ N) :=
     Module.Finite.of_surjective f (by simpa [f] using hq_surj)
   have hA : IsAdicComplete I A := by
     simpa [I, Unit96.completionPowerIdeal] using

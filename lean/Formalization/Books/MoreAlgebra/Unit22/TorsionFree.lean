@@ -8,6 +8,7 @@ import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.RingTheory.Flat.TorsionFree
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Localization.FractionRing
+import Mathlib.RingTheory.Localization.Integer
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
 import Mathlib.RingTheory.Valuation.ValuationRing
 
@@ -368,7 +369,90 @@ theorem finite_torsionFree_iff_embeds_finiteFree
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     TorsionFree R M ↔
       ∃ n : ℕ, ∃ f : M →ₗ[R] (Fin n →₀ R), Function.Injective f := by
-  sorry
+  classical
+  constructor
+  · intro h
+    let K := FractionRing R
+    let V := K ⊗[R] M
+    let g : M →ₗ[R] V := TensorProduct.mk R K M 1
+    have hg : Function.Injective g := by
+      have hf : Function.Injective
+          (fractionFieldTensorMap (R := R) (M := M) (K := K)) :=
+        (torsionFree_iff_fractionFieldTensorMap_injective (R := R) (M := M)
+          (K := K)).mp h
+      have hmap : fractionFieldTensorMap (R := R) (M := M) (K := K) =
+          (TensorProduct.comm R K M).toLinearMap.comp g := by
+        ext m
+        rfl
+      intro x y hxy
+      apply hf
+      rw [hmap]
+      exact congrArg (TensorProduct.comm R K M) hxy
+    obtain ⟨ι, b₀⟩ := Module.Free.exists_basis (R := K) (M := V)
+    letI : Finite ι := Module.Finite.finite_basis b₀
+    obtain ⟨n, e₀⟩ := Finite.exists_equiv_fin ι
+    obtain ⟨e⟩ := e₀
+    let b : Module.Basis (Fin n) K V := b₀.reindex e
+    let hK : M →ₗ[R] (Fin n →₀ K) :=
+      b.repr.toLinearMap.restrictScalars R |>.comp g
+    have hhK : Function.Injective hK := b.repr.injective.comp hg
+    obtain ⟨s, hs⟩ := (Module.Finite.fg_top : (⊤ : Submodule R M).FG)
+    let q : (Fin n →₀ R) →ₗ[R] (Fin n →₀ K) :=
+      Finsupp.mapRange.linearMap (Algebra.linearMap R K)
+    have hq : Function.Injective q := by
+      intro x y hxy
+      apply Finsupp.ext
+      intro i
+      apply IsFractionRing.injective R K
+      simpa [q] using congrArg (fun z => z i) hxy
+    obtain ⟨d, hd⟩ :=
+      IsLocalization.exist_integer_multiples_of_finite
+        (M := nonZeroDivisors R) (S := K)
+        (fun z : s × Fin n => hK z.1 z.2)
+    have hd' (x : s) (i : Fin n) :
+        ∃ r : R, algebraMap R K r = (d : R) • hK x.1 i := by
+      simpa [IsLocalization.IsInteger] using hd (x, i)
+    let z : s → Fin n →₀ R := fun x =>
+      Finsupp.equivFunOnFinite.symm (fun i => (hd' x i).choose)
+    have hz (x : s) :
+        q (z x) = (d : R) • hK x.1 := by
+      ext i
+      simpa [q, z, hd' x i] using (hd' x i).choose_spec
+    let hD : M →ₗ[R] (Fin n →₀ K) := (d : R) • hK
+    let L : Submodule R (Fin n →₀ K) := LinearMap.range q
+    have hgen : ∀ x : s, hD x ∈ L := by
+      intro x
+      change (d : R) • hK x.1 ∈ L
+      exact ⟨z x, hz x⟩
+    have hDmem : ∀ x : M, hD x ∈ L := by
+      intro x
+      have hle : (⊤ : Submodule R M) ≤ L.comap hD := by
+        rw [← hs]
+        exact Submodule.span_le.2 (fun y hy => hgen ⟨y, hy⟩)
+      exact hle (by trivial)
+    let eL : (Fin n →₀ R) ≃ₗ[R] L := LinearEquiv.ofInjective q hq
+    let f : M →ₗ[R] (Fin n →₀ R) :=
+      eL.symm.toLinearMap.comp (hD.codRestrict L hDmem)
+    refine ⟨n, f, ?_⟩
+    intro x y hxy
+    have hxy' : hD x = hD y := by
+      change eL.symm (hD.codRestrict L hDmem x) =
+        eL.symm (hD.codRestrict L hDmem y) at hxy
+      exact congrArg Subtype.val (eL.symm.injective hxy)
+    have hzero : (d : R) • (hK x - hK y) = 0 := by
+      rw [smul_sub]
+      change hD x - hD y = 0
+      exact sub_eq_zero.mpr hxy'
+    have hzero' :
+        (algebraMap R K (d : R)) • (hK x - hK y) = 0 := by
+      simpa [Algebra.smul_def] using hzero
+    have hd0 : algebraMap R K (d : R) ≠ 0 :=
+      IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors d.property
+    apply hhK
+    exact sub_eq_zero.mp ((smul_eq_zero.mp hzero').resolve_left hd0)
+  · rintro ⟨n, f, hf⟩
+    exact Function.Injective.moduleIsTorsionFree (f : M → (Fin n →₀ R)) hf
+      (fun r x => f.map_smul r x)
 
 /-! ## The noetherian-domain criteria -/
 
@@ -391,7 +475,134 @@ theorem finite_noetherian_domain_torsionFree_criteria
           p ∈ Module.support R M ∧ p.asIdeal = (⊥ : Ideal R)) ∧
          Formalization.Books.Algebra.Unit67.embeddedAssociatedPrimes
            (R := R) (M := M) = ∅] := by
-  sorry
+  tfae_have 1 ↔ 2 := by
+    exact finite_torsionFree_iff_embeds_finiteFree (R := R) (M := M)
+  tfae_have 1 ↔ 3 := by
+    constructor
+    · intro h p
+      constructor
+      · intro hp
+        change ∃ m : M, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+        obtain ⟨m, hm⟩ := hp
+        have hm0 : m ≠ 0 := by
+          intro hmzero
+          apply p.isPrime.ne_top
+          rw [← hm, Submodule.colon_eq_top_iff_subset]
+          simp [hmzero]
+        apply le_antisymm
+        · intro r hr
+          change r = 0
+          have hsmul : r • m = 0 := by
+            rw [← hm, Submodule.mem_colon_singleton] at hr
+            simpa using hr
+          exact ((torsionFree_iff_smul_eq_zero.mp h) r m hsmul).resolve_right hm0
+        · exact bot_le
+      · intro hp
+        change ∃ m : M, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal
+        obtain ⟨m, hm⟩ := @exists_ne M inferInstance (0 : M)
+        refine ⟨m, ?_⟩
+        rw [hp]
+        apply le_antisymm
+        · intro r hr
+          change r = 0
+          have hsmul : r • m = 0 := by
+            rw [Submodule.mem_colon_singleton] at hr
+            simpa using hr
+          exact ((torsionFree_iff_smul_eq_zero.mp h) r m hsmul).resolve_right hm
+        · exact bot_le
+    · intro h3
+      apply Module.IsTorsionFree.of_smul_eq_zero
+      intro r x hrx
+      by_cases hr : r = 0
+      · exact Or.inl hr
+      · right
+        by_contra hx
+        have hrzd : r ∈ {x : R | ∃ m : M, m ≠ 0 ∧ x • m = 0} :=
+          ⟨x, hx, hrx⟩
+        have hrunion :
+            r ∈ ⋃ p : {p : PrimeSpectrum R // p ∈
+              Formalization.Books.Algebra.Unit63.associatedPrimes R M},
+                (p.1.asIdeal : Set R) := by
+          rw [Formalization.Books.Algebra.Unit63.iUnion_associatedPrimes_eq_module_zeroDivisors]
+          exact hrzd
+        obtain ⟨p, hp⟩ := Set.mem_iUnion.mp hrunion
+        have hpbot := (h3 p.1).mp p.2
+        have hr0 : r = 0 := by
+          rw [hpbot] at hp
+          exact hp
+        exact hr hr0
+  tfae_have 3 ↔ 5 := by
+    constructor
+    · intro h3
+      have hass : (Formalization.Books.Algebra.Unit63.associatedPrimes R M).Nonempty := by
+        by_contra hnonempty
+        have hsub : Subsingleton M :=
+          (Formalization.Books.Algebra.Unit63.ass_eq_empty_iff_subsingleton
+            (R := R) (M := M)).mpr (Set.not_nonempty_iff_eq_empty.mp hnonempty)
+        exact not_subsingleton_iff_nontrivial.mpr inferInstance hsub
+      obtain ⟨p, hp⟩ := hass
+      have hpbot : p.asIdeal = (⊥ : Ideal R) := (h3 p).mp hp
+      refine ⟨⟨p, ⟨Formalization.Books.Algebra.Unit63.ass_subset_support hp, hpbot⟩⟩, ?_⟩
+      rw [Set.eq_empty_iff_forall_notMem]
+      intro q hq
+      apply hq.2
+      refine ⟨hq.1, ?_⟩
+      intro r hr hrq
+      have hqbot : q.asIdeal = (⊥ : Ideal R) := (h3 q).mp hq.1
+      have hrbot : r.asIdeal = (⊥ : Ideal R) := (h3 r).mp hr
+      change q.asIdeal ≤ r.asIdeal
+      rw [hqbot, hrbot]
+    · rintro ⟨hsupp, hemb⟩ p
+      let p₀ : PrimeSpectrum R := ⟨(⊥ : Ideal R), Ideal.isPrime_bot⟩
+      have hp₀supp : p₀ ∈ Module.support R M := by
+        obtain ⟨q, hq, hqbot⟩ := hsupp
+        have hqeq : q = p₀ := by
+          apply PrimeSpectrum.ext
+          simpa [p₀] using hqbot
+        simpa [hqeq] using hq
+      have hp₀min : Minimal
+          (fun q : PrimeSpectrum R => q ∈ Module.support R M) p₀ := by
+        refine ⟨hp₀supp, ?_⟩
+        intro q hq hqle
+        have hqeq : q = p₀ := by
+          apply PrimeSpectrum.ext
+          change q.asIdeal = (⊥ : Ideal R)
+          exact le_antisymm hqle bot_le
+        simp [hqeq]
+      have hp₀ass :
+          p₀ ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M :=
+        Formalization.Books.Algebra.Unit63.ass_of_minimal_support p₀ hp₀supp hp₀min
+      constructor
+      · intro hp
+        have hpmin :
+            Minimal
+              (fun q : PrimeSpectrum R =>
+                q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M) p := by
+          by_contra hnot
+          exact (Set.eq_empty_iff_forall_notMem.mp hemb p) ⟨hp, hnot⟩
+        have hp_le : p ≤ p₀ := hpmin.2 hp₀ass (by
+          change (⊥ : Ideal R) ≤ p.asIdeal
+          exact bot_le)
+        have hpbot : p.asIdeal = (⊥ : Ideal R) := by
+          apply le_antisymm
+          · change p.asIdeal ≤ (⊥ : Ideal R) at hp_le
+            exact hp_le
+          · exact bot_le
+        exact hpbot
+      · intro hpbot
+        have hpeq : p = p₀ := by
+          apply PrimeSpectrum.ext
+          simpa [p₀] using hpbot
+        simpa [hpeq] using hp₀ass
+  tfae_have 4 ↔ 5 := by
+    constructor
+    · rintro ⟨hsupp, hS⟩
+      exact ⟨hsupp, (Formalization.Books.Algebra.Unit157.criterion_no_embedded_primes
+        (R := R) (M := M)).mpr hS⟩
+    · rintro ⟨hsupp, hemb⟩
+      exact ⟨hsupp, (Formalization.Books.Algebra.Unit157.criterion_no_embedded_primes
+        (R := R) (M := M)).mp hemb⟩
+  tfae_finish
 
 /-! ## Flatness, valuation rings, and Dedekind domains -/
 
@@ -407,14 +618,16 @@ theorem valuationRing_flat_iff_torsionFree
     {A M : Type*} [CommRing A] [IsDomain A] [ValuationRing A]
     [AddCommGroup M] [Module A M] :
     Module.Flat A M ↔ Module.IsTorsionFree A M := by
-  sorry
+  simpa only [← Submodule.isTorsionFree_iff_torsion_eq_bot] using
+    (Module.Flat.flat_iff_torsion_eq_bot_of_isBezout (R := A) (M := M))
 
 /-- Over a Dedekind domain, flatness and torsion-freeness coincide. -/
 theorem dedekindDomain_flat_iff_torsionFree
     {A M : Type*} [CommRing A] [IsDedekindDomain A]
     [AddCommGroup M] [Module A M] :
     Module.Flat A M ↔ Module.IsTorsionFree A M := by
-  sorry
+  simpa only [← Submodule.isTorsionFree_iff_torsion_eq_bot] using
+    (IsDedekindDomain.flat_iff_torsion_eq_bot (R := A) (M := M))
 
 /-- A finite torsion-free module over a Dedekind domain is finite locally
 free, using the earlier chapter's source-facing local-freeness predicate. -/

@@ -192,7 +192,7 @@ theorem fourier_root_is_root
     rw [← pow_mul, Nat.mul_comm, pow_mul, hpow, one_pow]
   rw [Polynomial.IsRoot, Polynomial.eval_sub, Polynomial.eval_pow,
     Polynomial.eval_X, Polynomial.eval_C]
-  simpa [hi_pow]
+  simp [hi_pow]
 
 private theorem fourier_root_is_primitive_root
     (p : ℕ) (hp : Nat.Prime p) :
@@ -314,7 +314,7 @@ theorem fourier_factorization
       (powers_le_nonZeroDivisors_of_noZeroDivisors
         (show (p : ℤ) ≠ 0 by exact_mod_cast hp.ne_zero))
   let : IsIntegrallyClosed (fourierBaseRing p) := hIC
-  letI : Algebra ℤ ℚ := Ring.toIntAlgebra ℚ
+  let : Algebra ℤ ℚ := Ring.toIntAlgebra ℚ
   have hpQ : IsUnit ((algebraMap ℤ ℚ) (p : ℤ)) := by
     rw [isUnit_iff_ne_zero]
     intro hz
@@ -323,17 +323,17 @@ theorem fourier_factorization
     exact_mod_cast hz'
   let g : fourierBaseRing p →+* ℚ :=
     IsLocalization.Away.lift (p : ℤ) hpQ
-  letI : Algebra (fourierBaseRing p) ℚ := g.toAlgebra
-  letI : SMul ℤ (fourierBaseRing p) :=
+  let : Algebra (fourierBaseRing p) ℚ := g.toAlgebra
+  let : SMul ℤ (fourierBaseRing p) :=
     (inferInstance : Algebra ℤ (fourierBaseRing p)).toSMul
-  letI : SMul ℤ ℚ := (inferInstance : Algebra ℤ ℚ).toSMul
+  let : SMul ℤ ℚ := (inferInstance : Algebra ℤ ℚ).toSMul
   have hscalar : IsScalarTower ℤ (fourierBaseRing p) ℚ :=
     IsScalarTower.of_algebraMap_eq' (R := ℤ) (S := fourierBaseRing p) (A := ℚ) (by
       ext z
       change (algebraMap ℤ ℚ) z = g (algebraMap ℤ (fourierBaseRing p) z)
       simp [g])
-  letI : IsScalarTower ℤ (fourierBaseRing p) ℚ := hscalar
-  letI : IsFractionRing (fourierBaseRing p) ℚ :=
+  let : IsScalarTower ℤ (fourierBaseRing p) ℚ := hscalar
+  let : IsFractionRing (fourierBaseRing p) ℚ :=
     IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
       (M := Submonoid.powers (p : ℤ)) (fourierBaseRing p) ℚ
   have hmonic : (fourierPolynomial p (fourierBaseRing p)).Monic := by
@@ -349,7 +349,7 @@ theorem fourier_factorization
             (algebraMap (fourierBaseRing p) ℚ) =
           fourierPolynomial p ℚ := by
       simp only [fourierPolynomial, Polynomial.map_sum, Polynomial.map_pow,
-        Polynomial.map_X, map_one, one_pow]
+        Polynomial.map_X]
     rw [hmap_poly]
     exact fourierPolynomial_rat_irreducible p hp
   have hprime : Prime (fourierPolynomial p (fourierBaseRing p)) :=
@@ -397,7 +397,8 @@ theorem fourier_factorization
 product of all its pairwise differences. -/
 theorem fourier_derivative_at_root
     (p : ℕ) (hp : Nat.Prime p) (i : Fin p) :
-    (p : fourierExtension p) * (fourierRoot p ^ (p - 1)) =
+    (p : fourierExtension p) *
+        (fourierRoot p ^ (i : ℕ)) ^ (p - 1) =
       ∏ j ∈ Finset.univ.erase i,
         (fourierRoot p ^ (i : ℕ) - fourierRoot p ^ (j : ℕ)) := by
   sorry

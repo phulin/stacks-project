@@ -357,22 +357,16 @@ def DifferentialsFiniteFreeAt
 def DifferentialsProjectiveAt
     (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) : Prop :=
-  Module.Finite (Localization.AtPrime q.asIdeal)
-      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
-        (Localization.AtPrime q.asIdeal)) ∧
-    Module.Projective (Localization.AtPrime q.asIdeal)
-      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
-        (Localization.AtPrime q.asIdeal))
+  Module.Projective (Localization.AtPrime q.asIdeal)
+    (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
+      (Localization.AtPrime q.asIdeal))
 
 def DifferentialsFlatAt
     (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) : Prop :=
-  Module.Finite (Localization.AtPrime q.asIdeal)
-      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
-        (Localization.AtPrime q.asIdeal)) ∧
-    Module.Flat (Localization.AtPrime q.asIdeal)
-      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
-        (Localization.AtPrime q.asIdeal))
+  Module.Flat (Localization.AtPrime q.asIdeal)
+    (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
+      (Localization.AtPrime q.asIdeal))
 
 theorem smooth_at_iff_local_cotangent_conditions
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -391,7 +385,7 @@ theorem smooth_iff_smooth_at_all_primes
 
 theorem isOpen_smoothLocus
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
-    [Algebra.FinitePresentation R S] :
+    :
     IsOpen (SmoothLocus R S) := by
   sorry
 

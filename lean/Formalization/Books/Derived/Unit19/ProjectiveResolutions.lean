@@ -77,7 +77,29 @@ theorem object_projective_resolution_cochain_map_is_quasiIso
     {X : A} {P : BookComplex A}
     {f : P ⟶ (CochainComplex.singleFunctor A 0).obj X}
     (hP : IsObjectProjectiveResolution X P f) : QuasiIso f := by
-  sorry
+  rw [quasiIso_iff]
+  intro n
+  rw [quasiIsoAt_iff_isIso_homologyMap]
+  rcases lt_trichotomy n 0 with hn | rfl | hn
+  · let hP' : P.IsStrictlyLE 0 := by
+      rw [CochainComplex.isStrictlyLE_iff]
+      intro i hi
+      exact hP.1 i hi
+    let _ := hP'
+    let hK : IsZero (P.homology n) := hP.2.2.2 n hn
+    let hL : IsZero (((CochainComplex.singleFunctor A 0).obj X).homology n) :=
+      HomologicalComplex.isZero_single_obj_homology (ComplexShape.up ℤ) 0 X n (by omega)
+    exact ⟨⟨0, hK.eq_of_src _ _, hL.eq_of_tgt _ _⟩⟩
+  · exact hP.2.2.1
+  · let hP' : P.IsStrictlyLE 0 := by
+      rw [CochainComplex.isStrictlyLE_iff]
+      intro i hi
+      exact hP.1 i hi
+    let _ := hP'
+    let hK : IsZero (P.homology n) := P.isZero_of_isLE 0 n hn
+    let hL : IsZero (((CochainComplex.singleFunctor A 0).obj X).homology n) :=
+      HomologicalComplex.isZero_single_obj_homology (ComplexShape.up ℤ) 0 X n (by omega)
+    exact ⟨⟨0, hK.eq_of_src _ _, hL.eq_of_tgt _ _⟩⟩
 
 theorem object_projective_resolution_cochain_exists
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughProjectives A]
@@ -85,7 +107,36 @@ theorem object_projective_resolution_cochain_exists
     ∃ (P : BookComplex A)
       (f : P ⟶ (CochainComplex.singleFunctor A 0).obj X),
       IsObjectProjectiveResolution X P f := by
-  sorry
+  let R : ObjectProjectiveResolution X := CategoryTheory.ProjectiveResolution.of X
+  let P : BookComplex A := R.complex.extend ComplexShape.embeddingDownNat
+  let e : ((ChainComplex.single₀ A).obj X).extend ComplexShape.embeddingDownNat ≅
+      (CochainComplex.singleFunctor A 0).obj X :=
+    HomologicalComplex.extendSingleIso ComplexShape.embeddingDownNat X 0 0 (by simp)
+  let f : P ⟶ (CochainComplex.singleFunctor A 0).obj X :=
+    HomologicalComplex.extendMap R.π ComplexShape.embeddingDownNat ≫ e.hom
+  have hf : QuasiIso f := by
+    have hext : QuasiIso
+        (HomologicalComplex.extendMap R.π ComplexShape.embeddingDownNat) := by
+      rw [HomologicalComplex.quasiIso_extendMap_iff]
+      exact R.quasiIso
+    dsimp [f]
+    exact quasiIso_comp _ _
+  letI : QuasiIso f := hf
+  refine ⟨P, f, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro n hn
+    exact P.isZero_of_isStrictlyLE 0 n (by lia)
+  · intro n
+    infer_instance
+  · infer_instance
+  · intro n hn
+    have hL : IsZero (((CochainComplex.singleFunctor A 0).obj X).homology n) :=
+      HomologicalComplex.isZero_single_obj_homology (ComplexShape.up ℤ) 0 X n
+        (by omega)
+    have hI : IsIso (HomologicalComplex.homologyMap f n) :=
+      (quasiIsoAt_iff_isIso_homologyMap f n).1 (hf.quasiIsoAt n)
+    letI : IsIso (HomologicalComplex.homologyMap f n) := hI
+    exact IsZero.of_iso hL (asIso (HomologicalComplex.homologyMap f n))
 
 theorem object_projective_resolution_termwise_projective
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -116,7 +167,7 @@ theorem object_projective_resolution_exact_succ
 theorem object_projective_resolution_exists
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughProjectives A]
     (X : A) : Nonempty (ObjectProjectiveResolution X) := by
-  sorry
+  exact ⟨CategoryTheory.ProjectiveResolution.of X⟩
 
 /-! ## Boundedness and existence -/
 
@@ -124,7 +175,15 @@ theorem cohomology_bounded_above_of_projective_resolution
     {A : Type u} [Category.{v} A] [Abelian A]
     {K : BookComplex A} (R : ComplexProjectiveResolution K) :
     ∃ a : ℤ, ∀ n : ℤ, a < n → IsZero (K.homology n) := by
-  sorry
+  obtain ⟨a, ha⟩ := R.boundedAbove
+  let _ : R.source.IsStrictlyLE a := ha
+  refine ⟨a, ?_⟩
+  intro n hn
+  have hsource : IsZero (R.source.homology n) := R.source.isZero_of_isLE a n hn
+  have hI : IsIso (HomologicalComplex.homologyMap R.map n) :=
+    (quasiIsoAt_iff_isIso_homologyMap R.map n).1 (R.quasiIso.quasiIsoAt n)
+  letI : IsIso (HomologicalComplex.homologyMap R.map n) := hI
+  exact IsZero.of_iso hsource (asIso (HomologicalComplex.homologyMap R.map n)).symm
 
 theorem projective_resolution_of_cohomology_bounded_above
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -132,7 +191,11 @@ theorem projective_resolution_of_cohomology_bounded_above
     (hK : ∃ a : ℤ, ∀ n : ℤ, a < n → IsZero (K.homology n)) :
     ∃ (L : BookComplex A) (f : L ⟶ K),
       QuasiIso f ∧ IsBoundedAbove L := by
-  sorry
+  apply boundedCohomology_replacement_above A K
+  obtain ⟨a, ha⟩ := hK
+  refine ⟨a + 1, ?_⟩
+  intro n hn
+  exact ha n (by omega)
 
 theorem complex_projective_resolution_exists
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughProjectives A]

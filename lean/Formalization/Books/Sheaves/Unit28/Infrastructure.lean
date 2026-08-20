@@ -63,13 +63,99 @@ noncomputable def presheafColimitSectionsIso {X : TopCat.{v}} {J : Type v}
 /-- Stalks preserve finite limits of set-valued presheaves. -/
 theorem presheafStalkPreservesFiniteLimits {X : TopCat.{v}} (x : X) :
     PreservesFiniteLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  sorry
+  dsimp [TopCat.Presheaf.stalkFunctor]
+  let : PreservesFiniteLimits
+      ((Functor.whiskeringLeft (OpenNhds x)ᵒᵖ (Opens X)ᵒᵖ (Type v)).obj
+        (OpenNhds.inclusion x).op) := by
+    infer_instance
+  let : PreservesFiniteLimits
+      (colim : ((OpenNhds x)ᵒᵖ ⥤ Type v) ⥤ Type v) := by
+    infer_instance
+  exact comp_preservesFiniteLimits _ _
+
+private abbrev cofiniteCounterexampleSpace : TopCat.{v} :=
+  TopCat.of (CofiniteTopology (ULift.{v} ℕ))
+
+private abbrev cofiniteCounterexamplePoint : cofiniteCounterexampleSpace :=
+  CofiniteTopology.of ⟨0⟩
+
+private theorem cofiniteNeighborhoodStrictRefinement
+    (W : OpenNhds cofiniteCounterexamplePoint) :
+    ∃ U : OpenNhds cofiniteCounterexamplePoint, U ≤ W ∧ ¬ W ≤ U := by
+  have hWc : (W.1 : Set cofiniteCounterexampleSpace)ᶜ.Finite := by
+    exact (CofiniteTopology.isOpen_iff.mp W.1.isOpen)
+      ⟨cofiniteCounterexamplePoint, W.2⟩
+  have hWinf : (W.1 : Set cofiniteCounterexampleSpace).Infinite :=
+    Set.infinite_of_finite_compl hWc
+  have hnot : ¬ (W.1 : Set cofiniteCounterexampleSpace) ⊆
+      ({cofiniteCounterexamplePoint} : Set cofiniteCounterexampleSpace) := by
+    intro hsub
+    apply hWinf
+    exact (Set.finite_singleton cofiniteCounterexamplePoint).subset hsub
+  obtain ⟨y, hyW, hyx⟩ := Set.not_subset.mp hnot
+  have hxy : cofiniteCounterexamplePoint ≠ y := by
+    have hyx' : y ≠ cofiniteCounterexamplePoint := by
+      simpa [Set.mem_singleton_iff] using hyx
+    exact hyx'.symm
+  let U : OpenNhds cofiniteCounterexamplePoint :=
+    ⟨⟨(W.1 : Set cofiniteCounterexampleSpace) \ {y}, by
+        rw [CofiniteTopology.isOpen_iff']
+        right
+        rw [Set.compl_sdiff]
+        exact (Set.finite_singleton y).union hWc⟩,
+      ⟨W.2, by simpa [Set.mem_singleton_iff] using hxy⟩⟩
+  refine ⟨U, ?_, ?_⟩
+  · change (U.1 : Set cofiniteCounterexampleSpace) ⊆
+      (W.1 : Set cofiniteCounterexampleSpace)
+    intro z hz
+    exact hz.1
+  · intro hWU
+    change (W.1 : Set cofiniteCounterexampleSpace) ⊆
+      (U.1 : Set cofiniteCounterexampleSpace) at hWU
+    have hyU : y ∈ (U.1 : Set cofiniteCounterexampleSpace) := hWU hyW
+    exact hyU.2 (by simp)
 
 /-- Stalks do not preserve arbitrary limits in general. -/
 theorem presheafStalkDoesNotPreserveAllLimits :
     ∃ (X : TopCat.{v}) (x : X),
       ¬ PreservesLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  sorry
+  refine ⟨cofiniteCounterexampleSpace, cofiniteCounterexamplePoint, ?_⟩
+  let G : Discrete (OpenNhds cofiniteCounterexamplePoint) ⥤
+      TopCat.Presheaf (Type v) cofiniteCounterexampleSpace :=
+    Discrete.functor (fun U => coyoneda.obj (op (op U.1)))
+  intro h
+  let _ : PreservesLimits
+      (TopCat.Presheaf.stalkFunctor (Type v) cofiniteCounterexamplePoint) := h
+  have hp := isLimitOfPreserves
+    (TopCat.Presheaf.stalkFunctor (Type v) cofiniteCounterexamplePoint)
+    (limit.isLimit G)
+  let legs : ∀ U : Discrete (OpenNhds cofiniteCounterexamplePoint), PUnit ⟶
+      (TopCat.Presheaf.stalkFunctor (Type v) cofiniteCounterexamplePoint).obj
+        (G.obj U) := fun U =>
+    ↾fun _ : PUnit => colimit.ι
+      ((OpenNhds.inclusion cofiniteCounterexamplePoint).op ⋙ G.obj U)
+      (op U.as) (𝟙 _)
+  let c : Cone (G ⋙
+      TopCat.Presheaf.stalkFunctor (Type v) cofiniteCounterexamplePoint) :=
+    { pt := PUnit
+      π := Discrete.natTrans legs }
+  let a := hp.lift c PUnit.unit
+  obtain ⟨W, z, hz⟩ := Types.jointly_surjective' a
+  obtain ⟨U, hUW, hnWU⟩ := cofiniteNeighborhoodStrictRefinement W.unop
+  have q := (limit.π G (Discrete.mk U)).app (op W.unop.1) z
+  have hq : (op U.1 ⟶ op (W.unop.1)) := q
+  exact hnWU (leOfHom hq.unop)
+
+private instance presheafStalkPreservesColimitsInstance {X : TopCat.{v}} (x : X) :
+    PreservesColimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
+  dsimp [TopCat.Presheaf.stalkFunctor]
+  let : PreservesColimits
+      ((Functor.whiskeringLeft (OpenNhds x)ᵒᵖ (Opens X)ᵒᵖ (Type v)).obj
+        (OpenNhds.inclusion x).op) := by
+    infer_instance
+  let : PreservesColimits (colim : ((OpenNhds x)ᵒᵖ ⥤ Type v) ⥤ Type v) := by
+    infer_instance
+  infer_instance
 
 /-- The finite-diagram stalk/limit comparison. -/
 noncomputable def presheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
@@ -86,7 +172,7 @@ theorem exists_presheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
     (F : J ⥤ TopCat.Presheaf (Type v) X) (x : X) :
     Nonempty ((presheafColimit F).stalk x ≅
       colimit (F ⋙ TopCat.Presheaf.stalkFunctor (Type v) x)) := by
-  sorry
+  exact ⟨preservesColimitIso (TopCat.Presheaf.stalkFunctor (Type v) x) F⟩
 
 /- Stalks commute with arbitrary presheaf colimits. -/
 noncomputable def presheafColimitStalkIso {X : TopCat.{v}} {J : Type v}

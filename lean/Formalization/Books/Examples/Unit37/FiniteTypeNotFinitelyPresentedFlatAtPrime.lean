@@ -2466,11 +2466,660 @@ theorem ftFibre_factorization (k : Type u) [Field k] (n : ℕ) :
 
 theorem ftSecondPresentation_equiv_product (k : Type u) [Field k] (n : ℕ) :
     Nonempty (ftSecondPresentation k n ≃+* ftSecondProduct k n) := by
-  sorry
+  let d0 : ftKXLocal k := 2 * ftKX k ^ (n + 1) + 1
+  let p0 : Polynomial k := Polynomial.C 2 * Polynomial.X ^ (n + 1) + 1
+  have hp0 : p0 ∉ ftKXMaximalIdeal k := by
+    rw [ftKXMaximalIdeal, ← Polynomial.ker_constantCoeff]
+    intro hp
+    rw [RingHom.mem_ker] at hp
+    simp [p0] at hp
+  have hp0map : algebraMap (Polynomial k) (ftKXLocal k) p0 = d0 := by
+    simp [p0, d0, ftKX, Polynomial.C_eq_algebraMap]
+    rw [← IsScalarTower.algebraMap_apply k (Polynomial k) (ftKXLocal k)]
+    exact map_ofNat _ 2
+  have hd0not : d0 ∉ IsLocalRing.maximalIdeal (ftKXLocal k) := by
+    rw [← hp0map]
+    intro hp
+    exact hp0 ((IsLocalization.AtPrime.to_map_mem_maximal_iff
+      (S := ftKXLocal k) (I := ftKXMaximalIdeal k) p0).mp hp)
+  have hd0unit : IsUnit d0 :=
+    (IsLocalRing.notMem_maximalIdeal).mp hd0not
+  let R := Polynomial (ftKXLocal k)
+  let L : Ideal R := Ideal.span {ftSecondLeftRelation k n}
+  let J : Ideal R := Ideal.span {ftSecondRightRelation k n}
+  have hfactor : ftSecondRelationPolynomial k n =
+      ftSecondLeftRelation k n * ftSecondRightRelation k n := by
+    simpa [ftSecondLeftRelation, ftSecondRightRelation] using
+      (ftFibre_factorization k n).symm
+  have htop : L ⊔ J = ⊤ := by
+    have hmem : Polynomial.C d0 ∈ L ⊔ J := by
+      have hC2 : (Polynomial.C (2 : ftKXLocal k) : R) = 2 := by
+        rw [Polynomial.C_eq_algebraMap]
+        exact map_ofNat _ 2
+      have h := (L ⊔ J).sub_mem
+        (Ideal.mem_sup_right (Ideal.subset_span
+          (show ftSecondRightRelation k n ∈
+            ({ftSecondRightRelation k n} : Set R) by simp)))
+        ((L ⊔ J).mul_mem_left (Polynomial.C (ftKX k))
+          (Ideal.mem_sup_left (Ideal.subset_span
+            (show ftSecondLeftRelation k n ∈
+              ({ftSecondLeftRelation k n} : Set R) by simp))))
+      convert h using 1
+      simp [d0, ftSecondLeftRelation, ftSecondRightRelation]
+      rw [hC2]
+      ring
+    have hunit : IsUnit (Polynomial.C d0) :=
+      IsUnit.map (Polynomial.C : ftKXLocal k →+* R) hd0unit
+    apply top_unique
+    rw [← Ideal.span_singleton_eq_top.mpr hunit]
+    exact Ideal.span_le.2 (show
+      ({Polynomial.C d0} : Set R) ⊆ (↑(L ⊔ J) : Set R) from by
+        intro x hx
+        rw [Set.mem_singleton_iff] at hx
+        simpa [hx] using hmem)
+  have hcop : IsCoprime L J := (Ideal.isCoprime_iff_sup_eq).2 htop
+  have hIdeal : Ideal.span ({ftSecondRelationPolynomial k n} : Set R) = L * J := by
+    rw [hfactor]
+    dsimp [L, J]
+    rw [Ideal.span_singleton_mul_span_singleton]
+  have hcop' : IsCoprime
+      (Ideal.span ({ftSecondLeftRelation k n} : Set (Polynomial (ftKXLocal k))))
+      (Ideal.span ({ftSecondRightRelation k n} : Set (Polynomial (ftKXLocal k)))) := by
+    simpa [R, L, J] using hcop
+  have hIdeal' : Ideal.span
+      ({ftSecondRelationPolynomial k n} : Set (Polynomial (ftKXLocal k))) =
+      Ideal.span ({ftSecondLeftRelation k n} : Set (Polynomial (ftKXLocal k))) *
+        Ideal.span ({ftSecondRightRelation k n} : Set (Polynomial (ftKXLocal k))) := by
+    simpa [R, L, J] using hIdeal
+  let : CommRing (ftSecondBase k n) := by
+    unfold ftSecondBase
+    infer_instance
+  let : CommRing (ftSecondLeft k n) := by
+    unfold ftSecondLeft
+    infer_instance
+  let : CommRing (ftSecondRightBase k n) := by
+    unfold ftSecondRightBase
+    infer_instance
+  let crt : ftSecondBase k n ≃+*
+      ftSecondLeft k n × ftSecondRightBase k n :=
+    (Ideal.quotEquivOfEq hIdeal).trans
+      (Ideal.quotientMulEquivQuotientProd L J hcop)
+  let fL : ftSecondBase k n →+* ftSecondLeft k n :=
+    (RingHom.fst _ _).comp crt.toRingHom
+  let fR : ftSecondBase k n →+* ftSecondRightBase k n :=
+    (RingHom.snd _ _).comp crt.toRingHom
+  let gL : ftSecondBase k n →+* ftSecondLeft k n := fL
+  let gR : ftSecondBase k n →+* ftSecondRight k n :=
+    (algebraMap (ftSecondRightBase k n) (ftSecondRight k n)).comp fR
+  let g : ftSecondBase k n →+* ftSecondProduct k n := gL.prod gR
+  have hdL : gL (ftSecondDerivativeQuotient k n) =
+      Ideal.Quotient.mk L (Polynomial.C d0) := by
+    change ((RingHom.fst (ftSecondLeft k n) (ftSecondRightBase k n)).comp
+        (Ideal.quotientMulEquivQuotientProd L J hcop :
+          R ⧸ L * J →+* ftSecondLeft k n × ftSecondRightBase k n))
+        ((Ideal.quotEquivOfEq hIdeal)
+          (Ideal.Quotient.mk _ (ftSecondDerivative k))) = _
+    rw [Ideal.fst_comp_quotientMulEquivQuotientProd,
+      Ideal.quotEquivOfEq_mk, Ideal.Quotient.factor_mk]
+    simp [ftSecondDerivative, d0, R, L, ftSecondLeftRelation]
+    change (Ideal.Quotient.mk (Ideal.span
+      {Polynomial.X - Polynomial.C (ftKX k ^ n)})
+      (Polynomial.C (2 : ftKXLocal k) * Polynomial.C (ftKX k) *
+        Polynomial.X + 1)) =
+      Ideal.Quotient.mk (Ideal.span
+        {Polynomial.X - Polynomial.C (ftKX k ^ n)})
+        (Polynomial.C (2 : ftKXLocal k) * Polynomial.C (ftKX k) ^
+          (n + 1) + 1)
+    rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+    change _ ∈ Ideal.span
+      ({Polynomial.X - Polynomial.C (ftKX k ^ n)} :
+      Set (Polynomial (ftKXLocal k)))
+    rw [show (Polynomial.C (2 : ftKXLocal k) * Polynomial.C (ftKX k) *
+          Polynomial.X + 1) -
+          (Polynomial.C (2 : ftKXLocal k) * Polynomial.C (ftKX k) ^
+            (n + 1) + 1) =
+        Polynomial.C (2 * ftKX k) *
+          (Polynomial.X - Polynomial.C (ftKX k ^ n)) by
+      have hcpow : Polynomial.C (ftKX k) ^ (n + 1) =
+          Polynomial.C (ftKX k ^ (n + 1)) := by
+        simp only [Polynomial.C_pow]
+      have hcprod : Polynomial.C (ftKX k * ftKX k ^ n) =
+          Polynomial.C (ftKX k) * Polynomial.C (ftKX k ^ n) := by
+        exact Polynomial.C_mul
+      have hc2 : Polynomial.C (2 * ftKX k) =
+          Polynomial.C 2 * Polynomial.C (ftKX k) := by
+        exact Polynomial.C_mul
+      rw [hcpow, show ftKX k ^ (n + 1) = ftKX k * ftKX k ^ n by
+        rw [pow_succ]
+        ring, hcprod, hc2]
+      ring]
+    exact (Ideal.span ({Polynomial.X - Polynomial.C (ftKX k ^ n)} :
+      Set (Polynomial (ftKXLocal k)))).mul_mem_left _
+      (Ideal.subset_span (by simp))
+  have hdR : gR (ftSecondDerivativeQuotient k n) =
+      algebraMap (ftSecondRightBase k n) (ftSecondRight k n)
+        (ftSecondRightDerivative k n) := by
+    change (algebraMap (ftSecondRightBase k n) (ftSecondRight k n))
+      (((RingHom.snd (ftSecondLeft k n) (ftSecondRightBase k n)).comp
+        (Ideal.quotientMulEquivQuotientProd L J hcop :
+          R ⧸ L * J →+* ftSecondLeft k n × ftSecondRightBase k n))
+        ((Ideal.quotEquivOfEq hIdeal)
+          (Ideal.Quotient.mk _ (ftSecondDerivative k)))) = _
+    rw [Ideal.snd_comp_quotientMulEquivQuotientProd,
+      Ideal.quotEquivOfEq_mk, Ideal.Quotient.factor_mk]
+    rfl
+  have hdLunit : IsUnit (gL (ftSecondDerivativeQuotient k n)) := by
+    rw [hdL]
+    exact IsUnit.map (Ideal.Quotient.mk L)
+      (IsUnit.map (Polynomial.C : ftKXLocal k →+* R) hd0unit)
+  have hdunit : IsUnit (g (ftSecondDerivativeQuotient k n)) := by
+    change IsUnit (gL (ftSecondDerivativeQuotient k n),
+      gR (ftSecondDerivativeQuotient k n))
+    rw [Prod.isUnit_iff]
+    exact ⟨hdLunit, by
+      rw [hdR]
+      exact IsLocalization.Away.algebraMap_isUnit _⟩
+  let : Algebra (ftSecondBase k n) (ftSecondProduct k n) :=
+    { smul := fun r x => g r * x
+      algebraMap := g
+      commutes' := by
+        intro r x
+        exact mul_comm (g r) x
+      smul_def' := by
+        intro r x
+        rfl }
+  let : IsLocalization (Submonoid.powers (ftSecondDerivativeQuotient k n))
+      (ftSecondProduct k n) := by
+    refine { map_units := ?_, surj := ?_, exists_of_eq := ?_ }
+    · rintro ⟨a, ha⟩
+      obtain ⟨m, rfl⟩ := ha
+      change IsUnit (g ((ftSecondDerivativeQuotient k n) ^ m))
+      rw [map_pow]
+      exact hdunit.pow m
+    · intro z
+      obtain ⟨bs, hs⟩ := IsLocalization.surj (M :=
+        Submonoid.powers (ftSecondRightDerivative k n)) z.2
+      let b := bs.1
+      let s := bs.2
+      obtain ⟨m, hm⟩ := s.property
+      rw [← hm] at hs
+      let q := crt.symm
+        (z.1 * (gL (ftSecondDerivativeQuotient k n)) ^ m, b)
+      refine ⟨(q, ⟨(ftSecondDerivativeQuotient k n) ^ m, ⟨m, rfl⟩⟩), ?_⟩
+      apply Prod.ext
+      · change z.1 * (gL (ftSecondDerivativeQuotient k n)) ^ m =
+          gL q
+        have hq : crt q =
+            (z.1 * (gL (ftSecondDerivativeQuotient k n)) ^ m, b) := by
+          exact crt.apply_symm_apply _
+        exact (congrArg Prod.fst hq).symm
+      · change z.2 * (g ((ftSecondDerivativeQuotient k n) ^ m)).2 =
+          (g q).2
+        rw [map_pow]
+        have hden :
+            (g (ftSecondDerivativeQuotient k n)).2 =
+              algebraMap (ftSecondRightBase k n) (ftSecondRight k n)
+                (ftSecondRightDerivative k n) := by
+          simpa [g] using hdR
+        have hq : crt q =
+            (z.1 * (gL (ftSecondDerivativeQuotient k n)) ^ m, b) := by
+          exact crt.apply_symm_apply _
+        have hqg : (g q).2 =
+            algebraMap (ftSecondRightBase k n) (ftSecondRight k n) b := by
+          have hq' := congrArg Prod.snd hq
+          have hq'' := congrArg
+            (algebraMap (ftSecondRightBase k n) (ftSecondRight k n)) hq'
+          simpa [g, gR, fR, crt] using hq''
+        change z.2 * ((g (ftSecondDerivativeQuotient k n)).2) ^ m =
+          (g q).2
+        rw [hden, hqg]
+        simpa only [map_pow] using hs
+    · intro x y hxy
+      obtain ⟨s, hs⟩ := IsLocalization.exists_of_eq (M :=
+        Submonoid.powers (ftSecondRightDerivative k n)) (by
+          exact congrArg Prod.snd hxy)
+      obtain ⟨m, hm⟩ := s.property
+      rw [← hm] at hs
+      refine ⟨⟨(ftSecondDerivativeQuotient k n) ^ m, ⟨m, rfl⟩⟩, ?_⟩
+      apply crt.injective
+      apply Prod.ext
+      · have h : gL x = gL y := by
+          have h' := congrArg Prod.fst hxy
+          change gL x = gL y at h'
+          exact h'
+        have hmapL (z : ftSecondBase k n) :
+            (crt z).1 = gL z := by
+          rfl
+        have h' := congrArg
+          (fun z : ftSecondLeft k n =>
+            (gL (ftSecondDerivativeQuotient k n)) ^ m * z) h
+        change (crt ((ftSecondDerivativeQuotient k n) ^ m * x)).1 =
+          (crt ((ftSecondDerivativeQuotient k n) ^ m * y)).1
+        simp only [map_mul, map_pow]
+        change (crt (ftSecondDerivativeQuotient k n)).1 ^ m *
+            (crt x).1 =
+          (crt (ftSecondDerivativeQuotient k n)).1 ^ m * (crt y).1
+        rw [hmapL, hmapL, hmapL]
+        exact h'
+      · change (crt ((ftSecondDerivativeQuotient k n) ^ m * x)).2 =
+          (crt ((ftSecondDerivativeQuotient k n) ^ m * y)).2
+        simp only [map_mul, map_pow]
+        have hmapR (z : ftSecondBase k n) :
+            (crt z).2 = fR z := by
+          rfl
+        have hcoefR :
+            (crt (ftSecondDerivativeQuotient k n)).2 =
+              ftSecondRightDerivative k n := by
+          change ((RingHom.snd (ftSecondLeft k n)
+              (ftSecondRightBase k n)).comp
+              (Ideal.quotientMulEquivQuotientProd L J hcop :
+                R ⧸ L * J →+* ftSecondLeft k n × ftSecondRightBase k n))
+              ((Ideal.quotEquivOfEq hIdeal)
+                (Ideal.Quotient.mk _ (ftSecondDerivative k))) = _
+          rw [Ideal.snd_comp_quotientMulEquivQuotientProd,
+            Ideal.quotEquivOfEq_mk, Ideal.Quotient.factor_mk]
+          rfl
+        change (crt (ftSecondDerivativeQuotient k n)).2 ^ m *
+            (crt x).2 =
+          (crt (ftSecondDerivativeQuotient k n)).2 ^ m * (crt y).2
+        rw [hcoefR, hmapR, hmapR]
+        exact hs
+  exact ⟨(IsLocalization.algEquiv
+    (Submonoid.powers (ftSecondDerivativeQuotient k n))
+    (ftSecondPresentation k n) (ftSecondProduct k n)).toRingEquiv⟩
+
+private theorem ftSecondFractionRing_isLocalization_of_factor
+    (k : Type u) [Field k]
+    (hfactor : ∀ p : Polynomial k, p ≠ 0 →
+      ∃ (m : ℕ) (u : ftKXLocal k), IsUnit u ∧
+        algebraMap (Polynomial k) (ftKXLocal k) p = u * (ftKX k) ^ m) :
+    IsLocalization (Submonoid.powers (ftKX k)) (FractionRing (Polynomial k)) := by
+  let K := FractionRing (Polynomial k)
+  have hxK : algebraMap (ftKXLocal k) K (ftKX k) ≠ 0 := by
+    rw [ftKX, ← IsScalarTower.algebraMap_apply]
+    exact IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
+      (mem_nonZeroDivisors_iff_ne_zero.mpr (by simp))
+  change IsLocalization (Submonoid.powers (ftKX k)) K
+  refine { map_units := ?_, surj := ?_, exists_of_eq := ?_ }
+  · rintro ⟨a, ha⟩
+    obtain ⟨m, rfl⟩ := ha
+    change IsUnit (algebraMap (ftKXLocal k) K ((ftKX k) ^ m))
+    rw [map_pow]
+    exact isUnit_iff_ne_zero.mpr (pow_ne_zero m hxK)
+  · intro z
+    obtain ⟨a, b, hb, rfl⟩ := IsFractionRing.div_surjective (Polynomial k) z
+    obtain ⟨m, u, hu, hbu⟩ := hfactor b
+      (mem_nonZeroDivisors_iff_ne_zero.mp hb)
+    let uinv : ftKXLocal k := ↑(hu.unit⁻¹)
+    let sm : Submonoid.powers (ftKX k) :=
+      ⟨ftKX k ^ m, ⟨m, rfl⟩⟩
+    refine ⟨(algebraMap (Polynomial k) (ftKXLocal k) a * uinv, sm), ?_⟩
+    have hbuK : algebraMap (Polynomial k) K b =
+        algebraMap (ftKXLocal k) K u *
+          algebraMap (ftKXLocal k) K (ftKX k ^ m) := by
+      calc
+        algebraMap (Polynomial k) K b =
+            algebraMap (ftKXLocal k) K
+              (algebraMap (Polynomial k) (ftKXLocal k) b) :=
+          IsScalarTower.algebraMap_apply (Polynomial k) (ftKXLocal k) K b
+        _ = _ := by rw [hbu]; simp
+    change (algebraMap (Polynomial k) K a / algebraMap (Polynomial k) K b) *
+        algebraMap (ftKXLocal k) K (ftKX k ^ m) =
+      algebraMap (ftKXLocal k) K
+        (algebraMap (Polynomial k) (ftKXLocal k) a * uinv)
+    rw [hbuK]
+    simp only [map_mul]
+    rw [← IsScalarTower.algebraMap_apply]
+    simp only [div_eq_mul_inv, uinv, map_pow]
+    have huinvS : u * uinv = 1 := by
+      change u * ↑(hu.unit⁻¹) = 1
+      exact hu.mul_val_inv
+    have huinvK : (algebraMap (ftKXLocal k) K) u *
+        (algebraMap (ftKXLocal k) K) uinv = 1 := by
+      rw [← map_mul, huinvS, map_one]
+    have hcancel :
+        ((algebraMap (ftKXLocal k) K) u *
+            (algebraMap (ftKXLocal k) K (ftKX k)) ^ m)⁻¹ *
+          ((algebraMap (ftKXLocal k) K) (ftKX k)) ^ m =
+          (algebraMap (ftKXLocal k) K) uinv := by
+      let dK := (algebraMap (ftKXLocal k) K) u *
+        (algebraMap (ftKXLocal k) K (ftKX k)) ^ m
+      have huK0 : (algebraMap (ftKXLocal k) K) u ≠ 0 := by
+        intro huK
+        apply hu.ne_zero
+        exact (IsFractionRing.injective (ftKXLocal k) K).eq_iff.mp
+          (show (algebraMap (ftKXLocal k) K) u =
+            (algebraMap (ftKXLocal k) K) 0 by simpa using huK)
+      have hdK0 : dK ≠ 0 := by
+        dsimp [dK]
+        exact mul_ne_zero huK0 (pow_ne_zero m hxK)
+      have hprod :
+          dK * (algebraMap (ftKXLocal k) K) uinv =
+            ((algebraMap (ftKXLocal k) K) (ftKX k)) ^ m := by
+        calc
+          _ = ((algebraMap (ftKXLocal k) K) (ftKX k)) ^ m *
+              ((algebraMap (ftKXLocal k) K) u *
+                (algebraMap (ftKXLocal k) K) uinv) := by
+            dsimp [dK]
+            ring
+          _ = _ := by rw [huinvK, mul_one]
+      change dK⁻¹ * ((algebraMap (ftKXLocal k) K) (ftKX k)) ^ m = _
+      calc
+        dK⁻¹ * ((algebraMap (ftKXLocal k) K) (ftKX k)) ^ m =
+            dK⁻¹ * (dK * (algebraMap (ftKXLocal k) K) uinv) := by
+              rw [hprod]
+        _ = (dK⁻¹ * dK) * (algebraMap (ftKXLocal k) K) uinv := by ring
+        _ = _ := by rw [inv_mul_cancel₀ hdK0, one_mul]
+    rw [mul_assoc, hcancel]
+  · intro x y hxy
+    have hxy' : x = y := (IsFractionRing.injective
+      (ftKXLocal k) K).eq_iff.mp hxy
+    exact ⟨1, by simp [hxy']⟩
 
 theorem ftSecondProduct_equiv_final_product (k : Type u) [Field k] (n : ℕ) :
     Nonempty (ftSecondProduct k n ≃+* ftFinalProduct k) := by
-  sorry
+  let hunitR (p : Polynomial k) (hp : p ∉ ftKXMaximalIdeal k) :
+      IsUnit (algebraMap (Polynomial k) (ftKXLocal k) p) := by
+    apply (IsLocalRing.notMem_maximalIdeal).mp
+    intro hmem
+    exact hp ((IsLocalization.AtPrime.to_map_mem_maximal_iff
+      (S := ftKXLocal k) (I := ftKXMaximalIdeal k) p).mp hmem)
+  have hfactor : ∀ p : Polynomial k, p ≠ 0 →
+      ∃ (m : ℕ) (u : ftKXLocal k), IsUnit u ∧
+        algebraMap (Polynomial k) (ftKXLocal k) p = u * (ftKX k) ^ m := by
+    have hfactorAux : ∀ d : ℕ, ∀ p : Polynomial k, p.natDegree = d → p ≠ 0 →
+        ∃ (m : ℕ) (u : ftKXLocal k), IsUnit u ∧
+          algebraMap (Polynomial k) (ftKXLocal k) p = u * (ftKX k) ^ m := by
+      intro d
+      induction d using Nat.strong_induction_on with
+      | h d ih =>
+        intro p hpd hp
+        by_cases hmem : p ∈ ftKXMaximalIdeal k
+        · have hpdiv : p ∈ Ideal.span ({(Polynomial.X : Polynomial k)} : Set _) := by
+            simpa [ftKXMaximalIdeal] using hmem
+          obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hpdiv
+          have hq0 : q ≠ 0 := by
+            intro hq0
+            apply hp
+            rw [← hq, hq0, zero_mul]
+          have hdeg : q.natDegree < p.natDegree := by
+            rw [← hq, Polynomial.natDegree_mul hq0 (by simp)]
+            simp
+          obtain ⟨m, u, hu, hqu⟩ := ih q.natDegree
+            (by simpa [hpd] using hdeg) q rfl hq0
+          refine ⟨m + 1, u, hu, ?_⟩
+          rw [← hq, map_mul, hqu]
+          simp [ftKX, pow_succ, mul_comm, mul_left_comm]
+        · refine ⟨0, algebraMap (Polynomial k) (ftKXLocal k) p,
+            hunitR p hmem, ?_⟩
+          simp
+    intro p hp
+    exact hfactorAux p.natDegree p rfl hp
+  let K := FractionRing (Polynomial k)
+  let : IsLocalization (Submonoid.powers (ftKX k)) K :=
+    ftSecondFractionRing_isLocalization_of_factor k hfactor
+  let B := ftSecondRightBase k n
+  let U := Localization.Away (ftKX k)
+  let qB : Polynomial (ftKXLocal k) →+* ftSecondRightBase k n :=
+    Ideal.Quotient.mk (Ideal.span {ftSecondRightRelation k n})
+  let algB : ftKXLocal k →+* ftSecondRightBase k n :=
+    qB.comp (Polynomial.C : ftKXLocal k →+* Polynomial (ftKXLocal k))
+  let : Algebra (ftKXLocal k) (ftSecondRightBase k n) :=
+    { smul := fun r x => algB r * x
+      algebraMap := algB
+      commutes' := by
+        intro r x
+        exact mul_comm (algB r) x
+      smul_def' := by
+        intro r x
+        rfl }
+  let cS : ftKXLocal k := ftKX k ^ (n + 1) + 1
+  have hcS : IsUnit cS := by
+    have hpC : (Polynomial.X : Polynomial k) ^ (n + 1) + 1 ∉
+        ftKXMaximalIdeal k := by
+      rw [ftKXMaximalIdeal, ← Polynomial.ker_constantCoeff]
+      intro h
+      rw [RingHom.mem_ker] at h
+      simp at h
+    simpa [cS, ftKX] using
+      hunitR ((Polynomial.X : Polynomial k) ^ (n + 1) + 1) hpC
+  let xB : ftSecondRightBase k n :=
+    algB (ftKX k)
+  let cB : ftSecondRightBase k n :=
+    algB cS
+  have hcB : IsUnit cB := by
+    exact IsUnit.map (algebraMap (ftKXLocal k) B) hcS
+  have hrelB : xB * Ideal.Quotient.mk _ Polynomial.X + cB = 0 := by
+    change Ideal.Quotient.mk _ (ftSecondRightRelation k n) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [ftSecondRightRelation])
+  have hxB : IsUnit xB := by
+    let v : ftSecondRightBase k n := ↑(hcB.unit⁻¹)
+    have hcv : cB * v = 1 := by
+      change cB * ↑(hcB.unit⁻¹) = 1
+      exact hcB.mul_val_inv
+    have hleft : xB * (Ideal.Quotient.mk _ Polynomial.X * (-v)) = 1 := by
+      calc
+        xB * (Ideal.Quotient.mk _ Polynomial.X * (-v)) =
+            (xB * Ideal.Quotient.mk _ Polynomial.X) * (-v) := by ring
+        _ = (-cB) * (-v) := by
+          rw [show xB * Ideal.Quotient.mk _ Polynomial.X = -cB by
+            rw [add_eq_zero_iff_eq_neg] at hrelB
+            exact hrelB]
+        _ = cB * v := by ring
+        _ = 1 := hcv
+    exact isUnit_iff_exists.mpr ⟨_, hleft, by
+      calc
+        Ideal.Quotient.mk _ Polynomial.X * (-v) * xB =
+            xB * (Ideal.Quotient.mk _ Polynomial.X * (-v)) := by ring
+        _ = 1 := hleft⟩
+  let tU : U := -(algebraMap (ftKXLocal k) U cS) *
+    IsLocalization.Away.invSelf (ftKX k)
+  let pmap : Polynomial (ftKXLocal k) →+* U :=
+    Polynomial.eval₂RingHom (algebraMap (ftKXLocal k) U) tU
+  have hpmap : pmap (ftSecondRightRelation k n) = 0 := by
+    simp [pmap, tU, ftSecondRightRelation, cS]
+    calc
+      (algebraMap (ftKXLocal k) U) (ftKX k) *
+            ((-1 + -(algebraMap (ftKXLocal k) U) (ftKX k) ^ (n + 1)) *
+              IsLocalization.Away.invSelf (ftKX k)) +
+          ((algebraMap (ftKXLocal k) U) (ftKX k) ^ (n + 1) + 1) =
+        (-1 + -(algebraMap (ftKXLocal k) U) (ftKX k) ^ (n + 1)) *
+            ((algebraMap (ftKXLocal k) U) (ftKX k) *
+              IsLocalization.Away.invSelf (ftKX k)) +
+          ((algebraMap (ftKXLocal k) U) (ftKX k) ^ (n + 1) + 1) := by ring
+      _ = 0 := by
+        rw [IsLocalization.Away.mul_invSelf]
+        ring
+  let fbar : B →+* U :=
+    Ideal.Quotient.lift _ pmap (by
+      intro z hz
+      induction hz using Submodule.span_induction with
+      | mem z hz =>
+          rcases hz with rfl
+          exact hpmap
+      | zero => simp
+      | add x y _ _ hx hy =>
+          simp [map_add, hx, hy]
+      | smul r x _ hx =>
+          simp [map_mul, hx])
+  let : IsLocalization (Submonoid.powers (ftKX k)) U := by
+    change IsLocalization (Submonoid.powers (ftKX k))
+      (Localization.Away (ftKX k))
+    infer_instance
+  have hxB' : IsUnit (algB (ftKX k)) := by
+    simpa [xB] using hxB
+  let gbar : U →+* B :=
+    IsLocalization.Away.lift (R := ftKXLocal k)
+      (S := Localization.Away (ftKX k)) (P := B)
+      (x := ftKX k) (g := algB) hxB'
+  have hgbarcomp :
+      gbar.comp (algebraMap (ftKXLocal k) U) =
+        algebraMap (ftKXLocal k) B := by
+    change gbar.comp (algebraMap (ftKXLocal k) U) = algB
+    simp [gbar]
+  have hfbarcomp :
+      fbar.comp (algebraMap (ftKXLocal k) B) =
+        algebraMap (ftKXLocal k) U := by
+    ext r
+    change fbar (Ideal.Quotient.mk _ (Polynomial.C r)) = _
+    rw [Ideal.Quotient.lift_mk]
+    simp [pmap]
+  have hfg : fbar.comp gbar = RingHom.id _ := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers (ftKX k))
+    rw [RingHom.comp_assoc, hgbarcomp, hfbarcomp]
+    simp
+  have hinv : xB * gbar (IsLocalization.Away.invSelf (ftKX k)) = 1 := by
+    have h := congrArg gbar
+      (IsLocalization.Away.mul_invSelf (R := ftKXLocal k)
+        (S := U) (x := ftKX k))
+    have hbaseX :
+        gbar (algebraMap (ftKXLocal k) U (ftKX k)) = xB := by
+      have h' := congrArg (fun h : ftKXLocal k →+* B => h (ftKX k))
+        hgbarcomp
+      change gbar (algebraMap (ftKXLocal k) U (ftKX k)) =
+        algB (ftKX k) at h'
+      simpa [xB] using h'
+    have h' : gbar (algebraMap (ftKXLocal k) U (ftKX k)) *
+        gbar (IsLocalization.Away.invSelf (ftKX k)) = 1 := by
+      simpa only [map_mul, map_one] using h
+    rw [hbaseX] at h'
+    exact h'
+  have hbaseC :
+      gbar (algebraMap (ftKXLocal k) U cS) = cB := by
+    have h := congrArg (fun h : ftKXLocal k →+* B => h cS)
+      hgbarcomp
+    change gbar (algebraMap (ftKXLocal k) U cS) = algB cS at h
+    exact h
+  have hneg :
+      -(cB) = xB * Ideal.Quotient.mk _ Polynomial.X := by
+    have h := hrelB
+    rw [add_eq_zero_iff_eq_neg] at h
+    exact h.symm
+  have htU :
+      gbar tU = Ideal.Quotient.mk _ Polynomial.X := by
+    calc
+      gbar tU = -(gbar (algebraMap (ftKXLocal k) U cS)) *
+          gbar (IsLocalization.Away.invSelf (ftKX k)) := by
+            have hmapneg := map_neg gbar (algebraMap (ftKXLocal k) U cS)
+            change gbar (-(algebraMap (ftKXLocal k) U cS) *
+              IsLocalization.Away.invSelf (ftKX k)) = _
+            rw [map_mul, hmapneg]
+      _ = -cB * gbar (IsLocalization.Away.invSelf (ftKX k)) := by
+        rw [hbaseC]
+      _ = (xB * Ideal.Quotient.mk _ Polynomial.X) *
+          gbar (IsLocalization.Away.invSelf (ftKX k)) := by
+        rw [hneg]
+      _ = Ideal.Quotient.mk _ Polynomial.X *
+          (xB * gbar (IsLocalization.Away.invSelf (ftKX k))) := by
+        ring
+      _ = Ideal.Quotient.mk _ Polynomial.X := by
+        rw [hinv]
+        exact (mul_one
+          ((Ideal.Quotient.mk (Ideal.span {ftSecondRightRelation k n})
+            Polynomial.X) : B))
+  have hgf : gbar.comp fbar = RingHom.id _ := by
+    apply Ideal.Quotient.ringHom_ext
+    apply Polynomial.ringHom_ext'
+    · ext r
+      change gbar (fbar (Ideal.Quotient.mk _ (Polynomial.C r))) =
+        Ideal.Quotient.mk _ (Polynomial.C r)
+      rw [Ideal.Quotient.lift_mk]
+      have h := congrArg (fun h : ftKXLocal k →+* B => h r)
+        hgbarcomp
+      calc
+        gbar (pmap (Polynomial.C r)) =
+            algebraMap (ftKXLocal k) B r := by
+          simpa [pmap, RingHom.comp_apply] using h
+        _ = Ideal.Quotient.mk _ (Polynomial.C r) := by rfl
+    · change gbar (fbar (Ideal.Quotient.mk _ Polynomial.X)) =
+        Ideal.Quotient.mk _ Polynomial.X
+      rw [Ideal.Quotient.lift_mk]
+      simpa [pmap] using htU
+  have hbij : Function.Bijective fbar := by
+    constructor
+    · intro x y hxy
+      have h := congrArg gbar hxy
+      rw [show gbar (fbar x) = x by
+        have h' := congrArg (fun h : B →+* B => h x) hgf
+        simpa [RingHom.comp_apply] using h'] at h
+      rw [show gbar (fbar y) = y by
+        have h' := congrArg (fun h : B →+* B => h y) hgf
+        simpa [RingHom.comp_apply] using h'] at h
+      exact h
+    · intro y
+      exact ⟨gbar y, by
+        have h := congrArg (fun h : U →+* U => h y) hfg
+        simpa [RingHom.comp_apply] using h⟩
+  let eBU : B ≃+* U := RingEquiv.ofBijective fbar hbij
+  let eUK : U ≃+* K :=
+    (IsLocalization.algEquiv (Submonoid.powers (ftKX k)) U K).toRingEquiv
+  let eL : ftSecondLeft k n ≃+* ftKXLocal k :=
+    (Polynomial.quotientSpanXSubCAlgEquiv (ftKX k ^ n)).toRingEquiv
+  have hpoly : (2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1 ∉
+      ftKXMaximalIdeal k := by
+    rw [ftKXMaximalIdeal, ← Polynomial.ker_constantCoeff]
+    intro h
+    rw [RingHom.mem_ker] at h
+    simp at h
+  have hunitpoly : IsUnit
+      (algebraMap (Polynomial k) (ftKXLocal k)
+        ((2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1)) :=
+    hunitR _ hpoly
+  have hunitB : IsUnit
+      (algB ((algebraMap (Polynomial k) (ftKXLocal k))
+        ((2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1))) :=
+    by
+      exact IsUnit.map algB hunitpoly
+  have hderiv_eq : ftSecondRightDerivative k n =
+      -(algB ((algebraMap (Polynomial k) (ftKXLocal k))
+        ((2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1))) := by
+    change qB (ftSecondDerivative k) = _
+    change qB (Polynomial.C (2 * ftKX k) * Polynomial.X + 1) = _
+    rw [map_add, map_mul]
+    change algB (2 * ftKX k) * qB Polynomial.X + 1 = _
+    have hxz : algB (ftKX k) * qB Polynomial.X = -cB := by
+      change xB * qB Polynomial.X = -cB
+      rw [add_eq_zero_iff_eq_neg] at hrelB
+      exact hrelB
+    have hpB : algB ((algebraMap (Polynomial k) (ftKXLocal k))
+          ((2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1)) =
+        2 * cB - 1 := by
+      simp only [map_add, map_mul, map_pow, map_ofNat]
+      simp [ftKX, cB, cS]
+      ring
+    have h2 : algB (2 * ftKX k) = 2 * algB (ftKX k) := by
+      rw [map_mul, map_ofNat]
+    rw [h2]
+    calc
+      2 * algB (ftKX k) * qB Polynomial.X + 1 =
+          2 * (algB (ftKX k) * qB Polynomial.X) + 1 := by ring
+      _ = -2 * cB + 1 := by rw [hxz]; ring
+      _ = -(2 * cB - 1) := by ring
+      _ = -algB ((algebraMap (Polynomial k) (ftKXLocal k))
+          ((2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1)) := by
+        rw [hpB]
+  have hderivB : IsUnit (ftSecondRightDerivative k n) := by
+    rw [hderiv_eq]
+    have hunitpolyNeg : IsUnit
+        (-(algebraMap (Polynomial k) (ftKXLocal k)
+          ((2 : Polynomial k) * Polynomial.X ^ (n + 1) + 1))) :=
+      IsUnit.neg hunitpoly
+    have hmap := IsUnit.map algB hunitpolyNeg
+    simpa only [map_neg] using hmap
+  let : IsLocalization (Submonoid.powers (ftSecondRightDerivative k n)) B := by
+    apply IsLocalization.of_le_isUnit
+    rintro s ⟨m, rfl⟩
+    exact hderivB.pow m
+  let eBR : ftSecondRight k n ≃+* B :=
+    (IsLocalization.algEquiv (Submonoid.powers (ftSecondRightDerivative k n))
+      (ftSecondRight k n) B).toRingEquiv
+  let eR : ftSecondRight k n ≃+* K := eBR.trans (eBU.trans eUK)
+  change Nonempty
+    ((ftSecondLeft k n × ftSecondRight k n) ≃+*
+      (ftKXLocal k × K))
+  refine ⟨? _⟩
+  exact RingEquiv.prodCongr eL eR
 
 /-! ## The two ideals over `𝔭ₙ` -/
 
@@ -2481,6 +3130,82 @@ def ftCQPrimeIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (ftC k) :=
   ftCPrimeIdeal k n ⊔
     Ideal.span {ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1}
 
+private theorem ftCRPrimeIdeal_sup_CQPrimeIdeal_aux (k : Type u) [Field k] (n : ℕ) :
+    ftCRPrimeIdeal k n ⊔ ftCQPrimeIdeal k n = ⊤ := by
+  let d : ftC k :=
+    algebraMap (ftCQuotient k) (ftC k) (ftCDerivative k)
+  have hdunit : IsUnit d := by
+    change IsUnit (algebraMap (ftCQuotient k)
+      (Localization.Away (ftCDerivative k)) (ftCDerivative k))
+    exact IsLocalization.Away.algebraMap_isUnit _
+  have hr : ftCZ k - (ftCX k) ^ n ∈ ftCRPrimeIdeal k n := by
+    exact Ideal.mem_sup_right (Ideal.subset_span (by simp))
+  have hq : ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1 ∈
+      ftCQPrimeIdeal k n := by
+    exact Ideal.mem_sup_right (Ideal.subset_span (by simp))
+  have hd : d =
+      (ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1) +
+        ftCX k * (ftCZ k - (ftCX k) ^ n) := by
+    let qmk : Polynomial (ftA k) →+* ftCQuotient k :=
+      Ideal.Quotient.mk _
+    have htwo :
+        qmk (Polynomial.C (2 : ftA k)) =
+          (2 : ftCQuotient k) := by
+      change qmk (Polynomial.C (2 : ftA k)) = qmk (2 : Polynomial (ftA k))
+      congr 1
+    have hderiv :
+        qmk (ftCDerivativePolynomial k) =
+        (1 : ftCQuotient k) +
+          (2 : ftCQuotient k) *
+            qmk (Polynomial.C (ftAX k)) * qmk Polynomial.X := by
+      change qmk (Polynomial.C (2 * ftAX k) * Polynomial.X + 1) = _
+      rw [map_add, map_mul]
+      rw [show Polynomial.C (2 * ftAX k) =
+          Polynomial.C 2 * Polynomial.C (ftAX k) by
+            rw [← Polynomial.C_mul]]
+      rw [map_mul, htwo]
+      simp only [map_one]
+      ring
+    have hCAX :
+        algebraMap (ftCQuotient k) (ftC k)
+            (qmk (Polynomial.C (ftAX k))) = ftCX k := by
+      change algebraMap (ftCQuotient k) (ftC k)
+        (Ideal.Quotient.mk (ftCRelationsIdeal k)
+          (Polynomial.C (ftAX k))) = ftCX k
+      rw [Polynomial.C_eq_algebraMap, Ideal.Quotient.mk_algebraMap]
+      exact IsScalarTower.algebraMap_apply (ftA k) (ftCQuotient k)
+        (ftC k) (ftAX k)
+    have hX :
+        algebraMap (ftCQuotient k) (ftC k) (qmk Polynomial.X) =
+          ftCZ k := by
+      rfl
+    calc
+      d = algebraMap (ftCQuotient k) (ftC k)
+          (qmk (ftCDerivativePolynomial k)) := rfl
+      _ = algebraMap (ftCQuotient k) (ftC k)
+          ((1 : ftCQuotient k) +
+            (2 : ftCQuotient k) *
+            qmk (Polynomial.C (ftAX k)) * qmk Polynomial.X) :=
+        congrArg _ hderiv
+      _ = 1 + 2 * ftCX k * ftCZ k := by
+        simp only [map_add, map_mul, map_one, map_ofNat]
+        rw [hCAX, hX]
+      _ = (ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1) +
+          ftCX k * (ftCZ k - (ftCX k) ^ n) := by
+        ring
+  have hdmem : d ∈ ftCRPrimeIdeal k n ⊔ ftCQPrimeIdeal k n := by
+    rw [hd]
+    exact (ftCRPrimeIdeal k n ⊔ ftCQPrimeIdeal k n).add_mem
+      (Ideal.mem_sup_right hq)
+      ((ftCRPrimeIdeal k n ⊔ ftCQPrimeIdeal k n).mul_mem_left
+        (ftCX k) (Ideal.mem_sup_left hr))
+  have hspan : Ideal.span ({d} : Set (ftC k)) ≤
+      ftCRPrimeIdeal k n ⊔ ftCQPrimeIdeal k n :=
+    Ideal.span_le.2 (by intro x hx; simpa using hx ▸ hdmem)
+  apply top_unique
+  rw [← Ideal.span_singleton_eq_top.mpr hdunit]
+  exact hspan
+
 theorem ftCQPrimeIdeal_isMaximal (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     (ftCQPrimeIdeal k n).IsMaximal := by
   sorry
@@ -2490,15 +3215,132 @@ def ftXi (k : Type u) [Field k] (n : ℕ) : ftC k :=
 
 theorem ftCPrimeIdeal_eq_inf (k : Type u) [Field k] (n : ℕ) :
     ftCPrimeIdeal k n = ftCRPrimeIdeal k n ⊓ ftCQPrimeIdeal k n := by
-  sorry
+  let P : Ideal (ftC k) := ftCPrimeIdeal k n
+  have hA0 (a : ftA0 k) : ftAToA0 k (ftA0ToA k a) = a := by
+    change Ideal.Quotient.lift (ftARelationsIdeal k) (ftAAugmentation k) _
+        (Ideal.Quotient.mk (ftARelationsIdeal k) (MvPolynomial.C a)) = a
+    change ftAAugmentation k (MvPolynomial.C a) = a
+    simp [ftAAugmentation]
+  have hpa : ftAPrimeEquation k n ∈ ftAPrime k n := by
+    change ftAToA0 k (ftA0ToA k (ftPrimeEquation k n)) ∈ ftP0 k n
+    rw [hA0]
+    exact Ideal.subset_span (by simp)
+  have hprime : ftAToC k (ftAPrimeEquation k n) ∈ P := by
+    exact Ideal.mem_map_of_mem (ftAToC k) hpa
+  have hrel : ftCX k * (ftCZ k) ^ 2 + ftCZ k + ftCY k = 0 := by
+    have hzero :
+        (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k) :
+          ftCQuotient k) = 0 := by
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      exact Ideal.subset_span (by simp)
+    have hrel0 : algebraMap (ftCQuotient k) (ftC k)
+        (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k)) = 0 := by
+      calc
+        _ = algebraMap (ftCQuotient k) (ftC k) (0 : ftCQuotient k) :=
+          congrArg (algebraMap (ftCQuotient k) (ftC k)) hzero
+        _ = 0 := map_zero _
+    have heq : ftCX k * (ftCZ k) ^ 2 + ftCZ k + ftCY k =
+        algebraMap (ftCQuotient k) (ftC k)
+          (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k)) := by
+      have hAX : algebraMap (ftCQuotient k) (ftC k)
+          (Ideal.Quotient.mk (ftCRelationsIdeal k)
+            (Polynomial.C (ftAX k))) = ftAToC k (ftAX k) := by
+        rw [Polynomial.C_eq_algebraMap, Ideal.Quotient.mk_algebraMap]
+        exact IsScalarTower.algebraMap_apply (ftA k) (ftCQuotient k)
+          (ftC k) (ftAX k)
+      have hAY : algebraMap (ftCQuotient k) (ftC k)
+          (Ideal.Quotient.mk (ftCRelationsIdeal k)
+            (Polynomial.C (ftAY k))) = ftAToC k (ftAY k) := by
+        rw [Polynomial.C_eq_algebraMap, Ideal.Quotient.mk_algebraMap]
+        exact IsScalarTower.algebraMap_apply (ftA k) (ftCQuotient k)
+          (ftC k) (ftAY k)
+      let qAX : ftCQuotient k :=
+        Ideal.Quotient.mk (ftCRelationsIdeal k) (Polynomial.C (ftAX k))
+      let qX : ftCQuotient k :=
+        Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X
+      let qAY : ftCQuotient k :=
+        Ideal.Quotient.mk (ftCRelationsIdeal k) (Polynomial.C (ftAY k))
+      have hq :
+          (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k) :
+            ftCQuotient k) = qAX * qX ^ 2 + qX + qAY := by
+        let qmk : Polynomial (ftA k) →+* ftCQuotient k :=
+          Ideal.Quotient.mk _
+        change qmk (ftCRelation k) =
+          qmk (Polynomial.C (ftAX k)) * qmk Polynomial.X ^ 2 +
+            qmk Polynomial.X + qmk (Polynomial.C (ftAY k))
+        change qmk (Polynomial.C (ftAX k) * Polynomial.X ^ 2 +
+          Polynomial.X + Polynomial.C (ftAY k)) = _
+        rw [map_add, map_add, map_mul, map_pow]
+      have hmapprod :
+          algebraMap (ftCQuotient k) (ftC k) (qAX * qX ^ 2 + qX + qAY) =
+            algebraMap (ftCQuotient k) (ftC k) qAX *
+                (algebraMap (ftCQuotient k) (ftC k) qX) ^ 2 +
+              algebraMap (ftCQuotient k) (ftC k) qX +
+              algebraMap (ftCQuotient k) (ftC k) qAY := by
+        simp only [map_add, map_mul, map_pow]
+      have hleft :
+          ftCX k * (ftCZ k) ^ 2 + ftCZ k + ftCY k =
+            algebraMap (ftCQuotient k) (ftC k) qAX *
+                (algebraMap (ftCQuotient k) (ftC k) qX) ^ 2 +
+              algebraMap (ftCQuotient k) (ftC k) qX +
+              algebraMap (ftCQuotient k) (ftC k) qAY := by
+        dsimp [qAX, qX, qAY]
+        rw [hAX, hAY]
+        rfl
+      calc
+        _ = algebraMap (ftCQuotient k) (ftC k)
+              (qAX * qX ^ 2 + qX + qAY) := hleft.trans hmapprod.symm
+        _ = algebraMap (ftCQuotient k) (ftC k)
+              (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k)) :=
+          congrArg (algebraMap (ftCQuotient k) (ftC k)) hq.symm
+    rw [heq, hrel0]
+  have hprod :
+      (ftCZ k - (ftCX k) ^ n) *
+          (ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1) ∈ P := by
+    have heq :
+        (ftCZ k - (ftCX k) ^ n) *
+            (ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1) =
+          (ftCX k * (ftCZ k) ^ 2 + ftCZ k + ftCY k) -
+            ftAToC k (ftAPrimeEquation k n) := by
+      simp [ftAPrimeEquation, ftPrimeEquation, ftAX, ftAY,
+        ftCX, ftCY, ftAToC]
+      ring
+    rw [heq]
+    exact P.sub_mem (by rw [hrel]; exact P.zero_mem) hprime
+  have hmul : ftCRPrimeIdeal k n * ftCQPrimeIdeal k n ≤ P := by
+    change (P ⊔ Ideal.span {ftCZ k - (ftCX k) ^ n}) *
+      (P ⊔ Ideal.span
+        {ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1}) ≤ P
+    simp only [Ideal.sup_mul, Ideal.mul_sup]
+    refine sup_le (sup_le ?_ ?_) (sup_le ?_ ?_)
+    · exact Ideal.mul_le_right
+    · rw [mul_comm]
+      exact Ideal.mul_le_right
+    · exact Ideal.mul_le_right
+    · rw [show Ideal.span ({ftCZ k - (ftCX k) ^ n} : Set (ftC k)) *
+          Ideal.span ({ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1} : Set (ftC k)) =
+          Ideal.span ({(ftCZ k - (ftCX k) ^ n) *
+            (ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1)} : Set (ftC k)) by
+            rw [Ideal.span_singleton_mul_span_singleton]]
+      exact (Ideal.span_singleton_le_iff_mem P).mpr hprod
+  apply le_antisymm
+  · exact le_inf (show P ≤ ftCRPrimeIdeal k n by
+      dsimp [P, ftCRPrimeIdeal]; exact le_sup_left)
+      (show P ≤ ftCQPrimeIdeal k n by
+        dsimp [P, ftCQPrimeIdeal]; exact le_sup_left)
+  · rw [← Ideal.mul_eq_inf_of_coprime
+      (ftCRPrimeIdeal_sup_CQPrimeIdeal_aux k n)]
+    exact hmul
 
 theorem ftCRPrimeIdeal_sup_CQPrimeIdeal (k : Type u) [Field k] (n : ℕ) :
     ftCRPrimeIdeal k n ⊔ ftCQPrimeIdeal k n = ⊤ := by
-  sorry
+  exact ftCRPrimeIdeal_sup_CQPrimeIdeal_aux k n
 
 theorem ftCPrimeIdeal_eq_mul (k : Type u) [Field k] (n : ℕ) :
     ftCPrimeIdeal k n = ftCRPrimeIdeal k n * ftCQPrimeIdeal k n := by
-  sorry
+  rw [ftCPrimeIdeal_eq_inf]
+  exact (Ideal.mul_eq_inf_of_coprime
+    (ftCRPrimeIdeal_sup_CQPrimeIdeal k n)).symm
 
 theorem ftCQPrimeIdeal_annihilator_Xi (k : Type u) [Field k] (n : ℕ) :
     (Submodule.span (ftC k) ({ftXi k n} : Set (ftC k))).annihilator =

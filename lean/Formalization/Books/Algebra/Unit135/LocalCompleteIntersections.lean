@@ -116,7 +116,114 @@ theorem presentation_codimension_eq_local_dimension
     (c : ℕ)
     (hc : q'.asIdeal.height = q.asIdeal.height + (c : ℕ∞)) :
     krullDimensionAt q = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
-  sorry
+  let _ : Algebra.FiniteType k S := P.finiteType
+  letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  have hglobal : topologicalKrullDim (PrimeSpectrum P.Ring) =
+      (((n : ℕ∞) : WithBot ℕ∞)) := by
+    rw [PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim,
+      MvPolynomial.ringKrullDim_of_isNoetherianRing,
+      ringKrullDim_eq_zero_of_field]
+    simp
+  have huniv : topologicalKrullDim (Set.univ : Set (PrimeSpectrum P.Ring)) =
+      topologicalKrullDim (PrimeSpectrum P.Ring) :=
+    IsHomeomorph.topologicalKrullDim_eq _
+      (Homeomorph.Set.univ (PrimeSpectrum P.Ring)).isHomeomorph
+  have hpoly : krullDimensionAt q' = (((n : ℕ∞) : WithBot ℕ∞)) := by
+    have hpoint :=
+      Formalization.Books.Algebra.Unit114.dimension_at_a_point_finite_type_over_field
+        (k := k) (S := P.Ring) (p := q'.asIdeal) (hp := q'.2)
+    dsimp at hpoint
+    obtain ⟨d, hdx, hdcomp, _⟩ := hpoint
+    have hle : krullDimensionAt q' ≤ (((n : ℕ∞) : WithBot ℕ∞)) := by
+      exact (krullDimensionAt_le q' isOpen_univ (mem_univ q')).trans_eq
+        (huniv.trans hglobal)
+    have hmem : (((n : ℕ∞) : WithBot ℕ∞)) ∈
+        Formalization.Books.Algebra.Unit114.componentDimensionsAtPoint q' := by
+      refine ⟨Set.univ, ?_, mem_univ q', ?_⟩
+      · rw [irreducibleComponents_eq_singleton]
+        simp
+      · exact huniv.trans hglobal
+    have hge : (((n : ℕ∞) : WithBot ℕ∞)) ≤ d := hdcomp.2 hmem
+    have hle' : d ≤ (((n : ℕ∞) : WithBot ℕ∞)) := by
+      simpa [← hdx] using hle
+    calc
+      krullDimensionAt q' = d := hdx
+      _ = (((n : ℕ∞) : WithBot ℕ∞)) := le_antisymm hle' hge
+  have hcodim :=
+    Formalization.Books.Algebra.Unit116.codimension
+      (k := k) (S' := P.Ring) (S := S)
+      (f := MvPolynomial.aeval P.val) (hf := P.aeval_val_surjective) (p := q)
+  have halg : algebraMap P.Ring S =
+      MvPolynomial.aeval (R := k) P.val := P.algebraMap_eq
+  have hcomp :
+      PrimeSpectrum.comap (MvPolynomial.aeval P.val).toRingHom q = q' := by
+    rw [AlgHom.toRingHom_eq_coe, ← halg]
+    exact hcorresponding
+  rw [hcomp] at hcodim
+  have hcodim0 :
+      WithBot.unbotD 0 (krullDimensionAt q') -
+          WithBot.unbotD 0 (krullDimensionAt q) =
+        q'.asIdeal.height - q.asIdeal.height := by
+    simpa using hcodim
+  have hcodim' :
+      WithBot.unbotD 0 (krullDimensionAt q') -
+          WithBot.unbotD 0 (krullDimensionAt q) = (c : ℕ∞) := by
+    calc
+      _ = q'.asIdeal.height - q.asIdeal.height := hcodim0
+      _ = (c : ℕ∞) := by
+        have hqheight : q.asIdeal.height ≠ (⊤ : ℕ∞) :=
+          Ideal.height_ne_top_of_isPrime
+        rw [hc, add_comm]
+        exact (ENat.addLECancellable_of_ne_top hqheight).add_tsub_cancel_right
+  rw [hpoly] at hcodim'
+  simp only [WithBot.unbotD_coe] at hcodim'
+  have hnonneg : 0 ≤ krullDimensionAt q := by
+    rw [Formalization.Books.Topology.Unit10.krullDimensionAt]
+    refine le_iInf fun U => ?_
+    change 0 ≤ topologicalKrullDim (U : Set (PrimeSpectrum S))
+    rw [topologicalKrullDim, Order.krullDim_nonneg_iff]
+    let x : (U : Set (PrimeSpectrum S)) := ⟨q, U.mem⟩
+    exact ⟨⟨closure ({x} : Set (U : Set (PrimeSpectrum S))),
+      isIrreducible_singleton.closure,
+      isClosed_closure⟩⟩
+  have hnebot : krullDimensionAt q ≠ (⊥ : WithBot ℕ∞) := by
+    exact ne_of_gt (lt_of_lt_of_le (WithBot.bot_lt_coe 0) hnonneg)
+  obtain ⟨x, hx⟩ := WithBot.ne_bot_iff_exists.mp hnebot
+  have hupper : krullDimensionAt q ≤ (((n : ℕ∞) : WithBot ℕ∞)) := by
+    have hdim : ringKrullDim S ≤ ringKrullDim P.Ring :=
+      ringKrullDim_le_of_surjective (algebraMap P.Ring S) P.algebraMap_surjective
+    have hdim_top : topologicalKrullDim (PrimeSpectrum S) ≤
+        (((n : ℕ∞) : WithBot ℕ∞)) := by
+      calc
+        topologicalKrullDim (PrimeSpectrum S) = ringKrullDim S :=
+          PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim S
+        _ ≤ ringKrullDim P.Ring := hdim
+        _ = topologicalKrullDim (PrimeSpectrum P.Ring) :=
+          (PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim P.Ring).symm
+        _ = (((n : ℕ∞) : WithBot ℕ∞)) := hglobal
+    have hunivS : topologicalKrullDim (Set.univ : Set (PrimeSpectrum S)) =
+        topologicalKrullDim (PrimeSpectrum S) :=
+      IsHomeomorph.topologicalKrullDim_eq _
+        (Homeomorph.Set.univ (PrimeSpectrum S)).isHomeomorph
+    apply (krullDimensionAt_le q isOpen_univ (mem_univ q)).trans
+    rw [hunivS]
+    exact hdim_top
+  have hxle : x ≤ (n : ℕ∞) := by
+    apply WithBot.coe_le_coe.mp
+    simpa [hx] using hupper
+  have hxtop : x ≠ (⊤ : ℕ∞) :=
+    ne_of_lt (lt_of_le_of_lt hxle (WithTop.coe_lt_top n))
+  obtain ⟨y, hy⟩ := ENat.ne_top_iff_exists.mp hxtop
+  have hy_le : y ≤ n := by
+    rw [← hy] at hxle
+    exact WithTop.coe_le_coe.mp hxle
+  rw [← hx, WithBot.unbotD_coe] at hcodim'
+  rw [← hy] at hcodim'
+  have hnat : n - y = c := by
+    apply Nat.cast_injective (R := ℕ∞)
+    simpa only [← ENat.natCast_sub] using hcodim'
+  have hy_eq : y = n - c := by omega
+  rw [← hx, ← hy, hy_eq]
 
 theorem global_complete_intersection_localize
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]

@@ -1755,7 +1755,78 @@ theorem morphisms_equivalent_fibred_groupoids
     (ψ : FibredCategoryOverHom X₃ X₄)
     (hφ : Nonempty (overFunctor φ.underlying).IsEquivalence)
     (hψ : Nonempty (overFunctor ψ.underlying).IsEquivalence) :
-    (prePostcompositionFunctor φ ψ).IsEquivalence := by sorry
+    (prePostcompositionFunctor φ ψ).IsEquivalence := by
+  obtain ⟨φi, ⟨eφL⟩, ⟨eφR⟩⟩ :=
+    equivalence_fibredInGroupoids_is_equivalence_over hX₁ hX₂ φ hφ
+  obtain ⟨ψi, ⟨eψL⟩, ⟨eψR⟩⟩ :=
+    equivalence_fibredInGroupoids_is_equivalence_over hX₃ hX₄ ψ hψ
+  have hψL : ψ ≫ ψi ≅ 𝟙 X₃ := eψL
+  have hψR : ψi ≫ ψ ≅ 𝟙 X₄ := eψR
+  let F := prePostcompositionFunctor φ ψ
+  let K := prePostcompositionFunctor φi ψi
+  let Pψ := Bicategory.postcomp (B := FibredCategoryOver C) X₂ ψ
+  let Pψi₁ := Bicategory.postcomp (B := FibredCategoryOver C) X₁ ψi
+  let Pψi₂ := Bicategory.postcomp (B := FibredCategoryOver C) X₂ ψi
+  let Pψ₁ := Bicategory.postcomp (B := FibredCategoryOver C) X₁ ψ
+  let Qφ₄ := Bicategory.precomp (B := FibredCategoryOver C) X₄ φ
+  let Qφ₃ := Bicategory.precomp (B := FibredCategoryOver C) X₃ φ
+  let Qφi₃ := Bicategory.precomp (B := FibredCategoryOver C) X₃ φi
+  let Qφi₄ := Bicategory.precomp (B := FibredCategoryOver C) X₄ φi
+  let eFKIso : F ⋙ K ≅ 𝟭 _ := by
+    change (Pψ ⋙ Qφ₄) ⋙ (Pψi₁ ⋙ Qφi₃) ≅ 𝟭 _
+    exact
+      Functor.associator Pψ Qφ₄ (Pψi₁ ⋙ Qφi₃) ≪≫
+        Functor.isoWhiskerLeft Pψ
+          ((Functor.associator Qφ₄ Pψi₁ Qφi₃).symm ≪≫
+            Functor.isoWhiskerRight
+              (Bicategory.associatorNatIsoMiddle (B := FibredCategoryOver C)
+                φ ψi) Qφi₃ ≪≫
+            Functor.associator Pψi₂ Qφ₃ Qφi₃) ≪≫
+        (Functor.associator Pψ Pψi₂ (Qφ₃ ⋙ Qφi₃)).symm ≪≫
+        Functor.isoWhiskerRight
+          (Bicategory.associatorNatIsoLeft (B := FibredCategoryOver C)
+            X₂ ψ ψi) (Qφ₃ ⋙ Qφi₃) ≪≫
+        Functor.isoWhiskerRight
+          ((Bicategory.postcomposing (B := FibredCategoryOver C)
+            X₂ X₃ X₃).mapIso hψL) (Qφ₃ ⋙ Qφi₃) ≪≫
+        Functor.isoWhiskerRight
+          (Bicategory.rightUnitorNatIso (B := FibredCategoryOver C)
+            X₂ X₃) (Qφ₃ ⋙ Qφi₃) ≪≫
+        Functor.leftUnitor (Qφ₃ ⋙ Qφi₃) ≪≫
+        (Bicategory.associatorNatIsoRight (B := FibredCategoryOver C)
+          φi φ X₃).symm ≪≫
+        (Bicategory.precomposing (B := FibredCategoryOver C)
+          X₂ X₂ X₃).mapIso eφR ≪≫
+        Bicategory.leftUnitorNatIso (B := FibredCategoryOver C)
+          X₂ X₃
+  let eKFIso : K ⋙ F ≅ 𝟭 _ := by
+    change (Pψi₁ ⋙ Qφi₃) ⋙ (Pψ ⋙ Qφ₄) ≅ 𝟭 _
+    exact
+      Functor.associator Pψi₁ Qφi₃ (Pψ ⋙ Qφ₄) ≪≫
+        Functor.isoWhiskerLeft Pψi₁
+          ((Functor.associator Qφi₃ Pψ Qφ₄).symm ≪≫
+            Functor.isoWhiskerRight
+              (Bicategory.associatorNatIsoMiddle (B := FibredCategoryOver C)
+                φi ψ) Qφ₄ ≪≫
+            Functor.associator Pψ₁ Qφi₄ Qφ₄) ≪≫
+        (Functor.associator Pψi₁ Pψ₁ (Qφi₄ ⋙ Qφ₄)).symm ≪≫
+        Functor.isoWhiskerRight
+          (Bicategory.associatorNatIsoLeft (B := FibredCategoryOver C)
+            X₁ ψi ψ) (Qφi₄ ⋙ Qφ₄) ≪≫
+        Functor.isoWhiskerRight
+          ((Bicategory.postcomposing (B := FibredCategoryOver C)
+            X₁ X₄ X₄).mapIso hψR) (Qφi₄ ⋙ Qφ₄) ≪≫
+        Functor.isoWhiskerRight
+          (Bicategory.rightUnitorNatIso (B := FibredCategoryOver C)
+            X₁ X₄) (Qφi₄ ⋙ Qφ₄) ≪≫
+        Functor.leftUnitor (Qφi₄ ⋙ Qφ₄) ≪≫
+        (Bicategory.associatorNatIsoRight (B := FibredCategoryOver C)
+          φ φi X₄).symm ≪≫
+        (Bicategory.precomposing (B := FibredCategoryOver C)
+          X₁ X₁ X₄).mapIso eφL ≪≫
+        Bicategory.leftUnitorNatIso (B := FibredCategoryOver C)
+          X₁ X₄
+  exact Functor.IsEquivalence.mk' K eFKIso.symm eKFIso
 
 /-! ## Inertia, slices, composites, and fibre products -/
 

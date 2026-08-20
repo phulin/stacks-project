@@ -2572,7 +2572,125 @@ theorem totalMap_homotopic_of_vertical [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
     (h : VerticalHomotopy f g) :
     Nonempty (Homotopy (totalMap f) (totalMap g)) := by
-  sorry
+  let hcomp : ∀ n : ℤ,
+      (∐ fun p : ℤ => A.obj p (n - p)) ⟶
+        ∐ fun p : ℤ => B.obj p ((n - 1) - p) :=
+    fun n => Sigma.desc fun p =>
+      p.negOnePow •
+        (h.h p (n - p) ≫
+          eqToHom (by congr 1; lia) ≫
+          Sigma.ι (fun r : ℤ => B.obj r ((n - 1) - r)) p)
+  let hhom0 : ∀ i j : ℤ,
+      (∐ fun p : ℤ => A.obj p (i - p)) ⟶
+        ∐ fun p : ℤ => B.obj p (j - p) :=
+    fun i j => dite (i = j + 1)
+      (fun hij => hcomp i ≫ eqToHom (by
+        congr 1
+        funext p
+        congr 1
+        omega))
+      (fun _ => 0)
+  let H : Homotopy (totalMap f) (totalMap g) :=
+    { hom := hhom0
+      zero := by
+        intro i j hij
+        dsimp [hhom0]
+        by_cases hh : i = j + 1
+        · exfalso
+          apply hij
+          change j + 1 = i
+          exact hh.symm
+        · exact dif_neg hh
+      comm := by
+        intro n
+        dsimp [totalMap, dNext, prevD]
+        simp only [AddMonoidHom.mk'_apply]
+        have hnext : (ComplexShape.up ℤ).next n = n + 1 :=
+          (ComplexShape.up ℤ).next_eq' (ComplexShape.up_mk n (n + 1) rfl)
+        have hprev : (ComplexShape.up ℤ).prev n = n - 1 := by
+          apply (ComplexShape.up ℤ).prev_eq'
+          exact ComplexShape.up_mk (n - 1) n (by ring)
+        rw [hnext, hprev]
+        have hn : n - 1 + 1 = n := by ring
+        have hn' : n = n - 1 + 1 := hn.symm
+        have htransport_B {m : ℤ} (hm : (n - 1) + 1 = m) :
+            ((hm ▸ (totalDifferential B (n - 1) :
+                (∐ fun p : ℤ => B.obj p ((n - 1) - p)) ⟶
+                  ∐ fun p : ℤ => B.obj p ((n - 1) + 1 - p))) :
+              (∐ fun p : ℤ => B.obj p ((n - 1) - p)) ⟶
+                ∐ fun p : ℤ => B.obj p (m - p)) =
+              totalDifferential B (n - 1) ≫
+                eqToHom (by
+                  congr 1
+                  simp [hm]) := by
+          subst m
+          simp
+        have hexpl :
+            (Sigma.desc fun p =>
+              f.f p (n - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (n - r)) p) =
+              totalDifferential A n ≫ hhom0 (n + 1) n +
+                hhom0 n (n - 1) ≫ (hn ▸ totalDifferential B (n - 1)) +
+                  Sigma.desc (fun p =>
+                    g.f p (n - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (n - r)) p) := by
+          apply Sigma.hom_ext
+          intro p
+          simp only [totalDifferential, hhom0, hcomp, dif_pos rfl, dif_pos hn',
+            Sigma.ι_desc, Category.assoc]
+          simp only [Preadditive.comp_add]
+          simp only [Preadditive.add_comp, Linear.smul_comp, Category.assoc,
+            Sigma.ι_desc]
+          simp only [← Category.assoc, Sigma.ι_desc]
+          simp only [Preadditive.add_comp]
+          simp only [Category.assoc, Sigma.ι_desc]
+          have hdescB :
+              (Sigma.desc (fun p =>
+                totalD1Component B (n - 1) p ≫
+                    Sigma.ι (fun r : ℤ => B.obj r ((n - 1) + 1 - r)) (p + 1) +
+                  p.negOnePow •
+                    (totalD2Component B (n - 1) p ≫
+                      Sigma.ι (fun r : ℤ => B.obj r ((n - 1) + 1 - r)) p)) :
+                (∐ fun p : ℤ => B.obj p ((n - 1) - p)) ⟶
+                  ∐ fun p : ℤ => B.obj p ((n - 1) + 1 - p)) =
+              totalDifferential B (n - 1) := by
+            rfl
+          rw [hdescB]
+          rw [htransport_B hn]
+          simp [totalDifferential, Int.negOnePow_succ,
+            Linear.units_smul_comp, Linear.comp_units_smul, Category.assoc]
+          simp only [smul_smul]
+          simp [Int.negOnePow]
+          have hmap :
+              h.h p (n - p) ≫ eqToHom (by congr 1 <;> ring) ≫
+                  totalD1Component B (n - 1) p ≫
+                    Sigma.ι (fun r : ℤ => B.obj r ((n - 1) + 1 - r)) (p + 1) ≫
+                      eqToHom (by congr 1 <;> ring) =
+                totalD1Component A n p ≫
+                  h.h (p + 1) (n + 1 - (p + 1)) ≫
+                    eqToHom (by congr 1 <;> ring) ≫
+                      Sigma.ι (fun r : ℤ => B.obj r (n + 1 - 1 - r)) (p + 1) ≫
+                        eqToHom (by congr 1 <;> ring) := by
+            dsimp [totalD1Component]
+            simp only [Category.assoc]
+            conv_lhs =>
+              rw [← eqToHom_naturality_assoc
+                (fun q : ℤ => B.d1 p q)
+                (show n - p - 1 = n - 1 - p by ring)]
+            conv_rhs =>
+              rw [← eqToHom_naturality_assoc
+                (fun q : ℤ => h.h (p + 1) q)
+                (show n - p = n + 1 - (p + 1) by ring)]
+            conv_lhs =>
+              rw [eqToHom_naturality_assoc
+                (fun q : ℤ => Sigma.ι (fun r : ℤ => B.obj r (q - r)) (p + 1))
+                (show (n - 1) + 1 = n + 1 - 1 by ring)]
+            simpa [Category.assoc] using
+              congrArg (fun k => k ≫ eqToHom (by congr 1 <;> ring) ≫
+                Sigma.ι (fun r : ℤ => B.obj r (n + 1 - 1 - r)) (p + 1) ≫
+                  eqToHom (by congr 1 <;> ring))
+                (h.map p (n - p)) <;> ring
+          simp only [hmap]
+        simpa [totalComplex, totalMapComponent, hn] using hexpl }
+  exact ⟨H⟩
 
 theorem totalMap_homotopic_of_horizontal [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f g : DoubleComplexMap A B}

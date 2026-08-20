@@ -101,6 +101,67 @@ theorem quasiFiniteAt_iff_relativeDimensionAt_eq_zero
 
 /-- A point of relative dimension `n` has a standard neighbourhood which is
 quasi-finite over an `n`-variable polynomial algebra over the base. -/
+/-
+Proof roadmap (Stacks, Lemma 10.125.2 / Tag 00QE).
+
+* Put `p := PrimeSpectrum.comap f q`, `k := p.asIdeal.ResidueField`, and
+  `B := p.asIdeal.Fiber S`.  Transport `q` to the fibre point
+  `qbar := tensorFibrePrime f p q rfl` (Unit112/HomomorphismsAndDimension.lean).
+  Starting from the equality defining `hdim`, use
+  `krullDimensionAt_hasBasis` (Topology/Unit10/KrullDimension.lean) to choose
+  a fibre neighbourhood of dimension `n`.  Pull it back through
+  `PrimeSpectrum.preimageHomeomorphFiber` to the subspace of `Spec S` over
+  `p`, extend the subspace-open set to `Spec S`, and refine at `q` with
+  `PrimeSpectrum.isTopologicalBasis_basic_opens`.  This produces `g₀ : S`
+  with `g₀ ∉ q.asIdeal` and whose fibre basic open is contained in the chosen
+  neighbourhood.  Monotonicity of dimension for open subsets together with
+  `krullDimensionAt_le` gives both inequalities, so that basic open, cut out
+  by `1 ⊗ₜ g₀`, still has topological Krull dimension exactly `n`.  Identify it
+  open with the spectrum of `Localization.Away (1 ⊗ₜ g₀)` by
+  `PrimeSpectrum.localization_away_isOpenEmbedding`, and hence turn the last
+  equality into a ring-Krull-dimension equality using
+  `PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim`.
+
+* Identify that localized fibre with the fibre of `Localization.Away g₀`
+  using `IsLocalization.Away.tensorProductEquivTMulRight`
+  (Mathlib/RingTheory/Localization/BaseChange.lean).  Present this finite-type
+  `k`-algebra as a quotient of `MvPolynomial (Fin m) k` using
+  `Algebra.FiniteType.iff_quotient_mvPolynomial''` and
+  `Ideal.quotientKerAlgEquivOfSurjective`.  Apply
+  `Formalization.Books.Algebra.Unit115.noether_normalization` to its kernel.
+  Its dimension assertion and the preceding equality force the returned
+  number of normalizing variables to be `n`.
+
+* The important descent point is the final membership supplied for every
+  normalizing polynomial by `noether_normalization`: it lies in
+  `Unit115.integerPolynomialSubalgebra k m`.  Prove a small local helper that
+  this subalgebra is the range of coefficient change from the corresponding
+  integer polynomial ring (use `Algebra.adjoin_eq_range` and
+  `MvPolynomial.map`).  Thus the normalizing polynomials have representatives
+  before passing from `R` to `k`; evaluating those representatives at the
+  chosen finite-type generators defines
+  `φ₀ : MvPolynomial (Fin n) R →ₐ[R] Localization.Away g₀`.  Check its
+  specialization on `MvPolynomial.C` and `MvPolynomial.X`; under the fibre and
+  quotient equivalences it is precisely the finite map returned by Unit115.
+
+* Let `q₀` be the prime of `Localization.Away g₀` above `q`.  Apply
+  `Unit122.quasiFiniteAt_above_prime_criteria` (Unit122/QuasiFinite.lean) to
+  `φ₀.toRingHom`; the specialized finite normalization makes its fibre module
+  finite, so `φ₀` is quasi-finite at `q₀`.  Now use
+  `Unit123.isOpen_quasiFiniteLocus` (Unit123/ZariskiMain.lean) and choose a
+  basic open about `q₀` contained in that locus.  Clear its denominator with
+  `IsLocalization.Away.sec`, obtaining `s : S`, and identify the iterated
+  localization with `Localization.Away (g₀ * s)` using
+  `IsLocalization.Away.mul'` and `IsLocalization.algEquiv`.  Transport `φ₀`
+  and the global `Unit122.IsQuasiFinite` assertion across that equivalence and
+  return `g := g₀ * s`; primality and the two nonmembership hypotheses prove
+  `g ∉ q.asIdeal`.
+
+Do not try to apply normalization directly to the original fibre before the
+first localization: `hdim` controls a neighbourhood of `qbar`, not the whole
+fibre.  Also keep all comparisons above as explicit equivalences rather than
+asking definitional equality to identify the two localization presentations.
+-/
 theorem quasiFinite_over_polynomial_algebra
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : RingHom.FiniteType f)
@@ -115,6 +176,108 @@ theorem quasiFinite_over_polynomial_algebra
 
 /-- The refined polynomial cover whose point contracts to the base prime and
 the variables after the residue-field transcendence degree. -/
+/-
+Proof roadmap (Stacks, Lemma 10.125.3 / Tag 0520).
+
+* Apply `quasiFinite_over_polynomial_algebra f hfinite q` to `hdim`.  Write
+  `g₀ : S` for its denominator,
+  `θ : MvPolynomial (Fin n) R →ₐ[R] Localization.Away g₀` for its map, and
+  `q₀` for the prime above `q`.  Set
+  `P := PrimeSpectrum.comap θ.toRingHom q₀`.  First record the explicit
+  coefficient contraction
+  `P.asIdeal.comap MvPolynomial.C = p.asIdeal`; prove it by composing comaps,
+  using `hq`, and checking `θ.commutes` together with the localization map.
+
+* Put `k := p.asIdeal.ResidueField`.  Form the fibre prime of `P` for the
+  coefficient map `MvPolynomial.C` with
+  `Unit112.tensorFibrePrime`, and transport it through
+  `MvPolynomial.algebraTensorAlgEquiv` to a prime
+  `Pbar : PrimeSpectrum (MvPolynomial (Fin n) k)`.  Prove the intermediate
+  equality `Algebra.trdeg k Pbar.asIdeal.ResidueField = r` as a separate
+  helper.  Use `Unit113.residueFieldMapAt θ.toRingHom P q₀ rfl` for the map
+  `P.asIdeal.ResidueField →+* q₀.asIdeal.ResidueField`.  Quasi-finiteness of
+  `θ` makes this extension finite by
+  `Algebra.WeaklyQuasiFiniteAt.finite_residueField`, hence algebraic by
+  `Algebra.IsAlgebraic.of_finite`.  Install explicitly the scalar tower from
+  `k`, use injectivity of maps between fields for `FaithfulSMul`, and apply
+  `lift_trdeg_add_eq` followed by `trdeg_eq_zero`.  The localization map
+  `S → Localization.Away g₀` induces an equivalence between the residue fields
+  of `q` and `q₀`; prove its residue-field map bijective using
+  `IsLocalization.ringHom_ext` and `Ideal.ResidueField.ringHom_ext`, and use it
+  to rewrite `htrdeg`.  Finally transport from the fibre prime to `Pbar` with
+  `Ideal.residueFieldAlgEquiv` for `MvPolynomial.algebraTensorAlgEquiv`.
+  Keeping these equivalences and tower instances in this helper prevents
+  repeated inference of the several residue-field algebra structures.
+
+* Apply `Unit115.refined_noether_normalization Pbar.asIdeal Pbar.isPrime`.
+  It supplies `r₀ ≤ n`, an equality of the residue-field transcendence degree
+  with `r₀`, and a finite polynomial endomorphism `rhoBar` whose inverse image
+  of `Pbar.asIdeal` is `Unit115.tailVariableIdeal k n r₀` and which fixes
+  constants.  Compare its transcendence-degree equality with the preceding
+  one to obtain `r₀ = r`, and rewrite the tail ideal.  Lift the
+  finitely many polynomials `rhoBar (MvPolynomial.X i)` to the base after one
+  principal localization: use
+  `IsLocalization.exist_integer_multiples_of_finite`
+  (Mathlib/RingTheory/Localization/Integer.lean), instantiated with
+  `R ⧸ p.asIdeal`, its non-zero-divisor submonoid, and `k`, on the finite union
+  of their coefficient sets.  Lift the returned quotient-ring denominator to
+  `a : R`; its submonoid membership gives `ha : a ∉ p.asIdeal`.  The universal
+  property of `Localization.Away a` then gives a map to `k` whose range
+  contains every coefficient, and
+  `MvPolynomial.mem_range_map_iff_coeffs_subset` supplies polynomial lifts.
+  This yields an endomorphism
+  `rho : MvPolynomial (Fin n) (Localization.Away a) →ₐ[Localization.Away a]
+    MvPolynomial (Fin n) (Localization.Away a)` defined by `MvPolynomial.aeval`.
+  State and prove separately that its specialization to `k` is `rhoBar`, on
+  `C` and `X`, and consequently is finite and has the required contracted
+  fibre prime.
+
+* Base-change `θ` along `R → Localization.Away a`; the last conjunct of
+  `Unit122.isQuasiFinite_baseChange` preserves its global quasi-finiteness.
+  Compose that base-changed map after `rho`.  On the fibre at the selected
+  base prime this composite is `rhoBar` followed by the fibre of `θ`.
+  Regard finite `rhoBar` as quasi-finite and use
+  `Unit122.isQuasiFinite_comp` to make this specialized composite
+  quasi-finite.  Then identify the fibre at the contracted polynomial prime
+  and apply `Unit122.isolated_point_fibre_criteria` to prove that the lifted
+  composite is quasi-finite at the prime induced by `q₀`.  Its finite-type
+  part comes from `RingHom.FiniteType.comp`; do not claim that the lifted
+  `rho` is finite globally merely because its special fibre is finite.  Now
+  shrink the *target point in the localized `S`-algebra* inside
+  `Unit123.quasiFiniteLocus`, whose openness is
+  `Unit123.isOpen_quasiFiniteLocus`, and clear the new denominator.  Combining
+  that denominator with `g₀` gives `b : S` with `hb : b ∉ q.asIdeal`; on this
+  final target localization the composite is globally quasi-finite.
+
+* Identify all iterated target localizations with
+  `Localization.Away (f a * b)`.  Use `IsLocalization.Away.mul'`,
+  `IsLocalization.Away.mul_of_associated`, and `IsLocalization.algEquiv`;
+  prove that the transported base map is exactly
+  `Unit30.localizationAwayMulMap f a b` by
+  `IsLocalization.ringHom_ext`.  This produces the stated `φ`, and transports
+  the composed `Unit122.IsQuasiFinite` proof to `φ.toRingHom`.
+
+* Prove the contracted-prime identity before the final localization
+  transport.  The equality for `rhoBar` gives one inclusion immediately
+  after specialization.  For the reverse inclusion, specialize an arbitrary
+  member of the comap, use
+  `rhoBar ⁻¹' Pbar = Unit115.tailVariableIdeal k n r`, and lift the resulting
+  coefficient statement back through `R → Localization.Away a`; the
+  coefficient contraction recorded in the first step supplies precisely
+  `(p.asIdeal.map (algebraMap R (Localization.Away a))).map MvPolynomial.C`.
+  Localization at elements outside the chosen primes does not change this
+  comap.  Finish with `Ideal.comap_comap` and `PrimeSpectrum.ext`, transporting
+  along the same localization equivalences as for `φ`.
+
+Interface audit: the equality must be in
+`MvPolynomial (Fin n) (Localization.Away a)`, and the target really must be
+the single principal localization at `f a * b`; both are necessary to retain
+the base denominator while shrinking the source algebra.  Thus the current
+statement is not overstrong.  A known dead end is to apply
+`refined_noether_normalization` directly to `q.asIdeal`: its input must be the
+polynomial *fibre* prime `Pbar`, or the tail-ideal equality has the wrong
+coefficient contraction.
+-/
 theorem refined_quasiFinite_over_polynomial_algebra
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : RingHom.FiniteType f)
@@ -241,6 +404,49 @@ theorem ringKrullDim_le_of_quasiFinite_polynomial
 
 /-- Around a point where the fibre has dimension `n`, the fibre dimensions are
 bounded above by `n` on an open neighbourhood. -/
+/-
+Proof roadmap (Stacks, Lemma 10.125.6 / Tag 00QH, local step).
+
+* Obtain `g : S`, `hg : g ∉ q.asIdeal`, and
+  `φ : MvPolynomial (Fin n) R →ₐ[R] Localization.Away g` from
+  `quasiFinite_over_polynomial_algebra f hfinite q hdim`.  Take
+  `V := PrimeSpectrum.basicOpen g`; use `PrimeSpectrum.isOpen_basicOpen` and
+  `PrimeSpectrum.mem_basicOpen` for the first three parts of the conclusion.
+
+* Fix `q' ∈ V`, put `p' := PrimeSpectrum.comap f q'` and
+  `k' := p'.asIdeal.ResidueField`, and let `q'g` be
+  `Unit17.standardOpenSpectrumInverse g ⟨q', hq'⟩`
+  (Unit17/Spectrum.lean).  Base-change `φ.toRingHom` along `R → k'`.
+  Instantiate the third conjunct of `Unit122.isQuasiFinite_baseChange` with
+  `R' := k'`; after transport by `MvPolynomial.algebraTensorAlgEquiv`, this is
+  an `IsQuasiFinite` map
+  `MvPolynomial (Fin n) k' →ₐ[k']
+    (Localization.Away g ⊗[R] k')`.  Apply the already proved
+  `ringKrullDim_le_of_quasiFinite_polynomial` to get the intermediate bound
+  `ringKrullDim (Localization.Away g ⊗[R] k') ≤ n`.
+
+* Compare that target with the principal localization of the original fibre
+  `p'.asIdeal.Fiber S` at the image of `g`.  The algebra equivalence is
+  `IsLocalization.Away.tensorProductEquivTMulRight`
+  (Mathlib/RingTheory/Localization/BaseChange.lean), composed with tensor
+  commutativity if the factors occur in the opposite order.  State explicitly
+  that it sends the fibre point `Unit112.tensorFibrePrime f p' q' rfl` to the
+  prime corresponding to `q'g`; prove this by `PrimeSpectrum.ext` and check
+  pure tensors rather than by `rfl`.
+
+* The spectrum of this localized fibre is homeomorphic to the standard open
+  containing the fibre point by `Unit17.standardOpenSpectrumHomeomorph`.
+  Convert its topological dimension to the preceding ring dimension using
+  `PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim`, then apply
+  `krullDimensionAt_le` (Topology/Unit10/KrullDimension.lean) to that open
+  neighbourhood.  Unfold only `relativeDimensionAt` at the end; the resulting
+  inequality is exactly the requested bound for `q'`.
+
+The essential transport is through the fibre of `Localization.Away g`; it is
+not definitionally equal to the localization of `p'.asIdeal.Fiber S`, so a
+direct `simpa` without the stated tensor/localization equivalence is a known
+dead end.
+-/
 theorem relativeDimensionLocus_isOpen_near
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : RingHom.FiniteType f)
@@ -253,6 +459,34 @@ theorem relativeDimensionLocus_isOpen_near
   sorry
 
 /-- The bounded relative-dimension locus is open. -/
+/-
+Proof roadmap.
+
+Use `isOpen_iff_forall_mem_open`.  For a point `q` in
+`relativeDimensionLocus f hfinite n`, abbreviate
+`d₀ := relativeDimensionAt f hfinite (PrimeSpectrum.comap f q) q rfl`; the
+membership hypothesis says `d₀ ≤ (n : WithBot ℕ∞)`.  Extract a natural value
+without assuming it definitionally:
+
+1. Prove `0 ≤ d₀` by unfolding `relativeDimensionAt` and
+   `krullDimensionAt`, applying `le_iInf`, and using
+   `Order.krullDim_nonneg_iff`.  For every open neighbourhood `U`, the closure
+   of the singleton of its distinguished point is the required nonempty
+   irreducible closed subset (`isIrreducible_singleton.closure` and
+   `isClosed_closure`).
+2. This excludes `⊥`; apply `WithBot.ne_bot_iff_exists` to write
+   `d₀ = (x : WithBot ℕ∞)` for `x : ℕ∞`.
+3. The bound by the finite value `n` excludes `x = ⊤`; apply
+   `ENat.ne_top_iff_exists` to obtain `d : ℕ` with `x = d`.  Coercion
+   injectivity then gives both `d₀ = d` and `d ≤ n`.
+
+Apply `relativeDimensionLocus_isOpen_near f hfinite _ q rfl` to the equality
+`d₀ = d`.  It returns an open `V` containing `q` on which every relative
+dimension is at most `d`; compose with `d ≤ n` and finish with
+`simpa only [relativeDimensionLocus, Set.mem_setOf_eq]`.  The explicit
+`WithBot ℕ∞ → ℕ∞ → ℕ` extraction is essential: destructing `d₀` as though the
+upper bound alone made it a natural number leaves the `⊥` case unresolved.
+-/
 theorem isOpen_relativeDimensionLocus
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : RingHom.FiniteType f) (n : ℕ) :

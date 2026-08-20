@@ -630,8 +630,8 @@ private theorem imageSubobject_comp_eq_of_epi
   let h := imageSubobject_comp_le e f
   apply le_antisymm h
   let q := Subobject.ofLE (imageSubobject (e ≫ f)) (imageSubobject f) h
-  letI : Epi q := imageSubobject_comp_le_epi_of_epi e f
-  letI : IsIso q := isIso_of_mono_of_epi q
+  have hq : Epi q := imageSubobject_comp_le_epi_of_epi e f
+  have hqi : IsIso q := isIso_of_mono_of_epi q
   exact Subobject.le_of_comm (inv q) (by simp [q])
 
 /- The alternative source description uses all lower-degree terms rather than
@@ -817,8 +817,8 @@ theorem degenerate_to_associated_comm
   intro i j hij
   simp only [ComplexShape.down_Rel] at hij
   subst i
-  simpa only [associatedChainComplex_d, degenerateChainComplex_d] using
-    (degenerateBoundary_arrow U j).symm
+  rw [associatedChainComplex_d, degenerateChainComplex_d]
+  exact (degenerateBoundary_arrow U j).symm
 
 /-- The canonical inclusion of the degenerate subcomplex in the associated
 complex.  This map is part of the splitting interface: without it an abstract

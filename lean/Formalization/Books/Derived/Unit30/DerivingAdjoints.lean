@@ -1,6 +1,7 @@
 import Formalization.Books.Derived.Unit14.DerivedFunctors
 import Formalization.Books.Derived.Unit15.ClassicalDerivedFunctors
-import Mathlib.CategoryTheory.Functor.Derived.Adjunction
+import Mathlib.CategoryTheory.Functor.Derived.LeftDerived
+import Mathlib.CategoryTheory.Functor.Derived.RightDerived
 
 /-!
 # Derived Categories, Chapter 30: deriving adjoints

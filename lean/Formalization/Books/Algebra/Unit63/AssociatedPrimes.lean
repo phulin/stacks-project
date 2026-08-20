@@ -504,6 +504,28 @@ theorem ass_prod
     LinearMap.inr_injective (fun z => ⟨(z, 0), rfl⟩) Function.Exact.inr_fst
   exact h₁.2.antisymm (Set.union_subset_iff.2 ⟨h₁.1, h₂.1⟩)
 
+/-- Associated primes are preserved by an injective linear map. -/
+theorem associatedPrimes_subset_of_injective
+    {R : Type u} {M M' : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup M'] [Module R M']
+    (f : M →ₗ[R] M') (hf : Function.Injective f) :
+    associatedPrimes R M ⊆ associatedPrimes R M' := by
+  intro p hp
+  change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+  obtain ⟨m, hm⟩ := hp
+  refine ⟨f m, ?_⟩
+  ext r
+  rw [Submodule.mem_colon_singleton, ← hm, Submodule.mem_colon_singleton]
+  change r • f m = 0 ↔ r • m = 0
+  constructor
+  · intro hr
+    apply hf
+    rw [map_smul, hr, map_zero]
+  · intro hr
+    rw [← map_smul, hr, map_zero]
+
+
 /-- Over a Noetherian ring, a module is zero exactly when it has no associated
 prime. -/
 theorem ass_eq_empty_iff_subsingleton

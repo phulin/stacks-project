@@ -266,11 +266,13 @@ noncomputable def dgmRotatedConeTriangle
   obj₂ := dgmCone f
   obj₃ := dgmShift K (1 : ℤ)
   mor₁ := (DgmHomotopyQuotient A).map (dgmConeInclusionHom f)
-  mor₂ := (DgmHomotopyQuotient A).map (dgmConeProjectionHom f)
+  mor₂ := (DgmHomotopyQuotient A).map (-(dgmConeProjectionHom f))
   mor₃ := (DgmHomotopyQuotient A).map (dgmShiftMap f (1 : ℤ))
 
 /-- A cone short exact sequence, including the graded splitting required by
-the source's admissibility condition. -/
+the source's admissibility condition.  Unit06's projection is the negative
+`mappingCone.triangle` map, whereas the source's short exact sequence uses the
+positive graded projection, so the latter is represented by its negation. -/
 theorem dgmConeAdmissibleShortExact_exists
     {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
@@ -279,7 +281,7 @@ theorem dgmConeAdmissibleShortExact_exists
     Nonempty {S : DgmAdmissibleShortExact L (dgmCone f)
         (dgmShift K (1 : ℤ)) //
       S.f = dgmConeInclusionHom f ∧
-      S.g = dgmConeProjectionHom f} := by
+      S.g = -(dgmConeProjectionHom f)} := by
   sorry
 
 noncomputable def dgmConeAdmissibleShortExact

@@ -586,8 +586,7 @@ theorem improve_distinguished_triangle_homotopy
         (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
       norm_num [Int.negOnePow_def]
     rw [hsign]
-    simp only [Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
-      Iso.hom_inv_id_assoc]
+    simp only [Iso.hom_inv_id_assoc]
     simp
     rw [add_comm]
     exact CochainComplex.mappingCocone.id_X f n (n - 1) (by omega)

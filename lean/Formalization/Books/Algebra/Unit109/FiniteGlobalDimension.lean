@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit09.Localization
 import Formalization.Books.Algebra.Unit71.ExtGroups
 import Formalization.Books.Algebra.Unit85.ProjectiveModulesLocalRing
+import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
 import Mathlib.Algebra.Category.ModuleCat.ProjectiveDimension
 import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.Algebra.Module.Projective
@@ -23,6 +24,8 @@ open CategoryTheory.Limits
 open Module
 open Formalization.Books.Algebra.Unit71
 open Formalization.Books.Algebra.Unit09
+open Formalization.Books.Algebra.Unit102
+open scoped TensorProduct
 
 universe u v
 
@@ -980,6 +983,8 @@ private theorem localDepth_fin_succ_ge
       have hseq := localDepth_shortExact f g hf hfg hg
       simpa [ih] using hseq.1
 
+-/
+
 /-- A coordinate minimal finite free resolution of `M` of exact length `d`.
 
 Besides exactness at the positive terms, the augmentation condition records
@@ -997,12 +1002,14 @@ structure MinimalFiniteFreeResolution
   minimal : complex.MatrixEntriesInIdeal (IsLocalRing.maximalIdeal R)
   last_nonzero : complex.termRank d ≠ 0
 
+/-
 /-- The depth information carried by a minimal finite free resolution. -/
 structure MinimalFiniteFreeResolutionDepthInterface
     (R M : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] (d : ℕ) where
   resolution : MinimalFiniteFreeResolution R M d
   depth_lower : localDepth R M ≥ localDepth R R - d
+-/
 
 private theorem exists_minimal_finite_free_cover
     {R M : Type u} [CommRing R] [IsLocalRing R]
@@ -1305,6 +1312,8 @@ theorem exists_minimalFiniteFreeResolution
           exact hM.2 (q + 1) (by omega) hMbound
       obtain ⟨D⟩ := ih hKexact
       exact ⟨prependMinimalFiniteFreeResolution d n f hf hmin D⟩
+
+/-
 
 /-- The minimal resolution can be chosen together with the depth inequality
 obtained by breaking it into short exact sequences. -/

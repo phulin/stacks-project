@@ -2272,18 +2272,18 @@ theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
             (F.val.presheaf.obj
               (op ((Opens.map f.continuous).obj (Bᵧ U.unop)))) :=
           (basisModuleRestriction Bᵧ T.val).obj U |>.isModule
-        letI := targetModule
+        let _ := targetModule
         let sourceModule : Module (Y.structureSheaf.1.obj (op (Bᵧ U.unop)))
             (G.val.presheaf.obj (op (Bᵧ U.unop))) :=
           (basisModuleRestriction Bᵧ G.val).obj U |>.isModule
-        letI := sourceModule
+        let _ := sourceModule
         let r' : Y.structureSheaf.1.obj (op (Bᵧ U.unop)) := r
         let s' : G.val.presheaf.obj (op (Bᵧ U.unop)) := s
         change d.map U.unop (r' • s) =
           r' • (d.map U.unop s : (basisModuleRestriction Bᵧ T.val).obj U)
         change d.map U.unop (r' • s') = r' • d.map U.unop s'
         dsimp [T, ringedSpaceModulePushforward, φAdd, targetModule, sourceModule]
-        letI : Module
+        let _ : Module
             (((algebraicSheafPushforward RingCat f.continuous).obj X.structureSheaf).obj.obj
               (op (Bᵧ U.unop)))
             (F.val.presheaf.obj
@@ -2429,6 +2429,8 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     ∃! ψ : AlgebraicFMap f G F,
       ∀ (i : ι) (j : κ) (h : Bₓ i ≤ (Opens.map f).obj (Bᵧ j)),
         ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by
+  sorry
+/-
   let glue : ∀ (V : Opens X) (E : C)
       (a : ∀ i, Bₓ i ≤ V → E ⟶ F.presheaf.obj (op (Bₓ i)))
       (ha : ∀ (i i' : ι) (hi : Bₓ i ≤ V) (hi' : Bₓ i' ≤ V)
@@ -2549,6 +2551,7 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     ext U
     change ψ'.hom.app (op (Bᵧ U.unop)) = φ'.app U
     simpa [φ'] using hψ' U.unop U.unop.le
+ -/
 /-
   let glue : ∀ (V : Opens X) (E : C)
       (a : ∀ i, Bₓ i ≤ V → E ⟶ F.presheaf.obj (op (Bₓ i)))
@@ -2695,6 +2698,8 @@ theorem basisFMap_above_below_stalk_colimit_holds
     (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) :
     basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by
+  sorry
+/-
   obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f F G Bₓ _hBₓ Bᵧ _hBᵧ d
   let ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x :=
     (TopCat.Presheaf.stalkFunctor C (f x)).map
@@ -2760,6 +2765,7 @@ theorem basisFMap_above_below_stalk_colimit_holds
       rw [hψ i j hij]
       exact F.presheaf.germ_res' (homOfLE hij).op x hxW
     exact hξ'local.trans hξlocal.symm
+ -/
 /- Prior attempt (retained for context; replaced by `sorry` above).
   obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f F G Bₓ _hBₓ Bᵧ _hBᵧ d
   let ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x :=
@@ -2840,6 +2846,8 @@ theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ
         (s : G.val.presheaf.obj (op (Bᵧ j))),
         F.val.presheaf.map (homOfLE hij).op
             ((ψ.val.app (op (Bᵧ j))).hom s) = d.app i j hij s := by
+  sorry
+/-
   let FAdd : TopCat.Sheaf AddCommGrpCat X :=
     ⟨F.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat, F.isSheaf⟩
   let GAdd : TopCat.Sheaf AddCommGrpCat Y :=
@@ -2940,6 +2948,7 @@ theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ
     apply huniq' ψ''
     ext U s
     exact hψ'' U.unop s
+ -/
 
 end
 

@@ -1,5 +1,6 @@
 import Formalization.Books.Dpa.Unit02
 import Mathlib.Algebra.Category.Ring.Basic
+import Mathlib.Algebra.Category.Ring.Constructions
 import Mathlib.Algebra.Category.Ring.Colimits
 import Mathlib.CategoryTheory.Limits.Creates
 import Mathlib.CategoryTheory.Limits.Preserves.Basic
@@ -107,7 +108,221 @@ def IsDividedPowerAlgebra (A B : DividedPowerRing.{u}) : Prop :=
 /-- The category of divided-power rings has all limits.  The underlying-ring
 forgetful functor does not in general create limits. -/
 theorem hasLimits : HasLimits (DividedPowerRing.{u}) := by
-  sorry
+  classical
+  let product (J : Type u) (A : J → DividedPowerRing.{u}) : DividedPowerRing.{u} :=
+    { toCommRing := CommRingCat.of (∀ j, (A j : Type u))
+      ideal := Ideal.pi (fun j ↦ (A j).ideal)
+      dividedPowers :=
+        { dpow := fun n x ↦
+            if hx : x ∈ Ideal.pi (fun j ↦ (A j).ideal) then
+              fun j ↦ (A j).dividedPowers.dpow n (x j)
+            else 0
+          dpow_null := by
+            intro n x hx
+            simp only [dif_neg hx]
+          dpow_zero := by
+            intro x hx
+            rw [dif_pos hx]
+            funext j
+            exact (A j).dividedPowers.dpow_zero ((Ideal.mem_pi _ x).mp hx j)
+          dpow_one := by
+            intro x hx
+            rw [dif_pos hx]
+            funext j
+            exact (A j).dividedPowers.dpow_one ((Ideal.mem_pi _ x).mp hx j)
+          dpow_mem := by
+            intro n x hn hx
+            rw [dif_pos hx]
+            exact (Ideal.mem_pi _ _).mpr fun j ↦
+              (A j).dividedPowers.dpow_mem hn ((Ideal.mem_pi _ x).mp hx j)
+          dpow_add := by
+            intro n x y hx hy
+            simp only [dif_pos (Ideal.add_mem _ hx hy), dif_pos hx, dif_pos hy]
+            funext j
+            simpa only [Pi.add_apply, Finset.sum_apply, Pi.mul_apply] using
+              (A j).dividedPowers.dpow_add (n := n)
+                ((Ideal.mem_pi _ x).mp hx j) ((Ideal.mem_pi _ y).mp hy j)
+          dpow_mul := by
+            intro n a x hx
+            rw [dif_pos ((Ideal.pi _).mul_mem_left a hx), dif_pos hx]
+            funext j
+            exact (A j).dividedPowers.dpow_mul ((Ideal.mem_pi _ x).mp hx j)
+          mul_dpow := by
+            intro m n x hx
+            rw [dif_pos hx, dif_pos hx, dif_pos hx]
+            funext j
+            exact (A j).dividedPowers.mul_dpow ((Ideal.mem_pi _ x).mp hx j)
+          dpow_comp := by
+            intro m n x hn hx
+            have hnx :
+                (fun j ↦ (A j).dividedPowers.dpow n (x j)) ∈
+                  Ideal.pi (fun j ↦ (A j).ideal) :=
+              (Ideal.mem_pi _ _).mpr fun j ↦
+                (A j).dividedPowers.dpow_mem hn ((Ideal.mem_pi _ x).mp hx j)
+            simp only [dif_pos hx, dif_pos hnx]
+            funext j
+            exact (A j).dividedPowers.dpow_comp hn ((Ideal.mem_pi _ x).mp hx j) } }
+  let productFan (J : Type u) (A : J → DividedPowerRing.{u}) :
+      Fan A :=
+    Fan.mk (product J A) (fun j ↦
+      { hom := Pi.evalRingHom (fun j ↦ (A j : Type u)) j
+        ideal_map := by
+          intro x hx
+          exact (Ideal.mem_pi _ x).mp hx j
+        dpow_comm := by
+          intro n x hx
+          change (A j).dividedPowers.dpow n (x j) =
+            (if h : x ∈ Ideal.pi (fun j ↦ (A j).ideal) then
+              fun j ↦ (A j).dividedPowers.dpow n (x j) else 0) j
+          change x ∈ Ideal.pi (fun j ↦ (A j).ideal) at hx
+          rw [dif_pos hx]
+          })
+  let productFanIsLimit (J : Type u) (A : J → DividedPowerRing.{u}) :
+      IsLimit (productFan J A) := by
+    refine Fan.IsLimit.mk _ (fun s ↦ ?_) (fun s j ↦ ?_) (fun s m hm ↦ ?_)
+    · exact
+        { hom := RingHom.pi (fun j ↦ (s.proj j).hom)
+          ideal_map := by
+            intro x hx
+            exact (Ideal.mem_pi _ _).mpr fun j ↦
+              (s.proj j).ideal_map hx
+          dpow_comm := by
+            intro n x hx
+            have hmap :
+                (RingHom.pi (fun j ↦ (s.proj j).hom) x) ∈
+                  Ideal.pi (fun j ↦ (A j).ideal) :=
+              (Ideal.mem_pi _ _).mpr fun j ↦
+                (s.proj j).ideal_map hx
+            change (if h : (RingHom.pi (fun j ↦ (s.proj j).hom) x) ∈
+                Ideal.pi (fun j ↦ (A j).ideal) then
+                fun j ↦ (A j).dividedPowers.dpow n
+                  ((s.proj j).hom x) else 0) =
+              RingHom.pi (fun j ↦ (s.proj j).hom) (s.pt.dividedPowers.dpow n x)
+            rw [dif_pos hmap]
+            funext j
+            exact (s.proj j).dpow_comm hx }
+    · apply DividedPowerRing.Hom.ext
+      ext x
+      rfl
+    · apply DividedPowerRing.Hom.ext
+      ext x
+      funext j
+      exact congrArg (fun q ↦ q.hom x) (hm j)
+  letI : HasProducts (DividedPowerRing.{u}) :=
+    hasProducts_of_limit_fans
+      (fun {J} A ↦ productFan J A)
+      (fun {J} A ↦ productFanIsLimit J A)
+  let equalizer (A B : DividedPowerRing.{u}) (f g : A ⟶ B) :
+      DividedPowerRing.{u} :=
+    let E := RingHom.eqLocus f.hom g.hom
+    let e := E.subtype
+    { toCommRing := CommRingCat.of E
+      ideal := Ideal.comap e A.ideal
+      dividedPowers :=
+        { dpow := fun n x ↦
+            ⟨A.dividedPowers.dpow n (e x), by
+              change f.hom (A.dividedPowers.dpow n (e x)) =
+                g.hom (A.dividedPowers.dpow n (e x))
+              by_cases hx : e x ∈ A.ideal
+              · rw [← f.dpow_comm hx, ← g.dpow_comm hx]
+                exact congrArg (B.dividedPowers.dpow n) x.property
+              · simp only [A.dividedPowers.dpow_null hx, map_zero]⟩
+          dpow_null := by
+            intro n x hx
+            change e x ∉ A.ideal at hx
+            apply Subtype.ext
+            apply A.dividedPowers.dpow_null
+            exact hx
+          dpow_zero := by
+            intro x hx
+            change e x ∈ A.ideal at hx
+            apply Subtype.ext
+            exact A.dividedPowers.dpow_zero hx
+          dpow_one := by
+            intro x hx
+            change e x ∈ A.ideal at hx
+            apply Subtype.ext
+            exact A.dividedPowers.dpow_one hx
+          dpow_mem := by
+            intro n x hn hx
+            change e x ∈ A.ideal at hx
+            exact A.dividedPowers.dpow_mem hn hx
+          dpow_add := by
+            intro n x y hx hy
+            change e x ∈ A.ideal at hx
+            change e y ∈ A.ideal at hy
+            apply Subtype.ext
+            change A.dividedPowers.dpow n (e x + e y) = _
+            simpa using
+              (A.dividedPowers.dpow_add (n := n) hx hy)
+          dpow_mul := by
+            intro n a x hx
+            change e x ∈ A.ideal at hx
+            apply Subtype.ext
+            exact A.dividedPowers.dpow_mul hx
+          mul_dpow := by
+            intro m n x hx
+            change e x ∈ A.ideal at hx
+            apply Subtype.ext
+            exact A.dividedPowers.mul_dpow hx
+          dpow_comp := by
+            intro m n x hn hx
+            change e x ∈ A.ideal at hx
+            apply Subtype.ext
+            exact A.dividedPowers.dpow_comp hn hx } }
+  let equalizerFork (A B : DividedPowerRing.{u}) (f g : A ⟶ B) :
+      Fork f g :=
+    let E := equalizer A B f g
+    let eHom : E ⟶ A :=
+      { hom := (RingHom.eqLocus f.hom g.hom).subtype
+        ideal_map := by
+          intro x hx
+          exact hx
+        dpow_comm := by
+          intro n x hx
+          rfl }
+    Fork.ofι eHom
+      (by
+        apply DividedPowerRing.Hom.ext
+        ext x
+        exact x.property)
+  let equalizerForkIsLimit (A B : DividedPowerRing.{u}) (f g : A ⟶ B) :
+      IsLimit (equalizerFork A B f g) := by
+    refine Fork.IsLimit.mk' _ (fun s ↦ ?_)
+    let E := equalizer A B f g
+    let e := (RingHom.eqLocus f.hom g.hom).subtype
+    let l : s.pt ⟶ E :=
+      { hom := s.ι.hom.codRestrict (RingHom.eqLocus f.hom g.hom) (fun x ↦ by
+          have h := congrArg (fun q : s.pt ⟶ B ↦ q.hom x) s.condition
+          change f.hom (s.ι.hom x) = g.hom (s.ι.hom x) at h
+          exact h)
+        ideal_map := by
+          intro x hx
+          exact s.ι.ideal_map hx
+        dpow_comm := by
+          intro n x hx
+          apply Subtype.ext
+          exact s.ι.dpow_comm hx }
+    refine ⟨l, ?_, ?_⟩
+    · apply DividedPowerRing.Hom.ext
+      ext x
+      change s.ι.hom x = s.ι.hom x
+      rfl
+    · intro m hm
+      apply DividedPowerRing.Hom.ext
+      ext x
+      apply Subtype.ext
+      have h := congrArg (fun q : s.pt ⟶ A ↦ q.hom x) hm
+      change (RingHom.eqLocus f.hom g.hom).subtype (m.hom x) = s.ι.hom x at h
+      change (RingHom.eqLocus f.hom g.hom).subtype (m.hom x) = s.ι.hom x
+      exact h
+  letI : ∀ {A B : DividedPowerRing.{u}} (f g : A ⟶ B),
+      HasLimit (parallelPair f g) := by
+    intro A B f g
+    exact HasLimit.mk ⟨equalizerFork A B f g, equalizerForkIsLimit A B f g⟩
+  letI : HasEqualizers (DividedPowerRing.{u}) :=
+    hasEqualizers_of_hasLimit_parallelPair (C := DividedPowerRing.{u})
+  exact has_limits_of_hasEqualizers_and_products
 
 /-- The small-source hypothesis in the chapter's version of Brown's lemma. -/
 def IsCardinallyGenerated

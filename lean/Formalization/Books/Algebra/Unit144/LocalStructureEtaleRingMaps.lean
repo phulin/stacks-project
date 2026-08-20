@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit143.EtaleRingMaps
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Etale.StandardEtale
+import Mathlib.RingTheory.Unramified.LocalStructure
 
 /-!
 # Commutative Algebra, Chapter 144: Local structure of étale ring maps
@@ -45,21 +46,22 @@ theorem standardEtaleMap_isStandardEtale
 theorem standardEtaleMap_isEtale
     {R : Type u} [CommRing R] (P : StandardEtalePair R) :
     RingHom.Etale (standardEtaleMap P) := by
-  sorry
+  exact RingHom.etale_algebraMap.mpr inferInstance
 
 /-- Standard étale algebras are stable under base change. -/
 theorem standardEtale_baseChange
     {R R' : Type u} [CommRing R] [CommRing R'] [Algebra R R']
     (P : StandardEtalePair R) :
     Algebra.IsStandardEtale R' (R' ⊗[R] P.Ring) := by
-  sorry
+  infer_instance
 
 /-- A principal localization of a standard étale algebra is standard étale. -/
 theorem standardEtale_localization
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     (h : Algebra.IsStandardEtale R S) :
     ∀ s : S, Algebra.IsStandardEtale R (Localization.Away s) := by
-  sorry
+  intro s
+  exact Algebra.IsStandardEtale.of_isLocalizationAway s
 
 /-! ## The composition warning -/
 
@@ -137,7 +139,47 @@ theorem etaleAt_standardEtale_neighborhood
     (q : PrimeSpectrum S) (h : Formalization.Books.Algebra.Unit143.IsEtaleAt R S q) :
     ∃ g : S, g ∉ q.asIdeal ∧
       Algebra.IsStandardEtale R (Localization.Away g) := by
-  sorry
+  rcases h with ⟨g, hg, hE⟩
+  let T := Localization.Away g
+  let Q : Ideal T := Ideal.map (algebraMap S T) q.asIdeal
+  letI : q.asIdeal.IsPrime := q.2
+  letI : Q.IsPrime :=
+    IsLocalization.isPrime_of_isPrime_disjoint (Submonoid.powers g) T q.asIdeal q.2
+      (Set.disjoint_left.2 (fun x hxg hxq =>
+        by
+          change x ∈ Submonoid.powers g at hxg
+          obtain ⟨n, rfl⟩ := hxg
+          exact hg (q.2.mem_of_pow_mem n hxq)))
+  letI : Algebra.Etale R T := hE
+  letI : Algebra.IsEtaleAt R Q := by
+    exact Algebra.FormallyEtale.comp R T (Localization.AtPrime Q)
+  obtain ⟨f, hf, hstd⟩ :=
+    Algebra.IsEtaleAt.exists_isStandardEtale (R := R) (S := T) Q
+  obtain ⟨n, s, hs⟩ := IsLocalization.Away.surj g f
+  have hs_q : s ∉ q.asIdeal := by
+    intro hs_q
+    apply hf
+    have hmap : algebraMap S T s ∈ Q := Ideal.mem_map_of_mem _ hs_q
+    have hmul : f * algebraMap S T g ^ n ∈ Q := hs.symm ▸ hmap
+    apply (Q.unit_mul_mem_iff_mem (IsUnit.pow _ (IsLocalization.Away.algebraMap_isUnit g))).mp
+    simpa [mul_comm] using hmul
+  have hassoc : Associated f (algebraMap S T s) := by
+    rw [← hs]
+    exact associated_mul_unit_right f _ (IsUnit.pow _ (IsLocalization.Away.algebraMap_isUnit g))
+  letI : IsLocalization.Away (algebraMap S T s) (Localization.Away f) :=
+    IsLocalization.Away.of_associated hassoc
+  have hloc : IsLocalization.Away (s * g) (Localization.Away f) :=
+    IsLocalization.Away.mul (R := S) (S := T) (T := Localization.Away f)
+      (x := g) (y := s)
+  letI : IsLocalization.Away (g * s) (Localization.Away f) := by
+    simpa [mul_comm] using hloc
+  have hgs : g * s ∉ q.asIdeal := by
+    intro hgs
+    exact (q.2.mul_mem_iff_mem_or_mem.mp hgs).elim hg hs_q
+  let e : Localization.Away (g * s) ≃ₐ[R] Localization.Away f :=
+    (IsLocalization.algEquiv (.powers (g * s)) _ _).restrictScalars R
+  letI : Algebra.IsStandardEtale R (Localization.Away f) := hstd
+  exact ⟨g * s, hgs, Algebra.IsStandardEtale.of_equiv e.symm⟩
 
 /-! ## Finite flat covers -/
 

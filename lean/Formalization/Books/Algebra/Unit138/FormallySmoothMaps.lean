@@ -656,13 +656,47 @@ theorem application_NL_formallySmooth
 
 /-! ## Square-zero lifting and smoothness -/
 
+private theorem isNilpotent_ideal_span_finset
+    {R : Type*} [CommRing R] (s : Finset R)
+    (hs : ∀ x ∈ s, IsNilpotent x) :
+    IsNilpotent (Ideal.span (s : Set R)) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      refine ⟨1, ?_⟩
+      simp
+  | @insert a s ha ih =>
+      obtain ⟨n, hn⟩ := hs a (Finset.mem_insert_self a s)
+      obtain ⟨m, hm⟩ := ih (fun x hx => hs x (Finset.mem_insert_of_mem hx))
+      have ha_span : (Ideal.span ({a} : Set R)) ^ n = ⊥ := by
+        rw [Ideal.span_singleton_pow, hn]
+        simp
+      refine ⟨n + m, le_antisymm ?_ bot_le⟩
+      rw [Finset.coe_insert, Ideal.span_insert]
+      exact (Ideal.sup_pow_add_le_pow_sup_pow.trans (by rw [ha_span, hm]; simp))
+
 theorem formallySmooth_of_squareZero_flat
     {R S : Type*} [CommRing R] [CommRing S]
     (f : R →+* S) (I : Ideal R) (hI : I ^ 2 = ⊥)
     (hflat : f.Flat)
     (hquot : (quotientBaseChangeRingMap f I).FormallySmooth) :
     f.FormallySmooth := by
-  sorry
+  let qR : R →+* R ⧸ I := Ideal.Quotient.mk I
+  let qS : S →+* S ⧸ Ideal.map f I := Ideal.Quotient.mk _
+  let g := quotientBaseChangeRingMap f I
+  have hkerqR : RingHom.ker qR = I := by
+    simp [qR]
+  apply RingHom.FormallySmooth.of_flat_of_ker_eq_map_of_square_zero f hflat qR qS g
+  · exact Ideal.Quotient.mk_surjective
+  · exact Ideal.Quotient.mk_surjective
+  · symm
+    simpa [qR, qS, g, quotientBaseChangeRingMap] using
+      (Ideal.quotientMap_comp_mk (f := f) (H := Ideal.le_comap_map))
+  · rw [hkerqR]
+    exact hI
+  · rw [hkerqR]
+    simpa [qS] using (Ideal.mk_ker (I := Ideal.map f I))
+  · exact hquot
 
 theorem smooth_iff_formallySmooth_and_finitePresentation
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S) :
@@ -697,7 +731,9 @@ theorem formallySmooth_iff_faithfullyFlat_baseChange
     (f : R →+* S) (g : R →+* R') (hff : g.FaithfullyFlat) :
     f.FormallySmooth ↔
       (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).FormallySmooth := by
-  sorry
+  constructor
+  · exact formallySmooth_baseChange f g
+  · sorry
 
 theorem smooth_strong_lift
     {R S A : Type*} [CommRing R] [CommRing S] [CommRing A]
@@ -708,7 +744,86 @@ theorem smooth_strong_lift
         ∀ (g : S →ₐ[R] A ⧸ I),
           ∃ lift : S →ₐ[R] A,
             (Ideal.Quotient.mkₐ R I).comp lift = g := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra.FormallySmooth R S := hf.formallySmooth.toAlgebra
+  letI : Algebra.FinitePresentation R S := hf.finitePresentation
+  intro I hI g
+  classical
+  let P := Algebra.Presentation.ofFinitePresentation R S
+  let pMap : P.Ring →ₐ[R] S := IsScalarTower.toAlgHom R P.Ring S
+  let a : (Fin (Algebra.Presentation.ofFinitePresentationVars R S)) → A :=
+    fun i => (Ideal.Quotient.mk_surjective (g (P.val i))).choose
+  have ha (i : Fin (Algebra.Presentation.ofFinitePresentationVars R S)) :
+      Ideal.Quotient.mk I (a i) = g (P.val i) :=
+    (Ideal.Quotient.mk_surjective (g (P.val i))).choose_spec
+  let evalA : P.Ring →ₐ[R] A := MvPolynomial.aeval a
+  let rel : Finset A := Finset.univ.image (fun j => evalA (P.relation j))
+  let J : Ideal A := Ideal.span (rel : Set A)
+  have heval :
+      (Ideal.Quotient.mkₐ R I).comp evalA = g.comp pMap := by
+    apply MvPolynomial.algHom_ext
+    intro i
+    change Ideal.Quotient.mk I (evalA (.X i)) = g (pMap (.X i))
+    simpa [evalA, a, pMap] using ha i
+  have hrelI (j : Fin (Algebra.Presentation.ofFinitePresentationRels R S)) :
+      evalA (P.relation j) ∈ I := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    have h := congrArg
+      (fun k : P.Ring →ₐ[R] A ⧸ I => k (P.relation j)) heval
+    simpa [AlgHom.comp_apply, pMap, P.aeval_val_relation] using h
+  have hrelJ (j : Fin (Algebra.Presentation.ofFinitePresentationRels R S)) :
+      evalA (P.relation j) ∈ J := by
+    apply Ideal.subset_span
+    change evalA (P.relation j) ∈ rel
+    exact Finset.mem_image.mpr ⟨j, Finset.mem_univ _, rfl⟩
+  have hJle : J ≤ I := by
+    apply Ideal.span_le.2
+    intro x hx
+    change x ∈ rel at hx
+    obtain ⟨j, -, rfl⟩ := Finset.mem_image.mp hx
+    exact hrelI j
+  have hJnil : IsNilpotent J := by
+    apply isNilpotent_ideal_span_finset rel
+    intro x hx
+    change x ∈ rel at hx
+    obtain ⟨j, -, rfl⟩ := Finset.mem_image.mp hx
+    exact hI _ (hrelI j)
+  let qJ : A →ₐ[R] A ⧸ J := Ideal.Quotient.mkₐ R J
+  let evalQ : P.Ring →ₐ[R] A ⧸ J := qJ.comp evalA
+  have hker : P.ker ≤ RingHom.ker evalQ.toRingHom := by
+    rw [← P.span_range_relation_eq_ker]
+    apply Ideal.span_le.2
+    intro x hx
+    obtain ⟨j, rfl⟩ := Set.mem_range.mp hx
+    change evalQ (P.relation j) = 0
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr (hrelJ j)
+  let pLift := AlgHom.liftOfSurjective pMap P.algebraMap_surjective evalQ hker
+  let gJ := pLift
+  let qJI : A ⧸ J →ₐ[R] A ⧸ I := Ideal.Quotient.factorₐ R hJle
+  have hqJI : qJI.comp qJ = Ideal.Quotient.mkₐ R I := by
+    exact Ideal.Quotient.factorₐ_comp_mk R hJle
+  have hpLift : pLift.comp pMap = evalQ := by
+    apply AlgHom.ext
+    intro x
+    simpa [pLift, AlgHom.comp_apply] using
+      (AlgHom.liftOfSurjective_apply pMap P.algebraMap_surjective evalQ hker x)
+  have hgJ : qJI.comp gJ = g := by
+    have hpMap : Function.Surjective pMap := by
+      simpa [pMap] using P.algebraMap_surjective
+    rw [← AlgHom.cancel_right hpMap]
+    calc
+      (qJI.comp pLift).comp pMap = qJI.comp (pLift.comp pMap) := by
+        simp only [AlgHom.comp_assoc]
+      _ = qJI.comp evalQ := by rw [hpLift]
+      _ = (qJI.comp qJ).comp evalA := by
+        simp only [evalQ, AlgHom.comp_assoc]
+      _ = (Ideal.Quotient.mkₐ R I).comp evalA := by rw [hqJI]
+      _ = g.comp pMap := heval
+  obtain ⟨lift, hlift⟩ := Algebra.FormallySmooth.exists_lift J hJnil gJ
+  refine ⟨lift, ?_⟩
+  rw [← hgJ, ← hqJI]
+  simpa only [AlgHom.comp_assoc] using
+    congrArg (fun k : S →ₐ[R] A ⧸ J => qJI.comp k) hlift
 
 end
 

@@ -3,7 +3,7 @@ import Mathlib.RingTheory.RingHom.Finite
 
 namespace Formalization.Books.Obsolete.Unit05
 
-universe u
+universe u v w
 
 noncomputable section
 
@@ -13,7 +13,8 @@ noncomputable section
  constructions, and the map from `R_f` to `S_f` is Mathlib's canonical `Localization.awayMap`.
 -/
 structure FiniteAfterLocalizationDiagram
-    (R S S' : Type u) [CommRing R] [CommRing S] [CommRing S'] (f : R) where
+    (R : Type u) (S : Type v) (S' : Type w)
+    [CommRing R] [CommRing S] [CommRing S'] (f : R) where
   rS : R →+* S
   rfS' : Localization.Away f →+* S'
   s'Sf : S' →+* Localization.Away (rS f)
@@ -22,7 +23,8 @@ structure FiniteAfterLocalizationDiagram
 
 /-- A finite map over `R_f` extends to a finite `R`-algebra whose localization is `S'`. -/
 theorem finite_after_localization
-    {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
+    {R : Type u} {S : Type v} {S' : Type w}
+    [CommRing R] [CommRing S] [CommRing S']
     (f : R) (D : FiniteAfterLocalizationDiagram R S S' f) :
     ∃ (S'' : Type u) (hS'' : CommRing S''),
       letI : CommRing S'' := hS''

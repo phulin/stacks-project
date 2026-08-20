@@ -24,7 +24,7 @@ noncomputable section
 /- The coefficient map is the restriction of `φ` along `Polynomial.C`, while
    the new variable is sent to `φ (a * X)`. -/
 def changeEquationMap
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R[X] →+* S) (a : R) : R[X] →+* S :=
   Polynomial.eval₂RingHom
     (φ.comp (Polynomial.C : R →+* R[X]))
@@ -32,7 +32,7 @@ def changeEquationMap
 
 /- The source's `φ(a)` is the image of the constant polynomial `C a`. -/
 theorem change_equation_multiply
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R[X] →+* S) (t : S) (ht : φ.IsIntegralElem t) :
     ∃ ℓ : ℕ, ∀ a : R,
       (changeEquationMap φ a).IsIntegralElem
@@ -45,24 +45,24 @@ theorem change_equation_multiply
    coefficient `u_i = u_{i+1} t + φ(a_i)`.  It also makes sense for all
    natural `i`, with an empty sum when `i > n`. -/
 def integralRelationU
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R →+* S) (t : S) (a : ℕ → R) (n i : ℕ) : S :=
   ∑ j ∈ Finset.Icc i n, φ (a j) * t ^ (j - i)
 
 /- The finite coefficient set `(φ(a_0), ..., φ(a_n))`. -/
 def integralRelationCoefficientSet
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R →+* S) (a : ℕ → R) (n : ℕ) : Set S :=
   {x | ∃ i, i ≤ n ∧ x = φ (a i)}
 
 /- The set of the recursively defined elements `u_n, ..., u_1`. -/
 def integralRelationUSet
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R →+* S) (t : S) (a : ℕ → R) (n : ℕ) : Set S :=
   {x | ∃ i, 1 ≤ i ∧ i ≤ n ∧ x = integralRelationU φ t a n i}
 
 theorem make_integral_less_trivial
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R →+* S) (t : S) (a : ℕ → R) (n : ℕ)
     (hrel : ∑ i ∈ Finset.range (n + 1), φ (a i) * t ^ i = 0) :
     (∀ i, 1 ≤ i → i ≤ n →
@@ -73,7 +73,7 @@ theorem make_integral_less_trivial
   sorry
 
 theorem make_integral_not_in_ideal
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (φ : R →+* S) (t : S) (a : ℕ → R) (n : ℕ)
     (hrel : ∑ i ∈ Finset.range (n + 1), φ (a i) * t ^ i = 0)
     (J : Ideal S) (hnot : ∃ i, i ≤ n ∧ φ (a i) ∉ J) :

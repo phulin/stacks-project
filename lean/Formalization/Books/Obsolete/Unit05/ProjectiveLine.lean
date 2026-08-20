@@ -167,7 +167,6 @@ theorem projectiveLine_power_multiplication_bijective
 structure ProjectiveLineFiniteAlgebraConstruction
     {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
     (d e : ℕ) (hG : G.IsHomogeneous e) where
-  F_homogeneous : F.IsHomogeneous d
   ring : CommRing (projectiveLineQuotientComponent F (e * d) : Type u)
   algebra : letI := ring
     Algebra R (projectiveLineQuotientComponent F (e * d) : Type u)

@@ -1025,7 +1025,16 @@ theorem isReduced_perfectClosure_iff_algebraicClosure
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
     IsReduced (perfectClosure k (AlgebraicClosure k) ⊗[k] S) ↔
       IsReduced (AlgebraicClosure k ⊗[k] S) := by
-  sorry
+  constructor
+  · exact isReduced_algebraicClosure_tensorProduct_of_isReduced_perfectClosure
+  · intro hΩ
+    let P := perfectClosure k (AlgebraicClosure k)
+    let _ : IsReduced (AlgebraicClosure k ⊗[k] S) := hΩ
+    exact isReduced_of_injective
+      (Algebra.TensorProduct.map
+        (IsScalarTower.toAlgHom k P (AlgebraicClosure k)) 1)
+      (Module.Flat.rTensor_preserves_injective_linearMap _
+        (RingHom.injective _))
 
 /-- It suffices to test geometric reducedness on the canonical algebraic
 closure. -/

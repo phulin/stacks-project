@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit138.FormallySmoothMaps
+import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Mathlib.RingTheory.MvPowerSeries.Equiv
 import Mathlib.RingTheory.Smooth.AdicCompletion
 

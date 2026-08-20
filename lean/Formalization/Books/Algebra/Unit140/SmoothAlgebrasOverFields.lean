@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit137.SmoothRingMaps
+import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.FieldTheory.Separable

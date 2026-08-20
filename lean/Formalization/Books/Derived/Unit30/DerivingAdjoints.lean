@@ -1,5 +1,6 @@
 import Formalization.Books.Derived.Unit14.DerivedFunctors
 import Formalization.Books.Derived.Unit15.ClassicalDerivedFunctors
+import Formalization.Books.Derived.Unit16.Core
 import Mathlib.CategoryTheory.Functor.Derived.Adjunction
 
 /-!
@@ -193,10 +194,8 @@ functor. -/
 def IsUnboundedRightDerivedFunctor
     (F : A ⥤ B) [F.Additive]
     (RF : DerivedCategory A ⥤ DerivedCategory B) : Prop :=
-  ∃ α : classicalHomotopyToDerived F ⟶
-      (DerivedCategory.Qh (C := A)) ⋙ RF,
-    Functor.IsRightDerivedFunctor RF α (quasiIsoHomotopyProperty A) ∧
-      Nonempty (ExactTriangulatedFunctorData RF)
+  ∃ R : Formalization.Books.Derived.Unit16.UnboundedRightDerivedFunctorData F,
+    R.functor = RF
 
 /-- `LG` is an exact left derived functor on the unbounded derived category
 when it carries the canonical localization comparison map, satisfies

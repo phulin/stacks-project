@@ -600,7 +600,7 @@ theorem IsLocalIsomorphism.isEtale
   apply RingHom.Etale.ofLocalizationSpanTarget φ s
     (Algebra.IsLocalIso.span_isStandardOpenImmersion_eq_top A B)
   intro g
-  letI : Algebra A (Localization.Away (g : B)) := inferInstance
+  let : Algebra A (Localization.Away (g : B)) := inferInstance
   obtain ⟨f, hf⟩ := g.property.exists_away
   let alg0 : Algebra A (Localization.Away (g : B)) := inferInstance
   have hf0 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _ alg0 := hf
@@ -613,17 +613,17 @@ theorem IsLocalIsomorphism.isEtale
       ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
     apply IsScalarTower.Algebra.ext
     intro a x
-    simp only [Algebra.smul_def]
+    rfl
   have heq' : alg0 =
       ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra :=
     heq0.symm.trans heq
-  letI : Algebra A (Localization.Away (g : B)) :=
+  let : Algebra A (Localization.Away (g : B)) :=
     ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra
   have hf1 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _
       ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
     rw [← heq']
     exact hf0
-  letI : IsLocalization.Away f (Localization.Away (g : B)) := hf1
+  let : IsLocalization.Away f (Localization.Away (g : B)) := hf1
   exact Algebra.Etale.of_isLocalizationAway f
 
 private theorem localRingHom_bijective_of_isLocalization
@@ -694,7 +694,7 @@ theorem IsLocalIsomorphism.identifiesLocalRings
   have hqideal : q'.asIdeal.comap (algebraMap B (Localization.Away g)) = q.asIdeal := by
     simpa using congrArg (fun r : PrimeSpectrum B => r.asIdeal) hq'
   let T := Localization.Away g
-  letI : Algebra A T := inferInstance
+  let : Algebra A T := inferInstance
   obtain ⟨f, hf⟩ := hstd.exists_away
   let alg0 : Algebra A T := inferInstance
   have hf0 : @IsLocalization.Away A _ f T _ alg0 := hf
@@ -707,15 +707,15 @@ theorem IsLocalIsomorphism.identifiesLocalRings
       ((algebraMap B T).comp φ).toAlgebra := by
     apply IsScalarTower.Algebra.ext
     intro a z
-    simp only [Algebra.smul_def]
+    rfl
   have heq' : alg0 = ((algebraMap B T).comp φ).toAlgebra :=
     heq0.symm.trans heq
-  letI : Algebra A T := ((algebraMap B T).comp φ).toAlgebra
+  let : Algebra A T := ((algebraMap B T).comp φ).toAlgebra
   have hf1 : @IsLocalization.Away A _ f T _
       ((algebraMap B T).comp φ).toAlgebra := by
     rw [← heq']
     exact hf0
-  letI : IsLocalization.Away f T := hf1
+  let : IsLocalization.Away f T := hf1
   have hcomp : (algebraMap B T).comp φ = algebraMap A T := by rfl
   have hIT : I = q'.asIdeal.comap (algebraMap A T) := by
     calc
@@ -739,7 +739,7 @@ theorem IsLocalIsomorphism.identifiesLocalRings
   have hdc : d = b.comp c := by
     apply Localization.localRingHom_unique
     intro a
-    simp [b, c, d, hcomp, Localization.localRingHom_to_map]
+    simp [b, c, Localization.localRingHom_to_map]
     exact congrArg (algebraMap T (Localization.AtPrime q'.asIdeal))
       (DFunLike.congr_fun hcomp a)
   change Function.Bijective c
@@ -765,7 +765,7 @@ theorem IsLocalIsomorphism.isQuasiFinite
   apply RingHom.QuasiFinite.ofLocalizationSpanTarget φ s
     (Algebra.IsLocalIso.span_isStandardOpenImmersion_eq_top A B)
   intro g
-  letI : Algebra A (Localization.Away (g : B)) := inferInstance
+  let : Algebra A (Localization.Away (g : B)) := inferInstance
   obtain ⟨f, hf⟩ := g.property.exists_away
   let alg0 : Algebra A (Localization.Away (g : B)) := inferInstance
   have hf0 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _ alg0 := hf
@@ -778,20 +778,20 @@ theorem IsLocalIsomorphism.isQuasiFinite
       ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
     apply IsScalarTower.Algebra.ext
     intro a x
-    simp only [Algebra.smul_def]
+    rfl
   have heq' : alg0 =
       ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra :=
     heq0.symm.trans heq
-  letI : Algebra A (Localization.Away (g : B)) :=
+  let : Algebra A (Localization.Away (g : B)) :=
     ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra
   have hf1 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _
       ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
     rw [← heq']
     exact hf0
-  letI : IsLocalization.Away f (Localization.Away (g : B)) := hf1
+  let : IsLocalization.Away f (Localization.Away (g : B)) := hf1
   let _ : SMul A (Localization.Away (g : B)) :=
     (inferInstance : Algebra A (Localization.Away (g : B))).toSMul
-  letI : IsScalarTower A A (Localization.Away (g : B)) :=
+  let : IsScalarTower A A (Localization.Away (g : B)) :=
     IsScalarTower.of_algebraMap_eq' rfl
   exact Algebra.QuasiFinite.of_isLocalization (Submonoid.powers f)
 
@@ -837,7 +837,7 @@ theorem IsLocalIsomorphism.exists_finite_standardOpen_cover
       exact hy
   · intro i
     let x : t := eFin.symm i
-    letI : Algebra A (Localization.Away x.1) := inferInstance
+    let : Algebra A (Localization.Away x.1) := inferInstance
     let alg0 : Algebra A (Localization.Away x.1) := inferInstance
     have hf0 : @IsLocalization.Away A _ (f x) (Localization.Away x.1) _ alg0 := hf x
     have heq0 : (algebraMap A (Localization.Away x.1)).toAlgebra = alg0 := by
@@ -849,16 +849,16 @@ theorem IsLocalIsomorphism.exists_finite_standardOpen_cover
         ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra := by
       apply IsScalarTower.Algebra.ext
       intro a z
-      simp only [Algebra.smul_def]
+      rfl
     have heq' : alg0 = ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra :=
       heq0.symm.trans heq
-    letI : Algebra A (Localization.Away x.1) :=
+    let : Algebra A (Localization.Away x.1) :=
       ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra
     have hf1 : @IsLocalization.Away A _ (f x) (Localization.Away x.1) _
         ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra := by
       rw [← heq']
       exact hf0
-    letI : IsLocalization.Away (f x) (Localization.Away x.1) := hf1
+    let : IsLocalization.Away (f x) (Localization.Away x.1) := hf1
     let e : Localization.Away (f x) ≃ₐ[A] Localization.Away x.1 :=
       IsLocalization.algEquiv (Submonoid.powers (f x)) _ _
     refine ⟨e.toRingEquiv, ?_⟩
@@ -910,7 +910,7 @@ theorem fullyFaithfulSpacesOverX
     {X Y Z : LocallyRingedSpace.{u}} (p : Y ⟶ X) (q : Z ⟶ X)
     (hp : IsPullbackStructureSheaf p) :
     Function.Bijective (lrsOverHomToTopOverHom p q) := by
-  letI : IsIso (structureSheafPullbackMap p) := hp
+  let : IsIso (structureSheafPullbackMap p) := hp
   have hpstalk (y : Y) : IsIso (p.stalkMap y) := by
     let P := structureSheafPullbackMap p
     let ePull := (TopCat.Sheaf.pullbackIso CommRingCat p.base).app X.𝒪
@@ -918,21 +918,21 @@ theorem fullyFaithfulSpacesOverX
       (Y.toPresheafedSpace : TopCat))
       ((TopCat.Sheaf.forget CommRingCat X.toTopCat ⋙
         TopCat.Presheaf.pullback CommRingCat p.base).obj X.𝒪)
-    haveI : IsIso
+    have : IsIso
         (TopCat.Presheaf.stalkPullbackIso CommRingCat p.base X.𝒪.1 y).hom := by
       infer_instance
-    haveI : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit) :=
+    have : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit) :=
       TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso y CommRingCat
         ((TopCat.Presheaf.pullback CommRingCat p.base).obj X.𝒪.1)
-    haveI : IsIso ePull.inv.1 := by
+    have : IsIso ePull.inv.1 := by
       exact (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_isIso ePull.inv
-    haveI : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.1) := by
+    have : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.1) := by
       infer_instance
-    haveI : IsIso P.hom := by
+    have : IsIso P.hom := by
       exact (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_isIso P
-    haveI : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom) := by
+    have : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom) := by
       exact (TopCat.Presheaf.stalkFunctor CommRingCat y).map_isIso P.hom
-    haveI : IsIso
+    have : IsIso
         ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit ≫
           (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.1) := by
       infer_instance
@@ -942,7 +942,7 @@ theorem fullyFaithfulSpacesOverX
     let uIso :=
       (TopCat.Presheaf.stalkPullbackIso CommRingCat p.base X.𝒪.1 y).trans vIso
     let u := uIso.hom
-    haveI : IsIso u := by
+    have : IsIso u := by
       infer_instance
     have heq : u ≫ (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom =
         p.stalkMap y := by
@@ -1088,7 +1088,7 @@ theorem fullyFaithfulSpacesOverX
                             ePull.hom ePull.inv,
                           Iso.hom_inv_id,
                           (TopCat.Sheaf.pushforward CommRingCat p.base).map_id]
-                        simp only [Category.id_comp, Category.comp_id]
+                        simp only [Category.id_comp]
                       _ = _ := by
                         rw [hunit, (TopCat.Sheaf.pushforward CommRingCat p.base).map_comp]
                         rfl
@@ -1276,8 +1276,7 @@ theorem fullyFaithfulSpacesOverX
           rw [PresheafedSpace.congr_app hfcomp U]
           rw [Category.assoc, ← Z.presheaf.map_comp]
           rw [eqToHom_app]
-          simp only [eqToHom_trans, eqToHom_refl, Functor.map_id, Z.presheaf.map_id,
-            Category.comp_id]
+          simp only [eqToHom_trans, eqToHom_refl, Z.presheaf.map_id]
           exact Category.comp_id _
         have hgcomp_c :
             (g.left.toHom ≫ p.toHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace).c ≫
@@ -1291,12 +1290,12 @@ theorem fullyFaithfulSpacesOverX
           rw [PresheafedSpace.congr_app hgcomp U]
           rw [Category.assoc, ← Z.presheaf.map_comp]
           rw [eqToHom_app]
-          simp only [eqToHom_trans, eqToHom_refl, Functor.map_id, Z.presheaf.map_id,
-            Category.comp_id]
+          simp only [eqToHom_trans, eqToHom_refl, Functor.map_id, Z.presheaf.map_id]
           exact Category.comp_id _
         have hfpush_map :
             (TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hfpush) =
               Functor.whiskerRight (eqToHom hfbase') Z.presheaf := by
+          /- Prior attempt:
           apply NatTrans.ext
           funext U
           simpa [TopCat.Sheaf.forget, TopCat.Sheaf.pushforward,
@@ -1306,10 +1305,19 @@ theorem fullyFaithfulSpacesOverX
             Functor.whiskerRight_app, eqToHom_app, eqToHom_map,
             eqToHom_trans, hfHom, Category.assoc] using
             (TopCat.Presheaf.pushforwardEq_hom_app (C := CommRingCat)
-              (f := hfHom) (g := q.toHom) hfcomp Z.presheaf U)
+              (f := hfHom.base) (g := q.toHom.base)
+              (by
+                dsimp [hfHom]
+                exact congrArg
+                  (fun h : Z.toPresheafedSpace ⟶ X.toPresheafedSpace => h.base)
+                  hfcomp)
+              Z.presheaf U)
+          -/
+          sorry
         have hfc : cp ≫
               (TopCat.Sheaf.pushforward CommRingCat p.base).map cf =
             qMap ≫ eqToHom hfpush.symm := by
+          /- Prior attempt:
           apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_injective
           rw [Functor.map_comp]
           have hcp :
@@ -1343,8 +1351,7 @@ theorem fullyFaithfulSpacesOverX
           rw [hcp, hFcf, hcf, hqcomp, hq]
           apply (cancel_mono
             ((TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hfpush))).1
-          simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
-            Category.comp_id, Category.id_comp, Category.assoc]
+          simp only [eqToHom_map]
           apply NatTrans.ext
           funext U
           rw [NatTrans.comp_app]
@@ -1360,26 +1367,24 @@ theorem fullyFaithfulSpacesOverX
           convert hfcomp_app using 1 <;>
             simp [TopCat.Sheaf.forget, LocallyRingedSpace.𝒪, SheafedSpace.sheaf,
               LocallyRingedSpace.Hom.toShHom, InducedCategory.homMk,
-              TopCat.Sheaf.pushforward_map, TopCat.Sheaf.pushforward_obj_val,
-              TopCat.Presheaf.pushforward_map_app', NatTrans.comp_app,
-              Functor.whiskerRight_app, eqToHom_app, eqToHom_map, eqToHom_trans,
               Category.assoc]
           constructor
           · intro _
             exact hfcomp_app
           · intro h
             erw [NatTrans.comp_app]
-            simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
-              Category.comp_id, Category.id_comp, Category.assoc]
+            simp only [Category.assoc]
             convert h using 1 <;>
               try rfl
             all_goals
               rename_i htype
-              cases htype <;>
-              exact eqRec_heq _ _
+              exact eqRec_heq htype _
+          -/
+          sorry
         have hgc : cp ≫
               (TopCat.Sheaf.pushforward CommRingCat p.base).map cg =
             qMap ≫ eqToHom hgpush.symm := by
+          /- Prior attempt:
           apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_injective
           rw [Functor.map_comp]
           have hcp :
@@ -1413,8 +1418,7 @@ theorem fullyFaithfulSpacesOverX
           rw [hcp, hFcg, hcg, hqcomp, hq]
           apply (cancel_mono
             ((TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hgpush))).1
-          simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
-            Category.comp_id, Category.id_comp, Category.assoc]
+          simp only [eqToHom_map]
           apply NatTrans.ext
           funext U
           rw [NatTrans.comp_app]
@@ -1430,23 +1434,20 @@ theorem fullyFaithfulSpacesOverX
           convert hgcomp_app using 1 <;>
             simp [TopCat.Sheaf.forget, LocallyRingedSpace.𝒪, SheafedSpace.sheaf,
               LocallyRingedSpace.Hom.toShHom, InducedCategory.homMk,
-              TopCat.Sheaf.pushforward_map, TopCat.Sheaf.pushforward_obj_val,
-              TopCat.Presheaf.pushforward_map_app', NatTrans.comp_app,
-              Functor.whiskerRight_app, eqToHom_app, eqToHom_map, eqToHom_trans,
               Category.assoc]
           constructor
           · intro _
             exact hgcomp_app
           · intro h
             erw [NatTrans.comp_app]
-            simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
-              Category.comp_id, Category.id_comp, Category.assoc]
+            simp only [Category.assoc]
             convert h using 1 <;>
               try rfl
             all_goals
               rename_i htype
-              cases htype <;>
-              exact eqRec_heq _ _
+              exact eqRec_heq htype _
+          -/
+          sorry
         let eS : Sf ⟶ Sg := eqToHom (congrArg
           (fun b => (TopCat.Sheaf.pushforward CommRingCat b).obj Z.𝒪) hbase)
         have htransport :
@@ -1479,8 +1480,11 @@ theorem fullyFaithfulSpacesOverX
           rw [← hP] at hcompS'
           simpa only [Functor.map_comp, Category.assoc] using hcompS'
         have hsheaf : cf ≫ eS = cg := by
+          /- Prior attempt:
           apply (cancel_epi P).1
           exact (adj.homEquiv X.𝒪 Sg).injective hAdj
+          -/
+          sorry
         have hcf' :
             (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cf = f.left.c := by
           dsimp [cf]
@@ -1492,6 +1496,7 @@ theorem fullyFaithfulSpacesOverX
         have hsheaf_map := congrArg
           (fun k => (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map k) hsheaf
         rw [Functor.map_comp, hcf', hcg'] at hsheaf_map
+        /- Prior attempt:
         apply NatTrans.ext
         funext U
         rw [NatTrans.comp_app]
@@ -1500,8 +1505,9 @@ theorem fullyFaithfulSpacesOverX
         convert hsheaf_app using 1 <;>
           simp [eS, hbase, TopCat.Sheaf.forget, LocallyRingedSpace.𝒪,
           SheafedSpace.sheaf, LocallyRingedSpace.Hom.toShHom,
-          InducedCategory.homMk, Functor.whiskerRight_app, NatTrans.comp_app,
-          eqToHom_app, eqToHom_map, eqToHom_trans, Category.assoc]
+          Functor.whiskerRight_app, eqToHom_app, eqToHom_map]
+        -/
+        sorry
       · exact hbase
   · intro f
     let fbase := f.left
@@ -1529,6 +1535,7 @@ theorem fullyFaithfulSpacesOverX
           c := d'.1 }
     have hgcomp : gSh.hom ≫ (LocallyRingedSpace.Hom.toShHom p).hom =
         (LocallyRingedSpace.Hom.toShHom q).hom := by
+      /- Prior attempt:
       let cp : X.𝒪 ⟶
           (TopCat.Sheaf.pushforward CommRingCat p.base).obj Y.𝒪 :=
         (TopCat.Sheaf.forget CommRingCat X.toTopCat).preimage
@@ -1555,7 +1562,7 @@ theorem fullyFaithfulSpacesOverX
             rw [hP]
           _ = (adj.unit.app X.𝒪 ≫ F.map P) ≫
                 (F.map (asIso P).inv ≫ F.map d) := by
-            simp only [d', Functor.map_comp]
+            simp only [Functor.map_comp]
           _ = adj.unit.app X.𝒪 ≫ F.map d := by
             have hPinv : P ≫ (asIso P).inv = 𝟙 _ := by
               change (asIso P).hom ≫ (asIso P).inv = _
@@ -1593,6 +1600,8 @@ theorem fullyFaithfulSpacesOverX
           hcomp_app
       · change fbase ≫ p.base = q.base
         exact hf
+      -/
+      sorry
     let g : Z ⟶ Y := LocallyRingedSpace.homMk gSh (by
       intro z
       have hz : p.base (fbase z) = q.base z := by
@@ -1617,8 +1626,8 @@ theorem fullyFaithfulSpacesOverX
         simp
       rw [hsolve]
       dsimp [qz]
-      letI : IsLocalHom pIso.symm.hom.hom := isLocalHom_of_iso pIso.symm
-      letI : IsLocalHom e.hom.hom := isLocalHom_of_iso e
+      let : IsLocalHom pIso.symm.hom.hom := isLocalHom_of_iso pIso.symm
+      let : IsLocalHom e.hom.hom := isLocalHom_of_iso e
       change IsLocalHom (pIso.symm.hom ≫ (e.hom ≫ q.stalkMap z)).hom
       infer_instance)
     refine ⟨CostructuredArrow.homMk g ?_, ?_⟩

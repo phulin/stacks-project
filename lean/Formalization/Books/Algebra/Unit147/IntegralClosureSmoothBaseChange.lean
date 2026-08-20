@@ -16,9 +16,6 @@ constructed from its canonical bijectivity theorem.
 
 namespace Formalization.Books.Algebra.Unit147
 
-open CategoryTheory
-open CategoryTheory.Limits
-open Formalization.Books.Categories.Unit21
 open scoped BigOperators TensorProduct
 
 noncomputable section

@@ -8,6 +8,8 @@ import Mathlib.CategoryTheory.Limits.Shapes.Countable
 import Mathlib.Topology.Sheaves.Forget
 import Mathlib.Topology.Sheaves.SheafCondition.EqualizerProducts
 import Mathlib.Topology.Sheaves.LocallySurjective
+import Mathlib.CategoryTheory.Sites.LeftExact
+import Mathlib.Topology.Sheaves.Abelian
 import Mathlib.Data.Real.Basic
 import Mathlib.Topology.Instances.RealVectorSpace
 
@@ -57,9 +59,9 @@ abbrev AbelianSheafSurjective {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G
 
 /-- In `Ab(X)`, categorical epimorphisms are exactly locally surjective maps. -/
 theorem abelianSheaf_epi_iff_surjective
-    {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G) :
+    {X : TopCat.{w}} {F G : Ab.{w, w} X} (φ : F ⟶ G) :
     Epi φ ↔ AbelianSheafSurjective φ := by
-  sorry
+  exact (TopCat.Sheaf.isLocallySurjective_iff_epi φ).symm
 noncomputable def countableProductMap {C : Type u} [Category.{v} C]
     [HasCountableProducts C] (A B : ℕ → C) (φ : ∀ n, A n ⟶ B n) :
     limit (Discrete.functor A) ⟶ limit (Discrete.functor B) :=

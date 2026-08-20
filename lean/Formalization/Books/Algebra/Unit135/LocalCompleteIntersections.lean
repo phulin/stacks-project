@@ -565,7 +565,123 @@ theorem local_complete_intersection_localize
         (Localization.Away (algebraMap S U g)) V
     exact isGlobalCompleteIntersection_of_algEquiv
       (eS.restrictScalars k) (global_complete_intersection_localize
-        (hloc i) (algebraMap S U g))
+      (hloc i) (algebraMap S U g))
+
+theorem local_complete_intersection_of_localizationSpanTarget
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    (m : ℕ) (gs : Fin m → S)
+    (hgen : Ideal.span (Set.range gs) = (⊤ : Ideal S))
+    (hlocal : ∀ i, IsLocalCompleteIntersection k (Localization.Away (gs i))) :
+    IsLocalCompleteIntersection k S := by
+  choose hft n us hopen hglob using hlocal
+  have hftS : RingHom.FiniteType (algebraMap k S) := by
+    apply RingHom.finiteType_ofLocalizationSpanTarget
+    · exact hgen
+    · intro r
+      rcases r with ⟨x, ⟨i, rfl⟩⟩
+      simpa only [IsScalarTower.algebraMap_eq k S (Localization.Away (gs i))] using hft i
+  let ι := Σ i : Fin m, Fin (n i)
+  have hrepr : ∀ (i : Fin m) (j : Fin (n i)),
+      ∃ a : S, ∃ t : Submonoid.powers (gs i),
+        IsLocalization.mk' (Localization.Away (gs i)) a t = us i j := by
+    intro i j
+    obtain ⟨⟨a, t⟩, ht⟩ :=
+      IsLocalization.mk'_surjective (Submonoid.powers (gs i)) (us i j)
+    exact ⟨a, t, ht⟩
+  choose num den hnum using hrepr
+  let eι : Fin (Fintype.card ι) ≃ ι := (Fintype.equivFin ι).symm
+  let g' : Fin (Fintype.card ι) → S :=
+    fun z => gs (eι z).1 * num (eι z).1 (eι z).2
+  have hglobal : ∀ z : Fin (Fintype.card ι),
+      IsGlobalCompleteIntersection k (Localization.Away (g' z)) := by
+    intro z
+    let i := (eι z).1
+    let j := (eι z).2
+    let U := Localization.Away (gs i)
+    have hspec : us i j * algebraMap S U (den i j : S) =
+        algebraMap S U (num i j) := by
+      rw [← hnum i j]
+      simpa [U] using
+        (IsLocalization.mk'_spec U (num i j) (den i j))
+    have hunit : IsUnit (algebraMap S U (den i j : S)) :=
+      IsLocalization.map_units U (den i j)
+    have hassoc : Associated (us i j) (algebraMap S U (num i j)) := by
+      exact (associated_mul_unit_right _ _ hunit).trans (Associated.of_eq hspec)
+    letI : IsLocalization.Away (us i j)
+        (Localization.Away (algebraMap S U (num i j))) :=
+      IsLocalization.Away.of_associated hassoc.symm
+    let e₁ : Localization.Away (us i j) ≃ₐ[U]
+        Localization.Away (algebraMap S U (num i j)) :=
+      IsLocalization.algEquiv (Submonoid.powers (us i j))
+        (Localization.Away (us i j))
+        (Localization.Away (algebraMap S U (num i j)))
+    let e₂ : Localization.Away (algebraMap S U (num i j)) ≃ₐ[S]
+        Localization.Away (gs i * num i j) :=
+      IsLocalization.algEquiv (Submonoid.powers (gs i * num i j))
+        (Localization.Away (algebraMap S U (num i j)))
+        (Localization.Away (gs i * num i j))
+    exact isGlobalCompleteIntersection_of_algEquiv
+      ((e₁.restrictScalars k).trans (e₂.restrictScalars k)) (hglob i j)
+  have hcover : (⋃ z : Fin (Fintype.card ι),
+      (PrimeSpectrum.basicOpen (g' z) : Set (PrimeSpectrum S))) = Set.univ := by
+    apply Set.eq_univ_of_forall
+    intro q
+    have hqgs : ∃ i : Fin m, gs i ∉ q.asIdeal := by
+      by_contra hq
+      have hsubset : Set.range gs ⊆ q.asIdeal := by
+        rintro x ⟨i, rfl⟩
+        exact Classical.byContradiction (fun hi => hq ⟨i, hi⟩)
+      have htop : (⊤ : Ideal S) ≤ q.asIdeal := by
+        rw [← hgen]
+        exact Ideal.span_le.mpr hsubset
+      exact q.isPrime.ne_top (top_unique htop)
+    obtain ⟨i, hi⟩ := hqgs
+    let U := Localization.Away (gs i)
+    let J : Ideal U := q.asIdeal.map (algebraMap S U)
+    have hdisj : Disjoint (Submonoid.powers (gs i) : Set S) (q.asIdeal : Set S) := by
+      rw [Set.disjoint_left]
+      intro x hxS hxq
+      exact (Ideal.mem_primeCompl_iff.mp
+        (Submonoid.powers_le.mpr (Ideal.mem_primeCompl_iff.mpr hi) hxS)) hxq
+    have hJprime : J.IsPrime := by
+      simpa [J] using IsLocalization.isPrime_of_isPrime_disjoint
+        (Submonoid.powers (gs i)) U q.asIdeal q.isPrime hdisj
+    let qU : PrimeSpectrum U := ⟨J, hJprime⟩
+    have hqU : qU ∈ ⋃ j : Fin (n i),
+        (PrimeSpectrum.basicOpen (us i j) : Set (PrimeSpectrum U)) := by
+      rw [hopen i]
+      exact Set.mem_univ qU
+    obtain ⟨j, hj⟩ := Set.mem_iUnion.mp hqU
+    have huJ : us i j ∉ J :=
+      (PrimeSpectrum.mem_basicOpen (us i j) qU).mp hj
+    let a := num i j
+    let t := den i j
+    have hta : IsLocalization.mk' U a t = us i j := hnum i j
+    have hspec : us i j * algebraMap S U (t : S) = algebraMap S U a := by
+      rw [← hta]
+      exact IsLocalization.mk'_spec U a t
+    have hunit : IsUnit (algebraMap S U (t : S)) :=
+      IsLocalization.map_units U t
+    have haq : a ∉ q.asIdeal := by
+      intro haq
+      have hamap : algebraMap S U a ∈ J := Ideal.mem_map_of_mem (algebraMap S U) haq
+      have humap : us i j * algebraMap S U (t : S) ∈ J := hspec.symm ▸ hamap
+      have : us i j ∈ J := by
+        apply (Ideal.unit_mul_mem_iff_mem J hunit).mp
+        simpa [mul_comm] using humap
+      exact huJ this
+    refine Set.mem_iUnion.mpr ⟨eι.symm ⟨i, j⟩, ?_⟩
+    exact (PrimeSpectrum.mem_basicOpen (g' (eι.symm ⟨i, j⟩)) q).mpr (by
+      intro hprod
+      have hprod' : gs i * a ∈ q.asIdeal := by
+        change gs (eι (eι.symm ⟨i, j⟩)).1 *
+          num (eι (eι.symm ⟨i, j⟩)).1 (eι (eι.symm ⟨i, j⟩)).2 ∈ q.asIdeal at hprod
+        rw [eι.apply_symm_apply] at hprod
+        simpa [a] using hprod
+      exact (q.isPrime.mul_mem_iff_mem_or_mem.mp hprod').elim hi haq)
+  refine ⟨hftS, Fintype.card ι, g', hcover, ?_⟩
+  intro z
+  exact hglobal z
 
 private theorem isCohenMacaulayLocalRing_of_ringEquiv
     {R S : Type u} [CommRing R] [CommRing S]

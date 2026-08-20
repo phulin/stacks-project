@@ -432,6 +432,19 @@ theorem valuationRing_isGeneralizedValuationRing
     PreValuationRing R := by
   exact ValuationRing.toPreValuationRing
 
+/- The matrix helper is placed before the first structure theorem so its
+diagonal-cokernel API can be shared by the chain-ring and elementary-divisor
+proofs without a duplicate private diagonal convention. -/
+
+/-- The rectangular diagonal matrix with diagonal entries indexed by
+`Fin (min n m)`. -/
+def rectangularDiagonal {n m : ℕ} {R : Type u} [CommRing R]
+    (f : Fin (min n m) → R) : Matrix (Fin n) (Fin m) R :=
+  fun i j =>
+    if _h : i.1 = j.1 then
+      if h' : i.1 < min n m then f ⟨i.1, h'⟩ else 0
+    else 0
+
 /-! ## Finitely presented modules over generalized valuation rings -/
 
 /-- A finitely presented module over a generalized valuation ring is a finite
@@ -443,6 +456,95 @@ theorem generalizedValuationRing_finitePresentation
     [Module.FinitePresentation R M] :
     ∃ (n : ℕ) (f : Fin n → R),
       Nonempty (M ≃ₗ[R] finiteCyclicDirectSum R n f) := by
+  /-
+  Proof roadmap (chain-ring decomposition).
+
+  Interface audit: the statement has the hypotheses needed by the matrix
+  argument.  In particular `PreValuationRing` does not contain nontriviality,
+  so `[Nontrivial R]` must remain, while no domain hypothesis may be added:
+  generalized valuation rings here are allowed to have zero divisors.  The
+  different universes `R : Type u` and `M : Type v` are harmless because a
+  `LinearEquiv` may relate types in different universes.
+
+  1. Add the focused imports
+     `Mathlib.LinearAlgebra.Matrix.ToLin`,
+     `Mathlib.LinearAlgebra.Matrix.Permutation`,
+     `Mathlib.LinearAlgebra.Matrix.Transvection`, and
+     `Mathlib.LinearAlgebra.Quotient.Pi`.  First prove a private rectangular
+     chain-ring Smith lemma, before this declaration, with the precise output
+
+       ∃ U : Matrix.GeneralLinearGroup (Fin n) R,
+         ∃ V : Matrix.GeneralLinearGroup (Fin m) R,
+           ∃ d : Fin (min n m) → R,
+             (∀ ⦃i j⦄, i.1 ≤ j.1 → d i ∣ d j) ∧
+             (U : Matrix (Fin n) (Fin n) R) * A *
+               (V : Matrix (Fin m) (Fin m) R) = rectangularDiagonal d.
+
+     Install `letI : PreValuationRing R := hR` only inside that helper.  Induct
+     on `min n m`.  For the successor step, use
+     `PreValuationRing.cond` and a `Finset` induction on the entries of `A` to
+     choose an entry `p` dividing every entry.  Move it to `(0, 0)` with
+     `Equiv.Perm.swap` and `Equiv.Perm.permMatrix`; package the permutation and
+     its inverse as matrix units using `Matrix.permMatrix_mul`.  If all
+     entries vanish, take both units to be `1` and all diagonal entries `0`.
+
+     Write every first-row and first-column entry as a multiple of `p`, then
+     clear them with products of `Matrix.transvection`.  A transvection at
+     distinct indices has inverse with the negated coefficient by
+     `Matrix.transvection_mul_transvection_same`; this packages each clearing
+     matrix in `Matrix.GeneralLinearGroup`.  Recurse on the `Fin.succ`/`Fin.succ`
+     submatrix.  Embed the recursive units with `Matrix.fromBlocks`, reindexing
+     along `finSumFinEquiv` and `finCongr`, and multiply all accumulated units.
+     Since `p` divided every old entry, it divides every entry of the lower
+     block after clearing; hence it divides every recursive diagonal entry.
+     This supplies the displayed divisibility chain without a domain
+     cancellation argument.
+
+  2. Prove a separate, ring-independent diagonal-cokernel helper.  Extend
+     `d : Fin (min n m) → R` to
+
+       d' : Fin n → R := fun i =>
+         if hi : i.1 < min n m then d ⟨i.1, hi⟩ else 0.
+
+     Using `Matrix.toLin'_apply`, prove
+
+       LinearMap.range (Matrix.toLin' (rectangularDiagonal d)) =
+         Submodule.pi Set.univ
+           (fun i => (Ideal.span ({d' i} : Set R) : Submodule R R)).
+
+     The reverse inclusion is obtained coordinatewise: choose the coefficient
+     of `d' i` for `i < min n m` and put zero in unused source coordinates.
+     Transport the quotient across this equality with
+     `Submodule.Quotient.equiv`, apply `Submodule.quotientPi` from
+     `Mathlib/LinearAlgebra/Quotient/Pi.lean`, and finally apply
+     `(DirectSum.linearEquivFunOnFintype R (Fin n)
+       (fun i => principalQuotient R (d' i))).symm`.  Record the resulting
+     equivalence from the cokernel of the diagonal map to
+     `finiteCyclicDirectSum R n d'` as a small private definition/lemma.
+
+  3. Obtain
+     `⟨n, m, q, g, hq, hgq⟩ :=
+       Module.FinitePresentation.exists_fin' R M` from
+     `Mathlib/Algebra/Module/FinitePresentation.lean`.  Give the important
+     intermediate term the explicit type
+
+       A : Matrix (Fin n) (Fin m) R := LinearMap.toMatrix' g.
+
+     Apply the chain-ring Smith helper to `A`.  The identities
+     `Matrix.toLin'_toMatrix'` and `Matrix.toLin'_mul` translate the matrix
+     equality into pre- and postcomposition by linear automorphisms.  Right
+     multiplication does not change the range (use the linear equivalence's
+     `surjective.range_comp` lemma),
+     and left multiplication transports it by the automorphism; use
+     `Submodule.Quotient.equiv` to identify the two cokernels.
+
+  4. Convert `Function.Exact g q` to
+     `LinearMap.range g = LinearMap.ker q` with `LinearMap.exact_iff`.
+     Then `LinearMap.quotKerEquivOfSurjective q hq` identifies the cokernel of
+     `g` with `M`.  Compose its inverse, the quotient equivalence induced by
+     `U` and `V`, and the diagonal-cokernel equivalence from step 2.  Return
+     `n`, `d'`, and this composite in `Nonempty`.
+  -/
   sorry
 
 /-! ## Warfield's local-to-global summand theorem -/
@@ -456,6 +558,102 @@ theorem warfield
       PreValuationRing (Localization.AtPrime m.asIdeal))
     [Module.FinitePresentation R M] :
     IsFiniteCyclicSummand R M := by
+  /-
+  Proof roadmap (Warfield local-to-global descent).
+
+  Interface audit: the interface is sound.  A global `[Nontrivial R]` is not
+  required: if a maximal ideal is present, its localization is nontrivial by
+  `IsLocalization.AtPrime.nontrivial`; for the zero ring the maximal spectrum
+  is empty and every module is subsingleton.  Finite presentation, rather than
+  mere finite generation, is essential for localization of the two Hom
+  modules below.
+
+  1. Add the focused imports
+     `Mathlib.Algebra.Category.ModuleCat.Localization` and
+     `Mathlib.RingTheory.LocalProperties.Exactness`.  Prove a private lemma
+     saying that `IsPureFirstMap S` is preserved by
+     `S.map (ModuleCat.localizedModuleFunctor p.primeCompl)`.  A direct proof
+     should represent localized scalars and vectors with
+     `IsLocalization.mk'_surjective` and `IsLocalizedModule.mk'_surjective`,
+     clear the common denominator using `IsLocalizedModule.exists_of_eq`, and
+     invoke the original purity equivalence.  Units introduced by denominators
+     are cancelled with `IsLocalizedModule.map_units`.  Keep this lemma
+     separate: unfolding this denominator calculation in `warfield` makes the
+     Hom-localization goal prohibitively large.
+
+  2. Apply `characterize_pd_modules.mpr`.  For a short exact pure complex `S`,
+     put, with explicit universes,
+
+       F : (M →ₗ[R] (S.X₂ : Type (max u v))) →ₗ[R]
+             (M →ₗ[R] (S.X₃ : Type (max u v))) :=
+         LinearMap.llcomp R M (S.X₂ : Type (max u v))
+           (S.X₃ : Type (max u v)) S.g.hom.
+
+     It is definitionally the linear form of `homToThirdMap`.  It remains to
+     prove `Function.Surjective F`.
+
+  3. Fix `p : Ideal R` with `[p.IsMaximal]`, and write
+     `Rp := Localization.AtPrime p` and
+     `Sp := S.map (ModuleCat.localizedModuleFunctor p.primeCompl)`.
+     Exactness is
+     `hS.map_of_exact (ModuleCat.localizedModuleFunctor p.primeCompl)`; purity
+     is step 1.  The instance in
+     `Mathlib/Algebra/Module/FinitePresentation.lean` makes
+     `LocalizedModule p.primeCompl M` finitely presented over `Rp`.
+     Set `m : MaximalSpectrum R := ⟨p, inferInstance⟩`, install
+     `letI : PreValuationRing Rp := hlocal m`, and apply
+     `generalizedValuationRing_finitePresentation` to that localized module.
+
+     Regard the resulting finite cyclic direct sum as a cyclic direct summand
+     of itself (submodule `⊤`, complement `⊥`).  The forward implication of
+     `characterize_pd_modules` over `Rp`, applied to `Sp`, gives surjectivity of
+     postcomposition with `Sp.g.hom` on localized Hom modules.
+
+  4. For `i = 2, 3`, use as localization maps
+
+       IsLocalizedModule.map p.primeCompl
+         (LocalizedModule.mkLinearMap p.primeCompl M)
+         (LocalizedModule.mkLinearMap p.primeCompl (S.Xᵢ : Type (max u v))).
+
+     `Module.FinitePresentation.isLocalizedModule_map` states exactly that
+     these maps make the localized Hom spaces localizations of the original
+     Hom spaces.  Prove, as a named compatibility lemma, that the localization
+     of `F` is postcomposition with `Sp.g.hom`.  Use
+     `IsLocalizedModule.linearMap_ext`, `IsLocalizedModule.map_apply`,
+     `IsLocalizedModule.map_comp'`, and `LinearMap.llcomp_apply`; an `ext` on a
+     localized generator is enough.
+
+     Feed the local surjectivity from step 3 through this compatibility lemma,
+     for every maximal `p`, and conclude `Function.Surjective F` with
+     `surjective_of_isLocalized_maximal` from
+     `Mathlib/RingTheory/LocalProperties/Exactness.lean`.  This closes the
+     `characterize_pd_modules` criterion and yields
+     `IsCyclicDirectSummand R M`.
+
+     Do not try `LinearMap.split_surjective_of_localization_maximal`: that
+     theorem requires finite presentation of `S.X₃`, which is not among the
+     hypotheses.  Localizing the Hom map is what uses finite presentation of
+     `M` in the correct variance.
+
+  5. Shrink the possibly infinite direct sum in that conclusion.  Unpack it as
+     `⟨ι, f, K, ⟨L, hKL⟩, ⟨e⟩⟩`.  From the inherited
+     `Module.Finite R M`, choose generators
+     `g : Fin q → M` with `Module.Finite.exists_fin`.  Let `t : Finset ι`
+     be the union of the `DFinsupp.support`s of
+     `K.subtype (e (g j))`.  Support lemmas for addition and scalar
+     multiplication show that every element of `K` is supported in `t`.
+
+     Define the inclusion of the finite direct sum indexed by `t` with
+     `DirectSum.toModule`, project it to `K` with
+     `K.projectionOnto L hKL`, and use the support bound to corestrict the result
+     back to the finite direct sum.  The resulting endomorphism is idempotent;
+     `LinearMap.IsIdempotentElem.isCompl` from
+     `Mathlib/LinearAlgebra/Projection.lean` complements its range by its
+     kernel.  The range is linearly equivalent to `M` via `e`.  Finally reindex
+     `t` by `Finset.equivFin`, using `DirectSum.lequivCongrLeft` and
+     `DirectSum.congrLinearEquiv`, and return the resulting
+     `IsFiniteCyclicSummand R M`.
+  -/
   sorry
 
 /-! ## Bézout and elementary divisor domains -/
@@ -463,15 +661,6 @@ theorem warfield
 /-- A Bézout domain, using Mathlib's canonical Bézout predicate. -/
 def IsBezoutDomain (R : Type u) [CommRing R] : Prop :=
   IsDomain R ∧ IsBezout R
-
-/-- The rectangular diagonal matrix with diagonal entries indexed by
-`Fin (min n m)`. -/
-def rectangularDiagonal {n m : ℕ} {R : Type u} [CommRing R]
-    (f : Fin (min n m) → R) : Matrix (Fin n) (Fin m) R :=
-  fun i j =>
-    if _h : i.1 = j.1 then
-      if h' : i.1 < min n m then f ⟨i.1, h'⟩ else 0
-    else 0
 
 /-- An elementary divisor domain, expressed by Smith normal forms of matrices. -/
 def IsElementaryDivisorDomain (R : Type u) [CommRing R] : Prop :=
@@ -498,6 +687,116 @@ theorem elementaryDivisorDomain_iff_finiteCyclicDecomposition
     {R : Type u} [CommRing R] (hR : IsBezoutDomain R) :
     IsElementaryDivisorDomain R ↔
       EveryFinitelyPresentedModuleIsFiniteCyclicSum R := by
+  /-
+  Proof roadmap (matrix/presentation equivalence).
+
+  Interface audit: no hypothesis is missing.  In each implication install
+  `letI : IsDomain R := hR.1` and `letI : IsBezout R := hR.2` locally.  The
+  quantification `M : Type u` in
+  `EveryFinitelyPresentedModuleIsFiniteCyclicSum` is deliberate and sufficient:
+  all finite free modules and matrix cokernels used in the converse also live
+  in `Type u`.
+
+  Put the substantial argument in a private matrix/presentation lemma before
+  this theorem.  It should use the focused imports
+  `Mathlib.Algebra.Module.Presentation.Finite`,
+  `Mathlib.LinearAlgebra.Matrix.ToLin`, and
+  `Mathlib.LinearAlgebra.Quotient.Pi` and establish, over a Bézout domain, the
+  equivalence between rectangular Smith reduction and decomposition of every
+  finite matrix cokernel.  The two directions are as follows.
+
+  Forward direction (Smith form gives cyclic presentations):
+
+  1. Given `M` and `hM : Module.FinitePresentation R M`, install `letI := hM`
+     and obtain
+     `⟨n, m, q, g, hq, hgq⟩ :=
+       Module.FinitePresentation.exists_fin' R M`.  Set
+     `A : Matrix (Fin n) (Fin m) R := LinearMap.toMatrix' g`.
+     If `n = 0`, surjectivity of `q` makes `M` subsingleton; return the empty
+     direct sum.  If `m = 0`, exactness makes `q` bijective; return `n` copies
+     of `principalQuotient R 0`.  These two branches are necessary because
+     `IsElementaryDivisorDomain` only exposes matrices with positive sizes.
+
+  2. In the positive branch apply the matrix component of the elementary
+     divisor hypothesis to `A`.  Use `Matrix.toLin'_toMatrix'`,
+     `Matrix.toLin'_mul`, the relevant linear equivalence's
+     `surjective.range_comp` lemma, and
+     `Submodule.Quotient.equiv` to transport the cokernel of `g` to the
+     cokernel of `rectangularDiagonal d`.  Use the diagonal-cokernel helper
+     described at `generalizedValuationRing_finitePresentation`; it pads `d`
+     by zero through the unused codomain coordinates and returns a finite
+     cyclic direct sum.
+
+  3. `LinearMap.exact_iff` changes `hgq` into
+     `LinearMap.range g = LinearMap.ker q`, and
+     `LinearMap.quotKerEquivOfSurjective q hq` identifies this cokernel with
+     `M`.  Compose the three equivalences and return them in `Nonempty`.
+
+  Reverse direction (cyclic presentations give Smith form):
+
+  4. For a positive `A : Matrix (Fin n) (Fin m) R`, let
+
+       lA : (Fin m → R) →ₗ[R] (Fin n → R) := Matrix.toLin' A,
+       C  : Type u := (Fin n → R) ⧸ LinearMap.range lA.
+
+     Give `C` its finite-presentation instance with
+     `Module.finitePresentation_of_surjective` applied to
+     `(LinearMap.range lA).mkQ`; the kernel is the range, which is finitely
+     generated by `Submodule.fg_range` because `Fin m → R` is finite.
+     Apply the module hypothesis to `C`.
+
+  5. Encode the two presentations explicitly.  The presentation of `C` has
+     generators `Fin n`, relations `Fin m`, and relation map `lA`; equivalently
+     use `Module.Relations` and `Module.Relations.map` from
+     `Mathlib/Algebra/Module/Presentation/Basic.lean`.  For
+     `⨁ i, principalQuotient R (d i)`, use generators and relations both
+     indexed by `Fin k`, with relation `i` equal to
+     `Finsupp.single i (d i)`.  `Submodule.quotientPi` and
+     `DirectSum.linearEquivFunOnFintype` identify its relations quotient with
+     the stated direct sum.
+
+  6. Prove a private finite-presentation comparison lemma with this exact
+     input: an equivalence between the quotients of two maps between finite
+     free modules.  Choose lifts of each finite generator through the other
+     quotient map using `Submodule.mkQ_surjective`; the two composites differ
+     from the identity by maps landing in the relation submodules.  Choose
+     preimages of those finitely many differences under the relation maps.
+     Writing the lifts and correction homotopies with
+     `LinearMap.toMatrix'` gives invertible block row and column matrices and a
+     stable equivalence between the two presentation matrices.  This is the
+     concrete matrix form of the usual Tietze moves: adding/removing a
+     generator together with the relation setting it equal to the chosen
+     lift, and changing a finite generator or relation basis.  Verify each
+     block inverse with `Matrix.fromBlocks_multiply` and translate compositions by
+     `LinearMap.toMatrix'_comp`.
+
+  7. Cancel the identity generator-relation pairs introduced in step 6 one at
+     a time.  Move a unit diagonal entry to the final position with permutation
+     matrices, clear its row and column by `Matrix.transvection`, and delete
+     that `1` block.  Thus the original `n × m` matrix, not merely a
+     stabilization of it, is equivalent to a rectangular diagonal matrix.
+
+  8. Normalize the diagonal factors into a divisibility chain.  With
+     `classical`, install the noncomputable GCD structure
+     `letI := IsBezout.toGCDDomain R`.  For two diagonal entries `a,b`, use
+     `IsBezout.gcd_eq_sum`, `gcd_dvd_left`, `gcd_dvd_right`, and
+     `gcd_mul_lcm` from
+     `Mathlib/RingTheory/PrincipalIdealDomain.lean` to write explicit invertible
+     `2 × 2` row and column matrices replacing
+     `diag(a,b)` by `diag(gcd a b, lcm a b)` (absorb the associated unit from
+     `gcd_mul_lcm` into one row).  A finite induction first makes the initial
+     entry divide every later entry and then recurses on the tail.  Pad with
+     unit entries for killed generator-relation pairs and with zero entries for
+     the free cokernel coordinates; after the cancellations in step 7 the
+     function has type `Fin (min n m) → R`.  Compose all accumulated units to
+     obtain the `U`, `V`, divisibility proof, and matrix equality required by
+     `IsElementaryDivisorDomain`.
+
+  Finally the public theorem is a short wrapper around that private
+  matrix/presentation lemma.  In the forward implication discard `hR` after
+  installing its instances; in the reverse implication return `hR.1` as the
+  domain component and the Smith result as the matrix component.
+  -/
   sorry
 
 private def matrixEntrySet {R : Type u} [CommRing R] {m n : ℕ}
@@ -626,6 +925,79 @@ theorem elementaryDivisorDomain_isBezoutDomain
 theorem principalIdealDomain_isElementaryDivisorDomain
     (R : Type u) [CommRing R] [IsDomain R] [IsPrincipalIdealRing R] :
     IsElementaryDivisorDomain R := by
+  /-
+  Proof roadmap (PID rectangular Smith normal form).
+
+  Interface audit: `[IsDomain R] [IsPrincipalIdealRing R]` is Mathlib's
+  canonical PID interface (see
+  `Mathlib/RingTheory/PrincipalIdealDomain.lean`), and it supplies both
+  nontriviality and the Bézout instance.  No Euclidean-domain hypothesis should
+  be added.
+
+  1. Reuse the reverse implication of
+     `elementaryDivisorDomain_iff_finiteCyclicDecomposition`.  Set
+
+       hBezout : IsBezoutDomain R :=
+         ⟨inferInstance, (inferInstance : IsBezout R)⟩
+
+     and apply
+     `(elementaryDivisorDomain_iff_finiteCyclicDecomposition hBezout).2`.
+     Thus it is enough to decompose an arbitrary finitely presented PID module;
+     the preceding theorem then performs the presentation comparison and
+     returns rectangular Smith matrices with the required divisibility chain.
+
+  2. Add the focused imports
+     `Mathlib.LinearAlgebra.FreeModule.PID` and
+     `Mathlib.LinearAlgebra.Quotient.Pi`.  Given `M : Type u` and an explicit
+     `hM : Module.FinitePresentation R M`, install `letI := hM` and obtain
+
+       ⟨n, K, e, hK⟩ := Module.FinitePresentation.exists_fin R M,
+       e : M ≃ₗ[R] (Fin n → R) ⧸ K.
+
+     Let
+
+       snf := K.smithNormalForm (Pi.basisFun R (Fin n)).
+
+     Its second component has the explicit type
+     `Module.Basis.SmithNormalForm K (Fin n) r`; its fields are `bM`, `bN`,
+     `f : Fin r ↪ Fin n`, `a : Fin r → R`, and `snf`.
+
+  3. Extend the Smith coefficients to every codomain coordinate:
+
+       d j := if hj : j ∈ Set.range snf.f
+         then snf.a (Classical.choose hj) else 0.
+
+     The choice is independent of the witness by `snf.f.injective`.  Prove
+
+       Submodule.map snf.bM.equivFun.toLinearMap K =
+         Submodule.pi Set.univ
+           (fun j => (Ideal.span ({d j} : Set R) : Submodule R R)).
+
+     On coordinates in the range of `snf.f`, use the defining equation
+     `snf.snf` and expansion in the basis `snf.bN`; off that range use
+     `Module.Basis.SmithNormalForm.repr_eq_zero_of_notMem_range`, all from
+     `Mathlib/LinearAlgebra/FreeModule/PID.lean`.
+
+  4. Transport `(Fin n → R) ⧸ K` along `snf.bM.equivFun` with
+     `Submodule.Quotient.equiv`, rewrite by the equality in step 3, and apply
+     `Submodule.quotientPi`.  Then apply
+     `(DirectSum.linearEquivFunOnFintype R (Fin n)
+       (fun j => principalQuotient R (d j))).symm`.
+     Composing with `e` gives
+     `M ≃ₗ[R] finiteCyclicDirectSum R n d`; return `n`, `d`, and this
+     equivalence in `Nonempty`.
+
+  5. The result of step 4 proves
+     `EveryFinitelyPresentedModuleIsFiniteCyclicSum R`; applying step 1 finishes
+     the theorem.  Do not use `Submodule.quotientEquivDirectSum` directly: the
+     version in
+     `Mathlib/LinearAlgebra/FreeModule/Finite/Quotient.lean` assumes that `K`
+     has full rank, while a general finitely presented module has a free
+     quotient part.  Also, Mathlib's `Submodule.smithNormalForm` diagonalizes
+     the inclusion but does not order its coefficients by divisibility; that
+     ordering is supplied by the preceding matrix/presentation theorem, not by
+     the Mathlib structure.
+  -/
   sorry
 
 /-! ## Localizations and valuation rings -/

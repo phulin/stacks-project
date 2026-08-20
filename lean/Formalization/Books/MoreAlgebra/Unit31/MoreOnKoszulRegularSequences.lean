@@ -8,12 +8,12 @@ import Mathlib.RingTheory.RingHom.Smooth
 /-!
 # More on Algebra, Chapter 31: More on Koszul regular sequences
 
-This chapter records the six statements in the source section.  The algebraic
-Čech complex and the canonical homology base-change map are not present in the
-project's Mathlib version, so their source-facing data are isolated in small
-interfaces below.  All ring, quotient, tensor-product, blowup, regularity,
-flatness, and smoothness constructions use the canonical APIs from earlier
-chapters.
+This chapter records the six lemmas in the source section.  The algebraic
+Čech complex and the chain-level canonical homology base-change map are not
+present in the project's Mathlib version, so the precise obligations needed
+from those constructions are isolated in small source-facing interfaces
+below.  All ring, quotient, tensor-product, blowup, regularity, flatness, and
+smoothness constructions use the canonical APIs from earlier chapters.
 -/
 
 namespace Formalization.Books.MoreAlgebra.Unit31
@@ -40,11 +40,12 @@ structure ExtendedAlternatingCechComplexData
     (R : Type u) [CommRing R] (f : List R) where
   complex : CochainComplex (ModuleCat.{u} R) ℕ
   /-- The source's filtered-colimit comparison, expressed on homology until
-  the chain-level colimit construction is available in the project.  The
-  objects of `D` are the homology of the Koszul complexes on the powers of
-  `f`; its morphisms carry the source transition maps. -/
-  koszul_colimit_comparison :
-    ∀ i : ℕ, i < f.length →
+  the chain-level colimit construction is available in the project.  This is
+  the exact homology-level obligation used to transfer vanishing from the
+  Koszul complexes on the powers of `f` to the Čech complex.  It is supplied
+  in every degree of the bounded complex, including the top degree. -/
+  cohomology_colimit_comparison :
+    ∀ i : ℕ, i ≤ f.length →
       ∃ D : ℕ ⥤ ModuleCat.{u} R,
         (∀ n : ℕ,
           Nonempty (D.obj n ≅
@@ -132,11 +133,13 @@ noncomputable abbrev koszulHOneBaseChangeTarget
   (koszulComplexOnListWithCoefficients (B ⊗[A] A') (B ⊗[A] A')
     (baseChangedList f g xs)).homology 1
 
-/-- Data for the source’s canonical surjective `H₁` base-change map.
+/-- Source-facing data for the canonical surjective `H₁` base-change map.
 
 The current project does not yet expose the chain-level base-change morphism
-whose induced map on homology gives the canonical representative, so this
-source-facing interface records that representative at the homology level. -/
+whose induced map on homology is canonical.  This interface therefore records
+the map at the homology level, with exactly the source domain, target, and
+surjectivity property; it is the boundary for adding the chain-level
+construction later. -/
 structure KoszulHOneBaseChangeData
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B) where

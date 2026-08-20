@@ -402,35 +402,45 @@ theorem rightDerivedObjectFunctor_isDeltaFunctor
       hS.map_of_exact (CochainComplex.singleFunctor A 0)
   let e : K ⋙ DerivedCategory.Plus.Q (C := A) ≅
       DerivedCategory.Plus.singleFunctor A 0 := by
-    refine NatIso.ofComponents (fun X => ?_) ?_
-    · apply DerivedCategory.Plus.ι.preimageIso
-      exact ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm
+    let i : ∀ X : A,
+        (DerivedCategory.Plus.ι).obj ((K ⋙ DerivedCategory.Plus.Q).obj X) ≅
+          (DerivedCategory.Plus.ι).obj ((DerivedCategory.Plus.singleFunctor A 0).obj X) :=
+      fun X => by
+        change
+          (DerivedCategory.Q (C := A)).obj ((K.obj X).obj) ≅
+            (DerivedCategory.singleFunctor A 0).obj X
+        dsimp [K]
+        exact Iso.refl _
+    refine NatIso.ofComponents (fun X => (DerivedCategory.Plus.ι).preimageIso (i X)) ?_
     intro X Y f
     apply (DerivedCategory.Plus.ι).map_injective
     simp only [Functor.map_comp]
     have hY :
         (DerivedCategory.Plus.ι).map
-            ((DerivedCategory.Plus.ι).preimageIso
-              ((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm).hom =
-          ((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm.hom := by
+            ((DerivedCategory.Plus.ι).preimageIso (i Y)).hom = (i Y).hom := by
       change (DerivedCategory.Plus.ι).map
-          ((DerivedCategory.Plus.ι).preimage
-            (((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm.hom)) =
-        ((DerivedCategory.Plus.singleFunctorιIso A 0).app Y).symm.hom
-      exact CategoryTheory.Functor.map_preimage _
+          ((DerivedCategory.Plus.ι).preimage (i Y).hom) = (i Y).hom
+      exact CategoryTheory.Functor.map_preimage
+        (F := DerivedCategory.Plus.ι (C := A)) (i Y).hom
     have hX :
         (DerivedCategory.Plus.ι).map
-            ((DerivedCategory.Plus.ι).preimageIso
-              ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm).hom =
-          ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm.hom := by
+            ((DerivedCategory.Plus.ι).preimageIso (i X)).hom = (i X).hom := by
       change (DerivedCategory.Plus.ι).map
-          ((DerivedCategory.Plus.ι).preimage
-            (((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm.hom)) =
-        ((DerivedCategory.Plus.singleFunctorιIso A 0).app X).symm.hom
-      exact CategoryTheory.Functor.map_preimage _
+          ((DerivedCategory.Plus.ι).preimage (i X).hom) = (i X).hom
+      exact CategoryTheory.Functor.map_preimage
+        (F := DerivedCategory.Plus.ι (C := A)) (i X).hom
     rw [hY, hX]
-    simpa [K, ObjectProperty.lift] using
-      (DerivedCategory.Plus.singleFunctorιIso A 0).inv.naturality f
+    dsimp [i]
+    have hKmap : K.map f =
+        ObjectProperty.homMk ((CochainComplex.singleFunctor A 0).map f) := by
+      rfl
+    change
+      (DerivedCategory.Plus.Q.map (K.map f)).hom ≫
+          𝟙 _ =
+        𝟙 _ ≫ ((DerivedCategory.Plus.singleFunctor A 0).map f).hom
+    simp only [Category.comp_id, Category.id_comp]
+    rw [hKmap]
+    rfl
   let dK : DeltaFunctor (K ⋙ rightDerivedComplexFunctor F) := {
     delta := fun S hS => d.delta (S.map K) (hmap S hS)
     distinguished := by
@@ -440,10 +450,76 @@ theorem rightDerivedObjectFunctor_isDeltaFunctor
       intro S₁ S₂ φ h₁ h₂
       exact d.naturality ((Functor.mapShortComplex K).map φ)
         (hmap S₁ h₁) (hmap S₂ h₂) }
-  have hfun : K ⋙ rightDerivedComplexFunctor F =
+  let eRF : K ⋙ rightDerivedComplexFunctor F ≅
       rightDerivedObjectFunctor F := by
     dsimp [rightDerivedComplexFunctor, rightDerivedObjectFunctor]
-    sorry
-  exact ⟨hfun ▸ dK⟩
+    exact Functor.isoWhiskerRight e F.rightDerivedFunctorPlus
+  refine ⟨{
+    delta := fun S hS =>
+      (eRF.app S.X₃).inv ≫ dK.delta S hS ≫
+        (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.app S.X₁).hom
+    distinguished := by
+      intro S hS
+      apply isomorphic_distinguished _ (dK.distinguished S hS) _
+      exact (Triangle.isoMk
+          (Triangle.mk ((K ⋙ rightDerivedComplexFunctor F).map S.f)
+            ((K ⋙ rightDerivedComplexFunctor F).map S.g) (dK.delta S hS))
+          (Triangle.mk ((rightDerivedObjectFunctor F).map S.f)
+            ((rightDerivedObjectFunctor F).map S.g)
+            ((eRF.app S.X₃).inv ≫ dK.delta S hS ≫
+              (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.app S.X₁).hom))
+          (eRF.app S.X₁) (eRF.app S.X₂) (eRF.app S.X₃)
+          (eRF.hom.naturality S.f) (eRF.hom.naturality S.g) (by
+            change dK.delta S hS ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.app S.X₁).hom =
+              (eRF.app S.X₃).hom ≫ (eRF.app S.X₃).inv ≫ dK.delta S hS ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.app S.X₁).hom
+            rw [← Category.assoc, (eRF.app S.X₃).hom_inv_id,
+              Category.id_comp])).symm
+    naturality := by
+      intro S₁ S₂ φ h₁ h₂
+      dsimp
+      calc
+        (rightDerivedObjectFunctor F).map φ.τ₃ ≫
+              (eRF.inv.app S₂.X₃ ≫ dK.delta S₂ h₂ ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.hom.app S₂.X₁)) =
+            ((rightDerivedObjectFunctor F).map φ.τ₃ ≫ eRF.inv.app S₂.X₃) ≫
+              dK.delta S₂ h₂ ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.hom.app S₂.X₁) := by
+          simp only [Category.assoc]
+        _ = (eRF.inv.app S₁.X₃ ≫
+              (K ⋙ rightDerivedComplexFunctor F).map φ.τ₃) ≫
+              dK.delta S₂ h₂ ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.hom.app S₂.X₁) := by
+          rw [eRF.inv.naturality φ.τ₃]
+        _ = eRF.inv.app S₁.X₃ ≫
+              ((K ⋙ rightDerivedComplexFunctor F).map φ.τ₃ ≫
+                dK.delta S₂ h₂) ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.hom.app S₂.X₁) := by
+          simp only [Category.assoc]
+        _ = eRF.inv.app S₁.X₃ ≫
+              (dK.delta S₁ h₁ ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map
+                  ((K ⋙ rightDerivedComplexFunctor F).map φ.τ₁)) ≫
+                (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.hom.app S₂.X₁) := by
+          rw [dK.naturality φ h₁ h₂]
+        _ = eRF.inv.app S₁.X₃ ≫ dK.delta S₁ h₁ ≫
+              (shiftFunctor (DPlus B) (1 : ℤ)).map
+                ((K ⋙ rightDerivedComplexFunctor F).map φ.τ₁ ≫
+                  eRF.hom.app S₂.X₁) := by
+          rw [Functor.map_comp]
+          simp only [Category.assoc]
+        _ = eRF.inv.app S₁.X₃ ≫ dK.delta S₁ h₁ ≫
+              (shiftFunctor (DPlus B) (1 : ℤ)).map
+                (eRF.hom.app S₁.X₁ ≫
+                  (rightDerivedObjectFunctor F).map φ.τ₁) := by
+          rw [eRF.hom.naturality φ.τ₁]
+        _ = (eRF.inv.app S₁.X₃ ≫ dK.delta S₁ h₁ ≫
+              (shiftFunctor (DPlus B) (1 : ℤ)).map (eRF.hom.app S₁.X₁)) ≫
+              (shiftFunctor (DPlus B) (1 : ℤ)).map
+                ((rightDerivedObjectFunctor F).map φ.τ₁) := by
+          rw [Functor.map_comp]
+          simp only [Category.assoc]
+  }⟩
 
 end Formalization.Books.Derived.Unit20

@@ -534,8 +534,7 @@ structure FilteredComplexSpectralSequence {C : Type u}
           simp [f, d]))
   page_differentials : FilteredComplexPageDifferentials K
   component_iso : ∀ (r : ℕ) (p q : ℤ),
-    Nonempty (page (r + 1) (p, q) ≅
-      filteredComplexPage K (r + 1 : ℕ) p q)
+    Nonempty (page r (p, q) ≅ filteredComplexPage K (r : ℤ) p q)
   differential_compatibility : ∀ (r : ℕ) (p q : ℤ), ∃
     e₀ : page (r + 1) (p, q) ≅ filteredComplexPage K (r + 1 : ℕ) p q,
     ∃ e₁ : page (r + 1) (p + r + 1, q - r) ≅
@@ -639,21 +638,43 @@ theorem filteredComplexRaisesFiltration_E₁_source_formula
 
 /-! ### Functoriality -/
 
+/- A map of filtered complexes sends representatives of every page to
+   representatives of the corresponding page.  Recording this property is
+   what makes the page map below induced by the filtered-complex map rather
+   than an arbitrary morphism between two chosen spectral sequences. -/
+def FilteredComplexPageMapInducedBy {C : Type u} [Category.{v} C]
+    [Abelian C] {K L : FilteredComplex C} (f : K ⟶ L) (r : ℕ) (p q : ℤ)
+    (u : filteredComplexPage K (r : ℤ) p q ⟶
+      filteredComplexPage L (r : ℤ) p q) : Prop :=
+  ∀ {T : C} (z : T ⟶
+      (filteredComplexCyclePlus K (r : ℤ) p q : C)), ∃ zNext,
+    zNext ≫ (filteredComplexCyclePlus L (r : ℤ) p q).arrow =
+      z ≫ (filteredComplexCyclePlus K (r : ℤ) p q).arrow ≫
+        FilteredHom.hom (f.f (p + q)) ∧
+      filteredComplexPageClass K (r : ℤ) p q z ≫ u =
+        filteredComplexPageClass L (r : ℤ) p q zNext
+
 structure FilteredComplexSpectralSequenceHom {C : Type u}
     [Category.{v} C] [Abelian C] {K L : FilteredComplex C}
+    (f : K ⟶ L)
     (Sₖ : FilteredComplexSpectralSequence K)
     (Sₗ : FilteredComplexSpectralSequence L) where
   pageHom : ∀ r : ℕ, Sₖ.page r ⟶ Sₗ.page r
   compatible : ∀ r : ℕ,
     pageHom r ≫ Sₗ.differential r =
       Sₖ.differential r ≫ (bigradedShift r (-r + 1)).map (pageHom r)
+  component_induced : ∀ (r : ℕ) (p q : ℤ), ∃ u,
+    FilteredComplexPageMapInducedBy f r p q u ∧
+      ∃ eₖ : Sₖ.page r (p, q) ≅ filteredComplexPage K (r : ℤ) p q,
+      ∃ eₗ : Sₗ.page r (p, q) ≅ filteredComplexPage L (r : ℤ) p q,
+        eₖ.hom ≫ u = pageHom r (p, q) ≫ eₗ.hom
 
 theorem filteredComplex_functoriality
     {C : Type u} [Category.{v} C] [Abelian C]
     {K L : FilteredComplex C} (f : K ⟶ L) :
     ∀ (Sₖ : FilteredComplexSpectralSequence K)
       (Sₗ : FilteredComplexSpectralSequence L),
-      Nonempty (FilteredComplexSpectralSequenceHom Sₖ Sₗ) := by
+      Nonempty (FilteredComplexSpectralSequenceHom f Sₖ Sₗ) := by
   sorry
 
 /-! ## Induced cohomology filtration -/
@@ -742,26 +763,14 @@ theorem filteredComplex_cohomology_graded_formula
 
 /-! ## Limits and convergence -/
 
-structure FilteredComplexLimitData {C : Type u} [Category.{v} C]
-    [Abelian C] (K : FilteredComplex C) where
-  Binf : ∀ p q : ℤ, Subobject (K.X (p + q)).carrier
-  Zinf : ∀ p q : ℤ, Subobject (K.X (p + q)).carrier
-  Binf_upper : ∀ p q : ℤ, ∀ r : ℕ,
-    filteredComplexBoundaryPlus K (r + 1 : ℕ) p q ≤ Binf p q
-  Binf_least : ∀ p q : ℤ, ∀ Y : Subobject (K.X (p + q)).carrier,
-    (∀ r : ℕ, filteredComplexBoundaryPlus K (r + 1 : ℕ) p q ≤ Y) →
-      Binf p q ≤ Y
-  Zinf_lower : ∀ p q : ℤ, ∀ r : ℕ,
-    Zinf p q ≤ filteredComplexCyclePlus K (r + 1 : ℕ) p q
-  Zinf_greatest : ∀ p q : ℤ, ∀ Y : Subobject (K.X (p + q)).carrier,
-    (∀ r : ℕ, Y ≤ filteredComplexCyclePlus K (r + 1 : ℕ) p q) →
-      Y ≤ Zinf p q
-  Binf_le_Zinf : ∀ p q : ℤ, Binf p q ≤ Zinf p q
+abbrev FilteredComplexLimitData {C : Type u} [Category.{v} C]
+    [Abelian C] (K : FilteredComplex C) :=
+  Formalization.Books.Homology.Unit20.FilteredComplexLimitData K
 
-noncomputable def filteredComplexLimitPage {C : Type u} [Category.{v} C]
+abbrev filteredComplexLimitPage {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (L : FilteredComplexLimitData K)
     (p q : ℤ) : C :=
-  subquotientObject (L.Binf p q) (L.Zinf p q) (L.Binf_le_Zinf p q)
+  Formalization.Books.Homology.Unit20.filteredComplexLimitPage K L p q
 
 /-- The limiting page assembled from the componentwise stable boundaries and
 cycles.  Its `(p, q)` component is `filteredComplexLimitPage K L p q`. -/
@@ -808,12 +817,12 @@ def FilteredComplexTopBigradedInclusion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (p q : ℤ) : Prop :=
   ∀ r : ℕ,
     filteredComplexCycleLimitRepresentative K p q ≤
-      filteredComplexCyclePlus K (r + 1 : ℕ) p q
+      filteredComplexCyclePlus K (r : ℤ) p q
 
 def FilteredComplexBottomBigradedInclusion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (p q : ℤ) : Prop :=
   ∀ r : ℕ,
-    filteredComplexBoundaryPlus K (r + 1 : ℕ) p q ≤
+    filteredComplexBoundaryPlus K (r : ℤ) p q ≤
       filteredComplexBoundaryLimitRepresentative K p q
 
 theorem filteredComplex_on_top_bigraded
@@ -890,17 +899,32 @@ def filteredComplexCoregular {C : Type u} [Category.{v} C] [Abelian C]
   ∀ p q : ℤ, ∃ b : ℕ, ∀ r : ℕ, b ≤ r →
     S.differential r (p - r, q + r - 1) = 0
 
+def filteredComplexBoundedAt {C : Type u} [Category.{v} C] [Abelian C]
+    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K)
+    (r₀ : ℕ) : Prop :=
+  ∀ n : ℤ, Set.Finite {p : ℤ | ¬ IsZero (S.page r₀ (p, n - p))}
+
 def filteredComplexBounded {C : Type u} [Category.{v} C] [Abelian C]
     {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) : Prop :=
-  ∀ n : ℤ, Set.Finite {p : ℤ | ¬ IsZero (S.page 0 (p, n - p))}
+  ∃ r₀ : ℕ, filteredComplexBoundedAt S r₀
+
+def filteredComplexBoundedBelowAt {C : Type u} [Category.{v} C] [Abelian C]
+    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K)
+    (r₀ : ℕ) : Prop :=
+  ∀ n : ℤ, ∃ b : ℤ, ∀ p : ℤ, b ≤ p → IsZero (S.page r₀ (p, n - p))
 
 def filteredComplexBoundedBelow {C : Type u} [Category.{v} C] [Abelian C]
     {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) : Prop :=
-  ∀ n : ℤ, ∃ b : ℤ, ∀ p : ℤ, b ≤ p → IsZero (S.page 0 (p, n - p))
+  ∃ r₀ : ℕ, filteredComplexBoundedBelowAt S r₀
+
+def filteredComplexBoundedAboveAt {C : Type u} [Category.{v} C] [Abelian C]
+    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K)
+    (r₀ : ℕ) : Prop :=
+  ∀ n : ℤ, ∃ b : ℤ, ∀ p : ℤ, p ≤ b → IsZero (S.page r₀ (p, n - p))
 
 def filteredComplexBoundedAbove {C : Type u} [Category.{v} C] [Abelian C]
     {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) : Prop :=
-  ∀ n : ℤ, ∃ b : ℤ, ∀ p : ℤ, p ≤ b → IsZero (S.page 0 (p, n - p))
+  ∃ r₀ : ℕ, filteredComplexBoundedAboveAt S r₀
 
 theorem filteredComplex_regular_iff_stable_cycles
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -939,11 +963,16 @@ theorem filteredComplex_bounded_above_coregular
     filteredComplexBoundedAbove S → filteredComplexCoregular S := by
   sorry
 
+def filteredComplexConvergesAt {C : Type u} [Category.{v} C]
+    [Abelian C] (K : FilteredComplex C)
+    (S : FilteredComplexSpectralSequence K) : Prop :=
+  filteredComplexRegular S ∧ filteredComplexAbuts K ∧
+    FilteredComplexCohomologyComplete K
+
 def filteredComplexConverges {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) : Prop :=
   ∃ S : FilteredComplexSpectralSequence K,
-    filteredComplexRegular S ∧ filteredComplexAbuts K ∧
-      FilteredComplexCohomologyComplete K
+    filteredComplexConvergesAt K S
 
 theorem filteredComplex_limit_equations_give_associated_graded_iso
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -972,15 +1001,14 @@ theorem filteredComplex_convergence_iff
     (K : FilteredComplex C) :
     filteredComplexConverges K ↔
       ∃ S : FilteredComplexSpectralSequence K,
-        filteredComplexRegular S ∧ filteredComplexAbuts K ∧
-          FilteredComplexCohomologyComplete K := by
+        filteredComplexConvergesAt K S := by
   sorry
 
 /-! ## Finite filtrations and the `K₀` relation -/
 
-def FilteredComplexFiniteFiltration {C : Type u} [Category.{v} C]
+abbrev FilteredComplexFiniteFiltration {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) : Prop :=
-  ∀ n : ℤ, (K.X n).IsFinite
+  Formalization.Books.Homology.Unit20.FilteredComplexFiniteFiltration K
 
 def FilteredComplexCohomologyFiniteFiltration {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) : Prop :=
@@ -1058,10 +1086,44 @@ theorem filteredComplex_K0_alternating_sum
     (K : FilteredComplex C) (hK : FilteredComplexFiniteFiltration K)
     (S : FilteredComplexSpectralSequence K) (r : ℕ)
     (P : ObjectProperty C) [P.IsWeakSerreClass]
-    (hP : ∀ p q : ℤ, P (S.page r (p, q)))
     (hPclosure : IsWeakSerreClosureOfPage S r P)
     (hS : Set.Finite {pq : ℤ × ℤ | ¬ IsZero (S.page r pq)}) :
     Nonempty (FilteredComplexK0AlternatingSumStatement K S r P) := by
+  sorry
+
+/- The source's `A'` is the smallest weak Serre subcategory containing the
+   nonzero page terms.  It is represented by the intersection property below,
+   rather than by an arbitrary externally chosen object property. -/
+def filteredComplexPageWeakSerreClosure {C : Type u}
+    [Category.{v} C] [Abelian C]
+    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K)
+    (r : ℕ) : ObjectProperty C :=
+  fun X => ∀ Q : ObjectProperty C, Q.IsWeakSerreClass →
+    (∀ p q : ℤ, Q (S.page r (p, q))) → Q X
+
+theorem filteredComplex_page_weak_serre_closure_is_weak_serre
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K)
+    (r : ℕ) :
+    (filteredComplexPageWeakSerreClosure S r).IsWeakSerreClass := by
+  sorry
+
+structure FilteredComplexK0AlternatingSumConclusion {C : Type u}
+    [Category.{v} C] [Abelian C] (K : FilteredComplex C)
+    (S : FilteredComplexSpectralSequence K) (r : ℕ) where
+  closure_is_weak_serre :
+    (filteredComplexPageWeakSerreClosure S r).IsWeakSerreClass
+  closure : IsWeakSerreClosureOfPage S r
+    (filteredComplexPageWeakSerreClosure S r)
+  statement : @FilteredComplexK0AlternatingSumStatement C _ _ K S r
+    (filteredComplexPageWeakSerreClosure S r) closure_is_weak_serre
+
+theorem filteredComplex_K0_alternating_sum_exists_minimal
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (hK : FilteredComplexFiniteFiltration K)
+    (S : FilteredComplexSpectralSequence K) (r : ℕ)
+    (hS : Set.Finite {pq : ℤ × ℤ | ¬ IsZero (S.page r pq)}) :
+    Nonempty (FilteredComplexK0AlternatingSumConclusion K S r) := by
   sorry
 
 /-! ## The trivial convergence criterion -/
@@ -1074,7 +1136,8 @@ structure FilteredComplexTrivialConvergenceConclusion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) where
   bounded : ∃ S : FilteredComplexSpectralSequence K, filteredComplexBounded S
   cohomology_filtration_finite : FilteredComplexCohomologyFiniteFiltration K
-  converges : filteredComplexConverges K
+  converges : ∃ S : FilteredComplexSpectralSequence K,
+    filteredComplexBounded S ∧ filteredComplexConvergesAt K S
 
 theorem filteredComplex_trivial_convergence
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)

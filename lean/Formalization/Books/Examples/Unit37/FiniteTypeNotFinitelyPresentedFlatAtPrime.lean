@@ -827,7 +827,7 @@ instance ftCQ_isMaximal (k : Type u) [Field k] :
     (ftCQ k).IsMaximal := by
   let m : Ideal (ftA k) := IsLocalRing.maximalIdeal (ftA k)
   let K := ftA k ⧸ m
-  letI : Field K := Ideal.Quotient.field m
+  let _ : Field K := Ideal.Quotient.field m
   let ρ : ftA k →+* K := Ideal.Quotient.mk m
   let e : Polynomial (ftA k) →+* K := Polynomial.eval₂RingHom ρ 0
   have hmX : ftAX k ∈ m := by
@@ -1037,7 +1037,7 @@ instance ftCQ_isMaximal (k : Type u) [Field k] :
       rw [hfA, hρG n]
   have hkerf : RingHom.ker f ≤ ftCQ k := by
     intro c hc
-    letI : IsLocalization (Submonoid.powers (ftCDerivative k)) (ftC k) := by
+    let _ : IsLocalization (Submonoid.powers (ftCDerivative k)) (ftC k) := by
       change IsLocalization (Submonoid.powers (ftCDerivative k))
         (Localization.Away (ftCDerivative k))
       infer_instance
@@ -1062,8 +1062,6 @@ instance ftCQ_isMaximal (k : Type u) [Field k] :
       exact hqmap (Ideal.mem_map_of_mem _ hpq)
     apply (Ideal.unit_mul_mem_iff_mem _
       (IsLocalization.map_units (ftC k) s)).mp
-    change algebraMap (ftCQuotient k) (ftC k) (s : ftCQuotient k) *
-      IsLocalization.mk' (ftC k) p s ∈ ftCQ k
     have heq : algebraMap (ftCQuotient k) (ftC k) (s : ftCQuotient k) *
         IsLocalization.mk' (ftC k) p s =
         algebraMap (ftCQuotient k) (ftC k) p := by

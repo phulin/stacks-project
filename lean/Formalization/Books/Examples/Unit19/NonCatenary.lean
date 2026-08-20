@@ -1576,8 +1576,7 @@ theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
     rcases Set.mem_insert_iff.mp hy with rfl | rfl
     · exact Ideal.subset_span (by simp)
     · have hn0 : nGenerator d 0 ∈ nIdeal d :=
-        Ideal.subset_span (by
-          simp)
+        Ideal.subset_span (by simp)
       have hz1 : zSuccInGeneratedRing d 0 ∈ nIdeal d := by
         simpa [nGenerator, initialCoefficientSum] using hn0
       have hzR : zInGeneratedRing d =

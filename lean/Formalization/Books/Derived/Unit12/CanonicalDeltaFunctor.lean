@@ -566,17 +566,115 @@ theorem bounded_containsZero
 theorem bounded_isClosedUnderKernels
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderKernels (boundedProperty C) := by
-  sorry
+  constructor
+  rintro _ @⟨X₁, X₂, f, k, hk,
+    ⟨p₁, q₁, hp₁, hq₁⟩, ⟨p₂, q₂, hp₂, hq₂⟩⟩
+  refine ⟨min p₁ p₂, max q₁ q₂, ?_, ?_⟩
+  · rw [CochainComplex.isStrictlyGE_iff]
+    intro i hi
+    rw [IsZero.iff_id_eq_zero]
+    exact (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
+      (fun j ↦ by
+        rcases j with (_ | _)
+        · apply (@CochainComplex.isZero_of_isStrictlyGE C _ _ X₁ p₁ i
+          (lt_of_lt_of_le hi (min_le_left _ _)) hp₁).eq_of_tgt
+        · apply (@CochainComplex.isZero_of_isStrictlyGE C _ _ X₂ p₂ i
+          (lt_of_lt_of_le hi (min_le_right _ _)) hp₂).eq_of_tgt)
+  · rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    rw [IsZero.iff_id_eq_zero]
+    exact (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
+      (fun j ↦ by
+        rcases j with (_ | _)
+        · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ q₁ i
+          (lt_of_le_of_lt (le_max_left _ _) hi) hq₁).eq_of_tgt
+        · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ q₂ i
+          (lt_of_le_of_lt (le_max_right _ _) hi) hq₂).eq_of_tgt)
 
 theorem bounded_isClosedUnderCokernels
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderCokernels (boundedProperty C) := by
-  sorry
+  constructor
+  rintro _ @⟨X₁, X₂, f, k, hk,
+    ⟨p₁, q₁, hp₁, hq₁⟩, ⟨p₂, q₂, hp₂, hq₂⟩⟩
+  refine ⟨min p₁ p₂, max q₁ q₂, ?_, ?_⟩
+  · rw [CochainComplex.isStrictlyGE_iff]
+    intro i hi
+    rw [IsZero.iff_id_eq_zero]
+    exact (isColimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
+      (fun j ↦ by
+        rcases j with (_ | _)
+        · apply (@CochainComplex.isZero_of_isStrictlyGE C _ _ X₁ p₁ i
+          (lt_of_lt_of_le hi (min_le_left _ _)) hp₁).eq_of_src
+        · apply (@CochainComplex.isZero_of_isStrictlyGE C _ _ X₂ p₂ i
+          (lt_of_lt_of_le hi (min_le_right _ _)) hp₂).eq_of_src)
+  · rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    rw [IsZero.iff_id_eq_zero]
+    exact (isColimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
+      (fun j ↦ by
+        rcases j with (_ | _)
+        · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ q₁ i
+          (lt_of_le_of_lt (le_max_left _ _) hi) hq₁).eq_of_src
+        · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ q₂ i
+          (lt_of_le_of_lt (le_max_right _ _) hi) hq₂).eq_of_src)
 
 theorem bounded_isClosedUnderFiniteProducts
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderFiniteProducts (boundedProperty C) := by
-  sorry
+  refine ⟨fun J _ ↦ ?_⟩
+  constructor
+  intro _ ⟨p⟩
+  let _ := Fintype.ofFinite (Discrete J)
+  choose n hn using p.prop_diag_obj
+  choose m hm using hn
+  let s := Finset.image n (Finset.univ : Finset (Discrete J)) ∪ {0}
+  let t := Finset.image m (Finset.univ : Finset (Discrete J)) ∪ {0}
+  have hs : s.Nonempty := by
+    dsimp [s]
+    exact ⟨0, by simp⟩
+  have ht : t.Nonempty := by
+    dsimp [t]
+    exact ⟨0, by simp⟩
+  have hn' : ∀ j, (p.diag.obj j).IsStrictlyGE (s.min' hs) := by
+    intro j
+    let _ : (p.diag.obj j).IsStrictlyGE (n j) := (hm j).1
+    exact (p.diag.obj j).isStrictlyGE_of_ge (s.min' hs) (n j)
+      (Finset.min'_le s (n j) (by
+        apply Finset.mem_union_left
+        exact Finset.mem_image.2 ⟨j, Finset.mem_univ _, rfl⟩))
+  have hm' : ∀ j, (p.diag.obj j).IsStrictlyLE (t.max' ht) := by
+    intro j
+    let _ : (p.diag.obj j).IsStrictlyLE (m j) := (hm j).2
+    exact (p.diag.obj j).isStrictlyLE_of_le (m j) (t.max' ht)
+      (Finset.le_max' t (m j) (by
+        apply Finset.mem_union_left
+        exact Finset.mem_image.2 ⟨j, Finset.mem_univ _, rfl⟩))
+  refine ⟨s.min' hs, t.max' ht, ?_, ?_⟩
+  · rw [CochainComplex.isStrictlyGE_iff]
+    intro i hi
+    rw [IsZero.iff_id_eq_zero]
+    apply (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) p.isLimit).hom_ext
+    intro j
+    have hzero : IsZero ((p.diag.obj j).X i) :=
+      @CochainComplex.isZero_of_isStrictlyGE C _ _ (p.diag.obj j) (s.min' hs) i hi (hn' j)
+    have hπ : (p.π.app j).f i = 0 := by
+      apply hzero.eq_of_tgt
+    change 𝟙 _ ≫ (p.π.app j).f i = 0 ≫ (p.π.app j).f i
+    rw [hπ]
+    simp only [comp_zero]
+  · rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    rw [IsZero.iff_id_eq_zero]
+    apply (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) p.isLimit).hom_ext
+    intro j
+    have hzero : IsZero ((p.diag.obj j).X i) :=
+      @CochainComplex.isZero_of_isStrictlyLE C _ _ (p.diag.obj j) (t.max' ht) i hi (hm' j)
+    have hπ : (p.π.app j).f i = 0 := by
+      apply hzero.eq_of_tgt
+    change 𝟙 _ ≫ (p.π.app j).f i = 0 ≫ (p.π.app j).f i
+    rw [hπ]
+    simp only [comp_zero]
 
 noncomputable instance compPlus_abelian
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -651,7 +749,10 @@ theorem canonicalMinusFunctor_obj_mem
     (X : CompMinus C) :
     derivedMinusProperty C
       (((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X) := by
-  sorry
+  obtain ⟨n, hn⟩ := X.property
+  change ∃ n : ℤ, (DerivedCategory.TStructure.t (C := C)).IsLE
+    (((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X) n
+  refine ⟨n, ⟨X.obj, Iso.refl _, by exact hn⟩⟩
 
 /-- The bounded-above complex-to-derived functor, obtained by the canonical
 full-subcategory lift. -/
@@ -668,7 +769,18 @@ theorem canonicalBoundedFunctor_obj_mem
     (X : CompBounded C) :
     derivedBoundedProperty C
       (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X) := by
-  sorry
+  obtain ⟨p, q, hp, hq⟩ := X.property
+  change (derivedPlusProperty C
+      (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X) ∧
+    derivedMinusProperty C
+      (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X))
+  constructor
+  · change ∃ n : ℤ, (DerivedCategory.TStructure.t (C := C)).IsGE
+      (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X) n
+    exact ⟨p, ⟨X.obj, Iso.refl _, by exact hp⟩⟩
+  · change ∃ n : ℤ, (DerivedCategory.TStructure.t (C := C)).IsLE
+      (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj X) n
+    exact ⟨q, ⟨X.obj, Iso.refl _, by exact hq⟩⟩
 
 /-- The bounded complex-to-derived functor, obtained by the canonical
 full-subcategory lift. -/
@@ -683,7 +795,149 @@ noncomputable def canonicalBoundedFunctor
 theorem canonicalPlusFunctor_isDeltaFunctor
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C] :
     Nonempty (DeltaFunctor (canonicalPlusFunctor C)) := by
-  sorry
+  let _ : Abelian (CochainComplex C ℤ) :=
+    Formalization.Books.Homology.Unit13.cochainComplex_abelian C
+  let _ : (CochainComplex.plus C).ContainsZero := cochainPlus_containsZero C
+  let _ : ObjectProperty.IsClosedUnderKernels (CochainComplex.plus C) :=
+    cochainPlus_isClosedUnderKernels C
+  let _ : ObjectProperty.IsClosedUnderCokernels (CochainComplex.plus C) :=
+    cochainPlus_isClosedUnderCokernels C
+  let _ : ObjectProperty.IsClosedUnderFiniteProducts (CochainComplex.plus C) :=
+    cochainPlus_isClosedUnderFiniteProducts C
+  have hlim : PreservesFiniteLimits (CochainComplex.Plus.ι C) := by
+    rw [((Functor.preservesFiniteLimits_tfae (CochainComplex.Plus.ι C)).out 3 2 :)]
+    intro X Y f
+    exact (CochainComplex.plus C).preservesKernels_ι f
+  have hcol : PreservesFiniteColimits (CochainComplex.Plus.ι C) := by
+    rw [((Functor.preservesFiniteColimits_tfae (CochainComplex.Plus.ι C)).out 3 2 :)]
+    intro X Y f
+    exact (CochainComplex.plus C).preservesCokernels_ι f
+  let _ : PreservesFiniteLimits (CochainComplex.Plus.ι C) := hlim
+  let _ : PreservesFiniteColimits (CochainComplex.Plus.ι C) := hcol
+  have hι : Formalization.Books.Categories.Unit23.IsExact (CochainComplex.Plus.ι C) :=
+    ⟨hlim, hcol⟩
+  obtain ⟨d⟩ := Formalization.Books.Derived.Unit04.exact_precomposition_deltaFunctor
+    (DerivedCategory.Q (C := C)) (canonicalDerivedDeltaFunctor C)
+    (CochainComplex.Plus.ι C) hι
+  let e : canonicalPlusFunctor C ⋙ DerivedCategory.Plus.ι ≅
+      CochainComplex.Plus.ι C ⋙ DerivedCategory.Q (C := C) :=
+    Functor.isoWhiskerLeft (HomotopyCategory.Plus.quotient C)
+        (DerivedCategory.Plus.QhCompιIsoιCompQh C) ≪≫
+      Functor.isoWhiskerRight (HomotopyCategory.Plus.quotientCompιIso C)
+        (DerivedCategory.Qh (C := C)) ≪≫
+      Functor.isoWhiskerLeft (CochainComplex.Plus.ι C)
+        (DerivedCategory.quotientCompQhIso C)
+  let _ : (DerivedCategory.Plus.ι (C := C)).CommShift ℤ := by
+    dsimp [DerivedCategory.Plus.ι]
+    infer_instance
+  let _ : (CochainComplex.Plus.ι C ⋙ DerivedCategory.Q (C := C)).CommShift ℤ := by
+    infer_instance
+  let _ : (canonicalPlusFunctor C).CommShift ℤ :=
+    Functor.CommShift.ofComp e ℤ
+  let _ : NatTrans.CommShift e.hom ℤ :=
+    Functor.CommShift.ofComp_compatibility e ℤ
+  let delta : ∀ (S : ShortComplex (CompPlus C)) (_ : S.ShortExact),
+      (canonicalPlusFunctor C).obj S.X₃ ⟶
+        ((shiftFunctor (DPlus C) (1 : ℤ)).obj
+          ((canonicalPlusFunctor C).obj S.X₁)) :=
+    fun S hS =>
+      (DerivedCategory.TStructure.t (C := C)).plus.fullyFaithfulι.preimage
+        (e.hom.app S.X₃ ≫ d.delta S hS ≫
+          ((shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S.X₁)) ≫
+          ((DerivedCategory.Plus.ι (C := C)).commShiftIso (1 : ℤ)).inv.app
+            ((canonicalPlusFunctor C).obj S.X₁))
+  let G : DeltaFunctor (canonicalPlusFunctor C) := {
+    delta := delta
+    distinguished := by
+      intro S hS
+      apply (Functor.map_distinguished_iff (DerivedCategory.Plus.ι (C := C)) _).1
+      apply isomorphic_distinguished _ (d.distinguished S hS) _
+      refine Triangle.isoMk _ _ (e.app S.X₁) (e.app S.X₂) (e.app S.X₃) ?_ ?_ ?_
+      · exact e.hom.naturality S.f
+      · exact e.hom.naturality S.g
+      · change
+          ((DerivedCategory.Plus.ι (C := C)).map (delta S hS) ≫
+            ((DerivedCategory.Plus.ι (C := C)).commShiftIso (1 : ℤ)).hom.app
+              ((canonicalPlusFunctor C).obj S.X₁)) ≫
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.hom.app S.X₁) =
+          e.hom.app S.X₃ ≫ d.delta S hS
+        dsimp [delta]
+        simp only [Category.assoc, Iso.inv_hom_id_app_assoc]
+        rw [← Functor.map_comp, e.inv_hom_id_app]
+        have hmap :=
+          (shiftFunctor (DerivedCategory C) (1 : ℤ)).map_id
+            ((CochainComplex.Plus.ι C ⋙ DerivedCategory.Q (C := C)).obj S.X₁)
+        rw [hmap]
+        simpa only [Category.assoc] using
+          (Category.comp_id (e.hom.app S.X₃ ≫ d.delta S hS))
+    naturality := by
+      intro S₁ S₂ φ h₁ h₂
+      apply (DerivedCategory.TStructure.t (C := C)).plus.fullyFaithfulι.map_injective
+      rw [← cancel_mono
+        (((DerivedCategory.Plus.ι (C := C)).commShiftIso (1 : ℤ)).hom.app
+          ((canonicalPlusFunctor C).obj S₂.X₁))]
+      dsimp [delta]
+      rw [show ((canonicalPlusFunctor C).map φ.τ₃).hom =
+        (DerivedCategory.Plus.ι (C := C)).map
+          ((canonicalPlusFunctor C).map φ.τ₃) by rfl]
+      rw [show ((shiftFunctor (DPlus C) (1 : ℤ)).map
+          ((canonicalPlusFunctor C).map φ.τ₁)).hom =
+        (DerivedCategory.Plus.ι (C := C)).map
+          ((shiftFunctor (DPlus C) (1 : ℤ)).map
+            ((canonicalPlusFunctor C).map φ.τ₁)) by rfl]
+      simp only [Category.assoc]
+      have hnat₃ :
+          (DerivedCategory.Plus.ι (C := C)).map ((canonicalPlusFunctor C).map φ.τ₃) ≫
+              e.hom.app S₂.X₃ =
+            e.hom.app S₁.X₃ ≫
+              (CochainComplex.Plus.ι C ⋙ DerivedCategory.Q (C := C)).map φ.τ₃ := by
+        exact e.hom.naturality φ.τ₃
+      rw [← Category.assoc, hnat₃]
+      have hshift :
+          (DerivedCategory.Plus.ι (C := C)).map
+              ((shiftFunctor (DPlus C) (1 : ℤ)).map
+                ((canonicalPlusFunctor C).map φ.τ₁)) =
+            ((shiftFunctor (DerivedCategory.Plus C) (1 : ℤ) ⋙
+              DerivedCategory.Plus.ι (C := C)).map
+                ((canonicalPlusFunctor C).map φ.τ₁)) := by
+        rfl
+      rw [hshift]
+      rw [((DerivedCategory.Plus.ι (C := C)).commShiftIso (1 : ℤ)).hom.naturality
+        ((canonicalPlusFunctor C).map φ.τ₁)]
+      simp only [Category.assoc, Iso.inv_hom_id_app_assoc, Iso.inv_hom_id_app]
+      have hid :
+          (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) ≫
+              𝟙 ((DerivedCategory.Plus.ι (C := C) ⋙
+                shiftFunctor (DerivedCategory C) (1 : ℤ)).obj
+                ((canonicalPlusFunctor C).obj S₂.X₁)) =
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) := by
+        exact Category.comp_id _
+      rw [hid]
+      have hcomp :
+          ((DerivedCategory.Plus.ι (C := C) ⋙
+            shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+              ((canonicalPlusFunctor C).map φ.τ₁)) =
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+              ((DerivedCategory.Plus.ι (C := C)).map
+                ((canonicalPlusFunctor C).map φ.τ₁)) := by
+        rfl
+      rw [hcomp]
+      rw [← Functor.map_comp, ← Functor.comp_map, ← e.inv.naturality φ.τ₁]
+      rw [Functor.map_comp]
+      have hd :
+          e.hom.app S₁.X₃ ≫
+              ((CochainComplex.Plus.ι C ⋙ DerivedCategory.Q (C := C)).map φ.τ₃ ≫
+                d.delta S₂ h₂) ≫
+              (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) =
+            e.hom.app S₁.X₃ ≫
+              (d.delta S₁ h₁ ≫
+                (shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+                  ((CochainComplex.Plus.ι C ⋙ DerivedCategory.Q (C := C)).map φ.τ₁)) ≫
+              (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) := by
+        rw [d.naturality φ h₁ h₂]
+      simpa only [Category.assoc] using hd
+  }
+  exact ⟨G⟩
 
 /-- The canonical delta-functor structure on the bounded-above functor. -/
 theorem canonicalMinusFunctor_isDeltaFunctor

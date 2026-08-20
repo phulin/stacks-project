@@ -220,6 +220,7 @@ theorem formalFiberPropertyAt_of_quasiFiniteAt
     (hqp : q.asIdeal ≤ p.asIdeal)
     (hqp' : q'.asIdeal ≤ p'.asIdeal)
     (hquasi : RingHom.QuasiFiniteAt f p'.asIdeal)
+    (hA : PropertyA P) (hB : PropertyB P)
     (hP : HasFormalFiberAtProperty P R p q) :
     HasFormalFiberAtProperty P S p' q' := by
   sorry
@@ -235,6 +236,7 @@ theorem hasFormalFibresPropertyAt_of_quasiFiniteAt
     (hp : p'.asIdeal.comap f = p.asIdeal)
     (hfinite : RingHom.FiniteType f)
     (hquasi : RingHom.QuasiFiniteAt f p'.asIdeal)
+    (hA : PropertyA P) (hB : PropertyB P)
     (hR : HasFormalFibresPropertyAt P R p) :
     HasFormalFibresPropertyAt P S p' := by
   sorry

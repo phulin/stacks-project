@@ -712,7 +712,33 @@ theorem latticeDistance_additive
     (hM'' : Submodule.IsLattice K M'') :
     latticeDistance R M M'' =
       latticeDistance R M M' + latticeDistance R M' M'' := by
-  sorry
+  have h12 := lattice_intersection_and_sum hdim M M' hM hM'
+  have h23 := lattice_intersection_and_sum hdim M' M'' hM' hM''
+  have h13 := lattice_intersection_and_sum hdim M M'' hM hM''
+  let N := (M ⊓ M') ⊓ M''
+  have hN : Submodule.IsLattice K N :=
+    (lattice_intersection_and_sum hdim (M ⊓ M') M'' h12.1 hM'').1
+  have hN12 : N ≤ M ⊓ M' := inf_le_left
+  have hN23 : N ≤ M' ⊓ M'' := by
+    exact le_inf (inf_le_left.trans inf_le_right) inf_le_right
+  have hN13 : N ≤ M ⊓ M'' := by
+    exact le_inf (inf_le_left.trans inf_le_left) inf_le_right
+  have ha := lattice_length_additive_int hdim N (M ⊓ M') M
+    hN h12.1 hM hN12 inf_le_left
+  have hb := lattice_length_additive_int hdim N (M ⊓ M') M'
+    hN h12.1 hM' hN12 inf_le_right
+  have hc := lattice_length_additive_int hdim N (M' ⊓ M'') M'
+    hN h23.1 hM' hN23 inf_le_left
+  have hd := lattice_length_additive_int hdim N (M' ⊓ M'') M''
+    hN h23.1 hM'' hN23 inf_le_right
+  have he := lattice_length_additive_int hdim N (M ⊓ M'') M
+    hN h13.1 hM hN13 inf_le_left
+  have hf := lattice_length_additive_int hdim N (M ⊓ M'') M''
+    hN h13.1 hM'' hN13 inf_le_right
+  change latticeLengthInt R (M ⊓ M'') M - latticeLengthInt R (M ⊓ M'') M'' =
+    (latticeLengthInt R (M ⊓ M') M - latticeLengthInt R (M ⊓ M') M') +
+      (latticeLengthInt R (M' ⊓ M'') M' - latticeLengthInt R (M' ⊓ M'') M'')
+  omega
 
 theorem latticeDistance_antisymm
     {R : Type u} {K : Type v} {V : Type v}
@@ -723,7 +749,13 @@ theorem latticeDistance_antisymm
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') :
     latticeDistance R M M' = -latticeDistance R M' M := by
-  sorry
+  have _ := hdim
+  have _ := hM
+  have _ := hM'
+  change latticeLengthInt R (M ⊓ M') M - latticeLengthInt R (M ⊓ M') M' =
+    -(latticeLengthInt R (M' ⊓ M) M' - latticeLengthInt R (M' ⊓ M) M)
+  rw [inf_comm M' M]
+  ring
 
 /-! ## Transport by linear isomorphisms and determinants -/
 
@@ -743,7 +775,55 @@ theorem isLattice_latticeMap
     [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (φ : V ≃ₗ[K] V) (M : Submodule R V) (hM : Submodule.IsLattice K M) :
     Submodule.IsLattice K (latticeMap φ M) := by
-  sorry
+  have _ := hdim
+  change Submodule.IsLattice K (M.map (φ.restrictScalars R).toLinearMap)
+  refine ⟨hM.fg.map _, ?_⟩
+  apply le_antisymm le_top
+  intro x hx
+  have hspan : (Submodule.span K (M : Set V)).map φ.toLinearMap ≤
+      Submodule.span K (M.map (φ.restrictScalars R).toLinearMap : Set V) := by
+    rw [Submodule.map_span]
+    apply Submodule.span_mono
+    rintro z ⟨y, hy, rfl⟩
+    apply (Submodule.mem_map (f := (φ.restrictScalars R).toLinearMap)).mpr
+    exact ⟨y, hy, rfl⟩
+  have hy : φ (φ.symm x) ∈ (Submodule.span K (M : Set V)).map φ.toLinearMap := by
+    refine Submodule.mem_map.mpr ⟨φ.symm x, ?_, rfl⟩
+    rw [hM.span_eq_top]
+    exact Submodule.mem_top
+  simpa using hspan hy
+
+private theorem latticeLengthNat_latticeMap_of_le
+    {R : Type u} {K : Type v} {V : Type v}
+    [CommRing R] [Field K] [Algebra R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [IsScalarTower R K V] (φ : V ≃ₗ[K] V)
+    (N M : Submodule R V) (hNM : N ≤ M) :
+    latticeLengthNat R (latticeMap φ N) (latticeMap φ M) =
+      latticeLengthNat R N M := by
+  let e : M ≃ₗ[R] latticeMap φ M :=
+    Submodule.equivMapOfInjective (φ.restrictScalars R).toLinearMap
+      (φ.restrictScalars R).injective M
+  let P : Submodule R (M : Type v) := Submodule.comap M.subtype N
+  let Q : Submodule R (latticeMap φ M : Type v) :=
+    Submodule.comap (latticeMap φ M).subtype (latticeMap φ N)
+  have hPQ : P.map (e : (M : Type v) →ₗ[R] (latticeMap φ M : Type v)) = Q := by
+    ext z
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      change φ (y : V) ∈ latticeMap φ N
+      exact ⟨(y : V), hy, rfl⟩
+    · intro hz
+      change (z : V) ∈ latticeMap φ N at hz
+      rcases hz with ⟨y, hy, hzy⟩
+      let y' : M := ⟨y, hNM hy⟩
+      refine ⟨y', hy, ?_⟩
+      apply Subtype.ext
+      exact hzy
+  have hquot := Submodule.Quotient.equiv P Q e hPQ
+  have hlength := LinearEquiv.length_eq hquot
+  simpa [latticeLengthNat, latticeQuotient, P, Q] using
+    (congrArg ENat.toNat hlength).symm
 
 theorem latticeDistance_latticeMap_pair
     {R : Type u} {K : Type v} {V : Type v}
@@ -755,7 +835,35 @@ theorem latticeDistance_latticeMap_pair
     (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M') :
     latticeDistance R (latticeMap φ M) (latticeMap φ M') =
       latticeDistance R M M' := by
-  sorry
+  have _ := hdim
+  have _ := hM
+  have _ := hM'
+  have hmap_inf : latticeMap φ (M ⊓ M') =
+      latticeMap φ M ⊓ latticeMap φ M' := by
+    ext x
+    constructor
+    · intro hx
+      rcases hx with ⟨y, hy, hxy⟩
+      exact ⟨⟨y, hy.1, hxy⟩, ⟨y, hy.2, hxy⟩⟩
+    · intro hx
+      rcases hx with ⟨hy, hz⟩
+      rcases hy with ⟨y, hy, hxy⟩
+      rcases hz with ⟨z, hz, hzx⟩
+      have hyz : y = z := φ.injective (hxy.trans hzx.symm)
+      subst z
+      exact ⟨y, ⟨hy, hz⟩, hxy⟩
+  have hleft := latticeLengthNat_latticeMap_of_le φ (M ⊓ M') M inf_le_left
+  have hright := latticeLengthNat_latticeMap_of_le φ (M ⊓ M') M' inf_le_right
+  change latticeLengthInt R (latticeMap φ M ⊓ latticeMap φ M')
+      (latticeMap φ M) - latticeLengthInt R
+        (latticeMap φ M ⊓ latticeMap φ M') (latticeMap φ M') =
+    latticeLengthInt R (M ⊓ M') M - latticeLengthInt R (M ⊓ M') M'
+  rw [← hmap_inf]
+  change (latticeLengthNat R (latticeMap φ (M ⊓ M')) (latticeMap φ M) : ℤ) -
+      latticeLengthNat R (latticeMap φ (M ⊓ M')) (latticeMap φ M') =
+    (latticeLengthNat R (M ⊓ M') M : ℤ) -
+      latticeLengthNat R (M ⊓ M') M'
+  rw [hleft, hright]
 
 theorem latticeDistance_map_independent
     {R : Type u} {K : Type v} {V : Type v}
@@ -767,7 +875,16 @@ theorem latticeDistance_map_independent
     (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M') :
     latticeDistance R M (latticeMap φ M) =
       latticeDistance R M' (latticeMap φ M') := by
-  sorry
+  have hφM := isLattice_latticeMap hdim φ M hM
+  have hφM' := isLattice_latticeMap hdim φ M' hM'
+  have h1 := latticeDistance_additive hdim M M' (latticeMap φ M)
+    hM hM' hφM
+  have h2 := latticeDistance_additive hdim M' (latticeMap φ M') (latticeMap φ M)
+    hM' hφM' hφM
+  have h3 := latticeDistance_latticeMap_pair hdim φ M' M hM' hM
+  have h4 := latticeDistance_antisymm hdim M' M hM' hM
+  rw [h1, h2, h3, h4]
+  ring
 
 theorem latticeDistance_comp_decomposition
     {R : Type u} {K : Type v} {V : Type v}
@@ -779,9 +896,28 @@ theorem latticeDistance_comp_decomposition
     latticeDistance R M (latticeMap (ψ.trans φ) M) =
         latticeDistance R M (latticeMap ψ M) +
           latticeDistance R (latticeMap ψ M) (latticeMap (ψ.trans φ) M) ∧
-      latticeDistance R (latticeMap ψ M) (latticeMap (ψ.trans φ) M) =
+    latticeDistance R (latticeMap ψ M) (latticeMap (ψ.trans φ) M) =
         latticeDistance R M (latticeMap φ M) := by
-  sorry
+  have hψM := isLattice_latticeMap hdim ψ M hM
+  have hψφM := isLattice_latticeMap hdim (ψ.trans φ) M hM
+  have hfirst := latticeDistance_additive hdim M (latticeMap ψ M)
+    (latticeMap (ψ.trans φ) M) hM hψM hψφM
+  have hsecond := latticeDistance_map_independent hdim φ M (latticeMap ψ M)
+    hM hψM
+  have hcomp : latticeMap (ψ.trans φ) M = latticeMap φ (latticeMap ψ M) := by
+    ext x
+    constructor
+    · intro hx
+      rcases hx with ⟨y, hy, hxy⟩
+      exact ⟨ψ y, ⟨y, hy, rfl⟩, by simpa using hxy⟩
+    · intro hx
+      rcases hx with ⟨z, hz, hzx⟩
+      rcases hz with ⟨y, hy, hyz⟩
+      exact ⟨y, hy, by simpa [hyz] using hzx⟩
+  constructor
+  · exact hfirst
+  · rw [hcomp]
+    exact hsecond.symm
 
 theorem orderOfVanishing_det_comp
     {R : Type u} {K : Type v} {V : Type v}

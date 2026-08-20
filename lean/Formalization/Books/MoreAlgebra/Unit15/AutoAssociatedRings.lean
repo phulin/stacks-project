@@ -49,7 +49,107 @@ nonzero annihilator. -/
 theorem autoAssociated_hasPropertyP
     {R : Type u} [CommRing R] (hR : AutoAssociated R) :
     HasPropertyP R := by
-  sorry
+  rcases hR with ⟨hR, hweak⟩
+  letI : IsLocalRing R := hR
+  change ∃ x : R,
+    (IsLocalRing.closedPoint R).asIdeal ∈
+      ((⊥ : Submodule R R).colon ({x} : Set R)).minimalPrimes at hweak
+  rcases hweak with ⟨x, hx⟩
+  let J : Ideal R := (⊥ : Submodule R R).colon ({x} : Set R)
+  have hJne : J ≠ ⊤ := by
+    intro hJ
+    have hle : (⊤ : Ideal R) ≤ (IsLocalRing.closedPoint R).asIdeal := by
+      rw [← hJ]
+      exact hx.1.2
+    exact hx.1.1.ne_top (top_le_iff.mp hle)
+  have hrad : J.radical = IsLocalRing.maximalIdeal R := by
+    have hmax (K : Ideal R) :
+        IsLocalRing.maximalIdeal R ∈ K.minimalPrimes ↔
+          K.radical = IsLocalRing.maximalIdeal R := by
+      constructor
+      · intro hK
+        apply le_antisymm
+        · exact (Ideal.IsPrime.radical_le_iff
+            (IsLocalRing.maximalIdeal.isMaximal R).isPrime).mpr hK.1.2
+        · rw [Ideal.radical_eq_sInf]
+          refine le_sInf ?_
+          intro q hq
+          exact hK.2 ⟨hq.2, hq.1⟩
+            (@IsLocalRing.le_maximalIdeal_of_isPrime R _ _ q hq.2)
+      · intro hK
+        refine ⟨⟨(IsLocalRing.maximalIdeal.isMaximal R).isPrime, ?_⟩, ?_⟩
+        · rw [← hK]
+          exact Ideal.le_radical
+        · intro q hq hqmax
+          rw [← hK]
+          exact hq.1.radical_le_iff.mpr hq.2
+    apply (hmax J).mp
+    simpa [IsLocalRing.closedPoint, J] using hx
+  have hxne : x ≠ 0 := by
+    intro hx0
+    apply hJne
+    simp [J, hx0]
+  intro I hItop hIFG
+  obtain ⟨n, f, hf⟩ := Submodule.fg_iff_exists_fin_generating_family.mp hIFG
+  have hIle : I ≤ IsLocalRing.maximalIdeal R :=
+    IsLocalRing.le_maximalIdeal hItop
+  have hloc : ∀ i : Fin n,
+      LocalizedModule.mkLinearMap (Submonoid.powers (f i)) R x = 0 := by
+    intro i
+    have hfi : f i ∈ J.radical := by
+      rw [hrad]
+      apply hIle
+      rw [← hf]
+      exact Ideal.subset_span ⟨i, rfl⟩
+    obtain ⟨e, he⟩ := Ideal.mem_radical_iff.mp hfi
+    change LocalizedModule.mk x (1 : Submonoid.powers (f i)) = 0
+    rw [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.mk'_eq_zero']
+    refine ⟨⟨(f i) ^ e, ⟨e, rfl⟩⟩, ?_⟩
+    change (f i) ^ e • x = 0
+    have he' : (f i) ^ e • x = 0 := by
+      simpa [J, Submodule.mem_colon_singleton, smul_eq_mul] using he
+    exact he'
+  have hα : Formalization.Books.Algebra.Unit24.standardCoverModuleAlpha f R x = 0 := by
+    ext i
+    exact hloc i
+  have hμnot : ¬ Function.Injective
+      (Formalization.Books.Algebra.Unit24.standardCoverMultiplicationMap f R) := by
+    intro hμ
+    have hαinj := (Formalization.Books.Algebra.Unit24.injective_covering_iff f R).2 hμ
+    apply hxne
+    apply hαinj
+    simpa [hα]
+  obtain ⟨a, b, habmap, hab⟩ := Function.not_injective_iff.mp hμnot
+  let y : R := a - b
+  have hyne : y ≠ 0 := by
+    dsimp [y]
+    exact sub_ne_zero.mpr hab
+  have hyfi : ∀ i : Fin n, f i • y = 0 := by
+    intro i
+    have hi := congrFun habmap i
+    change f i * a = f i * b at hi
+    calc
+      f i • y = f i • (a - b) := by rfl
+      _ = f i • a - f i • b := by rw [smul_sub]
+      _ = 0 := sub_eq_zero.mpr (by simpa [smul_eq_mul] using hi)
+  let K : Ideal R := (⊥ : Submodule R R).colon ({y} : Set R)
+  have hIK : I ≤ K := by
+    rw [← hf, Ideal.span_le]
+    intro z hz
+    obtain ⟨i, rfl⟩ := hz
+    apply Submodule.mem_colon_singleton.mpr
+    simpa [K, smul_eq_mul, mul_comm] using hyfi i
+  have hyann : y ∈ Module.annihilator R I := by
+    rw [Module.mem_annihilator]
+    intro z
+    apply Subtype.ext
+    change y * (z : R) = 0
+    have hzK : (z : R) ∈ K := hIK z.2
+    have hzK' := Submodule.mem_colon_singleton.mp hzK
+    simpa [K, smul_eq_mul, mul_comm] using hzK'
+  intro hzero
+  have hybot : y ∈ (⊥ : Ideal R) := by simpa [hzero] using hyann
+  exact hyne (by simpa using hybot)
 
 /-- The projective-module formulation of property (P). -/
 def ProjectiveInjectivityCondition (R : Type u) [CommRing R] : Prop :=
@@ -160,7 +260,49 @@ theorem squareZeroRing_autoAssociated
 theorem squareZeroFiniteMap_injective
     (k : Type u) [Field k] (n : ℕ) :
     Function.Injective (squareZeroFiniteMap k n) := by
-  sorry
+  intro x y h
+  change Finsupp.linearCombination (squareZeroRing k) _ x =
+    Finsupp.linearCombination (squareZeroRing k) _ y at h
+  let v : Fin n → (ℕ →₀ squareZeroRing k) := fun i =>
+    Finsupp.single i.1 (1 : squareZeroRing k) -
+      squareZeroVariable k i.1 • Finsupp.single (i.1 + 1) (1 : squareZeroRing k)
+  let z : Fin n →₀ squareZeroRing k := x - y
+  have hz : Finsupp.linearCombination (squareZeroRing k) v z = 0 := by
+    dsimp [z, v]
+    rw [map_sub, h]
+    exact sub_self _
+  by_contra hne
+  have hzne : z ≠ 0 := by
+    intro hz0
+    apply hne
+    exact sub_eq_zero.mp (by simpa [z] using hz0)
+  have hsn : z.support.Nonempty := Finsupp.support_nonempty_iff.mpr hzne
+  let j : Fin n := z.support.min' hsn
+  have hj : j ∈ z.support := by
+    dsimp [j]
+    exact Finset.min'_mem _ _
+  have hjcoord : (Finsupp.linearCombination (squareZeroRing k) v z) j.1 = z j := by
+    rw [Finsupp.linearCombination_apply, Finsupp.sum_apply, Finsupp.sum]
+    rw [Finset.sum_eq_single j]
+    · simp [v]
+    · intro i hi hij
+      have hle : j ≤ i := by
+        dsimp [j]
+        exact Finset.min'_le z.support i hi
+      have hle' : j.1 ≤ i.1 := hle
+      have hneNat : i.1 ≠ j.1 := by
+        intro heq
+        apply hij
+        exact Fin.ext heq
+      have hsucc' : i.1 + 1 ≠ j.1 := by omega
+      simp [v, hneNat, hsucc']
+    · intro hjnot
+      exact (hjnot hj).elim
+  have hzj : z j = 0 := by
+    rw [← hjcoord]
+    rw [hz]
+    rfl
+  exact (Finsupp.notMem_support_iff.mpr hzj) hj
 
 /-- The displayed finite images are linearly independent. -/
 theorem squareZeroFiniteMap_linearIndependent
@@ -170,7 +312,8 @@ theorem squareZeroFiniteMap_linearIndependent
         Finsupp.single i.1 (1 : squareZeroRing k) -
           squareZeroVariable k i.1 •
             Finsupp.single (i.1 + 1) (1 : squareZeroRing k)) := by
-  sorry
+  apply linearIndependent_iff_injective_finsuppLinearCombination.mpr
+  exact squareZeroFiniteMap_injective k n
 
 /-- The displayed map on the countable free module is injective. -/
 theorem squareZeroMap_injective

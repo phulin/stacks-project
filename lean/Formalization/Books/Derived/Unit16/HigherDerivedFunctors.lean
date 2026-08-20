@@ -42,7 +42,8 @@ theorem rightDerived_negative_vanishing
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F)
     (K : DPlus A) (a : ℤ)
     (hK : ∀ i : ℤ, i < a →
-      IsZero ((DerivedCategory.Plus.homologyFunctor A i).obj K)) :
+      IsZero ((DerivedCategory.Plus.homologyFunctor A i).obj K))
+    (hR : R.IsPointwiseAt K) :
     ∀ i : ℤ, i < a →
       IsZero (rightDerivedCohomology R.functor K i) := by
   sorry
@@ -54,7 +55,9 @@ theorem rightDerived_truncation_cohomology_iso
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F)
-    (K : DPlus A) (a : ℤ) :
+    (K : DPlus A) (a : ℤ)
+    (hR : R.IsPointwiseAt K ∧
+      R.IsPointwiseAt (derivedPlusTruncLE K a)) :
     ∀ i : ℤ, i ≤ a →
       IsIso ((DerivedCategory.Plus.homologyFunctor B i).map
         (R.functor.map (derivedPlusTruncLEMap K a))) := by
@@ -138,11 +141,13 @@ theorem higherRightDerivedFunctor_vanishes_below_zero
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F) :
+    (hR : ∀ X : A,
+      R.IsPointwiseAt ((DerivedCategory.Plus.singleFunctor A 0).obj X)) →
     ∀ i : ℤ, i < 0 → ∀ X : A,
       IsZero ((higherRightDerivedFunctor F R.functor i).obj X) := by
-  intro i hi X
+  intro hR i hi X
   refine rightDerived_negative_vanishing
-    R ((DerivedCategory.Plus.singleFunctor A 0).obj X) 0 ?_ i hi
+    R ((DerivedCategory.Plus.singleFunctor A 0).obj X) 0 ?_ (hR X) i hi
   intro j hj
   exact DerivedCategory.Plus.isZero_homology_of_isGE
     ((DerivedCategory.Plus.singleFunctor A 0).obj X) 0 j hj

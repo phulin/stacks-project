@@ -1,4 +1,5 @@
 import Mathlib.CategoryTheory.Functor.Derived.RightDerived
+import Mathlib.CategoryTheory.Functor.Derived.PointwiseRightDerived
 import Mathlib.CategoryTheory.Functor.Derived.LeftDerived
 import Mathlib.CategoryTheory.Triangulated.TStructure.TruncLEGT
 import Formalization.Books.Categories.Unit23.ExactFunctors
@@ -109,6 +110,23 @@ structure RightDerivedFunctorData
   /-- The canonical degree-zero comparison is obtained from `unit` after
   applying degree-zero cohomology. -/
   zeroSourceIso : F ≅ rightDerivedSourceCohomology F
+
+/-- The chosen right derived functor is computed pointwise at `K`.
+
+`IsRightDerivedFunctor` records only a global left Kan extension.  The
+source's negative-vanishing argument uses the pointwise (cofinal) value at
+the object under consideration, so this condition is kept explicit rather
+than inferred from exactness. -/
+def RightDerivedFunctorData.IsPointwiseAt
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F)
+    (K : DPlus A) : Prop :=
+  let E : Functor.LeftExtension (plusDerivedLocalizationFunctor A)
+      (rightDerivedInputFunctor F) :=
+    Functor.LeftExtension.mk R.functor R.unit
+  Nonempty (Functor.LeftExtension.IsPointwiseLeftKanExtensionAt E K)
 
 /-- The canonical comparison `F ⟶ R⁰F` attached to a right derived functor. -/
 noncomputable def RightDerivedFunctorData.zeroComparison

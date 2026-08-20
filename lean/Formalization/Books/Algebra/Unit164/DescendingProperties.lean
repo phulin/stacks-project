@@ -90,7 +90,9 @@ theorem nagata_iff_noetherian_universallyJapanese
      No quotient or universe conversion is needed: all three predicates are
      instantiated in `Type u`.
   -/
-  sorry
+  simpa [and_comm] using
+    (Formalization.Books.Algebra.Unit162.nagata_iff_universallyJapanese_noetherian
+      (R := R))
 
 /- The map from a ring to the localization of a target ring at one of its
   prime ideals, used to state that the maximal ideal of `A` generates the

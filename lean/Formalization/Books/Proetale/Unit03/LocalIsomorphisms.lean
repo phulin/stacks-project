@@ -57,7 +57,16 @@ theorem baseChange_isLocalIsomorphism
     IsLocalIsomorphism
       (Algebra.TensorProduct.includeRight.toRingHom :
         A' →+* B ⊗[A] A') := by
-  sorry
+  let _ : Algebra A B := φ.toAlgebra
+  let _ : Algebra A A' := ψ.toAlgebra
+  let _ : Algebra A' (B ⊗[A] A') := Algebra.TensorProduct.rightAlgebra
+  change Algebra.IsLocalIso A B at h
+  let _ : Algebra.IsLocalIso A B := h
+  change Algebra.IsLocalIso A' (B ⊗[A] A')
+  let _ : Algebra.IsLocalIso A' (A' ⊗[A] B) := inferInstance
+  exact Algebra.IsLocalIso.of_algEquiv
+    (R := A') (S := A' ⊗[A] B) (T := B ⊗[A] A')
+    (Algebra.TensorProduct.commRight A A' B)
 
 theorem baseChange_identifiesLocalRings
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
@@ -74,14 +83,50 @@ theorem comp_isLocalIsomorphism
     (φ : A →+* B) (ψ : B →+* C)
     (hφ : IsLocalIsomorphism φ) (hψ : IsLocalIsomorphism ψ) :
     IsLocalIsomorphism (ψ.comp φ) := by
-  sorry
+  let _ : Algebra A B := φ.toAlgebra
+  let _ : Algebra B C := ψ.toAlgebra
+  let _ : Algebra A C := (ψ.comp φ).toAlgebra
+  let _ : IsScalarTower A B C := IsScalarTower.of_algebraMap_eq (by intro x; rfl)
+  change Algebra.IsLocalIso A B at hφ
+  change Algebra.IsLocalIso B C at hψ
+  change Algebra.IsLocalIso A C
+  let _ : Algebra.IsLocalIso A B := hφ
+  let _ : Algebra.IsLocalIso B C := hψ
+  exact Algebra.IsLocalIso.trans (T := C) (R := A) (S := B)
 
 theorem comp_identifiesLocalRings
     {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
     (φ : A →+* B) (ψ : B →+* C)
     (hφ : IdentifiesLocalRings φ) (hψ : IdentifiesLocalRings ψ) :
     IdentifiesLocalRings (ψ.comp φ) := by
-  sorry
+  intro q
+  let p : PrimeSpectrum B := ⟨q.asIdeal.comap ψ, inferInstance⟩
+  have hp := hφ p
+  have hq := hψ q
+  have hi : (q.asIdeal.comap ψ).comap φ = q.asIdeal.comap (ψ.comp φ) :=
+    Ideal.comap_comap φ ψ
+  let e := Localization.localRingEquiv
+    (q.asIdeal.comap (ψ.comp φ)) ((q.asIdeal.comap ψ).comap φ)
+    (RingEquiv.refl A) hi.symm
+  have heq := Localization.localRingHom_comp
+    (I := q.asIdeal.comap (ψ.comp φ)) (J := q.asIdeal.comap ψ)
+    (K := q.asIdeal) φ hi.symm ψ rfl
+  have hinner :
+      Localization.localRingHom (q.asIdeal.comap (ψ.comp φ))
+          (q.asIdeal.comap ψ) φ hi.symm =
+        (Localization.localRingHom ((q.asIdeal.comap ψ).comap φ)
+          (q.asIdeal.comap ψ) φ rfl).comp
+          (Localization.localRingHom (q.asIdeal.comap (ψ.comp φ))
+            ((q.asIdeal.comap ψ).comap φ) (RingHom.id A) hi.symm) := by
+    have hinner' := Localization.localRingHom_comp
+      (I := q.asIdeal.comap (ψ.comp φ))
+      (J := (q.asIdeal.comap ψ).comap φ) (K := q.asIdeal.comap ψ)
+      (RingHom.id A) hi.symm φ rfl
+    simpa only [RingHom.comp_id] using hinner'
+  rw [heq, hinner]
+  simpa [e, Localization.localRingEquiv, Localization.localRingHom_id, p,
+    Function.comp_def] using
+    (hq.comp hp).comp e.bijective
 
 theorem of_isLocalIsomorphism_of_isLocalIsomorphism
     {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
@@ -99,7 +144,95 @@ theorem of_identifiesLocalRings_of_identifiesLocalRings
     (hB : IdentifiesLocalRings (algebraMap A B))
     (hC : IdentifiesLocalRings (algebraMap A C)) :
     IdentifiesLocalRings f.toRingHom := by
-  sorry
+  let _ : Algebra B C := f.toRingHom.toAlgebra
+  let _ : IsScalarTower A B C := IsScalarTower.of_algHom f
+  intro q
+  let p : PrimeSpectrum B := ⟨q.asIdeal.comap f.toRingHom, inferInstance⟩
+  have hp := hB p
+  have hq := hC q
+  let I : Ideal A := q.asIdeal.comap (algebraMap A C)
+  let J : Ideal A := (q.asIdeal.comap f.toRingHom).comap (algebraMap A B)
+  have hi : I = J := by
+    ext x
+    change algebraMap A C x ∈ q.asIdeal ↔ f (algebraMap A B x) ∈ q.asIdeal
+    rw [f.commutes]
+  let e := Localization.localRingEquiv I J (RingEquiv.refl A) hi
+  have hcompid := Localization.localRingHom_comp
+    (I := I) (J := J) (K := p.asIdeal)
+    (RingHom.id A) hi (algebraMap A B) rfl
+  have hmapid :
+      Localization.localRingHom I p.asIdeal (algebraMap A B) hi =
+        (Localization.localRingHom J p.asIdeal (algebraMap A B) rfl).comp
+          (Localization.localRingHom I J (RingHom.id A) hi) := by
+    simpa only [RingHom.comp_id] using hcompid
+  have hp' : Function.Bijective
+      (Localization.localRingHom I p.asIdeal
+        (algebraMap A B) hi) := by
+    rw [hmapid]
+    simpa [e, Localization.localRingEquiv] using hp.comp e.bijective
+  have hic :
+      I = q.asIdeal.comap (f.toRingHom.comp (algebraMap A B)) := by
+    simpa only [I, J, Ideal.comap_comap] using hi
+  have heq := Localization.localRingHom_comp
+    (I := I) (J := p.asIdeal) (K := q.asIdeal)
+    (algebraMap A B) hi f.toRingHom rfl
+  have heq' :
+      Localization.localRingHom I q.asIdeal
+          (f.toRingHom.comp (algebraMap A B)) hic =
+        (Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+          q.asIdeal f.toRingHom rfl).comp
+          (Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+            (algebraMap A B) hi) := by
+    simpa [p] using heq
+  have hmap :
+      Localization.localRingHom I q.asIdeal
+          (f.toRingHom.comp (algebraMap A B)) hic =
+        Localization.localRingHom I q.asIdeal
+          (algebraMap A C) rfl := by
+    apply Localization.localRingHom_unique
+    intro x
+    simp
+  have hq' : Function.Bijective
+      ((Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+          q.asIdeal f.toRingHom rfl).comp
+        (Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+          (algebraMap A B) hi)) := by
+    rw [← heq', hmap]
+    exact hq
+  constructor
+  · intro x y hxy
+    obtain ⟨z, hz, rfl⟩ := hp'.2 x
+    obtain ⟨w, hw, rfl⟩ := hp'.2 y
+    have hxy' :
+        ((Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+            q.asIdeal f.toRingHom rfl).comp
+          (Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+            (algebraMap A B) hi)) z =
+        ((Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+            q.asIdeal f.toRingHom rfl).comp
+          (Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+            (algebraMap A B) hi)) w := by
+      change (Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+            q.asIdeal f.toRingHom rfl)
+          ((Localization.localRingHom I p.asIdeal
+            (algebraMap A B) hi) z) =
+        (Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+            q.asIdeal f.toRingHom rfl)
+          ((Localization.localRingHom I p.asIdeal
+            (algebraMap A B) hi) w)
+      exact hxy
+    exact congrArg
+      (fun t => Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+        (algebraMap A B) hi t) (hq'.1 hxy')
+  · intro y
+    obtain ⟨z, hz⟩ := hq'.2 y
+    refine ⟨Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+      (algebraMap A B) hi z, ?_⟩
+    change (Localization.localRingHom (q.asIdeal.comap f.toRingHom)
+      q.asIdeal f.toRingHom rfl)
+      ((Localization.localRingHom I (q.asIdeal.comap f.toRingHom)
+        (algebraMap A B) hi) z) = y
+    simpa only [RingHom.coe_comp, Function.comp_apply] using hz
 
 /-! ## Consequences of local isomorphisms -/
 

@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.Algebra.Category.Grp.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.ChangeOfRings
 import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.Limits.Shapes.Kernels
@@ -84,14 +85,20 @@ def Annihilates {C : Type u} [Category.{u} C]
   ∀ (U : C) (s : I.carrier.val.obj (op U)) (x : F.val.obj (op U)),
     I.sectionValue U s • x = 0
 
-/-- The underlying additive sheaf of an ideal admits a module realization over
-another sheaf of rings on the same topos. -/
-def IsModuleOver {C : Type u} [Category.{u} C]
-    {J : GrothendieckTopology C} {O R : Sheaf J RingCat.{u}}
-    (I : SheafIdeal O) : Prop :=
+/-- An ideal admits a module realization through a specified pushforward
+functor.
+
+The source identifies the kernel ideal with the pushforward of a module on
+the smaller ringed topos.  An additive-sheaf isomorphism alone would lose the
+module structure and would not express that identification, so the
+realization functor is part of this interface. -/
+def IsModuleOver {C D : Type u} [Category.{u} C] [Category.{u} D]
+    {J : GrothendieckTopology C} {K : GrothendieckTopology D}
+    {O : Sheaf J RingCat.{u}} {R : Sheaf K RingCat.{u}}
+    (I : SheafIdeal O)
+    (realization : SheafOfModules.{u} R ⥤ SheafOfModules.{u} O) : Prop :=
   ∃ F : SheafOfModules.{u} R,
-    Nonempty ((SheafOfModules.toSheaf O).obj I.carrier ≅
-      (SheafOfModules.toSheaf R).obj F)
+    Nonempty (realization.obj F ≅ I.carrier)
 
 /-- The full subcategory of `O`-modules annihilated by an ideal `I`. -/
 abbrev AnnihilatedModuleCategory {C : Type u} [Category.{u} C]
@@ -156,13 +163,30 @@ structure RingedToposHom {C D : Type u} [Category.{u} C] [Category.{u} D]
   /-- The sheaf of ideals which is the kernel of `sharp`, retained as the
   source-facing ideal object. -/
   kernel : SheafIdeal Y.structureSheaf
+  /-- The structure-sheaf map viewed as a morphism of `Y.structureSheaf`-
+  modules.  The target is the direct-image structure sheaf with scalars
+  restricted along `sharp`. -/
+  moduleSharp :
+    SheafOfModules.unit Y.structureSheaf ⟶
+      (SheafOfModules.restrictScalars sharp).obj
+        (SheafOfModules.unit (directImageRing.obj X.structureSheaf))
+  moduleSharp_underlying :
+    (SheafOfModules.toSheaf Y.structureSheaf).map moduleSharp =
+      (sheafCompose Y.topology (forget₂ RingCat AddCommGrpCat)).map sharp
   /-- The inclusion of the kernel ideal has zero composite with `sharp`. -/
   kernel_condition :
     kernel.inclusion ≫
         (sheafCompose Y.topology (forget₂ RingCat AddCommGrpCat)).map sharp = 0
+  /-- The same zero-composite condition in the category of modules. -/
+  module_kernel_condition :
+    kernel.moduleInclusion ≫ moduleSharp = 0
   /-- The kernel ideal satisfies the categorical kernel universal property. -/
   kernel_is_kernel :
     IsLimit (KernelFork.ofι kernel.inclusion kernel_condition)
+  /-- The kernel ideal also satisfies the kernel universal property before
+  forgetting the `Y.structureSheaf`-module structure. -/
+  module_kernel_is_kernel :
+    IsLimit (KernelFork.ofι kernel.moduleInclusion module_kernel_condition)
 
 /-! ## Thickenings -/
 
@@ -185,6 +209,24 @@ noncomputable abbrev underlyingSharp
 
 /- The zero composite is part of the canonical sequence rather than an
    existential side condition; it is supplied by the kernel interface. -/
+noncomputable def thickeningKernelModuleShortComplex
+    {C D : Type u} [Category.{u} C] [Category.{u} D]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    (i : Thickening X Y) :
+  ShortComplex (SheafOfModules.{u} Y.structureSheaf) :=
+  ShortComplex.mk i.hom.kernel.moduleInclusion i.hom.moduleSharp
+    i.hom.module_kernel_condition
+
+/-- The sequence in the source is a short exact sequence of modules over the
+structure sheaf of the thickened topos. -/
+abbrev HasShortExactSequence
+    {C D : Type u} [Category.{u} C] [Category.{u} D]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    (i : Thickening X Y) : Prop :=
+  (thickeningKernelModuleShortComplex i).ShortExact
+
+/- The underlying additive sequence is retained because it is useful for
+   transferring local surjectivity from sheaves of rings. -/
 noncomputable def thickeningKernelShortComplex
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
@@ -196,13 +238,13 @@ noncomputable def thickeningKernelShortComplex
 /-- The displayed sequence `0 → I → O' → O → 0`, expressed as the exact
 sequence of underlying additive sheaves.  The ideal inclusion is retained as
 a sheaf-module morphism in the kernel interface. -/
-abbrev HasShortExactSequence
+abbrev HasUnderlyingShortExactSequence
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
     (i : Thickening X Y) : Prop :=
   (thickeningKernelShortComplex i).ShortExact
 
-theorem shortExactSequence
+theorem underlyingShortExactSequence
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
     (i : Thickening X Y) [HasSheafify Y.topology AddCommGrpCat.{u}] :
@@ -228,6 +270,13 @@ theorem shortExactSequence
   · exact @Sheaf.epi_of_isLocallySurjective _ _ _ _ _ _ _ _ _ _ _
       (underlyingSharp i) _ hLocal
 
+theorem shortExactSequence
+    {C D : Type u} [Category.{u} C] [Category.{u} D]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    (i : Thickening X Y) [HasSheafify Y.topology AddCommGrpCat.{u}] :
+    (thickeningKernelModuleShortComplex i).ShortExact := by
+  sorry
+
 /-- A thickening is first order when the square of its kernel ideal is zero. -/
 def FirstOrderThickening {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
@@ -246,14 +295,14 @@ theorem module_category_equivalence
         SheafIdeal.AnnihilatedModuleCategory i.hom.kernel) := by
   sorry
 
-/-- For a first order thickening the kernel ideal admits a module realization
-over the structure sheaf of the smaller ringed topos. -/
+/-- For a first order thickening the kernel ideal is the pushforward of a
+module on the smaller ringed topos. -/
 theorem kernel_is_module_over
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
     (i : Thickening X Y) (hi : FirstOrderThickening i) :
-    SheafIdeal.IsModuleOver
-      (R := i.hom.directImageRing.obj X.structureSheaf) i.hom.kernel := by
+    SheafIdeal.IsModuleOver (O := Y.structureSheaf) (R := X.structureSheaf)
+      i.hom.kernel i.hom.moduleDirectImage := by
   sorry
 
 /-! ## Morphisms of thickenings -/
@@ -300,14 +349,6 @@ structure MorphismOfThickenings
     f'.sharp ≫ f'.directImageRing.map i.hom.sharp ≫
         direct_ring_iso.hom.app X.structureSheaf =
       t.hom.sharp ≫ t.hom.directImageRing.map f.sharp
-  /-- The induced map `f'^{-1} J → I` over the inverse-image structure-sheaf
-  map. -/
-  inverseImageKernelMap :
-    SheafIdealMap f'.inverseImageSharp
-      (f'.inverseImageIdeal t.hom.kernel) i.hom.kernel
-  /-- The induced map `(f')^* J → I` from the commutative square. -/
-  pullbackKernelMap :
-    f'.modulePullback.obj t.hom.kernel.carrier ⟶ i.hom.kernel.carrier
 
 /-! The inverse-image ideal and the two module sheaves in the source's
 notation are now determined by the corresponding interfaces on the vertical
@@ -338,9 +379,58 @@ abbrev MorphismOfThickenings.basePullbackKernel
     {X : RingedTopos C} {Y : RingedTopos D}
     {B : RingedTopos E} {B' : RingedTopos F}
     {i : Thickening X Y} {t : Thickening B B'}
-    (m : MorphismOfThickenings i t) : SheafOfModules.{u} Y.structureSheaf :=
-  i.hom.moduleDirectImage.obj
-    (m.f.modulePullback.obj (t.hom.modulePullback.obj t.hom.kernel.carrier))
+    (m : MorphismOfThickenings i t)
+    (J : SheafOfModules.{u} B.structureSheaf) :
+    SheafOfModules.{u} Y.structureSheaf :=
+  i.hom.moduleDirectImage.obj (m.f.modulePullback.obj J)
+
+/-- The inverse-image kernel map supplied by the commutative square. -/
+theorem inverseImageKernel_map_exists
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    Nonempty
+      (SheafIdealMap m.f'.inverseImageSharp
+        m.inverseImageKernel i.hom.kernel) := by
+  sorry
+
+/-- A chosen representative of the inverse-image kernel map. -/
+noncomputable def MorphismOfThickenings.inverseImageKernelMap
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    SheafIdealMap m.f'.inverseImageSharp
+      m.inverseImageKernel i.hom.kernel :=
+  Classical.choice (inverseImageKernel_map_exists m)
+
+/-- The pullback kernel map supplied by the commutative square. -/
+theorem pullbackKernel_map_exists
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    Nonempty
+      (m.pullbackKernel ⟶ i.hom.kernel.carrier) := by
+  sorry
+
+/-- A chosen representative of the pullback kernel map. -/
+noncomputable def MorphismOfThickenings.pullbackKernelMap
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    m.pullbackKernel ⟶ i.hom.kernel.carrier :=
+  Classical.choice (pullbackKernel_map_exists m)
 
 /-- The strictness condition for a morphism of thickenings. -/
 def MorphismOfThickenings.IsStrict
@@ -386,38 +476,14 @@ theorem pullbackKernel_homEquiv_basePullbackKernel_of_firstOrder
     {B : RingedTopos E} {B' : RingedTopos F}
     {i : Thickening X Y} {t : Thickening B B'}
     (m : MorphismOfThickenings i t)
-    (_hi : FirstOrderThickening i) (_ht : FirstOrderThickening t) :
+    (hi : FirstOrderThickening i) (ht : FirstOrderThickening t)
+    (J : SheafOfModules.{u} B.structureSheaf)
+    (hJ : Nonempty
+      (t.hom.moduleDirectImage.obj J ≅ t.hom.kernel.carrier)) :
     Nonempty
       ((m.pullbackKernel ⟶ i.hom.kernel.carrier) ≃
-        (m.basePullbackKernel ⟶ i.hom.kernel.carrier)) := by
+        (m.basePullbackKernel J ⟶ i.hom.kernel.carrier)) := by
   sorry
-
-/-! The inverse-image and tensor-pullback maps appearing in the source are
-the two fields below; strictness is the local-surjectivity condition on the
-second one. -/
-
-theorem inverseImageKernel_map_exists
-    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
-    [Category.{u} E] [Category.{u} F]
-    {X : RingedTopos C} {Y : RingedTopos D}
-    {B : RingedTopos E} {B' : RingedTopos F}
-    {i : Thickening X Y} {t : Thickening B B'}
-    (m : MorphismOfThickenings i t) :
-    Nonempty
-      (SheafIdealMap m.f'.inverseImageSharp
-        m.inverseImageKernel i.hom.kernel) :=
-  ⟨m.inverseImageKernelMap⟩
-
-theorem pullbackKernel_map_exists
-    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
-    [Category.{u} E] [Category.{u} F]
-    {X : RingedTopos C} {Y : RingedTopos D}
-    {B : RingedTopos E} {B' : RingedTopos F}
-    {i : Thickening X Y} {t : Thickening B B'}
-    (m : MorphismOfThickenings i t) :
-    Nonempty
-      (m.pullbackKernel ⟶ i.hom.kernel.carrier) :=
-  ⟨m.pullbackKernelMap⟩
 
 end
 

@@ -421,14 +421,14 @@ theorem shortExactDerivedExtContravariantWindow_exact
 
 theorem shortExactDerivedExtCovariantInitialWindow_exact
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
-    {S : ShortComplex C} (hS : S.ShortExact) (X : DerivedCategory C) :
-    (shortExactDerivedExtCovariantInitialWindow hS X).Exact := by
+    {S : ShortComplex C} (hS : S.ShortExact) (B : C) :
+    (shortExactDerivedExtCovariantInitialWindow hS (DerivedObject B)).Exact := by
   sorry
 
 theorem shortExactDerivedExtContravariantInitialWindow_exact
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
-    {S : ShortComplex C} (hS : S.ShortExact) (Y : DerivedCategory C) :
-    (shortExactDerivedExtContravariantInitialWindow hS Y).Exact := by
+    {S : ShortComplex C} (hS : S.ShortExact) (A : C) :
+    (shortExactDerivedExtContravariantInitialWindow hS (DerivedObject A)).Exact := by
   sorry
 
 /-- A full, faithful, shift-compatible functor preserves the book's shifted Hom groups. -/

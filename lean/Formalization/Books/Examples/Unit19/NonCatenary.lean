@@ -11,6 +11,7 @@ import Mathlib.RingTheory.Localization.Ideal
 import Mathlib.RingTheory.PowerSeries.NoZeroDivisors
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.RegularLocalRing.Defs
+import Mathlib.RingTheory.RegularLocalRing.Polynomial
 
 /-!
 # Examples, Chapter 19: A non catenary Noetherian local ring
@@ -948,6 +949,8 @@ private theorem quotient_xSubOne_generated_surjective
       ∃ p : Polynomial k,
         Ideal.Quotient.mk (xSubOneIdeal d) ⟨y, hy⟩ = g p := by
   intro y hy
+  change localization_n_presentation_hasRep (d := d) (S := S) gP
+    (⟨y, hy⟩ : R d)
   refine Algebra.adjoin_induction
     (p := fun y hy =>
       ∃ p : Polynomial k,
@@ -1922,12 +1925,90 @@ theorem localization_m_has_dimension_one (d : PowerSeriesData k) :
 
 theorem localization_m_has_residue_field_k (d : PowerSeriesData k) :
     Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mIdeal d)) ≃+* k) := by
-  sorry
+  rcases quotient_mIdeal_equiv d with ⟨e⟩
+  exact ⟨(@IsLocalization.AtPrime.equivQuotMaximalIdeal (R d) _ (mIdeal d)
+    (mIdeal_isMaximal d) (Localization.AtPrime (mIdeal d)) _ _ _ _).symm.trans e⟩
 
 /-- The residue field at `𝔫` is also `k`. -/
 theorem quotient_nIdeal_equiv (d : PowerSeriesData k) :
     Nonempty (R d ⧸ nIdeal d ≃+* k) := by
-  sorry
+  rcases quotient_xSubOneIdeal_equiv_with_z d with ⟨e, hez⟩
+  let q : R d →+* R d ⧸ xSubOneIdeal d :=
+    Ideal.Quotient.mk (xSubOneIdeal d)
+  let f : R d →+* k :=
+    Polynomial.constantCoeff.comp (e.toRingHom.comp q)
+  have hez' : e (q (zInGeneratedRing d)) = Polynomial.X := by
+    simpa [q] using hez
+  have hxJ : xInGeneratedRing d - 1 ∈
+      Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+    exact Ideal.subset_span (by simp)
+  have hzJ : zInGeneratedRing d ∈
+      Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+    exact Ideal.subset_span (by simp)
+  have hker : RingHom.ker f = nIdeal d := by
+    rw [nIdeal_eq_span_xSubOne_z d]
+    apply le_antisymm
+    · intro r hr
+      change Polynomial.constantCoeff (e (q r)) = 0 at hr
+      have hpoly : e (q r) ∈
+          Ideal.span {(Polynomial.X : Polynomial k)} := by
+        rw [← Polynomial.ker_constantCoeff]
+        exact hr
+      obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hpoly
+      let a₀ := e.symm a
+      obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective a₀
+      have hea : e a₀ = a := by
+        simp [a₀]
+      have heq : e (q r) = e (q (zInGeneratedRing d) * q s) := by
+        rw [map_mul, hez', hs, hea]
+        simpa [mul_comm] using ha.symm
+      have hqr : q r = q (zInGeneratedRing d) * q s :=
+        e.injective heq
+      have hdiff : r - zInGeneratedRing d * s ∈ xSubOneIdeal d := by
+        rw [← Ideal.Quotient.eq_zero_iff_mem]
+        change q (r - zInGeneratedRing d * s) = 0
+        rw [map_sub, map_mul, hqr]
+        ring
+      obtain ⟨b, hb⟩ := by
+        rw [xSubOneIdeal] at hdiff
+        exact Ideal.mem_span_singleton'.mp hdiff
+      have hdiff' : r - zInGeneratedRing d * s ∈
+          Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+        rw [← hb]
+        simpa [mul_comm] using
+          (Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}).mul_mem_right b hxJ
+      have hzs : zInGeneratedRing d * s ∈
+          Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+        have h := (Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}).mul_mem_right s hzJ
+        simpa [mul_comm] using h
+      simpa [sub_add_cancel] using
+        (Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}).add_mem hdiff' hzs
+    · rw [Ideal.span_le]
+      intro r hr
+      change Polynomial.constantCoeff (e (q r)) = 0
+      rcases Set.mem_insert_iff.mp hr with rfl | rfl
+      · have hq : q (xInGeneratedRing d - 1) = 0 := by
+          change Ideal.Quotient.mk (xSubOneIdeal d)
+            (xInGeneratedRing d - 1) = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact Ideal.subset_span (by simp)
+        rw [hq]
+        simp
+      · rw [hez']
+        simp
+  have hf : Function.Surjective f := by
+    intro c
+    obtain ⟨r, hr⟩ :=
+      Ideal.Quotient.mk_surjective (e.symm (Polynomial.C c))
+    refine ⟨r, ?_⟩
+    change Polynomial.constantCoeff (e (q r)) = c
+    have hqr : q r = e.symm (Polynomial.C c) := by
+      simpa [q] using hr
+    rw [hqr]
+    simp
+  let eF := (Ideal.quotEquivOfEq hker.symm).trans
+    (RingHom.quotientKerEquivOfSurjective (f := f) hf)
+  exact ⟨eF⟩
 
 /-- The Laurent polynomial ring `k[x, x⁻¹]`. -/
 abbrev LaurentPolynomialRing (k : Type u) [Field k] :=
@@ -1948,18 +2029,1107 @@ noncomputable def nPresentationIdeal (k : Type u) [Field k] : Ideal (nPresentati
 /-- The presentation ideal is maximal. -/
 theorem nPresentationIdeal_isMaximal (k : Type u) [Field k] :
     (nPresentationIdeal k).IsMaximal := by
-  sorry
+  let e : Polynomial k →+* k := Polynomial.evalRingHom 1
+  have heX : e (Polynomial.X : Polynomial k) = 1 := by
+    simp [e]
+  have heunits : ∀ y : Submonoid.powers (Polynomial.X : Polynomial k), IsUnit (e y) := by
+    rintro ⟨y, hy⟩
+    obtain ⟨n, rfl⟩ := hy
+    simp [map_pow, heX]
+  let g : LaurentPolynomialRing k →+* k :=
+    IsLocalization.lift (M := Submonoid.powers (Polynomial.X : Polynomial k))
+      (g := e) heunits
+  have hgcomp :
+      g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)) = e :=
+    IsLocalization.lift_comp heunits
+  have hgx : g (xInLaurentPolynomialRing k) = 1 := by
+    change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+      (Polynomial.X : Polynomial k) = 1
+    rw [hgcomp, heX]
+  have hgk (c : k) : g (algebraMap k (LaurentPolynomialRing k) c) = c := by
+    change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+      (Polynomial.C c) = c
+    rw [hgcomp]
+    simp [e]
+  let J : Ideal (LaurentPolynomialRing k) :=
+    Ideal.map (algebraMap (Polynomial k) (LaurentPolynomialRing k))
+      (Ideal.span {(Polynomial.X : Polynomial k) - 1})
+  have hker : RingHom.ker g = J := by
+    apply le_antisymm
+    · intro y hy
+      obtain ⟨p, s, rfl⟩ :=
+        IsLocalization.exists_mk'_eq (Submonoid.powers (Polynomial.X : Polynomial k)) y
+      change g (IsLocalization.mk' (LaurentPolynomialRing k) p s) = 0 at hy
+      have hp : e p = 0 := by
+        have h := (IsLocalization.lift_mk'_spec heunits p 0 s).mp hy
+        simpa using h
+      have hpJ : p ∈ Ideal.span
+          {(Polynomial.X : Polynomial k) - Polynomial.C 1} := by
+        rw [← Polynomial.ker_evalRingHom (1 : k)]
+        change e p = 0
+        exact hp
+      change IsLocalization.mk' (LaurentPolynomialRing k) p s ∈ J
+      rw [IsLocalization.mk'_mem_map_algebraMap_iff]
+      exact ⟨1, by simp, by simpa using hpJ⟩
+    · rw [Ideal.map_le_iff_le_comap, Ideal.span_le]
+      intro p hp
+      rcases hp with rfl
+      change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+        ((Polynomial.X : Polynomial k) - 1) = 0
+      rw [hgcomp]
+      simp [e]
+  let f : nPresentationRing k →+* k := Polynomial.eval₂RingHom g 0
+  let I : Ideal (nPresentationRing k) :=
+    Ideal.span {algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k) - 1, Polynomial.X}
+  have hkerF : RingHom.ker f = I := by
+    apply le_antisymm
+    · intro p hp
+      change f p = 0 at hp
+      have hc : g p.constantCoeff = 0 := by
+        simpa [f] using hp
+      have hpc : p.constantCoeff ∈ J := hker ▸ hc
+      have hmapJ :
+          J.map (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)) ≤ I := by
+        dsimp [J]
+        rw [Ideal.map_le_iff_le_comap, Ideal.map_le_iff_le_comap, Ideal.span_le]
+        intro c hc
+        rcases Set.mem_singleton_iff.mp hc with rfl
+        apply Ideal.subset_span
+        left
+        simp [xInLaurentPolynomialRing]
+      have hC : Polynomial.C p.constantCoeff ∈ I := by
+        apply hmapJ
+        simpa using (Ideal.mem_map_of_mem
+          (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)) hpc)
+      have hXI : Polynomial.X ∈ I := Ideal.subset_span (by simp [I])
+      have hX : Polynomial.X * p.divX ∈ I := by
+        have h := I.mul_mem_left p.divX hXI
+        simpa [mul_comm] using h
+      rw [← Polynomial.X_mul_divX_add p]
+      exact I.add_mem hX hC
+    · rw [Ideal.span_le]
+      intro p hp
+      change f p = 0
+      rcases Set.mem_insert_iff.mp hp with rfl | rfl
+      · have hfg : f (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+            (xInLaurentPolynomialRing k)) = g (xInLaurentPolynomialRing k) := by
+          change f (Polynomial.C (xInLaurentPolynomialRing k)) =
+            g (xInLaurentPolynomialRing k)
+          simp [f]
+        calc
+          f (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+              (xInLaurentPolynomialRing k) - 1) =
+              f (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+                (xInLaurentPolynomialRing k)) - f 1 := by rw [map_sub]
+          _ = g (xInLaurentPolynomialRing k) - 1 := by rw [hfg, map_one]
+          _ = 0 := by rw [hgx]; simp
+      · change Polynomial.eval₂ g 0 (Polynomial.X : Polynomial (LaurentPolynomialRing k)) = 0
+        simp
+  have hf : Function.Surjective f := by
+    intro c
+    refine ⟨Polynomial.C (algebraMap k (LaurentPolynomialRing k) c), ?_⟩
+    change Polynomial.eval₂ g 0
+        (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = c
+    rw [Polynomial.eval₂_C]
+    exact hgk c
+  let eF := (Ideal.quotEquivOfEq hkerF.symm).trans
+    (RingHom.quotientKerEquivOfSurjective (f := f) hf)
+  rw [show nPresentationIdeal k = I by rfl]
+  apply Ideal.Quotient.maximal_of_isField
+  exact eF.toMulEquiv.isField (Field.toIsField k)
 
 instance nPresentationIdeal_isPrime_instance :
     (nPresentationIdeal k).IsPrime :=
   (nPresentationIdeal_isMaximal k).isPrime
 
+private theorem localization_n_presentation_hrep_tail (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S]
+    (gP : nPresentationRing k →+* S)
+    [IsScalarTower k (R d) S]
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d))
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d))
+    (hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c)
+    (qx : (nPresentationIdeal k).primeCompl)
+    (hqx : (qx : nPresentationRing k) = Polynomial.C (xInLaurentPolynomialRing k)) :
+    ∀ n : ℕ, ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S (zSuccInGeneratedRing d n) * gP q = gP p := by
+  intro n
+  induction n with
+  | zero =>
+      refine ⟨Polynomial.X, qx, ?_⟩
+      have hzR : xInGeneratedRing d * zSuccInGeneratedRing d 0 =
+          zInGeneratedRing d := by
+        apply Subtype.ext
+        exact (z_eq_X_mul_zTail_one d).symm
+      have hzS := congrArg (algebraMap (R d) S) hzR
+      rw [map_mul] at hzS
+      change algebraMap (R d) S (zSuccInGeneratedRing d 0) * gP qx =
+        gP Polynomial.X
+      have hqxS : gP qx = algebraMap (R d) S (xInGeneratedRing d) := by
+        rw [hqx]
+        change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
+        exact hgen_x
+      rw [hqxS, hgen_z, ← hzS]
+      ring
+  | succ n ih =>
+      rcases ih with ⟨p, q, hq⟩
+      let c : k := d.coefficients (n + 1)
+      let pc : nPresentationRing k :=
+        Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)
+      have hrecR : xInGeneratedRing d * zSuccInGeneratedRing d (n + 1) +
+          algebraMap k (R d) c = zSuccInGeneratedRing d n := by
+        apply Subtype.ext
+        change PowerSeries.X * zTail (k := k) d.coefficients (n + 2) +
+            PowerSeries.C c = zTail (k := k) d.coefficients (n + 1)
+        exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
+      have hrecS := congrArg (algebraMap (R d) S) hrecR
+      rw [map_add, map_mul] at hrecS
+      have hpc : gP pc = algebraMap k S c := by
+        exact hgP_C c
+      refine ⟨p - pc * q, q * qx, ?_⟩
+      change algebraMap (R d) S (zSuccInGeneratedRing d (n + 1)) *
+        gP (↑(q * qx)) = gP (p - pc * (q : nPresentationRing k))
+      have hqprod : gP (↑(q * qx) : nPresentationRing k) =
+          gP (q : nPresentationRing k) * gP (qx : nPresentationRing k) := by
+        change gP ((q : nPresentationRing k) * (qx : nPresentationRing k)) = _
+        rw [map_mul]
+      have hqxS : gP (qx : nPresentationRing k) =
+          algebraMap (R d) S (xInGeneratedRing d) := by
+        rw [hqx]
+        change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
+        exact hgen_x
+      have hq' : algebraMap (R d) S (zSuccInGeneratedRing d n) * gP q = gP p := by
+        simpa only [zSuccInGeneratedRing] using hq
+      have hmul :
+          (algebraMap (R d) S (xInGeneratedRing d) *
+              algebraMap (R d) S (zSuccInGeneratedRing d (n + 1)) +
+            algebraMap k S c) * gP q = gP p := by
+        rw [IsScalarTower.algebraMap_apply k (R d) S c, hrecS, hq']
+      rw [hqprod, hqxS, map_sub, map_mul]
+      calc
+        algebraMap (R d) S (zSuccInGeneratedRing d (n + 1)) *
+              (gP q * algebraMap (R d) S (xInGeneratedRing d)) =
+            (algebraMap (R d) S (xInGeneratedRing d) *
+                algebraMap (R d) S (zSuccInGeneratedRing d (n + 1)) +
+              algebraMap k S c) * gP q -
+              algebraMap k S c * gP q := by ring
+        _ = gP p - algebraMap k S c * gP q := by
+          exact congrArg (fun t : S => t - algebraMap k S c * gP q) hmul
+        _ = gP p - gP pc * gP q := by
+          exact congrArg (fun t : S => gP p - t * gP q) hpc.symm
+
+private theorem localization_n_presentation_hrep_x (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d)) :
+    algebraMap (R d) S (xInGeneratedRing d) * gP 1 =
+      gP (Polynomial.C (xInLaurentPolynomialRing k)) := by
+  rw [map_one, mul_one]
+  change algebraMap (R d) S (xInGeneratedRing d) =
+    gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+      (xInLaurentPolynomialRing k))
+  exact hgen_x.symm
+
+private theorem localization_n_presentation_hrep_z (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d)) :
+    algebraMap (R d) S (zInGeneratedRing d) * gP 1 = gP Polynomial.X := by
+  rw [map_one, mul_one]
+  exact hgen_z.symm
+
+private theorem localization_n_presentation_hrep_const (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S] [Algebra k S]
+    [IsScalarTower k (R d) S]
+    (gP : nPresentationRing k →+* S) (c : k)
+    (hgP_C : gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) =
+      algebraMap k S c) :
+    algebraMap (R d) S (algebraMap k (R d) c) * gP 1 =
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) := by
+  calc
+    algebraMap (R d) S (algebraMap k (R d) c) * gP 1 = algebraMap k S c := by
+      rw [map_one, mul_one]
+      exact (IsScalarTower.algebraMap_apply k (R d) S c).symm
+    _ = gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) := hgP_C.symm
+
+private theorem localization_n_presentation_hrep_add (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S) (y z : R d)
+    (hy : ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S y * gP q = gP p)
+    (hz : ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S z * gP q = gP p) :
+    ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S (y + z) * gP q = gP p := by
+  rcases hy with ⟨p, q, hq⟩
+  rcases hz with ⟨p', q', hq'⟩
+  refine ⟨p * q' + p' * q, q * q', ?_⟩
+  change algebraMap (R d) S (y + z) * gP (↑(q * q')) =
+    gP (p * (q' : nPresentationRing k) + p' * q)
+  rw [map_add]
+  have hqprod : gP (↑(q * q') : nPresentationRing k) =
+      gP (q : nPresentationRing k) * gP (q' : nPresentationRing k) := by
+    change gP ((q : nPresentationRing k) * (q' : nPresentationRing k)) = _
+    rw [map_mul]
+  rw [hqprod, map_add, map_mul, map_mul]
+  calc
+    ((algebraMap (R d) S y + algebraMap (R d) S z) *
+        (gP q * gP q')) =
+      (algebraMap (R d) S y * gP q) * gP q' +
+        (algebraMap (R d) S z * gP q') * gP q := by ring
+    _ = gP p * gP q' + gP p' * gP q := by rw [hq, hq']
+
+private theorem localization_n_presentation_hrep_mul (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S) (y z : R d)
+    (hy : ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S y * gP q = gP p)
+    (hz : ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S z * gP q = gP p) :
+    ∃ p : nPresentationRing k,
+      ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S (y * z) * gP q = gP p := by
+  rcases hy with ⟨p, q, hq⟩
+  rcases hz with ⟨p', q', hq'⟩
+  refine ⟨p * p', q * q', ?_⟩
+  change algebraMap (R d) S (y * z) * gP (↑(q * q')) = gP (p * p')
+  rw [map_mul]
+  have hqprod : gP (↑(q * q') : nPresentationRing k) =
+      gP (q : nPresentationRing k) * gP (q' : nPresentationRing k) := by
+    change gP ((q : nPresentationRing k) * (q' : nPresentationRing k)) = _
+    rw [map_mul]
+  rw [hqprod]
+  calc
+    (algebraMap (R d) S y * algebraMap (R d) S z) *
+        (gP (q : nPresentationRing k) * gP (q' : nPresentationRing k)) =
+      (algebraMap (R d) S y * gP q) *
+        (algebraMap (R d) S z * gP q') := by ring
+    _ = gP p * gP p' := by rw [hq, hq']
+    _ = gP (p * p') := by rw [map_mul]
+
+private def localization_n_presentation_rep (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S) (r : R d) : Prop :=
+  ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S r * gP q = gP p
+
+private theorem localization_n_presentation_adjoin_representation
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S)
+    (hX : localization_n_presentation_rep (d := d) (S := S) gP
+      (xInGeneratedRing d))
+    (hZ : localization_n_presentation_rep (d := d) (S := S) gP
+      (zInGeneratedRing d))
+    (hTail : ∀ n : ℕ,
+      localization_n_presentation_rep (d := d) (S := S) gP
+        (zSuccInGeneratedRing d n))
+    (hC : ∀ c : k,
+      localization_n_presentation_rep (d := d) (S := S) gP
+        (algebraMap k (R d) c))
+    (hAdd : ∀ y z : R d,
+      localization_n_presentation_rep (d := d) (S := S) gP y →
+      localization_n_presentation_rep (d := d) (S := S) gP z →
+      localization_n_presentation_rep (d := d) (S := S) gP (y + z))
+    (hMul : ∀ y z : R d,
+      localization_n_presentation_rep (d := d) (S := S) gP y →
+      localization_n_presentation_rep (d := d) (S := S) gP z →
+      localization_n_presentation_rep (d := d) (S := S) gP (y * z)) :
+      ∀ (y : PowerSeries k) (hy : y ∈ generatedRing d),
+      localization_n_presentation_rep (d := d) (S := S) gP (⟨y, hy⟩ : R d) := by
+  intro y hy
+  refine Algebra.adjoin_induction
+    (R := k)
+    (A := PowerSeries k)
+    (s := insert PowerSeries.X
+      (insert (zPowerSeries (k := k) d.coefficients)
+        (Set.range (fun j : ℕ => zTail (k := k) d.coefficients (j + 1)))))
+    (p := fun y hy =>
+      localization_n_presentation_rep (d := d) (S := S) gP (⟨y, hy⟩ : R d))
+    ?_ ?_ ?_ ?_ hy
+  · rintro y (rfl | hr)
+    · exact hX
+    · rcases Set.mem_insert_iff.mp hr with rfl | hr
+      · exact hZ
+      · rcases Set.mem_range.mp hr with ⟨n, rfl⟩
+        exact hTail n
+  · intro c
+    exact hC c
+  · intro y z hy' hz' hy hz
+    exact hAdd (⟨y, hy'⟩ : R d) (⟨z, hz'⟩ : R d) hy hz
+  · intro y z hy' hz' hy hz
+    exact hMul (⟨y, hy'⟩ : R d) (⟨z, hz'⟩ : R d) hy hz
+
+private theorem localization_n_presentation_rep_x (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d)) :
+    localization_n_presentation_rep (d := d) (S := S) gP (xInGeneratedRing d) := by
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S (xInGeneratedRing d) * gP q = gP p
+  exact ⟨Polynomial.C (xInLaurentPolynomialRing k), 1,
+    localization_n_presentation_hrep_x (d := d) (S := S) gP hgen_x⟩
+
+private theorem localization_n_presentation_rep_z (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d)) :
+    localization_n_presentation_rep (d := d) (S := S) gP (zInGeneratedRing d) := by
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S (zInGeneratedRing d) * gP q = gP p
+  exact ⟨Polynomial.X, 1,
+    localization_n_presentation_hrep_z (d := d) (S := S) gP hgen_z⟩
+
+private theorem localization_n_presentation_rep_tail (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d))
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d))
+    (hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c)
+    (qx : (nPresentationIdeal k).primeCompl)
+    (hqx : (qx : nPresentationRing k) = Polynomial.C (xInLaurentPolynomialRing k))
+    (n : ℕ) :
+    localization_n_presentation_rep (d := d) (S := S) gP
+      (zSuccInGeneratedRing d n) := by
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S (zSuccInGeneratedRing d n) * gP q = gP p
+  exact localization_n_presentation_hrep_tail
+    (d := d) (S := S) gP hgen_x hgen_z hgP_C qx hqx n
+
+private theorem localization_n_presentation_rep_const (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S] [Algebra k S]
+    [IsScalarTower k (R d) S]
+    (gP : nPresentationRing k →+* S) (hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c)
+    (c : k) :
+    localization_n_presentation_rep (d := d) (S := S) gP (algebraMap k (R d) c) := by
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S (algebraMap k (R d) c) * gP q = gP p
+  exact ⟨Polynomial.C (algebraMap k (LaurentPolynomialRing k) c), 1,
+    localization_n_presentation_hrep_const (d := d) (S := S) gP c (hgP_C c)⟩
+
+private theorem localization_n_presentation_rep_add (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S) (y z : R d)
+    (hy : localization_n_presentation_rep (d := d) (S := S) gP y)
+    (hz : localization_n_presentation_rep (d := d) (S := S) gP z) :
+    localization_n_presentation_rep (d := d) (S := S) gP (y + z) := by
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S y * gP q = gP p at hy
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S z * gP q = gP p at hz
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S (y + z) * gP q = gP p
+  exact localization_n_presentation_hrep_add (d := d) (S := S) gP y z hy hz
+
+private theorem localization_n_presentation_rep_mul (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    (gP : nPresentationRing k →+* S) (y z : R d)
+    (hy : localization_n_presentation_rep (d := d) (S := S) gP y)
+    (hz : localization_n_presentation_rep (d := d) (S := S) gP z) :
+    localization_n_presentation_rep (d := d) (S := S) gP (y * z) := by
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S y * gP q = gP p at hy
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S z * gP q = gP p at hz
+  change ∃ p : nPresentationRing k,
+    ∃ q : (nPresentationIdeal k).primeCompl,
+      algebraMap (R d) S (y * z) * gP q = gP p
+  exact localization_n_presentation_hrep_mul (d := d) (S := S) gP y z hy hz
+
+private theorem localization_n_presentation_hrep (d : PowerSeriesData k)
+    (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d))
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d))
+    (hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c)
+    (qx : (nPresentationIdeal k).primeCompl)
+    (hqx : (qx : nPresentationRing k) = Polynomial.C (xInLaurentPolynomialRing k)) :
+    ∀ (y : PowerSeries k) (hy : y ∈ generatedRing d),
+      ∃ p : nPresentationRing k,
+        ∃ q : (nPresentationIdeal k).primeCompl,
+        algebraMap (R d) S (⟨y, hy⟩ : R d) * gP q = gP p := by
+  exact localization_n_presentation_adjoin_representation
+    (d := d) (S := S) gP
+    (localization_n_presentation_rep_x (d := d) (S := S) gP hgen_x)
+    (localization_n_presentation_rep_z (d := d) (S := S) gP hgen_z)
+    (localization_n_presentation_rep_tail
+      (d := d) (S := S) gP hgen_x hgen_z hgP_C qx hqx)
+    (localization_n_presentation_rep_const
+      (d := d) (S := S) gP hgP_C)
+    (localization_n_presentation_rep_add (d := d) (S := S) gP)
+    (localization_n_presentation_rep_mul (d := d) (S := S) gP)
+
+private theorem localization_n_presentation_lift_surjective
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S] [IsLocalRing S]
+    (gP : nPresentationRing k →+* S) (fP : nPresentationRing k →+* k)
+    (hres : S ⧸ IsLocalRing.maximalIdeal S ≃+* k)
+    (hrescomp : (hres.toRingHom.comp
+      (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S))).comp gP = fP)
+    (hkerP : RingHom.ker fP = nPresentationIdeal k)
+    (hunitP : ∀ y : (nPresentationIdeal k).primeCompl, IsUnit (gP y))
+    (hrep : ∀ (y : PowerSeries k) (hy : y ∈ generatedRing d),
+      ∃ p : nPresentationRing k,
+        ∃ q : (nPresentationIdeal k).primeCompl,
+          algebraMap (R d) S (⟨y, hy⟩ : R d) * gP q = gP p) :
+    Function.Surjective
+      (IsLocalization.lift (S := Localization.AtPrime (nPresentationIdeal k))
+        (M := (nPresentationIdeal k).primeCompl)
+        (g := gP) hunitP) := by
+  rw [IsLocalization.lift_surjective_iff]
+  intro y
+  obtain ⟨rs, hrs⟩ :=
+    IsLocalization.surj (R := R d) (S := S) (nIdeal d).primeCompl y
+  let r : R d := rs.1
+  let s : (nIdeal d).primeCompl := rs.2
+  obtain ⟨p, q, hp⟩ := hrep r.1 r.2
+  obtain ⟨u, t, hu⟩ := hrep s.1.1 s.1.2
+  have hp' : algebraMap (R d) S (r : R d) * gP q = gP p := by
+    simpa [r] using hp
+  have hu' : algebraMap (R d) S (s : R d) * gP t = gP u := by
+    simpa [s] using hu
+  have huunit : IsUnit (gP u) := by
+    rw [← hu']
+    exact (IsLocalization.map_units S s).mul (hunitP t)
+  have huP : u ∉ nPresentationIdeal k := by
+    intro huP
+    have hfu : fP u = 0 := by
+      change u ∈ RingHom.ker fP
+      rw [hkerP]
+      exact huP
+    have huM : gP u ∈ IsLocalRing.maximalIdeal S := by
+      rw [← Ideal.Quotient.eq_zero_iff_mem]
+      have hcomp := congrArg (fun h : nPresentationRing k →+* k => h u) hrescomp
+      apply hres.injective
+      change hres (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) (gP u)) = hres 0
+      calc
+        hres (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) (gP u)) =
+            ((hres.toRingHom.comp (Ideal.Quotient.mk
+              (IsLocalRing.maximalIdeal S))).comp gP) u := rfl
+        _ = fP u := hcomp
+        _ = 0 := hfu
+        _ = hres 0 := by simp
+    exact (IsLocalRing.notMem_maximalIdeal.mpr huunit) huM
+  refine ⟨⟨p * t, ⟨u * q, ?_⟩⟩, ?_⟩
+  · exact Submonoid.mul_mem _ huP q.prop
+  · calc
+      y * gP (u * q) = y * (gP u * gP q) := by rw [map_mul]
+      _ = y * (algebraMap (R d) S (s : R d) * gP t) * gP q := by rw [hu']; ring
+      _ = (y * algebraMap (R d) S (s : R d)) * gP t * gP q := by ring
+      _ = algebraMap (R d) S (r : R d) * gP t * gP q := by rw [hrs]
+      _ = (algebraMap (R d) S (r : R d) * gP q) * gP t := by ring
+      _ = gP p * gP t := by rw [hp']
+      _ = gP (p * t) := by rw [map_mul]
+
+private theorem localization_n_presentation_gP_injective
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsLocalization (nIdeal d).primeCompl S]
+    [IsScalarTower k (R d) S]
+    (gP : nPresentationRing k →+* S)
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d))
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d))
+    (hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c)
+    (hxunit : IsUnit (algebraMap (R d) S (xInGeneratedRing d))) :
+    Function.Injective gP := by
+  let hSFrac : S →+* FractionRing (R d) :=
+    IsLocalization.lift (S := S) (M := (nIdeal d).primeCompl)
+      (g := algebraMap (R d) (FractionRing (R d))) (by
+        intro y
+        have hy0 : (y : R d) ≠ 0 := by
+          intro hy
+          exact y.prop (hy ▸ (nIdeal d).zero_mem)
+        exact IsLocalization.map_units (R := R d) (M := nonZeroDivisors (R d))
+          (FractionRing (R d))
+          ⟨y, mem_nonZeroDivisors_iff_ne_zero.mpr hy0⟩)
+  have hSFraccomp : hSFrac.comp (algebraMap (R d) S) =
+      algebraMap (R d) (FractionRing (R d)) := by
+    apply IsLocalization.lift_comp
+  have hSFrac_inj : Function.Injective hSFrac := by
+    apply IsLocalization.injective_of_map_algebraMap_zero
+      (R := R d) (M := (nIdeal d).primeCompl) S hSFrac
+    intro x hx
+    have hx' : algebraMap (R d) (FractionRing (R d)) x = 0 := by
+      rw [← hSFraccomp]
+      exact hx
+    have hx0 : x = 0 := by
+      apply (IsFractionRing.injective (R d) (FractionRing (R d)))
+      simpa using hx'
+    simpa [hx0]
+  letI : Algebra (Polynomial k) (LaurentPolynomialRing k) := inferInstance
+  letI : Algebra (Polynomial (Polynomial k)) (nPresentationRing k) :=
+    Polynomial.algebra (Polynomial k) (LaurentPolynomialRing k)
+  let gC : Polynomial (Polynomial k) →+* S :=
+    Polynomial.eval₂RingHom
+      (Polynomial.eval₂RingHom (algebraMap k S)
+        (algebraMap (R d) S (xInGeneratedRing d)))
+      (algebraMap (R d) S (zInGeneratedRing d))
+  have hgCcomp : hSFrac.comp gC = xzPolynomialMap d := by
+    apply Polynomial.ringHom_ext
+    · intro p
+      have hgc : gC (Polynomial.C p) =
+          Polynomial.eval₂ (algebraMap k S)
+            (algebraMap (R d) S (xInGeneratedRing d)) p := by
+        simp only [gC, Polynomial.coe_eval₂RingHom, Polynomial.eval₂_C]
+      have hxz : xzPolynomialMap d (Polynomial.C p) =
+          Polynomial.eval₂ (algebraMap k (FractionRing (R d)))
+            (algebraMap (R d) (FractionRing (R d))
+              (xInGeneratedRing d)) p := by
+        simp [xzPolynomialMap]
+      change hSFrac (gC (Polynomial.C p)) =
+        xzPolynomialMap d (Polynomial.C p)
+      rw [hgc, hxz]
+      rw [Polynomial.hom_eval₂]
+      rw [show hSFrac.comp (algebraMap k S) = algebraMap k (FractionRing (R d)) by
+        apply RingHom.ext
+        intro c
+        have hsc : algebraMap k S c =
+            algebraMap (R d) S (algebraMap k (R d) c) := by
+          rw [IsScalarTower.algebraMap_apply k (R d) S]
+        change hSFrac (algebraMap k S c) = algebraMap k (FractionRing (R d)) c
+        rw [hsc]
+        exact (congrArg (fun h : R d →+* FractionRing (R d) =>
+          h (algebraMap k (R d) c)) hSFraccomp).trans
+          (IsScalarTower.algebraMap_apply k (R d) (FractionRing (R d)) c).symm]
+      congr 1
+      exact congrArg (fun h : R d →+* FractionRing (R d) =>
+        h (xInGeneratedRing d)) hSFraccomp
+    · simp only [RingHom.coe_comp, Function.comp_apply, gC,
+        Polynomial.coe_eval₂RingHom, Polynomial.eval₂_X, xzPolynomialMap]
+      change hSFrac (algebraMap (R d) S (zInGeneratedRing d)) =
+        algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)
+      exact congrArg (fun h : R d →+* FractionRing (R d) =>
+        h (zInGeneratedRing d)) hSFraccomp
+  have hgCinj : Function.Injective gC := by
+    intro p q hpq
+    apply xzPolynomialMap_injective d
+    rw [← hgCcomp]
+    exact congrArg hSFrac hpq
+  let M0 : Submonoid (Polynomial (Polynomial k)) :=
+    (Submonoid.powers (Polynomial.X : Polynomial k)).map
+      (Polynomial.C : Polynomial k →+* Polynomial (Polynomial k)).toMonoidHom
+  letI : IsLocalization M0 (nPresentationRing k) := by
+    change IsLocalization
+      ((Submonoid.powers (Polynomial.X : Polynomial k)).map
+        (Polynomial.C : Polynomial k →+* Polynomial (Polynomial k)).toMonoidHom)
+      (Polynomial (LaurentPolynomialRing k))
+    exact Polynomial.isLocalization (Submonoid.powers (Polynomial.X : Polynomial k))
+      (LaurentPolynomialRing k)
+  have hunitC : ∀ y : M0, IsUnit (gC y) := by
+    rintro ⟨y, ⟨s, hs, rfl⟩⟩
+    obtain ⟨n, rfl⟩ := hs
+    change IsUnit (Polynomial.eval₂
+      (Polynomial.eval₂RingHom (algebraMap k S)
+        (algebraMap (R d) S (xInGeneratedRing d)))
+      (algebraMap (R d) S (zInGeneratedRing d))
+      (Polynomial.C (Polynomial.X ^ n)))
+    rw [Polynomial.eval₂_C]
+    simpa only [Polynomial.coe_eval₂RingHom, Polynomial.eval₂_X_pow] using hxunit.pow n
+  let F0 : nPresentationRing k →+* S :=
+    IsLocalization.lift (S := nPresentationRing k) (M := M0) (g := gC) hunitC
+  have hF0comp : F0.comp (algebraMap (Polynomial (Polynomial k))
+      (nPresentationRing k)) = gC :=
+    IsLocalization.lift_comp hunitC
+  have hFcomp : gP.comp (algebraMap (Polynomial (Polynomial k))
+      (nPresentationRing k)) = gC := by
+    apply Polynomial.ringHom_ext
+    intro p
+    have hcoeff :
+        (gP.comp (algebraMap (LaurentPolynomialRing k) (nPresentationRing k))).comp
+            (algebraMap (Polynomial k) (LaurentPolynomialRing k)) =
+          Polynomial.eval₂RingHom (algebraMap k S)
+            (algebraMap (R d) S (xInGeneratedRing d)) := by
+      apply Polynomial.ringHom_ext
+      · intro c
+        change gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = _
+        simpa only [Polynomial.coe_eval₂RingHom, Polynomial.eval₂_C] using hgP_C c
+      · change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
+        simpa [Polynomial.algebraMap_apply] using hgen_x
+    have hcoeffp := congrArg (fun h : Polynomial k →+* S => h p) hcoeff
+    simpa [RingHom.coe_comp, Function.comp_apply, Polynomial.algebraMap_def,
+      Polynomial.mapRingHom, gC] using hcoeffp
+    · simpa [gC, Polynomial.algebraMap_def, Polynomial.mapRingHom] using hgen_z
+  have hF0eq : F0 = gP := by
+    apply IsLocalization.ringHom_ext M0
+    rw [hF0comp, hFcomp]
+  have hF0inj : Function.Injective F0 := by
+    rw [IsLocalization.lift_injective_iff]
+    intro p q
+    constructor
+    · intro hpq
+      have hpq' := congrArg F0 hpq
+      change (F0.comp (algebraMap (Polynomial (Polynomial k))
+        (nPresentationRing k))) p =
+        (F0.comp (algebraMap (Polynomial (Polynomial k))
+          (nPresentationRing k))) q at hpq'
+      rw [hF0comp] at hpq'
+      exact hpq'
+    · intro hpq
+      exact congrArg (algebraMap (Polynomial (Polynomial k))
+        (nPresentationRing k)) (hgCinj hpq)
+  rw [← hF0eq]
+  exact hF0inj
+
+private theorem localization_n_presentation_gP_data
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S] :
+    ∃ gP : nPresentationRing k →+* S,
+      IsUnit (algebraMap (R d) S (xInGeneratedRing d)) ∧
+      gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+        algebraMap (R d) S (xInGeneratedRing d) ∧
+      gP (Polynomial.X : nPresentationRing k) =
+        algebraMap (R d) S (zInGeneratedRing d) ∧
+      (∀ c : k,
+        gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) =
+          algebraMap k S c) := by
+  have hxnot : xInGeneratedRing d ∉ nIdeal d := by
+    intro hx
+    have hxm : xInGeneratedRing d - 1 ∈ nIdeal d := by
+      rw [nIdeal_eq_span_xSubOne_z d]
+      exact Ideal.subset_span (by simp)
+    have hone : (1 : R d) ∈ nIdeal d := by
+      have h := (nIdeal d).sub_mem hx hxm
+      simpa [sub_sub] using h
+    exact ((Ideal.ne_top_iff_one (nIdeal d)).mp (nIdeal_isMaximal d).ne_top) hone
+  have hxunit : IsUnit (algebraMap (R d) S (xInGeneratedRing d)) := by
+    exact IsLocalization.map_units S
+      (⟨xInGeneratedRing d, hxnot⟩ : (nIdeal d).primeCompl)
+  let e0 : Polynomial k →+* S :=
+    Polynomial.eval₂RingHom (algebraMap k S)
+      (algebraMap (R d) S (xInGeneratedRing d))
+  have hxunit0 : IsUnit (e0 (Polynomial.X : Polynomial k)) := by
+    simpa [e0] using hxunit
+  let gQ : LaurentPolynomialRing k →+* S :=
+    IsLocalization.Away.lift (g := e0) Polynomial.X hxunit0
+  let gP : nPresentationRing k →+* S :=
+    Polynomial.eval₂RingHom gQ (algebraMap (R d) S (zInGeneratedRing d))
+  have hgQ : gQ (xInLaurentPolynomialRing k) =
+      algebraMap (R d) S (xInGeneratedRing d) := by
+    change gQ (algebraMap (Polynomial k) (LaurentPolynomialRing k) Polynomial.X) = _
+    rw [IsLocalization.Away.lift_eq (g := e0) Polynomial.X hxunit0]
+    simp [e0, xInLaurentPolynomialRing]
+  have hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+      (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d) := by
+    change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
+    change Polynomial.eval₂ gQ (algebraMap (R d) S (zInGeneratedRing d))
+        (Polynomial.C (xInLaurentPolynomialRing k)) = _
+    rw [Polynomial.eval₂_C]
+    exact hgQ
+  have hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d) := by
+    change Polynomial.eval₂ gQ (algebraMap (R d) S (zInGeneratedRing d))
+        (Polynomial.X : Polynomial (LaurentPolynomialRing k)) = _
+    rw [Polynomial.eval₂_X]
+  have hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c := by
+    intro c
+    change Polynomial.eval₂ gQ (algebraMap (R d) S (zInGeneratedRing d))
+      (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = _
+    rw [Polynomial.eval₂_C]
+    change gQ (algebraMap k (LaurentPolynomialRing k) c) = _
+    change (gQ.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+      (Polynomial.C c) = _
+    rw [IsLocalization.Away.lift_comp]
+    simp [e0]
+  exact ⟨gP, hxunit, hgen_x, hgen_z, hgP_C⟩
+
+private theorem localization_n_presentation_fP_data
+    (d : PowerSeriesData k) :
+    ∃ (fP : nPresentationRing k →+* k),
+      Function.Surjective fP ∧
+      RingHom.ker fP = nPresentationIdeal k ∧
+      ∃ qx : (nPresentationIdeal k).primeCompl,
+        (qx : nPresentationRing k) = Polynomial.C (xInLaurentPolynomialRing k) := by
+  let e : Polynomial k →+* k := Polynomial.evalRingHom 1
+  have heX : e (Polynomial.X : Polynomial k) = 1 := by simp [e]
+  have heunits : ∀ y : Submonoid.powers (Polynomial.X : Polynomial k), IsUnit (e y) := by
+    rintro ⟨y, hy⟩
+    obtain ⟨n, rfl⟩ := hy
+    simp [map_pow, heX]
+  let g : LaurentPolynomialRing k →+* k :=
+    IsLocalization.lift (M := Submonoid.powers (Polynomial.X : Polynomial k))
+      (g := e) heunits
+  let fP : nPresentationRing k →+* k := Polynomial.eval₂RingHom g 0
+  have hfP : Function.Surjective fP := by
+    intro c
+    refine ⟨Polynomial.C (algebraMap k (LaurentPolynomialRing k) c), ?_⟩
+    change Polynomial.eval₂ g 0
+        (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = c
+    rw [Polynomial.eval₂_C]
+    change g (algebraMap k (LaurentPolynomialRing k) c) = c
+    change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+        (Polynomial.C c) = c
+    rw [IsLocalization.lift_comp]
+    simp [e]
+  have hleP : nPresentationIdeal k ≤ RingHom.ker fP := by
+    change Ideal.span {algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k) - 1, Polynomial.X} ≤ RingHom.ker fP
+    rw [Ideal.span_le]
+    intro p hp
+    change fP p = 0
+    rcases Set.mem_insert_iff.mp hp with rfl | rfl
+    · change fP (Polynomial.C (xInLaurentPolynomialRing k) - 1) = 0
+      have hfg : fP (Polynomial.C (xInLaurentPolynomialRing k)) =
+          g (xInLaurentPolynomialRing k) := by
+        change Polynomial.eval₂ g 0
+            (Polynomial.C (xInLaurentPolynomialRing k)) =
+          g (xInLaurentPolynomialRing k)
+        rw [Polynomial.eval₂_C]
+      have hgx : g (xInLaurentPolynomialRing k) = 1 := by
+        change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+            (Polynomial.X : Polynomial k) = 1
+        rw [IsLocalization.lift_comp, heX]
+      calc
+        fP (Polynomial.C (xInLaurentPolynomialRing k) - 1) =
+            fP (Polynomial.C (xInLaurentPolynomialRing k)) - fP 1 := by
+              rw [map_sub]
+        _ = g (xInLaurentPolynomialRing k) - 1 := by rw [hfg, map_one]
+        _ = 0 := by rw [hgx]; simp
+    · change Polynomial.eval₂ g 0 (Polynomial.X : Polynomial (LaurentPolynomialRing k)) = 0
+      rw [Polynomial.eval₂_X]
+  have hkerP : RingHom.ker fP = nPresentationIdeal k := by
+    have hmax : (RingHom.ker fP).IsMaximal := by
+      apply Ideal.Quotient.maximal_of_isField
+      exact (RingHom.quotientKerEquivOfSurjective (f := fP) hfP).toMulEquiv.isField
+        (Field.toIsField k)
+    exact (nPresentationIdeal_isMaximal k).eq_of_le hmax.ne_top hleP |>.symm
+  have hxPnot : (Polynomial.C (xInLaurentPolynomialRing k) : nPresentationRing k) ∉
+      nPresentationIdeal k := by
+    intro hx
+    have hxm : Polynomial.C (xInLaurentPolynomialRing k) - 1 ∈ nPresentationIdeal k :=
+      Ideal.subset_span (by simp [nPresentationIdeal])
+    have hone : (1 : nPresentationRing k) ∈ nPresentationIdeal k := by
+      have h := (nPresentationIdeal k).sub_mem hx hxm
+      simpa [sub_sub] using h
+    exact ((Ideal.ne_top_iff_one (nPresentationIdeal k)).mp
+      (nPresentationIdeal_isMaximal k).ne_top) hone
+  let qx : (nPresentationIdeal k).primeCompl :=
+    ⟨Polynomial.C (xInLaurentPolynomialRing k), by
+      exact hxPnot⟩
+  exact ⟨fP, hfP, hkerP, qx, rfl⟩
+
+private theorem localization_n_presentation_predata (d : PowerSeriesData k) :
+    ∃ (gP : nPresentationRing k →+* Localization.AtPrime (nIdeal d))
+      (fP : nPresentationRing k →+* k)
+      (hres : IsLocalRing.ResidueField (Localization.AtPrime (nIdeal d)) ≃+* k),
+      IsUnit (algebraMap (R d) (Localization.AtPrime (nIdeal d))
+        (xInGeneratedRing d)) ∧
+      gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+        algebraMap (R d) (Localization.AtPrime (nIdeal d))
+          (xInGeneratedRing d) ∧
+      gP (Polynomial.X : nPresentationRing k) =
+        algebraMap (R d) (Localization.AtPrime (nIdeal d))
+          (zInGeneratedRing d) ∧
+      (∀ c : k,
+        gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) =
+          algebraMap k (Localization.AtPrime (nIdeal d)) c) ∧
+      Function.Surjective fP ∧ RingHom.ker fP = nPresentationIdeal k ∧
+      (∃ qx : (nPresentationIdeal k).primeCompl,
+        (qx : nPresentationRing k) = Polynomial.C (xInLaurentPolynomialRing k)) ∧
+      ((hres.toRingHom.comp
+        (Ideal.Quotient.mk (IsLocalRing.maximalIdeal (Localization.AtPrime (nIdeal d)))))
+        .comp gP = fP) ∧
+      (∀ y : (nPresentationIdeal k).primeCompl,
+        IsUnit (gP y)) := by
+  let S := Localization.AtPrime (nIdeal d)
+  have hxnot : xInGeneratedRing d ∉ nIdeal d := by
+    intro hx
+    have hxm : xInGeneratedRing d - 1 ∈ nIdeal d := by
+      rw [nIdeal_eq_span_xSubOne_z d]
+      exact Ideal.subset_span (by simp)
+    have hone : (1 : R d) ∈ nIdeal d := by
+      have h := (nIdeal d).sub_mem hx hxm
+      simpa [sub_sub] using h
+    exact ((Ideal.ne_top_iff_one (nIdeal d)).mp (nIdeal_isMaximal d).ne_top) hone
+  have hxunit : IsUnit (algebraMap (R d) S (xInGeneratedRing d)) := by
+    exact IsLocalization.map_units S
+      (⟨xInGeneratedRing d, hxnot⟩ : (nIdeal d).primeCompl)
+  let e0 : Polynomial k →+* S :=
+    Polynomial.eval₂RingHom (algebraMap k S)
+      (algebraMap (R d) S (xInGeneratedRing d))
+  have hxunit0 : IsUnit (e0 (Polynomial.X : Polynomial k)) := by
+    simpa [e0] using hxunit
+  let gQ : LaurentPolynomialRing k →+* S :=
+    IsLocalization.Away.lift (g := e0) Polynomial.X hxunit0
+  let gP : nPresentationRing k →+* S :=
+    Polynomial.eval₂RingHom gQ (algebraMap (R d) S (zInGeneratedRing d))
+  have hgQ : gQ (xInLaurentPolynomialRing k) =
+      algebraMap (R d) S (xInGeneratedRing d) := by
+    change gQ (algebraMap (Polynomial k) (LaurentPolynomialRing k) Polynomial.X) = _
+    rw [IsLocalization.Away.lift_eq (g := e0) Polynomial.X hxunit0]
+    simp [e0, xInLaurentPolynomialRing]
+  have hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+      (xInLaurentPolynomialRing k)) = algebraMap (R d) S (xInGeneratedRing d) := by
+    change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
+    change Polynomial.eval₂ gQ (algebraMap (R d) S (zInGeneratedRing d))
+      (Polynomial.C (xInLaurentPolynomialRing k)) = _
+    rw [Polynomial.eval₂_C]
+    exact hgQ
+  have hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d) := by
+    change Polynomial.eval₂ gQ (algebraMap (R d) S (zInGeneratedRing d))
+      (Polynomial.X : Polynomial (LaurentPolynomialRing k)) = _
+    rw [Polynomial.eval₂_X]
+  have hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c := by
+    intro c
+    change Polynomial.eval₂ gQ (algebraMap (R d) S (zInGeneratedRing d))
+      (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = _
+    rw [Polynomial.eval₂_C]
+    change gQ (algebraMap k (LaurentPolynomialRing k) c) = _
+    change (gQ.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+      (Polynomial.C c) = _
+    rw [IsLocalization.Away.lift_comp]
+    simp [e0]
+  let e : Polynomial k →+* k := Polynomial.evalRingHom 1
+  have heX : e (Polynomial.X : Polynomial k) = 1 := by simp [e]
+  have heunits : ∀ y : Submonoid.powers (Polynomial.X : Polynomial k), IsUnit (e y) := by
+    rintro ⟨y, hy⟩
+    obtain ⟨n, rfl⟩ := hy
+    simp [map_pow, heX]
+  let g : LaurentPolynomialRing k →+* k :=
+    IsLocalization.lift (M := Submonoid.powers (Polynomial.X : Polynomial k))
+      (g := e) heunits
+  let fP : nPresentationRing k →+* k := Polynomial.eval₂RingHom g 0
+  have hfP : Function.Surjective fP := by
+    intro c
+    refine ⟨Polynomial.C (algebraMap k (LaurentPolynomialRing k) c), ?_⟩
+    change Polynomial.eval₂ g 0 (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = c
+    rw [Polynomial.eval₂_C]
+    change g (algebraMap k (LaurentPolynomialRing k) c) = c
+    change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+      (Polynomial.C c) = c
+    rw [IsLocalization.lift_comp]
+    simp [e]
+  have hleP : nPresentationIdeal k ≤ RingHom.ker fP := by
+    change Ideal.span {algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+      (xInLaurentPolynomialRing k) - 1, Polynomial.X} ≤ RingHom.ker fP
+    rw [Ideal.span_le]
+    intro p hp
+    change fP p = 0
+    rcases Set.mem_insert_iff.mp hp with rfl | rfl
+    · change fP (Polynomial.C (xInLaurentPolynomialRing k) - 1) = 0
+      have hfg : fP (Polynomial.C (xInLaurentPolynomialRing k)) =
+          g (xInLaurentPolynomialRing k) := by
+        change Polynomial.eval₂ g 0 (Polynomial.C (xInLaurentPolynomialRing k)) =
+          g (xInLaurentPolynomialRing k)
+        rw [Polynomial.eval₂_C]
+      have hgx : g (xInLaurentPolynomialRing k) = 1 := by
+        change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
+          (Polynomial.X : Polynomial k) = 1
+        rw [IsLocalization.lift_comp, heX]
+      calc
+        fP (Polynomial.C (xInLaurentPolynomialRing k) - 1) =
+            fP (Polynomial.C (xInLaurentPolynomialRing k)) - fP 1 := by rw [map_sub]
+        _ = g (xInLaurentPolynomialRing k) - 1 := by rw [hfg, map_one]
+        _ = 0 := by rw [hgx]; simp
+    · change Polynomial.eval₂ g 0 (Polynomial.X : Polynomial (LaurentPolynomialRing k)) = 0
+      rw [Polynomial.eval₂_X]
+  have hkerP : RingHom.ker fP = nPresentationIdeal k := by
+    have hmax : (RingHom.ker fP).IsMaximal := by
+      apply Ideal.Quotient.maximal_of_isField
+      exact (RingHom.quotientKerEquivOfSurjective (f := fP) hfP).toMulEquiv.isField
+        (Field.toIsField k)
+    exact (nPresentationIdeal_isMaximal k).eq_of_le hmax.ne_top hleP |>.symm
+  have hxPnot : (Polynomial.C (xInLaurentPolynomialRing k) : nPresentationRing k) ∉
+      nPresentationIdeal k := by
+    intro hx
+    have hxm : Polynomial.C (xInLaurentPolynomialRing k) - 1 ∈ nPresentationIdeal k :=
+      Ideal.subset_span (by simp [nPresentationIdeal])
+    have hone : (1 : nPresentationRing k) ∈ nPresentationIdeal k := by
+      have h := (nPresentationIdeal k).sub_mem hx hxm
+      simpa [sub_sub] using h
+    exact ((Ideal.ne_top_iff_one (nPresentationIdeal k)).mp
+      (nPresentationIdeal_isMaximal k).ne_top) hone
+  let qx : (nPresentationIdeal k).primeCompl :=
+    ⟨Polynomial.C (xInLaurentPolynomialRing k), hxPnot⟩
+  rcases quotient_nIdeal_equiv d with ⟨eN⟩
+  let hres :=
+    (@IsLocalization.AtPrime.equivQuotMaximalIdeal (R d) _ (nIdeal d)
+      (nIdeal_isMaximal d) S _ _ _ _).symm.trans eN
+  have hrescomp : (hres.toRingHom.comp
+      (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S))).comp gP = fP := by
+    apply Polynomial.ringHom_ext
+    · intro c
+      simp [gP, fP, hres]
+    · simp [gP, fP, hres]
+  have hunitP : ∀ y : (nPresentationIdeal k).primeCompl, IsUnit (gP y) := by
+    intro y
+    rw [← IsLocalRing.notMem_maximalIdeal]
+    intro hy
+    have hy0 : Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) (gP y) = 0 := by
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact hy
+    have hy' : hres (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) (gP y)) = 0 := by
+      simpa using congrArg hres hy0
+    have hfy : fP y = 0 := by
+      have hcomp := congrArg (fun h : nPresentationRing k →+* k => h y) hrescomp
+      rw [← hcomp]
+      exact hy'
+    have hyker : y.val ∈ RingHom.ker fP := hfy
+    have hyI : y.val ∈ nPresentationIdeal k := by simpa only [hkerP] using hyker
+    exact y.prop hyI
+  exact ⟨gP, fP, hres, hxunit, hgen_x, hgen_z, hgP_C, hfP, hkerP,
+    ⟨qx, rfl⟩, hrescomp, hunitP⟩
+
+private theorem localization_n_presentation_surjective_of_data
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S] [IsLocalRing S]
+    (gP : nPresentationRing k →+* S) (fP : nPresentationRing k →+* k)
+    (hres : S ⧸ IsLocalRing.maximalIdeal S ≃+* k)
+    (hrescomp : (hres.toRingHom.comp
+      (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S))).comp gP = fP)
+    (hkerP : RingHom.ker fP = nPresentationIdeal k)
+    (hunitP : ∀ y : (nPresentationIdeal k).primeCompl, IsUnit (gP y))
+    (qx : (nPresentationIdeal k).primeCompl)
+    (hqx : (qx : nPresentationRing k) = Polynomial.C (xInLaurentPolynomialRing k))
+    (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+        (xInLaurentPolynomialRing k)) =
+      algebraMap (R d) S (xInGeneratedRing d))
+    (hgen_z : gP (Polynomial.X : nPresentationRing k) =
+      algebraMap (R d) S (zInGeneratedRing d))
+    (hgP_C : ∀ c : k,
+      gP (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = algebraMap k S c) :
+    Function.Surjective
+      (IsLocalization.lift (S := Localization.AtPrime (nPresentationIdeal k))
+        (M := (nPresentationIdeal k).primeCompl) (g := gP) hunitP) := by
+  have hrep := localization_n_presentation_hrep (d := d) (S := S) gP
+    hgen_x hgen_z hgP_C qx hqx
+  exact localization_n_presentation_lift_surjective
+    (d := d) (S := S) gP fP hres hrescomp hkerP hunitP hrep
+
+private theorem localization_n_presentation_equiv_of_data
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S] [IsLocalRing S]
+    (gP : nPresentationRing k →+* S) (fP : nPresentationRing k →+* k)
+    (hres : S ⧸ IsLocalRing.maximalIdeal S ≃+* k)
+    (hrescomp : (hres.toRingHom.comp
+      (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S))).comp gP = fP)
+    (hkerP : RingHom.ker fP = nPresentationIdeal k)
+    (hunitP : ∀ y : (nPresentationIdeal k).primeCompl, IsUnit (gP y))
+    (hFsurj : Function.Surjective
+      (IsLocalization.lift (S := Localization.AtPrime (nPresentationIdeal k))
+        (M := (nPresentationIdeal k).primeCompl) (g := gP) hunitP))
+    (hgPinj : Function.Injective gP) :
+    Nonempty (Localization.AtPrime (nPresentationIdeal k) ≃+* S) := by
+  let F : Localization.AtPrime (nPresentationIdeal k) →+* S :=
+    IsLocalization.lift (M := (nPresentationIdeal k).primeCompl)
+      (g := gP) hunitP
+  exact ⟨RingEquiv.ofBijective F ⟨by
+    rw [IsLocalization.lift_injective_iff]
+    intro p q
+    constructor
+    · intro hpq
+      have hpq' := congrArg F hpq
+      change (F.comp (algebraMap (nPresentationRing k)
+        (Localization.AtPrime (nPresentationIdeal k)))) p =
+        (F.comp (algebraMap (nPresentationRing k)
+          (Localization.AtPrime (nPresentationIdeal k)))) q at hpq'
+      rw [IsLocalization.lift_comp hunitP] at hpq'
+      exact hpq'
+    · intro hpq
+      exact congrArg (algebraMap (nPresentationRing k)
+        (Localization.AtPrime (nPresentationIdeal k)))
+        (hgPinj hpq), hFsurj⟩⟩
+
+private theorem localization_n_presentation_compatibility
+    (d : PowerSeriesData k) (S : Type*) [CommRing S] [Algebra (R d) S]
+    [Algebra k S] [IsScalarTower k (R d) S]
+    [IsLocalization (nIdeal d).primeCompl S] [IsLocalRing S]
+    (gP : nPresentationRing k →+* S) (fP : nPresentationRing k →+* k)
+    (hres : S ⧸ IsLocalRing.maximalIdeal S ≃+* k)
+    (hkerP : RingHom.ker fP = nPresentationIdeal k)
+    (hrescomp : (hres.toRingHom.comp
+      (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S))).comp gP = fP) :
+    ∀ y : (nPresentationIdeal k).primeCompl, IsUnit (gP y) := by
+    intro y
+    rw [← IsLocalRing.notMem_maximalIdeal]
+    intro hy
+    have hy0 : Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) (gP y) = 0 := by
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact hy
+    have hy' : hres (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) (gP y)) = 0 := by
+      simpa using congrArg hres hy0
+    have hfy : fP y = 0 := by
+      have hcomp := congrArg (fun h : nPresentationRing k →+* k => h y) hrescomp
+      rw [← hcomp]
+      exact hy'
+    have hyker : y.val ∈ RingHom.ker fP := by
+      exact hfy
+    have hyI : y.val ∈ nPresentationIdeal k := by
+      simpa only [hkerP] using hyker
+    exact y.prop hyI
+
+private theorem localization_n_presentation_core (d : PowerSeriesData k) :
+    Nonempty (Localization.AtPrime (nPresentationIdeal k) ≃+*
+      Localization.AtPrime (nIdeal d)) := by
+  let S := Localization.AtPrime (nIdeal d)
+  rcases localization_n_presentation_predata d with
+    ⟨gP, fP, hres, hxunit, hgen_x, hgen_z, hgP_C, _, hkerP,
+      ⟨qx, hqx⟩, hrescomp, hunitP⟩
+  have hFsurj := localization_n_presentation_surjective_of_data (d := d) (S := S)
+    gP fP hres hrescomp hkerP hunitP qx hqx hgen_x hgen_z hgP_C
+  have hgPinj := localization_n_presentation_gP_injective (d := d) (S := S) gP
+    hgen_x hgen_z hgP_C hxunit
+  exact localization_n_presentation_equiv_of_data (d := d) (S := S) gP fP hres
+    hrescomp hkerP hunitP hFsurj hgPinj
+
 /-- The source's presentation of `R_𝔫` by the localization of
 `k[x, x⁻¹, z]` at `(x - 1, z)`. -/
 theorem localization_n_presentation (d : PowerSeriesData k) :
     Nonempty (Localization.AtPrime (nPresentationIdeal k) ≃+*
-      Localization.AtPrime (nIdeal d)) := by
-  sorry
+      Localization.AtPrime (nIdeal d)) := localization_n_presentation_core d
 
 /-- `R_𝔫` is a regular local ring of dimension `2` and residue field `k`. -/
 theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
@@ -1967,7 +3137,92 @@ theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
       IsRegularLocalRing (Localization.AtPrime (nIdeal d)) ∧
       ringKrullDim (Localization.AtPrime (nIdeal d)) = 2 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (nIdeal d)) ≃+* k) := by
-  sorry
+  rcases localization_n_presentation d with ⟨e⟩
+  haveI : IsRegularRing (LaurentPolynomialRing k) := by
+    rw [isRegularRing_iff]
+    intro p hp
+    let q : Ideal (Polynomial k) :=
+      p.comap (algebraMap (Polynomial k) (LaurentPolynomialRing k))
+    haveI : q.IsPrime := by
+      dsimp [q]
+      infer_instance
+    have hd : Disjoint (Submonoid.powers (Polynomial.X : Polynomial k) : Set (Polynomial k))
+        (q : Set (Polynomial k)) := by
+      refine Set.disjoint_left.mpr ?_
+      intro a ha hq
+      obtain ⟨n, rfl⟩ := ha
+      have hunit : IsUnit (algebraMap (Polynomial k) (LaurentPolynomialRing k)
+          ((Polynomial.X : Polynomial k) ^ n)) := by
+        exact IsLocalization.map_units (M := Submonoid.powers (Polynomial.X : Polynomial k))
+          (LaurentPolynomialRing k) ⟨(Polynomial.X : Polynomial k) ^ n, ⟨n, rfl⟩⟩
+      exact hp.ne_top (p.eq_top_of_isUnit_mem hq hunit)
+    letI : IsRegularRing (Polynomial k) := by infer_instance
+    exact IsRegularLocalRing.of_ringEquiv
+      (IsLocalization.localizationLocalizationAtPrimeIsoLocalization
+        (M := Submonoid.powers (Polynomial.X : Polynomial k)) p).toRingEquiv
+  haveI : IsRegularRing (nPresentationRing k) := by infer_instance
+  haveI : IsRegularLocalRing (Localization.AtPrime (nPresentationIdeal k)) := by
+    infer_instance
+  have hregS : IsRegularLocalRing (Localization.AtPrime (nIdeal d)) :=
+    IsRegularLocalRing.of_ringEquiv
+      (R := Localization.AtPrime (nPresentationIdeal k)) e
+  have hdimP : ringKrullDim (Localization.AtPrime (nPresentationIdeal k)) = 2 := by
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height
+      (nPresentationIdeal k) (Localization.AtPrime (nPresentationIdeal k))]
+    let q : Ideal (LaurentPolynomialRing k) :=
+      (nPresentationIdeal k).comap
+        (algebraMap (LaurentPolynomialRing k) (nPresentationRing k))
+    letI : (nPresentationIdeal k).LiesOver q := ⟨rfl⟩
+    have hqprime : q.IsPrime :=
+      Ideal.isPrime_of_liesOver (nPresentationIdeal k) q
+    have hxne : xInLaurentPolynomialRing k - 1 ≠ 0 := by
+      intro h
+      have h' : (Polynomial.X : Polynomial k) - 1 = 0 := by
+        apply IsLocalization.injective (LaurentPolynomialRing k)
+          (powers_le_nonZeroDivisors_of_noZeroDivisors (x := (Polynomial.X : Polynomial k))
+            (by simp))
+        simpa [xInLaurentPolynomialRing] using h
+      exact (Polynomial.X_sub_C_ne_zero (1 : k)) (by simpa using h')
+    have hqnebot : q ≠ ⊥ := by
+      intro hq
+      have hxm : xInLaurentPolynomialRing k - 1 ∈ q := by
+        change algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
+            (xInLaurentPolynomialRing k - 1) ∈ nPresentationIdeal k
+        rw [map_sub]
+        exact Ideal.subset_span (by simp [nPresentationIdeal])
+      rw [hq] at hxm
+      exact hxne (by simpa using hxm)
+    have hLaurentDomain : IsDomain (LaurentPolynomialRing k) :=
+      IsLocalization.isDomain_localization
+        (powers_le_nonZeroDivisors_of_noZeroDivisors (x := (Polynomial.X : Polynomial k))
+          (by simp))
+    have hLaurentPIR : IsPrincipalIdealRing (LaurentPolynomialRing k) := by
+      constructor
+      intro I
+      rw [← IsLocalization.map_under
+        (M := Submonoid.powers (Polynomial.X : Polynomial k))
+        (S := LaurentPolynomialRing k) I]
+      obtain ⟨x, hx⟩ := IsPrincipalIdealRing.principal (I.under (Polynomial k))
+      refine ⟨⟨algebraMap (Polynomial k) (LaurentPolynomialRing k) x, ?_⟩⟩
+      rw [hx, Ideal.map_span, Set.image_singleton]
+    letI : IsDomain (LaurentPolynomialRing k) := hLaurentDomain
+    letI : IsPrincipalIdealRing (LaurentPolynomialRing k) := hLaurentPIR
+    have hqmax : q.IsMaximal :=
+      Ideal.IsPrime.isMaximal hqprime hqnebot
+    have hqheight : q.height = 1 := by
+      apply IsPrincipalIdealRing.height_eq_one_of_isMaximal q
+      exact Ring.not_isField_of_ne_of_ne hqnebot hqmax.ne_top
+    have hPmax : (nPresentationIdeal k).IsMaximal := nPresentationIdeal_isMaximal k
+    rw [@Polynomial.height_eq_height_add_one (LaurentPolynomialRing k) _ inferInstance q
+      (nPresentationIdeal k) hPmax inferInstance, hqheight]
+    norm_num
+  have hnoethS : IsNoetherianRing (Localization.AtPrime (nIdeal d)) := by
+    exact hregS.toIsNoetherian
+  refine ⟨hnoethS, hregS, ?_, ?_⟩
+  · rw [← hdimP, ringKrullDim_eq_of_ringEquiv e]
+  · rcases quotient_nIdeal_equiv d with ⟨eN⟩
+    exact ⟨(@IsLocalization.AtPrime.equivQuotMaximalIdeal (R d) _ (nIdeal d)
+      (nIdeal_isMaximal d) (Localization.AtPrime (nIdeal d)) _ _ _ _).symm.trans eN⟩
 
 /-- The source's multiplicative subset `S = (R - 𝔪) ∩ (R - 𝔫)`. -/
 def multiplicativeSet (d : PowerSeriesData k) : Set (R d) :=
@@ -1984,7 +3239,23 @@ theorem multiplicativeSet_isMultiplicative (d : PowerSeriesData k) :
     1 ∈ multiplicativeSet d ∧
       ∀ {r s : R d}, r ∈ multiplicativeSet d → s ∈ multiplicativeSet d →
         r * s ∈ multiplicativeSet d := by
-  sorry
+  rw [multiplicativeSet_eq_complement_union d]
+  constructor
+  · simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union]
+    intro h
+    rcases h with h | h
+    · exact (Ideal.ne_top_iff_one (mIdeal d)).mp (mIdeal_isMaximal d).ne_top h
+    · exact (Ideal.ne_top_iff_one (nIdeal d)).mp (nIdeal_isMaximal d).ne_top h
+  · intro r s hr hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hr hs ⊢
+    intro h
+    rcases h with h | h
+    · rcases (mIdeal_isPrime d).mem_or_mem h with h' | h'
+      · exact hr (Or.inl h')
+      · exact hs (Or.inl h')
+    · rcases (nIdeal_isPrime d).mem_or_mem h with h' | h'
+      · exact hr (Or.inr h')
+      · exact hs (Or.inr h')
 
 /- The displayed multiplicative subset, bundled as Mathlib's canonical
 submonoid structure. -/

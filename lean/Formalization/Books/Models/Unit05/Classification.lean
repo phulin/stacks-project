@@ -6399,7 +6399,7 @@ private theorem no_positive_cycle
       omega
     · have hnot : i.val + 1 ≠ 0 := by omega
       apply Fin.ext
-      simp [next, prev, hi, hnot]
+      simp [next, prev, hi]
   have hne_next_prev : ∀ i, next i ≠ prev i := by
     intro i h
     by_cases hn : i.val + 1 = k
@@ -7396,10 +7396,10 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
               omega, Finset.mem_univ _⟩)
           have hdi : B i i * x i = (al : ℝ) * xl := by
             rw [hdiagK i]
-            simp [x, hi0, hilast, h2t]
+            simp [x, hi0, hilast]
           have hbp : B i prev * x prev = -(fl : ℝ) * xm := by
             rw [hbK i prev (by dsimp [prev]; omega)]
-            simp [x, prev, hi0, hilast, h2t, hprev0, hprevlast]
+            simp [x, prev, hilast, hprev0, hprevlast]
           dsimp [rest] at hrest
           linarith [hs1, hs2, hrest, hdi, hbp, hright0]
         · let next : Fin t := ⟨i.val + 1, by omega⟩
@@ -7461,8 +7461,8 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
             · have : next.val + 1 = t := by
                 dsimp [next] at hnext ⊢
                 omega
-              simp [x, next, hi0, hnext, this, hilast]
-            · simp [x, next, hi0, hnext, hilast]
+              simp [x, next, hi0, hnext]
+            · simp [x, next, hi0, hnext]
           have hbp : B i prev * x prev =
               if i.val = 1 then -(f0 : ℝ) * x0 else -(r : ℝ) * xm := by
             rw [hbK i prev (by dsimp [prev]; omega)]
@@ -7473,24 +7473,24 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
               have hprevLast' : ¬ prev.val + 1 = t := by
                 dsimp [prev]
                 omega
-              simp [x, prev, hi0, hilast, hprev, hprev0', hprevLast']
+              simp [x, prev, hprev]
             · have hprev0' : prev.val ≠ 0 := by
                 dsimp [prev] at hprev ⊢
                 omega
               have hprevLast' : ¬ prev.val + 1 = t := by
                 dsimp [prev]
                 omega
-              simp [x, prev, hi0, hilast, hprev, hprev0', hprevLast']
+              simp [x, prev, hilast, hprev, hprev0', hprevLast']
           dsimp [rest] at hrest
           by_cases hnext : i.val + 2 = t
           · by_cases hprev : i.val = 1
-            · simp [hnext, hprev] at hfn hbp
+            · simp [hprev] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hleft1, hright1]
             · simp [hnext, hprev] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hright1]
           · by_cases hprev : i.val = 1
             · have ht3 : ¬ (3 : ℕ) = t := by omega
-              simp [hnext, hprev, ht3] at hfn hbp
+              simp [hprev, ht3] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hleft1]
             · simp [hnext, hprev] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp]
@@ -7599,7 +7599,7 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
         hleft0 hleft1 hright0 hright1
     have hp := Matrix.PosDef.dotProduct_mulVec_pos hBpos hx
     rw [hz] at hp
-    simpa using hp
+    simp at hp
   have hfirstOne : pf01 * qf01 = 1 →
       D.w z0 = r ∧ D.a z0 z1 = r := by
     intro h
@@ -7687,7 +7687,7 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
                 exact (hfirstOne hf1).1
               · exact hmiddleWeight i (by omega) hi
             rw [hwri, hrel]
-            simp [hi] <;> ring
+            simp [hi]; ring
         have hdB : ∀ i, D.a i i = s0 * (if i.val + 1 = t then -2 else -4) := by
           intro i
           rw [hDdiag i, hwB i]
@@ -7751,7 +7751,7 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
               simpa [hzlast] using (hfirstOne hf1).1
             · have hh := hmiddleWeight i (by omega) hi
               rw [hh]
-              simp [hi] <;> ring
+              simp [hi]
         have hdC : ∀ i, D.a i i = r * (if i.val + 1 = t then -4 else -2) := by
           intro i
           rw [hDdiag i, hwC i]
@@ -7779,12 +7779,12 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
                   ring
             · by_cases hj2 : j.val + 2 < t
               · rw [hmidEdge i j hij (by omega) hj2]
-                simp [hi, hj]
+                simp [hj]
               · have hh := (hunit i j hij (by omega) (by omega)).2
                 have hwj := hmiddleWeight j (by omega) hj
                 rw [hwj] at hh
                 rw [hh]
-                simp [hi, hj]
+                simp [hj]
         have hbC : ∀ i j, j.val + 1 = i.val →
             D.a i j = r * (if i.val + 1 = t then 2 else 1) := by
           intro i j hij
@@ -7969,8 +7969,8 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           exfalso
           exact hcontra (4 * r) (2 * r) r r 1 2 2 (by norm_num)
             (hdiag_of (4 * r) r hleftDiag hrightDiag) hfK hbK
-            (by norm_num <;> ring) (by norm_num <;> ring)
-            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num; ring) (by norm_num; ring)
+            (by norm_num) (by norm_num)
         · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
           have hleftW : D.w z0 = 2 * r := by
             calc
@@ -7997,8 +7997,8 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           exfalso
           exact hcontra (4 * r) (2 * r) (4 * r) (2 * r) 1 2 1 (by norm_num)
             (hdiag_of (4 * r) (4 * r) hleftDiag hrightDiag) hfK hbK
-            (by norm_num <;> ring) (by norm_num <;> ring)
-            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num; ring) (by norm_num; ring)
+            (by norm_num; ring) (by norm_num; ring)
       · obtain ⟨hponeL, hqtwoL⟩ | ⟨hptwoL, hqoneL⟩ :=
           positive_product_two pl34 ql34 hpl34 hql34 hl2
         · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
@@ -8025,8 +8025,8 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           exfalso
           exact hcontra r r r r 2 2 2 (by norm_num)
             (hdiag_of r r hleftDiag hrightDiag) hfK hbK
-            (by norm_num <;> ring) (by norm_num <;> ring)
-            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num) (by norm_num)
+            (by norm_num) (by norm_num)
         · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
           have hleftEdge : D.a z0 z1 = r := by
             calc
@@ -8053,8 +8053,8 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           exfalso
           exact hcontra r r (4 * r) (2 * r) 2 2 1 (by norm_num)
             (hdiag_of r (4 * r) hleftDiag' hrightDiag) hfK hbK
-            (by norm_num <;> ring) (by norm_num <;> ring)
-            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num) (by norm_num)
+            (by norm_num; ring) (by norm_num; ring)
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →
@@ -8069,7 +8069,7 @@ theorem lemma_E6 (T : NumericalType) (S : MinusTwoSubgraph T 6)
   sorry
 
 theorem lemma_E6_not_full (T : NumericalType) (S : MinusTwoSubgraph T 6)
-    (hn : T.n = 6) (hedges : hasE6Edges (localData S))
+    (hn : T.n = 6) (_hedges : hasE6Edges (localData S))
     (hpattern : isE6 (localData S)) : False := by
   classical
   let D := localData S

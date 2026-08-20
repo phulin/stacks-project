@@ -1,3 +1,4 @@
+import Mathlib.Algebra.Homology.DerivedCategory.SingleTriangle
 import Formalization.Books.Derived.Unit16.Core
 
 /-!
@@ -57,7 +58,53 @@ theorem rightDerived_truncation_cohomology_iso
     ∀ i : ℤ, i ≤ a →
       IsIso ((DerivedCategory.Plus.homologyFunctor B i).map
         (R.functor.map (derivedPlusTruncLEMap K a))) := by
-  sorry
+  obtain ⟨eR⟩ := R.exact
+  haveI : R.functor.CommShift ℤ := eR.commShift
+  haveI : R.functor.IsTriangulated := eR.isTriangulated
+  intro i hi
+  let T := (DerivedCategory.Plus.TStructure.t.triangleLEGT a).obj K
+  have hT : T ∈ distTriang (DPlus A) :=
+    DerivedCategory.Plus.TStructure.t.triangleLEGT_distinguished a K
+  have hT₃ : T.obj₃.IsGE (a + 1) := by
+    dsimp [T]
+    infer_instance
+  letI : T.obj₃.IsGE (a + 1) := hT₃
+  let U : Triangle (DPlus B) := R.functor.mapTriangle.obj T
+  have hU : U ∈ distTriang (DPlus B) := R.functor.map_distinguished T hT
+  let H := DerivedCategory.Plus.homologyFunctor B 0
+  let hfive := H.homologySequenceComposableArrows₅ U (i - 1) i (by lia)
+  have hneg₁ : IsZero ((H.shift (i - 1)).obj U.obj₃) := by
+    have h := rightDerived_negative_vanishing
+      R T.obj₃ (a + 1) (by
+        intro j hj
+        exact (DerivedCategory.Plus.isZero_homology_of_isGE T.obj₃
+          (a + 1) j hj)) (i - 1) (by lia)
+    change IsZero (rightDerivedCohomology R.functor T.obj₃ (i - 1))
+    exact h
+  have hneg₂ : IsZero ((H.shift i).obj U.obj₃) := by
+    have h := rightDerived_negative_vanishing
+      R T.obj₃ (a + 1) (by
+        intro j hj
+        exact (DerivedCategory.Plus.isZero_homology_of_isGE T.obj₃
+          (a + 1) j hj)) i (by lia)
+    change IsZero (rightDerivedCohomology R.functor T.obj₃ i)
+    exact h
+  have hδ : ((H.shift (i - 1)).map U.mor₂) ≫
+      H.homologySequenceδ U (i - 1) i (by lia) = 0 := by
+    apply hneg₁.eq_of_src
+  have hnext : ((H.shift i).map U.mor₂) = 0 :=
+    by
+      apply hneg₂.eq_of_src
+  have hmono : Mono ((H.shift i).map U.mor₁) := by
+    let h₃ := hfive.exact 3
+    exact h₃.mono_g hδ
+  have hepi : Epi ((H.shift i).map U.mor₁) := by
+    let h₄ := hfive.exact 4
+    exact h₄.epi_f hnext
+  letI : Mono ((H.shift i).map U.mor₁) := hmono
+  letI : Epi ((H.shift i).map U.mor₁) := hepi
+  have : IsIso ((H.shift i).map U.mor₁) := by infer_instance
+  simpa [H, U, T, derivedPlusTruncLEMap] using this
 
 /-! ## 16.2. Higher derived functors -/
 
@@ -83,7 +130,12 @@ theorem higherRightDerivedFunctor_vanishes_below_zero
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F) :
     ∀ i : ℤ, i < 0 → ∀ X : A,
       IsZero ((higherRightDerivedFunctor F R.functor i).obj X) := by
-  sorry
+  intro i hi X
+  refine rightDerived_negative_vanishing
+    R ((DerivedCategory.Plus.singleFunctor A 0).obj X) 0 ?_ i hi
+  intro j hj
+  exact DerivedCategory.Plus.isZero_homology_of_isGE
+    ((DerivedCategory.Plus.singleFunctor A 0).obj X) 0 j hj
 
 /-- The zeroth right derived functor is left exact. -/
 theorem higherRightDerivedFunctor_zero_is_left_exact
@@ -92,7 +144,49 @@ theorem higherRightDerivedFunctor_zero_is_left_exact
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F) :
     IsLeftExact (higherRightDerivedFunctor F R.functor 0) := by
-  sorry
+  obtain ⟨eR⟩ := R.exact
+  haveI : R.functor.CommShift ℤ := eR.commShift
+  haveI : R.functor.IsTriangulated := eR.isTriangulated
+  apply (left_exact_iff_maps_short_exact_on_left _).2
+  intro S hS
+  let X : A ⥤ DPlus A := DerivedCategory.Plus.singleFunctor A 0
+  let δ : X.obj S.X₃ ⟶
+      (shiftFunctor (DPlus A) (1 : ℤ)).obj (X.obj S.X₁) :=
+    DerivedCategory.Plus.ι.preimage
+      (hS.singleTriangle.mor₃ ≫
+        (DerivedCategory.Plus.ι.commShiftIso (1 : ℤ)).inv.app (X.obj S.X₁))
+  let T : Triangle (DPlus A) :=
+    Triangle.mk (X.map S.f) (X.map S.g) δ
+  have hT : T ∈ distTriang (DPlus A) := by
+    apply (Functor.map_distinguished_iff DerivedCategory.Plus.ι T).1
+    simpa [T, δ, X, Functor.mapTriangle,
+      ShortComplex.ShortExact.singleTriangle] using hS.singleTriangle_distinguished
+  let U : Triangle (DPlus B) := R.functor.mapTriangle.obj T
+  have hU : U ∈ distTriang (DPlus B) := R.functor.map_distinguished T hT
+  let H := DerivedCategory.Plus.homologyFunctor B 0
+  have hfive := H.homologySequenceComposableArrows₅ U (-1) 0 (by simp)
+  have hneg : IsZero ((H.shift (-1)).obj U.obj₃) := by
+    have h := rightDerived_negative_vanishing
+      R (X.obj S.X₃) 0 (by
+        intro j hj
+        exact DerivedCategory.Plus.isZero_homology_of_isGE
+          (X.obj S.X₃) 0 j hj) (-1) (by omega)
+    simpa [H, U, T, X] using h
+  rw [ComposableArrows.exact_iff_δ₀]
+  constructor
+  · change (ShortComplex.mk (0 : (0 : B) ⟶ _)
+      (H.map (R.functor.map (X.map S.f))) _).Exact
+    let e : ShortComplex.mk (0 : (0 : B) ⟶ _)
+        (H.map (R.functor.map (X.map S.f))) _ ≅
+        ShortComplex.mk ((H.shift (-1)).map U.mor₃)
+          ((H.shift 0).map U.mor₁) _ :=
+      ShortComplex.isoMk hneg.isoZero.symm (Iso.refl _) (Iso.refl _)
+        (by simp) (by simp)
+    apply (ShortComplex.exact_iff_of_iso e).2
+    exact hfive.exact 3
+  · change (ShortComplex.mk (H.map (R.functor.map (X.map S.f)))
+      (H.map (R.functor.map (X.map S.g))) _).Exact
+    simpa [H, U, T, X] using hfive.exact 4
 
 /-- The canonical map `F ⟶ R⁰F` is an isomorphism exactly when `F` is left
   exact. -/

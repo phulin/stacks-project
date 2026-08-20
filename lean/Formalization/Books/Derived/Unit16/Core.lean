@@ -172,7 +172,11 @@ theorem minusHomotopyQuotient_mem
     boundedAboveHomotopyProperty A
       (((boundedAboveProperty A).ι ⋙
         HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj K) := by
-  sorry
+  change (boundedAboveProperty A).strictMap
+    (HomotopyCategory.quotient A (ComplexShape.up ℤ))
+    (((boundedAboveProperty A).ι ⋙
+      HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj K)
+  exact ⟨K.1, K.2⟩
 
 /-- The canonical functor `Comp⁻(𝒜) ⥤ K⁻(𝒜)`. -/
 noncomputable def minusHomotopyQuotient
@@ -191,7 +195,17 @@ theorem singleFunctor_mem_KMinus
     [HasDerivedCategory.{w} A] (X : A) (n : ℤ) :
     boundedAboveHomotopyProperty A
       ((HomotopyCategory.singleFunctor A n).obj X) := by
-  sorry
+  change (boundedAboveProperty A).strictMap
+    (HomotopyCategory.quotient A (ComplexShape.up ℤ))
+    ((HomotopyCategory.singleFunctor A n).obj X)
+  refine ⟨(CochainComplex.singleFunctor A n).obj X, ?_⟩
+  refine ⟨n, ?_⟩
+  rw [CochainComplex.isStrictlyLE_iff]
+  intro i hi
+  have h : i ≠ n := by omega
+  simp [CochainComplex.singleFunctor, CochainComplex.singleFunctors,
+    HomologicalComplex.single, h]
+  exact Limits.isZero_zero A
 
 noncomputable def singleMinusFunctor
     {A : Type u} [Category.{v} A] [Abelian A]

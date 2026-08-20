@@ -323,7 +323,32 @@ theorem homotopy_tensor
   the reflexive, symmetric, transitive closure and must be eliminated by the
   `EqvGen` induction.
   -/
-  sorry
+  induction h with
+  | rel φ₀ ψ₀ h₀ =>
+      rcases h₀ with ⟨h₀⟩
+      apply Relation.EqvGen.rel
+      refine ⟨{
+        app := fun n α =>
+          (T.degreeIso N L n).symm.toLinearMap.comp
+            ((tensorHomotopyComponent h₀ L n α).comp
+              (T.degreeIso M L n).toLinearMap)
+        at_zero := ?_
+        at_one := ?_
+        naturality := ?_
+      }⟩
+      · intro n
+        simp only [tensorHomotopyComponent, h₀.at_zero, T.map_component]
+      · intro n
+        simp only [tensorHomotopyComponent, h₀.at_one, T.map_component]
+      · intro n m f α x
+        exact T.degreewise_naturality f (h₀.app n (f ≫ α)) (h₀.app m α)
+          (h₀.naturality f α) x
+  | refl φ₀ =>
+      exact Relation.EqvGen.refl _
+  | symm φ₀ ψ₀ h₀ ih =>
+      exact Relation.EqvGen.symm _ _ ih
+  | trans φ₀ ψ₀ χ₀ h₁ h₂ ih₁ ih₂ =>
+      exact Relation.EqvGen.trans _ _ _ ih₁ ih₂
 
 /-- An exterior-power operation on cosimplicial modules. -/
 structure CosimplicialExteriorPowerOperation (A : CosimplicialRing.{u})
@@ -390,7 +415,32 @@ theorem homotopy_exterior_power
      `Relation.EqvGen.rel`, and assemble the remaining three induction cases
      with `.refl`, `.symm`, and `.trans`.
   -/
-  sorry
+  induction h with
+  | rel φ₀ ψ₀ h₀ =>
+      rcases h₀ with ⟨h₀⟩
+      apply Relation.EqvGen.rel
+      refine ⟨{
+        app := fun n α =>
+          (W.degreeIso N i n).symm.toLinearMap.comp
+            ((exteriorPower.map i (h₀.app n α)).comp
+              (W.degreeIso M i n).toLinearMap)
+        at_zero := ?_
+        at_one := ?_
+        naturality := ?_
+      }⟩
+      · intro n
+        simp only [h₀.at_zero, W.map_component]
+      · intro n
+        simp only [h₀.at_one, W.map_component]
+      · intro n m f α x
+        exact W.degreewise_naturality i f (h₀.app n (f ≫ α)) (h₀.app m α)
+          (h₀.naturality f α) x
+  | refl φ₀ =>
+      exact Relation.EqvGen.refl _
+  | symm φ₀ ψ₀ h₀ ih =>
+      exact Relation.EqvGen.symm _ _ ih
+  | trans φ₀ ψ₀ χ₀ h₁ h₂ ih₁ ih₂ =>
+      exact Relation.EqvGen.trans _ _ _ ih₁ ih₂
 
 /-- The degreewise `∧^i h` component in the source's proof. -/
 noncomputable def exteriorPowerHomotopyComponent {A : CosimplicialRing.{u}}
@@ -479,7 +529,29 @@ theorem homotopy_base_change
      generated-relation induction with the constructors from
      `Mathlib/Logic/Relation.lean`.
   -/
-  sorry
+  induction h with
+  | rel φ₀ ψ₀ h₀ =>
+      rcases h₀ with ⟨h₀⟩
+      apply Relation.EqvGen.rel
+      refine ⟨{
+        app := fun n α => F.componentMap n (h₀.app n α)
+        at_zero := ?_
+        at_one := ?_
+        naturality := ?_
+      }⟩
+      · intro n
+        simp only [F.map_component, h₀.at_zero]
+      · intro n
+        simp only [F.map_component, h₀.at_one]
+      · intro n m g α x
+        exact F.componentMap_naturality g (h₀.app n (g ≫ α)) (h₀.app m α)
+          (h₀.naturality g α) x
+  | refl φ₀ =>
+      exact Relation.EqvGen.refl _
+  | symm φ₀ ψ₀ h₀ ih =>
+      exact Relation.EqvGen.symm _ _ ih
+  | trans φ₀ ψ₀ χ₀ h₁ h₂ ih₁ ih₂ =>
+      exact Relation.EqvGen.trans _ _ _ ih₁ ih₂
 
 /-- The degreewise `h ⊗ 1` component for base change. -/
 def baseChangeHomotopyComponent {A B : CosimplicialRing.{u}}
@@ -562,7 +634,29 @@ theorem homotopy_completion
   wrapper and is declared too late to use here; the displayed `app` avoids a
   forward reference.
   -/
-  sorry
+  induction h with
+  | rel φ₀ ψ₀ h₀ =>
+      rcases h₀ with ⟨h₀⟩
+      apply Relation.EqvGen.rel
+      refine ⟨{
+        app := fun n α => F.componentMap n (h₀.app n α)
+        at_zero := ?_
+        at_one := ?_
+        naturality := ?_
+      }⟩
+      · intro n
+        simp only [F.map_component, h₀.at_zero]
+      · intro n
+        simp only [F.map_component, h₀.at_one]
+      · intro n m g α x
+        exact F.componentMap_naturality g (h₀.app n (g ≫ α)) (h₀.app m α)
+          (h₀.naturality g α) x
+  | refl φ₀ =>
+      exact Relation.EqvGen.refl _
+  | symm φ₀ ψ₀ h₀ ih =>
+      exact Relation.EqvGen.symm _ _ ih
+  | trans φ₀ ψ₀ χ₀ h₁ h₂ ih₁ ih₂ =>
+      exact Relation.EqvGen.trans _ _ _ ih₁ ih₂
 
 /-- The degreewise `h^` component for completion. -/
 def completionHomotopyComponent {A : CosimplicialRing.{u}}

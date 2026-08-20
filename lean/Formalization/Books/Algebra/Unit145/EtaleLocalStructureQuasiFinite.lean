@@ -1,8 +1,7 @@
 import Formalization.Books.Algebra.Unit113.DimensionFormula
-import Mathlib.RingTheory.Etale.QuasiFinite
+import Formalization.Books.Algebra.Unit122.QuasiFinite
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.RingHom.Etale
-import Mathlib.RingTheory.RingHom.QuasiFinite
 
 /-!
 # Commutative Algebra, Chapter 145: Étale local structure of quasi-finite ring maps
@@ -141,7 +140,7 @@ theorem etale_makes_quasiFinite_finite_one_prime
     (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
     (hq : PrimeSpectrum.comap f q = p)
     (hfiniteType : f.FiniteType)
-    (hquasi : RingHom.QuasiFiniteAt f q.asIdeal) :
+    (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q) :
     letI : Algebra R S := f.toAlgebra
     Nonempty (EtaleFiniteAtPrimeData f p q hq) := by
   sorry
@@ -237,7 +236,8 @@ structure EtaleFiniteOverPrimeData
     letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
       PrimeSpectrum.comap (algebraMap R' decomposition.B) r = p' →
-        ¬ RingHom.QuasiFiniteAt (algebraMap R' decomposition.B) r.asIdeal
+        ¬ Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt
+          (algebraMap R' decomposition.B) r
 
 /-- Étale local structure after collecting all quasi-finite points over a
 prime into finitely many finite factors. -/
@@ -281,7 +281,8 @@ structure EtaleFinitePurelyInseparableData
     letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
       PrimeSpectrum.comap (algebraMap R' decomposition.B) r = p' →
-        ¬ RingHom.QuasiFiniteAt (algebraMap R' decomposition.B) r.asIdeal
+        ¬ Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt
+          (algebraMap R' decomposition.B) r
 
 theorem etale_makes_quasiFinite_finite_variant
     {R S : Type u} [CommRing R] [CommRing S]

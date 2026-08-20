@@ -1,4 +1,5 @@
 import Formalization.Books.MoreAlgebra.Unit12
+import Formalization.Books.MoreAlgebra.Unit46
 import Formalization.Books.MoreAlgebra.Unit45
 import Formalization.Books.MoreAlgebra.Unit49
 import Mathlib.RingTheory.DedekindDomain.Basic
@@ -24,6 +25,7 @@ open Formalization.Books.Algebra.Unit96
 open Formalization.Books.Algebra.Unit154
 open Formalization.Books.Algebra.Unit155
 open Formalization.Books.MoreAlgebra.Unit12
+open Formalization.Books.MoreAlgebra.Unit46
 open Formalization.Books.MoreAlgebra.Unit40
 open Formalization.Books.MoreAlgebra.Unit41
 open scoped TensorProduct
@@ -60,7 +62,7 @@ noncomputable instance completionAtPrimeAlgebra
     Algebra R (completionAtPrime R p) :=
   (completionAtPrimeMap R p).toAlgebra
 
-noncomputable def primeResidueFieldAlgebra
+@[instance_reducible] noncomputable def primeResidueFieldAlgebra
     (R : Type u) [CommRing R] (q : PrimeSpectrum R) :
     Algebra R q.asIdeal.ResidueField :=
   Algebra.compHom q.asIdeal.ResidueField
@@ -188,11 +190,11 @@ theorem regular_completion_iff_geometricallyRegularLocalFormalFibers
       HasGeometricallyRegularLocalFormalFibers A := by
   sorry
 
-/-- In characteristic zero, regularity of every formal fibre implies geometric
+/-- For a `ℚ`-algebra, regularity of every formal fibre implies geometric
 regularity of every formal fibre. -/
-theorem geometricallyRegularLocalFormalFibers_of_charZero
+theorem geometricallyRegularLocalFormalFibers_of_QAlgebra
     {A : Type u} [CommRing A] [IsNoetherianRing A] [IsLocalRing A]
-    [CharZero A]
+    [Algebra ℚ A]
     (hregular : HasRegularLocalFormalFibers A) :
     HasGeometricallyRegularLocalFormalFibers A := by
   sorry
@@ -301,14 +303,10 @@ theorem isGRing_iff_finiteFree_maps_have_regularFormalFibers
 
 /-- The polynomial-power-series ring used in the positive-characteristic
 helper lemma. -/
-abbrev powerSeriesPolynomialRing
-    (k : Type u) [CommRing k] (n m : ℕ) : Type u :=
-  MvPolynomial (Fin m) (MvPowerSeries (Fin n) k)
-
 noncomputable instance powerSeriesPolynomialRingIsDomain
     (k : Type u) [Field k] (n m : ℕ) :
     IsDomain (powerSeriesPolynomialRing k n m) := by
-  letI : IsDomain (MvPowerSeries (Fin n) k) :=
+  let _ : IsDomain (MvPowerSeries (Fin n) k) :=
     NoZeroDivisors.to_isDomain _
   dsimp [powerSeriesPolynomialRing]
   infer_instance
@@ -404,7 +402,7 @@ theorem isGRing_ubiquity :
 /-- A henselian local ring is a filtered colimit of henselian local G-rings
 with local transition maps. -/
 theorem exists_filteredLocalGRingColimit
-    {A : Type u} [CommRing A] [IsLocalRing A] [HenselianLocalRing A] :
+    {A : Type u} [CommRing A] [HenselianLocalRing A] :
     ∃ (I : Type u) (_ : Category I) (_ : IsFiltered I)
       (D : FilteredLocalRingColimitData I A),
       ∀ i, IsLocalRing (D.diagram.obj i) ∧

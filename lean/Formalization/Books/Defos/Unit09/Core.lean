@@ -15,8 +15,8 @@ This file records the definitions from `books/defos.tex:2451-2540`.  A
 ringed topos is represented by a site together with its category-valued sheaf
 of rings.  The inverse and direct image functors of a morphism are retained
 explicitly, as is the map on structure sheaves.  Ideals are represented by
-additive sheaves embedded in the underlying additive sheaf of the structure
-sheaf, with their local multiplicative closure made explicit.
+sheaves of modules embedded in the unit module of the structure sheaf, with
+their local sections exposed as sections of the ambient ring sheaf.
 -/
 
 namespace Formalization.Books.Defos.Unit09
@@ -33,8 +33,6 @@ noncomputable section
 structure RingedTopos (C : Type u) [Category.{u} C] where
   topology : GrothendieckTopology C
   structureSheaf : Sheaf topology RingCat.{u}
-  /-- The standard sheafification support for the underlying additive sheaves. -/
-  hasAdditiveSheafify : HasSheafify topology AddCommGrpCat.{u}
 
 /-- The category of sheaves of sets on the site underlying a ringed topos. -/
 abbrev Sheaves {C : Type u} [Category.{u} C] (X : RingedTopos C) :=
@@ -61,21 +59,20 @@ noncomputable def underlyingRingSheafFunctor
 
 /-- A sheaf of ideals in a sheaf of rings.
 
-The carrier is an additive sheaf, and `sectionValue` identifies its local
-sections with sections of the ambient ring sheaf.  The closure field is the
-usual condition that multiplication by a local ambient section stays in the
-ideal. -/
+The carrier is an `O`-module and the inclusion is a morphism of sheaves of
+`O`-modules into the unit module.  `sectionValue` exposes its local sections
+as sections of the ambient ring sheaf. -/
 structure SheafIdeal {C : Type u} [Category.{u} C]
     {J : GrothendieckTopology C} (O : Sheaf J RingCat.{u}) where
   carrier : SheafOfModules.{u} O
   inclusion : (SheafOfModules.toSheaf O).obj carrier ⟶ underlyingAdditiveSheaf O
   inclusion_mono : Mono inclusion
+  moduleInclusion : carrier ⟶ SheafOfModules.unit O
+  moduleInclusion_underlying :
+    (SheafOfModules.toSheaf O).map moduleInclusion = inclusion
   sectionValue : ∀ (U : C), carrier.val.obj (op U) → O.obj.obj (op U)
   sectionValue_inclusion : ∀ (U : C) (s : carrier.val.obj (op U)),
     sectionValue U s = inclusion.hom.app (op U) s
-  isIdeal : ∀ (U : C) (r : O.obj.obj (op U)) (s : carrier.val.obj (op U)),
-    ∃ t : carrier.val.obj (op U),
-      sectionValue U t = r * sectionValue U s
 
 namespace SheafIdeal
 
@@ -87,8 +84,8 @@ def Annihilates {C : Type u} [Category.{u} C]
   ∀ (U : C) (s : I.carrier.val.obj (op U)) (x : F.val.obj (op U)),
     I.sectionValue U s • x = 0
 
-/-- A sheaf ideal can be regarded as a module over another sheaf of rings on
-the same topos. -/
+/-- The underlying additive sheaf of an ideal admits a module realization over
+another sheaf of rings on the same topos. -/
 def IsModuleOver {C : Type u} [Category.{u} C]
     {J : GrothendieckTopology C} {O R : Sheaf J RingCat.{u}}
     (I : SheafIdeal O) : Prop :=
@@ -196,8 +193,9 @@ noncomputable def thickeningKernelShortComplex
   ShortComplex.mk i.hom.kernel.inclusion (underlyingSharp i)
     i.hom.kernel_condition
 
-/-- The displayed sequence `0 → I → O' → O → 0`, expressed as a short exact
-sequence in the category of additive sheaves. -/
+/-- The displayed sequence `0 → I → O' → O → 0`, expressed as the exact
+sequence of underlying additive sheaves.  The ideal inclusion is retained as
+a sheaf-module morphism in the kernel interface. -/
 abbrev HasShortExactSequence
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
@@ -207,11 +205,8 @@ abbrev HasShortExactSequence
 theorem shortExactSequence
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
-    (i : Thickening X Y) :
+    (i : Thickening X Y) [HasSheafify Y.topology AddCommGrpCat.{u}] :
     (thickeningKernelShortComplex i).ShortExact := by
-  let hSheafify : HasSheafify Y.topology AddCommGrpCat.{u} := Y.hasAdditiveSheafify
-  letI : Abelian (Sheaf Y.topology AddCommGrpCat.{u}) := by
-    exact @CategoryTheory.sheafIsAbelian _ _ _ _ _ _ hSheafify
   let hLocal : Sheaf.IsLocallySurjective (underlyingSharp i) := by
     change Presheaf.IsLocallySurjective Y.topology (underlyingSharp i).hom
     rw [Presheaf.isLocallySurjective_iff_whisker_forget]
@@ -251,8 +246,8 @@ theorem module_category_equivalence
         SheafIdeal.AnnihilatedModuleCategory i.hom.kernel) := by
   sorry
 
-/-- For a first order thickening the kernel ideal is a module over the
-structure sheaf of the smaller ringed topos. -/
+/-- For a first order thickening the kernel ideal admits a module realization
+over the structure sheaf of the smaller ringed topos. -/
 theorem kernel_is_module_over
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
@@ -269,6 +264,11 @@ structure SheafIdealMap {C : Type u} [Category.{u} C]
     (α : O ⟶ P) (I : SheafIdeal O) (K : SheafIdeal P) where
   map : (SheafOfModules.toSheaf O).obj I.carrier ⟶
     (SheafOfModules.toSheaf P).obj K.carrier
+  map_smul : ∀ (U : C) (r : O.obj.obj (op U))
+    (s : I.carrier.val.obj (op U)),
+    map.hom.app (op U) (r • s) =
+      α.hom.app (op U) r •
+        (show K.carrier.val.obj (op U) from map.hom.app (op U) s)
   map_sectionValue : ∀ (U : C) (s : I.carrier.val.obj (op U)),
     K.sectionValue U (map.hom.app (op U) s) =
       α.hom.app (op U) (I.sectionValue U s)
@@ -308,19 +308,6 @@ structure MorphismOfThickenings
   /-- The induced map `(f')^* J → I` from the commutative square. -/
   pullbackKernelMap :
     f'.modulePullback.obj t.hom.kernel.carrier ⟶ i.hom.kernel.carrier
-  /-- The first-order comparison between the two module realizations of the
-  base kernel.  The module pullback and direct-image functors are explicit
-  interfaces above, so their compatibility with the commutative square is
-  recorded here rather than inferred from the ring-level data alone. -/
-  firstOrder_pullbackKernel_iso :
-    ∀ (_hi : FirstOrderThickening i) (_ht : FirstOrderThickening t),
-      Nonempty
-        ((SheafOfModules.toSheaf Y.structureSheaf).obj
-            (f'.modulePullback.obj t.hom.kernel.carrier) ≅
-          (SheafOfModules.toSheaf Y.structureSheaf).obj
-            (i.hom.moduleDirectImage.obj
-              (f.modulePullback.obj
-                (t.hom.modulePullback.obj t.hom.kernel.carrier))))
 
 /-! The inverse-image ideal and the two module sheaves in the source's
 notation are now determined by the corresponding interfaces on the vertical
@@ -387,11 +374,12 @@ abbrev MorphismOfThickenings.baseKernel
     SheafIdeal B'.structureSheaf :=
   t.hom.kernel
 
-/-- For first order horizontal thickenings the two pullback descriptions of
-the base kernel agree.  The canonical equality of module sheaves is exposed
-as an isomorphism, which is the usable categorical form of the source's
-notation `((f')^* J) = (f^* J)`. -/
-theorem pullbackKernel_iso_basePullbackKernel_of_firstOrder
+/-- In the first-order case the source's equality of the two pullback
+descriptions is used through the induced equivalence on maps into the source
+kernel.  A literal object isomorphism would be too strong: the two displayed
+module objects need not be isomorphic before applying the first-order
+identification. -/
+theorem pullbackKernel_homEquiv_basePullbackKernel_of_firstOrder
     {C D E F : Type u} [Category.{u} C] [Category.{u} D]
     [Category.{u} E] [Category.{u} F]
     {X : RingedTopos C} {Y : RingedTopos D}
@@ -400,10 +388,9 @@ theorem pullbackKernel_iso_basePullbackKernel_of_firstOrder
     (m : MorphismOfThickenings i t)
     (_hi : FirstOrderThickening i) (_ht : FirstOrderThickening t) :
     Nonempty
-      ((SheafOfModules.toSheaf Y.structureSheaf).obj m.pullbackKernel ≅
-        (SheafOfModules.toSheaf Y.structureSheaf).obj
-          m.basePullbackKernel) := by
-  exact m.firstOrder_pullbackKernel_iso _hi _ht
+      ((m.pullbackKernel ⟶ i.hom.kernel.carrier) ≃
+        (m.basePullbackKernel ⟶ i.hom.kernel.carrier)) := by
+  sorry
 
 /-! The inverse-image and tensor-pullback maps appearing in the source are
 the two fields below; strictness is the local-surjectivity condition on the

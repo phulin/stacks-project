@@ -132,8 +132,8 @@ def PropertyA (P : RingMapProperty) : Prop :=
     [Algebra k k'] [Algebra k R] [Algebra.FiniteType k k']
     [IsNoetherianRing R],
     P k R →
-      letI : Algebra k' (k' ⊗[k] R) := Algebra.TensorProduct.leftAlgebra
-      P k' (k' ⊗[k] R)
+      letI : Algebra k' (R ⊗[k] k') := Algebra.TensorProduct.rightAlgebra
+      P k' (R ⊗[k] k')
 
 /-- (B): `P` can be checked on all localizations of the target. -/
 def PropertyB (P : RingMapProperty) : Prop :=
@@ -344,7 +344,7 @@ def CohenMacaulayProperty : RingMapProperty :=
 def SerreRAfterFiniteExtensionsProperty (n : ℕ) : RingMapProperty :=
   fun k R _ _ _ =>
     ∀ (k' : Type u) [Field k'] [Algebra k k'] [FiniteDimensional k k'],
-      HasPropertyRk (k' ⊗[k] R) n
+      HasPropertyRk (R ⊗[k] k') n
 
 /-- Geometric reducedness satisfies the source's assertions (A)--(E). -/
 theorem geometricallyReducedProperty_A_to_E :

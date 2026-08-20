@@ -2596,6 +2596,7 @@ structure SpectralSystemLimitSheafData
 pullbacks of a spectral sheaf system. -/
 theorem exists_spectralSystemLimitSheaf
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
     Nonempty (SpectralSystemLimitSheafData S) := by
@@ -2603,6 +2604,7 @@ theorem exists_spectralSystemLimitSheaf
 
 noncomputable def spectralSystemLimitSheafData
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
     SpectralSystemLimitSheafData S :=
@@ -2612,6 +2614,7 @@ noncomputable def spectralSystemLimitSheafData
 pullbacks of a spectral sheaf system. -/
 noncomputable def spectralSystemLimitSheaf
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
     TopCat.Sheaf (Type v) (spectralInverseLimitSpace X) :=
@@ -2797,6 +2800,7 @@ noncomputable def spectralSystemSectionsColimit
 spectral inverse-limit factor. -/
 theorem exists_spectralSystemDescendOpensEquiv
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (hX : IsSpectralSpaceDiagram X) (S : SpectralSheafSystem X)
     (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui)
@@ -2810,6 +2814,7 @@ theorem exists_spectralSystemDescendOpensEquiv
 spectral inverse-limit factor. -/
 noncomputable def spectralSystemDescendOpensEquiv
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (hX : IsSpectralSpaceDiagram X) (S : SpectralSheafSystem X)
     (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui)

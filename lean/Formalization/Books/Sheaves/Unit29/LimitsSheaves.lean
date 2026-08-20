@@ -1609,6 +1609,7 @@ structure SpectralSystemLimitSheafData
 /-- The colimit sheaf in the inverse-limit construction exists. -/
 theorem exists_spectralSystemLimitSheaf
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
     Nonempty (SpectralSystemLimitSheafData S) := by
@@ -1616,6 +1617,7 @@ theorem exists_spectralSystemLimitSheaf
 
 noncomputable def spectralSystemLimitSheafData
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) : SpectralSystemLimitSheafData S :=
   Classical.choice (exists_spectralSystemLimitSheaf S)
@@ -1623,6 +1625,7 @@ noncomputable def spectralSystemLimitSheafData
 /-- The sheaf on the inverse-limit space obtained as this colimit. -/
 noncomputable def spectralSystemLimitSheaf
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
     TopCat.Sheaf (Type v) (spectralInverseLimitSpace X) :=
@@ -1707,6 +1710,7 @@ noncomputable def spectralSystemSectionsColimit
 opens of a spectral factor. -/
 theorem exists_spectralSystemDescendOpensEquiv
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (hX : IsSpectralSpaceDiagram X) (S : SpectralSheafSystem X)
     (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui)
@@ -1719,6 +1723,7 @@ theorem exists_spectralSystemDescendOpensEquiv
 /-- A chosen descent equivalence for sections on a quasi-compact open. -/
 noncomputable def spectralSystemDescendOpensEquiv
     {I : Type u} [Category.{w} I] [IsCofiltered I]
+    [UnivLE.{u, v}]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (hX : IsSpectralSpaceDiagram X) (S : SpectralSheafSystem X)
     (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui)

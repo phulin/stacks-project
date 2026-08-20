@@ -155,6 +155,23 @@ theorem internalHomPostcomp_zero {X : TopCat.{v}} {O : CommRingSheaf X}
 
 /-! ## Tensor adjunction -/
 
+/- The source states the adjunction first as a canonical isomorphism of
+   internal-Hom objects.  Chapter 18 supplies the representing objects and
+   the hom-set equivalence below; this chosen isomorphism is the corresponding
+   object-level interface. -/
+theorem internalHom_tensor_internalHom_iso_exists {X : TopCat.{v}}
+    (O : CommRingSheaf X) (F G H : CommRingSheafModule O) :
+    Nonempty
+      (internalHom O (Formalization.Books.Modules.Unit16.tensorProductSheaf O F G) H ≅
+        internalHom O F (internalHom O G H)) := by
+  sorry
+
+noncomputable def internalHomTensorInternalHomIso {X : TopCat.{v}}
+    (O : CommRingSheaf X) (F G H : CommRingSheafModule O) :
+    internalHom O (Formalization.Books.Modules.Unit16.tensorProductSheaf O F G) H ≅
+      internalHom O F (internalHom O G H) :=
+  Classical.choice (internalHom_tensor_internalHom_iso_exists O F G H)
+
 theorem internalHom_tensor_hom_equiv_exists {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G H : CommRingSheafModule O) :
     Nonempty ((Formalization.Books.Modules.Unit16.tensorProductSheaf O F G ⟶ H) ≃

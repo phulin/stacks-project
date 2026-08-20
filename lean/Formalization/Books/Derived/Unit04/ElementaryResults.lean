@@ -42,8 +42,9 @@ namespace Formalization.Books.Derived.Unit04
 section Pretriangulated
 
 variable {C : Type u} [Category.{v} C] [AdditiveCategory C]
-  [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
-  [Pretriangulated C]
+  [HasShift C ℤ]
+  [hAdditive : ∀ n : ℤ, (shiftFunctor C n).Additive]
+  [hPretriangulated : Pretriangulated C]
 
 /-- The three consecutive composites in a distinguished triangle vanish. -/
 theorem distinguished_triangle_compositions_zero
@@ -1587,13 +1588,169 @@ def ProjectionCoprojection {X Y : C} (f : X ⟶ Y) : Prop :=
   ∃ (K Z Q : C) (eX : X ≅ K ⊞ Z) (eY : Y ≅ Z ⊞ Q),
     f = eX.hom ≫ biprod.snd ≫ biprod.inl ≫ eY.inv
 
+private lemma projectionCoprojection_of_hasKernel
+    {X Y : C} (f : X ⟶ Y) [HasKernel f] :
+    ProjectionCoprojection f := by
+  obtain ⟨Z, g, h, hT⟩ := distinguished_cocone_triangle (kernel.ι f)
+  have hki : Mono (kernel.ι f) := by
+    change Mono (Fork.ι (limit.cone (parallelPair f 0)))
+    exact Fork.IsLimit.mono (limit.isLimit (parallelPair f 0))
+  have hzero : h = 0 := by
+    apply (Triangle.mk (kernel.ι f) g h).mor₃_eq_zero_of_mono₁ hT
+    change Mono (kernel.ι f)
+    exact hki
+  obtain ⟨eX, heX₁, heX₂⟩ :=
+    exists_iso_binaryBiproduct_of_distTriang (Triangle.mk (kernel.ι f) g h) hT hzero
+  change X ≅ kernel f ⊞ Z at eX
+  change kernel.ι f ≫ eX.hom = (biprod.inl : kernel f ⟶ kernel f ⊞ Z) at heX₁
+  change g = eX.hom ≫ (biprod.snd : kernel f ⊞ Z ⟶ Z) at heX₂
+  obtain ⟨q, hq⟩ :=
+    (Triangle.mk (kernel.ι f) g h).yoneda_exact₂ hT f (kernel.condition f)
+  change Z ⟶ Y at q
+  change f = g ≫ q at hq
+  have hfactor : f = eX.hom ≫ biprod.snd ≫ q := by
+    calc
+      f = g ≫ q := hq
+      _ = eX.hom ≫ biprod.snd ≫ q := by
+        rw [heX₂]
+        rw [Category.assoc]
+  have hqmono : Mono q := by
+    rw [mono_iff_cancel_zero]
+    intro A a ha
+    have hkill : (a ≫ biprod.inr ≫ eX.inv) ≫ f = 0 := by
+      calc
+        (a ≫ biprod.inr ≫ eX.inv) ≫ f =
+            (a ≫ biprod.inr ≫ eX.inv) ≫
+              (eX.hom ≫ biprod.snd ≫ q) :=
+          congrArg (fun k : X ⟶ Y => (a ≫ biprod.inr ≫ eX.inv) ≫ k) hfactor
+        _ = 0 := by simp [Category.assoc, ha]
+    obtain ⟨l, hl⟩ := kernel.lift' f (a ≫ biprod.inr ≫ eX.inv) hkill
+    have hla : l ≫ (biprod.inl : kernel f ⟶ kernel f ⊞ Z) =
+        a ≫ (biprod.inr : Z ⟶ kernel f ⊞ Z) := by
+      calc
+        l ≫ (biprod.inl : kernel f ⟶ kernel f ⊞ Z) =
+            l ≫ kernel.ι f ≫ eX.hom := by rw [heX₁]
+        _ = (a ≫ biprod.inr ≫ eX.inv) ≫ eX.hom := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => k ≫ eX.hom) hl
+        _ = a ≫ biprod.inr := by simp
+    calc
+      a = a ≫ 𝟙 _ := by simp
+      _ = a ≫ biprod.inr ≫ biprod.snd := by simp
+      _ = l ≫ biprod.inl ≫ biprod.snd := by
+        simpa only [Category.assoc] using
+          (congrArg (fun k => k ≫ biprod.snd) hla).symm
+      _ = 0 := by simp
+  obtain ⟨Q, r, s, hU⟩ := distinguished_cocone_triangle q
+  have hszero : s = 0 := by
+    apply (Triangle.mk q r s).mor₃_eq_zero_of_mono₁ hU
+    exact hqmono
+  obtain ⟨eY, heY₁, heY₂⟩ :=
+    exists_iso_binaryBiproduct_of_distTriang (Triangle.mk q r s) hU hszero
+  change Y ≅ Z ⊞ Q at eY
+  change q ≫ eY.hom = (biprod.inl : Z ⟶ Z ⊞ Q) at heY₁
+  have hq' : q = (biprod.inl : Z ⟶ Z ⊞ Q) ≫ eY.inv := by
+    rw [← cancel_mono eY.hom]
+    simp [heY₁]
+  refine ⟨kernel f, Z, Q, eX, eY, ?_⟩
+  calc
+    f = eX.hom ≫ biprod.snd ≫ q := hfactor
+    _ = eX.hom ≫ biprod.snd ≫ biprod.inl ≫ eY.inv := by rw [hq']
+
+private lemma projectionCoprojection_of_hasCokernel
+    {X Y : C} (f : X ⟶ Y) [HasCokernel f] :
+    ProjectionCoprojection f := by
+  obtain ⟨A, g, h, hT⟩ := distinguished_cocone_triangle₁ (cokernel.π f)
+  have hzero : h = 0 := by
+    apply (Triangle.mk g (cokernel.π f) h).mor₃_eq_zero_of_epi₂ hT
+    change Epi (cokernel.π f)
+    infer_instance
+  obtain ⟨eY, heY₁, heY₂⟩ :=
+    exists_iso_binaryBiproduct_of_distTriang (Triangle.mk g (cokernel.π f) h) hT hzero
+  change Y ≅ A ⊞ cokernel f at eY
+  change g ≫ eY.hom = (biprod.inl : A ⟶ A ⊞ cokernel f) at heY₁
+  change cokernel.π f = eY.hom ≫
+    (biprod.snd : A ⊞ cokernel f ⟶ cokernel f) at heY₂
+  obtain ⟨p, hp⟩ :=
+    (Triangle.mk g (cokernel.π f) h).coyoneda_exact₂ hT f (cokernel.condition f)
+  change X ⟶ A at p
+  change f = p ≫ g at hp
+  have hp_epi : Epi p := by
+    rw [epi_iff_cancel_zero]
+    intro B d hd
+    let c := eY.hom ≫ biprod.fst ≫ d
+    change Y ⟶ B at c
+    have hc : f ≫ c = 0 := by
+      calc
+        f ≫ c = (p ≫ g) ≫ c :=
+          congrArg (fun k : X ⟶ Y => k ≫ c) hp
+        _ = p ≫ (g ≫ eY.hom) ≫ biprod.fst ≫ d := by
+          simp only [c, Category.assoc]
+        _ = p ≫ (biprod.inl : A ⟶ A ⊞ cokernel f) ≫ biprod.fst ≫ d := by
+          rw [heY₁]
+        _ = 0 := by simp [hd]
+    obtain ⟨l, hl⟩ := cokernel.desc' f c hc
+    calc
+      d = g ≫ c := by
+        calc
+          d = (biprod.inl : A ⟶ A ⊞ cokernel f) ≫ biprod.fst ≫ d := by simp
+          _ = (g ≫ eY.hom) ≫ biprod.fst ≫ d := by rw [heY₁]
+          _ = g ≫ c := by simp only [c, Category.assoc]
+      _ = g ≫ cokernel.π f ≫ l := by
+        simpa only [Category.assoc] using
+          (congrArg (fun k : Y ⟶ B => g ≫ k) hl).symm
+      _ = 0 := by
+        have hcomp : g ≫ cokernel.π f = 0 :=
+          comp_distTriang_mor_zero₁₂ _ hT
+        calc
+          g ≫ cokernel.π f ≫ l = (g ≫ cokernel.π f) ≫ l := by
+            rw [Category.assoc]
+          _ = 0 := by rw [hcomp]; simp
+  obtain ⟨K, a, b, hU⟩ := distinguished_cocone_triangle₁ p
+  have hszero : b = 0 := by
+    apply (Triangle.mk a p b).mor₃_eq_zero_of_epi₂ hU
+    change Epi p
+    exact hp_epi
+  obtain ⟨eX, heX₁, heX₂⟩ :=
+    exists_iso_binaryBiproduct_of_distTriang (Triangle.mk a p b) hU hszero
+  change X ≅ K ⊞ A at eX
+  change p = eX.hom ≫ (biprod.snd : K ⊞ A ⟶ A) at heX₂
+  have hg : g = (biprod.inl : A ⟶ A ⊞ cokernel f) ≫ eY.inv := by
+    rw [← cancel_mono eY.hom]
+    simp [heY₁]
+  refine ⟨K, A, cokernel f, eX, eY, ?_⟩
+  calc
+    f = p ≫ g := hp
+    _ = eX.hom ≫ biprod.snd ≫ g := by
+      rw [heX₂]
+      rw [Category.assoc]
+    _ = eX.hom ≫ biprod.snd ≫ biprod.inl ≫ eY.inv := by rw [hg]
+
 /-- For a split morphism, existence of a kernel, existence of a cokernel, and
 the projection--coprojection normal form are equivalent. -/
 theorem split_morphism_kernel_cokernel_iff
     {X Y : C} (f : X ⟶ Y) :
     (HasKernel f ↔ HasCokernel f) ∧
       (HasCokernel f ↔ ProjectionCoprojection f) := by
-  sorry
+  constructor
+  · constructor
+    · intro h
+      let : HasKernel f := h
+      obtain ⟨K, Z, Q, eX, eY, hf⟩ := projectionCoprojection_of_hasKernel f
+      rw [hf]
+      infer_instance
+    · intro h
+      let : HasCokernel f := h
+      obtain ⟨K, Z, Q, eX, eY, hf⟩ := projectionCoprojection_of_hasCokernel f
+      rw [hf]
+      infer_instance
+  · constructor
+    · intro h
+      let : HasCokernel f := h
+      exact projectionCoprojection_of_hasCokernel f
+    · rintro ⟨K, Z, Q, eX, eY, hf⟩
+      rw [hf]
+      infer_instance
 
 end Pretriangulated
 
@@ -1602,37 +1759,58 @@ end Pretriangulated
 section ProductsAndIdempotents
 
 variable {C : Type u} [Category.{v} C] [AdditiveCategory C]
-  [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
-  [Pretriangulated C]
+  [HasShift C ℤ]
+  [hAdditive : ∀ n : ℤ, (shiftFunctor C n).Additive]
+  [hPretriangulated : Pretriangulated C]
 
+omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- A shift equivalence transports any existing product to the product of the
 shifted family. -/
-theorem shift_has_product
+lemma shift_has_product
+    [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C]
     {J : Type w} (X : J → C) [HasProduct X] :
     HasProduct (fun j => X j⟦(1 : ℤ)⟧) := by
-  sorry
+  let : HasLimit (Discrete.functor X ⋙ shiftFunctor C (1 : ℤ)) :=
+    CategoryTheory.Adjunction.hasLimit_comp_equivalence
+      (Discrete.functor X) (shiftFunctor C (1 : ℤ))
+  exact hasLimit_of_iso
+    (Discrete.compNatIsoDiscrete X (shiftFunctor C (1 : ℤ)))
 
+omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- The dual coproduct transport along a shift equivalence. -/
-theorem shift_has_coproduct
+lemma shift_has_coproduct
+    [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C]
     {J : Type w} (X : J → C) [HasCoproduct X] :
     HasCoproduct (fun j => X j⟦(1 : ℤ)⟧) := by
-  sorry
+  let : HasColimit (Discrete.functor X ⋙ shiftFunctor C (1 : ℤ)) :=
+    CategoryTheory.Adjunction.hasColimit_comp_equivalence
+      (Discrete.functor X) (shiftFunctor C (1 : ℤ))
+  exact hasColimit_of_iso
+    (Discrete.compNatIsoDiscrete X (shiftFunctor C (1 : ℤ))).symm
 
+omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- The shift comparison for a product is an isomorphism whenever the source
 and shifted products exist. -/
-theorem shift_product_comparison_isIso
+lemma shift_product_comparison_isIso
+    [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C]
     {J : Type w} (X : J → C)
     [HasProduct X] [HasProduct (fun j => X j⟦(1 : ℤ)⟧)] :
     IsIso (piComparison (shiftFunctor C (1 : ℤ)) X) := by
-  sorry
+  infer_instance
 
+omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- The dual shift comparison for a coproduct is an isomorphism whenever the
 source and shifted coproducts exist. -/
-theorem shift_coproduct_comparison_isIso
+lemma shift_coproduct_comparison_isIso
+    [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C]
     {J : Type w} (X : J → C)
     [HasCoproduct X] [HasCoproduct (fun j => X j⟦(1 : ℤ)⟧)] :
     IsIso (sigmaComparison (shiftFunctor C (1 : ℤ)) X) := by
-  sorry
+  infer_instance
 
 /-- Products of distinguished triangles are distinguished. -/
 /- The source assumes only the three products.  This wrapper installs the
@@ -1682,7 +1860,307 @@ theorem coproduct_of_distinguished_triangles
     [HasCoproduct (fun j => (T j).obj₂)]
     [HasCoproduct (fun j => (T j).obj₃)] :
     coproductTriangle T ∈ distTriang C := by
-  sorry
+  let : AdditiveCategory Cᵒᵖ :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  let : Pretriangulated Cᵒᵖ := inferInstance
+  let Top : J → Triangle Cᵒᵖ := fun j =>
+    (triangleOpEquivalence C).functor.obj (Opposite.op (T j))
+  let : HasProduct (fun j => (Top j).obj₁) := by
+    change HasProduct (fun j => Opposite.op (T j).obj₃)
+    infer_instance
+  let : HasProduct (fun j => (Top j).obj₂) := by
+    change HasProduct (fun j => Opposite.op (T j).obj₂)
+    infer_instance
+  let : HasProduct (fun j => (Top j).obj₃) := by
+    change HasProduct (fun j => Opposite.op (T j).obj₁)
+    infer_instance
+  let : HasProduct (fun j => (Top j).obj₁⟦(1 : ℤ)⟧) :=
+    shift_has_product (fun j => (Top j).obj₁)
+  have hTop : ∀ j, Top j ∈ distTriang Cᵒᵖ := by
+    intro j
+    exact op_distinguished (T j) (hT j)
+  let P : Triangle Cᵒᵖ := productTriangle Top
+  have hP : P ∈ distTriang Cᵒᵖ := by
+    exact productTriangle_distinguished Top hTop
+  let U : Triangle C :=
+    ((triangleOpEquivalence C).inverse.obj P).unop
+  have hU : U ∈ distTriang C := by
+    exact unop_distinguished P hP
+  let e₁ : (coproductTriangle T).obj₁ ≅ U.obj₁ :=
+    (opCoproductIsoProduct (fun j => (T j).obj₁)).unop.symm
+  let e₂ : (coproductTriangle T).obj₂ ≅ U.obj₂ :=
+    (opCoproductIsoProduct (fun j => (T j).obj₂)).unop.symm
+  let e₃ : (coproductTriangle T).obj₃ ≅ U.obj₃ :=
+    (opCoproductIsoProduct (fun j => (T j).obj₃)).unop.symm
+  dsimp [coproductTriangle] at e₁ e₂ e₃
+  change (∐ fun j => (T j).obj₁) ≅ U.obj₁ at e₁
+  change (∐ fun j => (T j).obj₂) ≅ U.obj₂ at e₂
+  change (∐ fun j => (T j).obj₃) ≅ U.obj₃ at e₃
+  have he₁ι (j : J) :
+      Sigma.ι (fun j => (T j).obj₁) j ≫ e₁.hom =
+        (Pi.π (fun j => (Top j).obj₃) j).unop := by
+    change Sigma.ι (fun j => (T j).obj₁) j ≫
+        (opCoproductIsoProduct (fun j => (T j).obj₁)).inv.unop =
+      (Pi.π (fun j => Opposite.op (T j).obj₁) j).unop
+    apply Quiver.Hom.op_inj
+    simpa only [op_comp, Quiver.Hom.op_unop] using
+      (opCoproductIsoProduct_inv_comp_ι (fun j => (T j).obj₁) j)
+  have he₂ι (j : J) :
+      Sigma.ι (fun j => (T j).obj₂) j ≫ e₂.hom =
+        (Pi.π (fun j => (Top j).obj₂) j).unop := by
+    change Sigma.ι (fun j => (T j).obj₂) j ≫
+        (opCoproductIsoProduct (fun j => (T j).obj₂)).inv.unop =
+      (Pi.π (fun j => Opposite.op (T j).obj₂) j).unop
+    apply Quiver.Hom.op_inj
+    simpa only [op_comp, Quiver.Hom.op_unop] using
+      (opCoproductIsoProduct_inv_comp_ι (fun j => (T j).obj₂) j)
+  have he₃ι (j : J) :
+      Sigma.ι (fun j => (T j).obj₃) j ≫ e₃.hom =
+        (Pi.π (fun j => (Top j).obj₁) j).unop := by
+    change Sigma.ι (fun j => (T j).obj₃) j ≫
+        (opCoproductIsoProduct (fun j => (T j).obj₃)).inv.unop =
+      (Pi.π (fun j => Opposite.op (T j).obj₃) j).unop
+    apply Quiver.Hom.op_inj
+    simpa only [op_comp, Quiver.Hom.op_unop] using
+      (opCoproductIsoProduct_inv_comp_ι (fun j => (T j).obj₃) j)
+  have hU₁mor : U.mor₁ =
+      (Limits.Pi.map (f := fun j => Opposite.op (T j).obj₂)
+        (g := fun j => Opposite.op (T j).obj₁)
+        (fun j => (T j).mor₁.op)).unop := by
+    rfl
+  have hU₂mor : U.mor₂ =
+      (Limits.Pi.map (f := fun j => Opposite.op (T j).obj₃)
+        (g := fun j => Opposite.op (T j).obj₂)
+        (fun j => (T j).mor₂.op)).unop := by
+    rfl
+  have hcomm₁ : (coproductTriangle T).mor₁ ≫ e₂.hom =
+      e₁.hom ≫ U.mor₁ := by
+    dsimp [U, P, Top]
+    dsimp [coproductTriangle]
+    change (Limits.Sigma.map (f := fun j => (T j).obj₁)
+      (g := fun j => (T j).obj₂) (fun j => (T j).mor₁)) ≫ e₂.hom =
+      e₁.hom ≫ U.mor₁
+    apply Sigma.hom_ext
+    intro j
+    let q₁ : (T j).obj₁ ⟶ U.obj₁ :=
+      (Pi.π (fun j => (Top j).obj₃) j).unop
+    let q₂ : (T j).obj₂ ⟶ U.obj₂ :=
+      (Pi.π (fun j => (Top j).obj₂) j).unop
+    have hpi₁ :
+        q₁ ≫ U.mor₁ = (T j).mor₁ ≫ q₂ := by
+      rw [hU₁mor]
+      apply Quiver.Hom.op_inj
+      change
+        (Limits.Pi.map (f := fun j => Opposite.op (T j).obj₂)
+          (g := fun j => Opposite.op (T j).obj₁)
+          (fun j => (T j).mor₁.op)) ≫
+            Pi.π (fun j => Opposite.op (T j).obj₁) j =
+          Pi.π (fun j => Opposite.op (T j).obj₂) j ≫ (T j).mor₁.op
+      exact Limits.Pi.map_π (fun j => (T j).mor₁.op) j
+    calc
+      Sigma.ι (fun j => (T j).obj₁) j ≫
+          Limits.Sigma.map (fun j => (T j).mor₁) ≫ e₂.hom =
+          ((T j).mor₁ ≫ Sigma.ι (fun j => (T j).obj₂) j) ≫ e₂.hom := by
+        simpa only [Category.assoc] using
+          congrArg (fun k => k ≫ e₂.hom)
+            (Limits.Sigma.ι_map (f := fun j => (T j).obj₁)
+              (g := fun j => (T j).obj₂) (fun j => (T j).mor₁) j)
+      _ = (T j).mor₁ ≫ q₂ := by
+        simpa only [q₂, Category.assoc] using
+          congrArg (fun k => (T j).mor₁ ≫ k) (he₂ι j)
+      _ = q₁ ≫ U.mor₁ := by
+        exact hpi₁.symm
+      _ = Sigma.ι (fun j => (T j).obj₁) j ≫ e₁.hom ≫ U.mor₁ := by
+        simpa only [q₁, Category.assoc] using
+          (congrArg (fun k => k ≫ U.mor₁) (he₁ι j)).symm
+  have hcomm₂ : (coproductTriangle T).mor₂ ≫ e₃.hom =
+      e₂.hom ≫ U.mor₂ := by
+    dsimp [U, P, Top]
+    dsimp [coproductTriangle]
+    change (Limits.Sigma.map (f := fun j => (T j).obj₂)
+      (g := fun j => (T j).obj₃) (fun j => (T j).mor₂)) ≫ e₃.hom =
+      e₂.hom ≫ U.mor₂
+    apply Sigma.hom_ext
+    intro j
+    let q₂ : (T j).obj₂ ⟶ U.obj₂ :=
+      (Pi.π (fun j => (Top j).obj₂) j).unop
+    let q₃ : (T j).obj₃ ⟶ U.obj₃ :=
+      (Pi.π (fun j => (Top j).obj₁) j).unop
+    have hpi₂ :
+        (T j).mor₂ ≫ q₃ = q₂ ≫ U.mor₂ := by
+      rw [hU₂mor]
+      apply Quiver.Hom.op_inj
+      change
+        Pi.π (fun j => Opposite.op (T j).obj₃) j ≫ (T j).mor₂.op =
+          (Limits.Pi.map (f := fun j => Opposite.op (T j).obj₃)
+          (g := fun j => Opposite.op (T j).obj₂)
+          (fun j => (T j).mor₂.op)) ≫
+            Pi.π (fun j => Opposite.op (T j).obj₂) j
+      exact (Limits.Pi.map_π (fun j => (T j).mor₂.op) j).symm
+    calc
+      Sigma.ι (fun j => (T j).obj₂) j ≫
+          Limits.Sigma.map (fun j => (T j).mor₂) ≫ e₃.hom =
+          ((T j).mor₂ ≫ Sigma.ι (fun j => (T j).obj₃) j) ≫ e₃.hom := by
+        simpa only [Category.assoc] using
+          congrArg (fun k => k ≫ e₃.hom)
+            (Limits.Sigma.ι_map (f := fun j => (T j).obj₂)
+              (g := fun j => (T j).obj₃) (fun j => (T j).mor₂) j)
+      _ = (T j).mor₂ ≫ q₃ := by
+        simpa only [q₃, Category.assoc] using
+          congrArg (fun k => (T j).mor₂ ≫ k) (he₃ι j)
+      _ = q₂ ≫ U.mor₂ := by
+        exact hpi₂
+      _ = Sigma.ι (fun j => (T j).obj₂) j ≫ e₂.hom ≫ U.mor₂ := by
+        simpa only [q₂, Category.assoc] using
+          (congrArg (fun k => k ≫ U.mor₂) (he₂ι j)).symm
+  have hcomm₃ : (coproductTriangle T).mor₃ ≫ e₁.hom⟦(1 : ℤ)⟧' =
+      e₃.hom ≫ U.mor₃ := by
+    let : HasCoproduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧) :=
+      shift_has_coproduct (fun j => (T j).obj₁)
+    dsimp [coproductTriangle]
+    change
+      ((Limits.Sigma.map (fun j => (T j).mor₃) ≫
+          sigmaComparison (shiftFunctor C (1 : ℤ))
+            (fun j => (T j).obj₁)) ≫ e₁.hom⟦(1 : ℤ)⟧') =
+        e₃.hom ≫ U.mor₃
+    apply Sigma.hom_ext
+    intro j
+    have hσ :
+        Sigma.ι (fun j => (shiftFunctor C (1 : ℤ)).obj ((T j).obj₁)) j ≫
+            sigmaComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (T j).obj₁) =
+          (shiftFunctor C (1 : ℤ)).map
+            (Sigma.ι (fun j => (T j).obj₁) j) := by
+      dsimp [sigmaComparison]
+      simp
+    let q₁ : (T j).obj₁ ⟶ U.obj₁ :=
+      (Pi.π (fun j => (Top j).obj₃) j).unop
+    let q₃ : (T j).obj₃ ⟶ U.obj₃ :=
+      (Pi.π (fun j => (Top j).obj₁) j).unop
+    have hpi₃ :
+        (T j).mor₃ ≫ (shiftFunctor C (1 : ℤ)).map q₁ =
+          q₃ ≫ U.mor₃ := by
+      apply Quiver.Hom.op_inj
+      dsimp [q₁, q₃]
+      apply Quiver.Hom.unop_inj
+      simp only [unop_comp, Quiver.Hom.unop_op]
+      have huπ :=
+        opShiftFunctorEquivalence_unitIso_inv_naturality (C := C) (1 : ℤ)
+          (Pi.π (fun j => (Top j).obj₁) j)
+      have huπ' := congrArg Quiver.Hom.unop huπ
+      simp only [unop_comp, Quiver.Hom.unop_op] at huπ'
+      change
+        (T j).mor₃ ≫ (shiftFunctor C (1 : ℤ)).map
+            (Pi.π (fun j => (Top j).obj₃) j).unop =
+          (Pi.π (fun j => (Top j).obj₁) j).unop ≫
+            ((opShiftFunctorEquivalence C (1 : ℤ)).unitIso.inv.app
+                (∏ᶜ fun j => (Top j).obj₁)).unop ≫
+              (shiftFunctor C (1 : ℤ)).map
+                ((Limits.Pi.map (fun j => (Top j).mor₃) ≫
+                  inv (piComparison (shiftFunctor Cᵒᵖ (1 : ℤ))
+                    (fun j => (Top j).obj₁))).unop)
+      have hunit := congrArg
+        (fun k => k ≫ (shiftFunctor C (1 : ℤ)).map
+          ((Limits.Pi.map (fun j => (Top j).mor₃) ≫
+            inv (piComparison (shiftFunctor Cᵒᵖ (1 : ℤ))
+              (fun j => (Top j).obj₁))).unop)) huπ'.symm
+      have hunit' :
+          (Pi.π (fun j => (Top j).obj₁) j).unop ≫
+              ((opShiftFunctorEquivalence C (1 : ℤ)).unitIso.inv.app
+                (∏ᶜ fun j => (Top j).obj₁)).unop ≫
+            (shiftFunctor C (1 : ℤ)).map
+              ((Limits.Pi.map (fun j => (Top j).mor₃) ≫
+                inv (piComparison (shiftFunctor Cᵒᵖ (1 : ℤ))
+                  (fun j => (Top j).obj₁))).unop) =
+          ((opShiftFunctorEquivalence C (1 : ℤ)).unitIso.inv.app
+              (Top j).obj₁).unop ≫
+            (shiftFunctor C (1 : ℤ)).map
+              ((shiftFunctor Cᵒᵖ (1 : ℤ)).map
+                (Pi.π (fun j => (Top j).obj₁) j)).unop ≫
+            (shiftFunctor C (1 : ℤ)).map
+              ((Limits.Pi.map (fun j => (Top j).mor₃) ≫
+                inv (piComparison (shiftFunctor Cᵒᵖ (1 : ℤ))
+                  (fun j => (Top j).obj₁))).unop) := by
+        simpa only [Category.assoc] using hunit
+      rw [hunit']
+      rw [← Functor.map_comp, ← unop_comp]
+      have hQ :
+          ((Limits.Pi.map (fun j => (Top j).mor₃) ≫
+              inv (piComparison (shiftFunctor Cᵒᵖ (1 : ℤ))
+                (fun j => (Top j).obj₁))) ≫
+            (shiftFunctor Cᵒᵖ (1 : ℤ)).map
+              (Pi.π (fun j => (Top j).obj₁) j)) =
+        Pi.π (fun j => (Top j).obj₃) j ≫ (Top j).mor₃ := by
+        rw [Category.assoc, inv_piComparison_comp_map_π,
+          Limits.Pi.map_π]
+      rw [hQ]
+      simp only [unop_comp, Functor.map_comp]
+      have hcancel :
+          ((opShiftFunctorEquivalence C (1 : ℤ)).unitIso.inv.app
+              (Top j).obj₁).unop ≫
+            (shiftFunctor C (1 : ℤ)).map ((Top j).mor₃.unop) =
+          (T j).mor₃ := by
+        change
+          ((opShiftFunctorEquivalence C (1 : ℤ)).unitIso.inv.app
+              (Opposite.op (T j).obj₃)).unop ≫
+            (shiftFunctor C (1 : ℤ)).map
+              (opShiftFunctorEquivalenceSymmHomEquiv
+                (C := C) (n := (1 : ℤ))
+                (X := Opposite.op (T j).obj₁)
+                (Y := Opposite.op (T j).obj₃) (T j).mor₃.op).unop =
+            (T j).mor₃
+        exact opShiftFunctorEquivalenceSymmHomEquiv_left_inv
+            (C := C) (n := (1 : ℤ))
+            (X := Opposite.op (T j).obj₁)
+            (Y := Opposite.op (T j).obj₃) (f := (T j).mor₃.op)
+      rw [← Category.assoc, hcancel]
+      rfl
+    calc
+      Sigma.ι (fun j => (T j).obj₃) j ≫
+          ((Limits.Sigma.map (fun j => (T j).mor₃) ≫
+            sigmaComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (T j).obj₁)) ≫
+            (shiftFunctor C (1 : ℤ)).map e₁.hom) =
+          ((T j).mor₃ ≫
+            Sigma.ι (fun j => (shiftFunctor C (1 : ℤ)).obj
+              ((T j).obj₁)) j ≫
+              sigmaComparison (shiftFunctor C (1 : ℤ))
+                (fun j => (T j).obj₁)) ≫
+            (shiftFunctor C (1 : ℤ)).map e₁.hom := by
+        simpa only [Category.assoc] using
+          congrArg
+            (fun k => k ≫ sigmaComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (T j).obj₁) ≫
+              (shiftFunctor C (1 : ℤ)).map e₁.hom)
+            (Limits.Sigma.ι_map (f := fun j => (T j).obj₃)
+              (g := fun j => (shiftFunctor C (1 : ℤ)).obj ((T j).obj₁))
+              (fun j => (T j).mor₃) j)
+      _ = ((T j).mor₃ ≫
+            (shiftFunctor C (1 : ℤ)).map
+              (Sigma.ι (fun j => (T j).obj₁) j)) ≫
+            (shiftFunctor C (1 : ℤ)).map e₁.hom := by
+        simpa only [Category.assoc] using
+          congrArg
+            (fun k => (T j).mor₃ ≫ k ≫
+              (shiftFunctor C (1 : ℤ)).map e₁.hom) hσ
+      _ = (T j).mor₃ ≫
+          (shiftFunctor C (1 : ℤ)).map
+            (Sigma.ι (fun j => (T j).obj₁) j ≫ e₁.hom) := by
+        rw [Functor.map_comp]
+        simp only [Category.assoc]
+      _ = (T j).mor₃ ≫
+          (shiftFunctor C (1 : ℤ)).map q₁ := by
+        simpa only [q₁] using
+          congrArg
+            (fun k => (T j).mor₃ ≫ (shiftFunctor C (1 : ℤ)).map k)
+            (he₁ι j)
+      _ = q₃ ≫ U.mor₃ := hpi₃
+      _ = Sigma.ι (fun j => (T j).obj₃) j ≫ e₃.hom ≫ U.mor₃ := by
+        simpa only [q₃, Category.assoc] using
+          (congrArg (fun k => k ≫ U.mor₃) (he₃ι j)).symm
+  exact isomorphic_distinguished _ hU _
+    (Triangle.isoMk (coproductTriangle T) U e₁ e₂ e₃ hcomm₁ hcomm₂ hcomm₃)
 
 /-- Countable products imply that the preadditive triangulated category is
 Karoubian. -/

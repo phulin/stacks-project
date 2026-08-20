@@ -1,10 +1,11 @@
 import Mathlib.Algebra.Module.Torsion.Free
+import Mathlib.Algebra.Module.RingHom
 import Mathlib.Algebra.TrivSqZeroExt.Basic
-import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.Regular.RegularSequence
+import Mathlib.RingTheory.RingHom.Flat
 
 /-!
 # Examples, Chapter 15: Regular sequences and base change
@@ -260,10 +261,10 @@ def koszulH₂ {S : Type u} [CommRing S] (x y : S) : Submodule S S :=
 
 /-- A concrete low-degree interface for Koszul-regularity of a pair.
 
-Mathlib's regular-sequence API does not yet provide Koszul complexes.  For a
-two-element sequence, the positive-degree condition is exactly injectivity of
-the degree-two differential together with exactness at degree one, which is
-the interface recorded here. -/
+The full Koszul complex is not exposed by the Mathlib imports available to
+this chapter. For a two-element sequence, the positive-degree condition is
+represented by injectivity in degree two together with exactness in degree
+one. -/
 def IsKoszulRegularPair {S : Type u} [CommRing S] (x y : S) : Prop :=
   Function.Injective (koszulDifferential₂ x y) ∧
     Function.Exact (koszulDifferential₂ x y) (koszulDifferential₁ x y)
@@ -290,7 +291,7 @@ def StrangePushoutDiagram (k : Type u) [Field k] : Prop :=
     (f : StrangeBottomLeft k →ₗ[PolynomialRing k] StrangeModule k)
     (g : StrangeModule k →ₗ[PolynomialRing k] StrangeRight k),
     Function.Injective a ∧ Function.Exact a b ∧ Function.Surjective b ∧
-      Function.Injective c ∧ Function.Exact f g ∧
+    Function.Injective c ∧ Function.Injective f ∧ Function.Exact f g ∧
         Function.Surjective g ∧
       e.comp a = f.comp c ∧ g.comp e = b ∧ g.comp f = d ∧
       (∀ {N : Type u} [AddCommGroup N] [Module (PolynomialRing k) N]
@@ -323,7 +324,8 @@ theorem strangeE_y_smul_eq_zero (k : Type u) [Field k] :
   sorry
 
 /-- With the pair relation used above, `(x,0)` is identified with `(0,1)·z`.
-This is the sign-corrected form of the corresponding source calculation. -/
+This records the consequence of the displayed relation; the source's later
+minus sign is inconsistent with that relation. -/
 theorem strangeE_x_smul_eq_z_smul_one (k : Type u) [Field k] :
     xPolynomial k • strangeE k =
       zPolynomial k • strangePairClass k 0 1 := by
@@ -423,6 +425,10 @@ instance strangeLocalRing_commRing (k : Type u) [Field k] :
     CommRing (StrangeLocalRing k) := by
   unfold StrangeLocalRing
   infer_instance
+
+instance strangeLocalRing_module (k : Type u) [Field k] :
+    Module (StrangeLocalRing k) (StrangeLocalRing k) :=
+  (RingHom.id (StrangeLocalRing k)).toModule
 
 instance strangeLocalRing_algebra (k : Type u) [Field k] :
     Algebra (StrangeSquareZeroRing k) (StrangeLocalRing k) := by
@@ -540,6 +546,10 @@ def baseChangeIdealXY (k : Type u) [Field k] : Ideal (baseChangeRing k) :=
 abbrev baseChangeQuotient (k : Type u) [Field k] :=
   baseChangeRing k ⧸ baseChangeIdealXY k
 
+def baseChangeQuotientMap (k : Type u) [Field k] :
+    BaseRing k →+* baseChangeQuotient k :=
+  (Ideal.Quotient.mk (baseChangeIdealXY k)).comp (baseChangeMap k)
+
 def baseMaximalExtension (k : Type u) [Field k] : Ideal (baseChangeRing k) :=
   (baseRingMaximalIdeal k).map (baseChangeMap k)
 
@@ -552,17 +562,6 @@ def baseChangeFiberX (k : Type u) [Field k] : baseChangeFiber k :=
 def baseChangeFiberY (k : Type u) [Field k] : baseChangeFiber k :=
   Ideal.Quotient.mk (baseMaximalExtension k) (baseChangeY k)
 
-/-- Flatness of a module over a ring map, with the module structure induced by
-the map. -/
-def FlatOver {A B : Type u} [CommRing A] [CommRing B]
-    (f : A →+* B) (M : Type u) [AddCommGroup M] [Module B M] : Prop :=
-  @Module.Flat A M _ _ (Module.compHom M f)
-
-/-- Torsion-freeness of a module over the source ring of a ring map. -/
-def TorsionFreeOver {A B : Type u} [CommRing A] [CommRing B]
-    (f : A →+* B) (M : Type u) [AddCommGroup M] [Module B M] : Prop :=
-  @Module.IsTorsionFree A M _ _ (Module.compHom M f)
-
 theorem base_ring_prime_isPrime (k : Type u) [Field k] :
     (basePrimeIdeal k).IsPrime := by
   exact basePrimeIdeal_isPrime k
@@ -572,11 +571,13 @@ theorem base_change_map_isLocalHom (k : Type u) [Field k] :
   sorry
 
 theorem base_change_quotient_torsion_free (k : Type u) [Field k] :
-    TorsionFreeOver (baseChangeMap k) (baseChangeQuotient k) := by
+    letI : Module (BaseRing k) (baseChangeQuotient k) :=
+      Module.compHom (baseChangeQuotient k) (baseChangeMap k)
+    Module.IsTorsionFree (BaseRing k) (baseChangeQuotient k) := by
   sorry
 
 theorem base_change_quotient_flat (k : Type u) [Field k] :
-    FlatOver (baseChangeMap k) (baseChangeQuotient k) := by
+    RingHom.Flat (baseChangeQuotientMap k) := by
   sorry
 
 theorem base_change_fiber_common_annihilator (k : Type u) [Field k] :
@@ -603,10 +604,11 @@ def BaseChangeRegularSequenceStatement (k : Type u) [Field k] : Prop :=
   IsLocalRing (BaseRing k) ∧
     IsLocalRing (baseChangeRing k) ∧
     IsLocalHom (baseChangeMap k) ∧
-    IsRegularSequence (baseChangeRing k) [baseChangeX k, baseChangeY k] ∧
+    IsRegularSequence (baseChangeRing k)
+      [baseChangeX k, baseChangeY k] ∧
     baseChangeX k ∈ strangeLocalMaximalIdeal k ∧
       baseChangeY k ∈ strangeLocalMaximalIdeal k ∧
-    FlatOver (baseChangeMap k) (baseChangeQuotient k) ∧
+    RingHom.Flat (baseChangeQuotientMap k) ∧
     ¬ IsRegularSequence (baseChangeFiber k)
       [baseChangeFiberX k, baseChangeFiberY k] ∧
     ¬ IsKoszulRegularPair (baseChangeFiberX k) (baseChangeFiberY k)

@@ -541,6 +541,28 @@ def tensorLeftIdempotentMap
 
 /-- Tensoring with a nonzero geometrically connected algebra preserves the
 idempotents and connected components of the other algebra. -/
+theorem geometricallyConnected_baseChange_idempotents_bijective
+    {k : Type u} {R : Type w} {S : Type v} [Field k] [CommRing R] [CommRing S]
+    [Algebra k R] [Algebra k S] [Nontrivial S]
+    (hS : IsGeometricallyConnected.{u, v, w} k S) :
+    Function.Bijective
+      (tensorLeftIdempotentMap (k := k) (R := R) (S := S)) := by
+  sorry
+
+/-- Tensoring with a nonzero geometrically connected algebra preserves the
+connected components of the other algebra. -/
+theorem geometricallyConnected_baseChange_components_bijective
+    {k : Type u} {R : Type w} {S : Type v} [Field k] [CommRing R] [CommRing S]
+    [Algebra k R] [Algebra k S] [Nontrivial S]
+    (hS : IsGeometricallyConnected.{u, v, w} k S) :
+    Function.Bijective
+      ((PrimeSpectrum.continuous_comap
+        (Algebra.TensorProduct.includeLeftRingHom :
+          R →+* R ⊗[k] S)).connectedComponentsMap) := by
+  sorry
+
+/-- Tensoring with a nonzero geometrically connected algebra preserves the
+idempotents and connected components of the other algebra. -/
 theorem geometricallyConnected_baseChange_idempotents_and_components
     {k : Type u} {R : Type w} {S : Type v} [Field k] [CommRing R] [CommRing S]
     [Algebra k R] [Algebra k S] [Nontrivial S]
@@ -607,7 +629,8 @@ theorem geometricallyConnected_baseChange_idempotents_and_components
   argument also cover the zero ring, where both spectra and both component
   types are empty and both idempotent types are singletons.
   -/
-  sorry
+  exact ⟨geometricallyConnected_baseChange_idempotents_bijective hS,
+    geometricallyConnected_baseChange_components_bijective hS⟩
 
 end
 

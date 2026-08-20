@@ -122,7 +122,7 @@ theorem flatAtPrime_iff_isCohenMacaulayAt_and_relativeDimension
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
     [Algebra.FiniteType k S] (d : ℕ)
     (φ : MvPolynomial (Fin d) k →ₐ[k] S)
-    (hquasi : RingHom.QuasiFinite φ.toRingHom) :
+    (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFinite φ.toRingHom) :
     let hfinite : RingHom.FiniteType (algebraMap k S) :=
       RingHom.finiteType_algebraMap.mpr
         (inferInstance : Algebra.FiniteType k S)

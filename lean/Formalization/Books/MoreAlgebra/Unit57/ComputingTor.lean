@@ -4,6 +4,7 @@ import Mathlib.CategoryTheory.Adjunction.Additive
 import Mathlib.LinearAlgebra.Basis.Basic
 import Formalization.Books.Algebra.Unit75.TorGroups
 import Formalization.Books.Derived.Unit15.ClassicalDerivedFunctors
+import Formalization.Books.Derived.Unit16.Core
 import Formalization.Books.MoreAlgebra.Unit56.DerivedCategoriesOfModules
 
 /-!
@@ -65,21 +66,17 @@ noncomputable abbrev tensorModuleFunctor (R : Type u) [CommRing R]
     (M : Mod R) : Mod R ⥤ Mod R :=
   MonoidalCategory.tensorRight M
 
-/- The source's total left derived functor is represented by a functor on
-`D⁻`.  The `represented` field records its defining computation on the
-bounded-above homotopy category, using the canonical localization functor. -/
-structure LeftDerivedMinusFunctorData
+/- The source's total left derived functor is represented by the established
+Chapter 16 package.  Its comparison is a counit from the localization of
+`K⁻` to the termwise functor, together with the left-derived universal
+property and exactness; it does not incorrectly identify the derived functor
+with termwise application on arbitrary complexes. -/
+abbrev LeftDerivedMinusFunctorData
     {C : Type u} [Category.{v} C] [Abelian C]
     {E : Type u'} [Category.{v'} E] [Abelian E]
     [HasDerivedCategory.{w} C] [HasDerivedCategory.{w} E]
-    (F : C ⥤ E) [F.Additive] where
-  /-- The total left derived functor on bounded-above derived categories. -/
-  functor : Formalization.Books.Derived.Unit11.DMinus C ⥤
-    Formalization.Books.Derived.Unit11.DMinus E
-  /-- The functor is computed by `F` on bounded-above complexes. -/
-  represented : ∀ K : KMinus C,
-    Nonempty (functor.obj ((minusDerivedLocalizationFunctor C).obj K) ≅
-      (classicalHomotopyMinusToDerived F).obj K)
+    (F : C ⥤ E) [F.Additive] : Type _ :=
+  Formalization.Books.Derived.Unit16.LeftDerivedFunctorData F
 
 /-- Bounded-above projective resolutions give the source's total left derived
 functor for an additive functor out of a category with enough projectives. -/

@@ -220,6 +220,7 @@ theorem localizedModule_isTorsionFree
     Module.IsTorsionFree (Localization S) (LocalizedModule S M) := by
   infer_instance
 
+attribute [local instance] Algebra.TensorProduct.rightAlgebra Algebra.TensorProduct.leftAlgebra in
 /-- Flat base change between domains preserves torsion-freeness. -/
 theorem flat_baseChange_isTorsionFree
     {R R' M : Type*} [CommRing R] [CommRing R']
@@ -230,22 +231,22 @@ theorem flat_baseChange_isTorsionFree
   let K := FractionRing R
   let V := K ⊗[R] M
   let A := R' ⊗[R] K
-  letI : Algebra K A := Algebra.TensorProduct.rightAlgebra
-  letI : Algebra R' A := Algebra.TensorProduct.leftAlgebra
-  letI : Module.IsTorsionFree R' A := by
+  have hA : Module.IsTorsionFree R' A := by
     infer_instance
-  letI : Module.IsTorsionFree A (A ⊗[K] V) := by
+  have hD_A : Module.IsTorsionFree A (A ⊗[K] V) := by
     infer_instance
   have hD : Module.IsTorsionFree R' (A ⊗[K] V) := by
-    exact Module.IsTorsionFree.trans A
+    exact @Module.IsTorsionFree.trans A R' (A ⊗[K] V)
+      _ _ _ _ _ hD_A _ hA _ _ _
   let e₁ : A ⊗[K] V ≃ₗ[R'] A ⊗[R] M :=
     (TensorProduct.AlgebraTensorModule.cancelBaseChange R K A A M).restrictScalars R'
   let e₂ : A ⊗[R] M ≃ₗ[R'] R' ⊗[R] V :=
     TensorProduct.AlgebraTensorModule.assoc R R R' R' K M
   let e : A ⊗[K] V ≃ₗ[R'] R' ⊗[R] V := e₁.trans e₂
-  letI : Module.IsTorsionFree R' (A ⊗[K] V) := hD
-  letI : Module.IsTorsionFree R' (R' ⊗[R] V) := by
-    exact e.symm.injective.moduleIsTorsionFree _ (by simp)
+  have hC : Module.IsTorsionFree R' (R' ⊗[R] V) := by
+    exact @Function.Injective.moduleIsTorsionFree R' (R' ⊗[R] V)
+      (A ⊗[K] V) _ _ _ _ _ hD e.symm e.symm.injective
+      (fun r x ↦ e.symm.map_smul r x)
   let g : M →ₗ[R] V := TensorProduct.mk R K M 1
   have hg : Function.Injective g := by
     have hf : Function.Injective
@@ -264,7 +265,8 @@ theorem flat_baseChange_isTorsionFree
     TensorProduct.AlgebraTensorModule.lTensor R' R' g
   have hbase : Function.Injective gb :=
     Module.Flat.lTensor_preserves_injective_linearMap g hg
-  exact hbase.moduleIsTorsionFree _ (fun r x ↦ gb.map_smul r x)
+  exact @Function.Injective.moduleIsTorsionFree R' (R' ⊗[R] M)
+    (R' ⊗[R] V) _ _ _ _ _ hC gb hbase (fun r x ↦ gb.map_smul r x)
 
 /-! ## Extensions, local tests, and finite modules -/
 
@@ -312,8 +314,7 @@ theorem torsionFree_iff_localized_at_maximal
           (LocalizedModule.AtPrime m.asIdeal M) := by
   constructor
   · intro h m
-    letI : Module.IsTorsionFree R M := h
-    exact localizedModule_isTorsionFree m.asIdeal.primeCompl
+    exact @localizedModule_isTorsionFree R M _ _ _ _ m.asIdeal.primeCompl h
   · intro h
     apply Module.IsTorsionFree.of_smul_eq_zero
     intro r x hrx
@@ -338,8 +339,6 @@ theorem torsionFree_iff_localized_at_maximal
         exact hx (by simpa [I] using hone)
       obtain ⟨m, hm, hIm⟩ := Ideal.exists_le_maximal I hI_top
       let p : MaximalSpectrum R := ⟨m, hm⟩
-      letI : Module.IsTorsionFree (Localization.AtPrime p.asIdeal)
-          (LocalizedModule.AtPrime p.asIdeal M) := h p
       let S := p.asIdeal.primeCompl
       have hrp : algebraMap R (Localization S) r ≠ 0 := by
         intro hzero
@@ -353,7 +352,7 @@ theorem torsionFree_iff_localized_at_maximal
         rw [← (LocalizedModule.mkLinearMap S M).map_smul]
         simpa [hrx]
       have hmk : LocalizedModule.mk x (1 : S) = 0 :=
-        (Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance
+        (Module.isTorsionFree_iff_smul_eq_zero.mp (h p)
           (algebraMap R (Localization S) r) (LocalizedModule.mk x (1 : S)) hsmul).resolve_left hrp
       have hmk' : LocalizedModule.mk x (1 : S) = LocalizedModule.mk 0 (1 : S) := by
         simpa using hmk

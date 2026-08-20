@@ -86,7 +86,7 @@ def FiniteProjectiveDirectSummandCondition (R : Type u) [CommRing R] : Prop :=
     [Module.Finite R M] [Module.Projective R M]
     (N : Submodule R M),
     Module.Finite R N → Module.Projective R N →
-      ∃ P : Submodule R M, IsCompl N P
+      IsComplemented N
 
 /-- The split-injection formulation of property (P). -/
 def FreeRankOneSplitCondition (R : Type u) [CommRing R] : Prop :=
@@ -95,7 +95,7 @@ def FreeRankOneSplitCondition (R : Type u) [CommRing R] : Prop :=
       ∃ g : (Fin n → R) →ₗ[R] R,
         g.comp u = LinearMap.id
 
-/-- Property (P) is equivalent to the three finite-projective and split-map
+/-- Property (P) is equivalent to the four finite-projective and split-map
 formulations in the source lemma. -/
 theorem hasPropertyP_iff_finiteProjective_conditions
     {R : Type u} [CommRing R] :

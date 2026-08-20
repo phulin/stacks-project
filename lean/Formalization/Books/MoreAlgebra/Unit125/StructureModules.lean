@@ -58,8 +58,8 @@ def IsFiniteCyclicSummand (R T : Type u) [CommRing R]
   ∃ (n : ℕ) (f : Fin n → R),
     IsLinearSummandOf R T (finiteCyclicDirectSum R n f)
 
-/-- A module is a summand of a finite direct sum of nonzero cyclic torsion
-modules. -/
+/-- A module is a summand of a finite direct sum of cyclic torsion modules
+whose defining scalars are nonzero. -/
 def IsFiniteNonzeroCyclicSummand (R T : Type u) [CommRing R]
     [AddCommGroup T] [Module R T] : Prop :=
   ∃ (n : ℕ) (f : Fin n → R),

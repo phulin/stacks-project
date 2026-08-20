@@ -817,7 +817,7 @@ theorem formula_limit_of_representable {C : Type u} [Category.{v} C]
       (SimplexCategory.Truncated.δ (n + 1) (j.pred hij.ne_zero)
         (by simp) (by simp)).op (by
         apply Opposite.unop_injective
-        dsimp [faceObj, faceArrow, commonObj, commonMap, L]
+        dsimp [faceObj, faceArrow, commonObj, commonMap]
         change SimplexCategory.δ (j.pred hij.ne_zero) ≫ SimplexCategory.δ i =
           SimplexCategory.δ ⟨i.val, by omega⟩ ≫ SimplexCategory.δ j
         exact (SimplexCategory.δ_comp_δ' (i := ⟨i.val, by omega⟩)

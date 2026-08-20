@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
+import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Formalization.Books.Algebra.Unit114.DimensionFiniteTypeAlgebras
 import Formalization.Books.Algebra.Unit115.NoetherNormalization
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
@@ -152,6 +153,141 @@ theorem dimension_at_a_point_finite_type_field
       ringKrullDim (Localization.AtPrime p.asIdeal) +
         ((Cardinal.toENat (Algebra.trdeg k p.asIdeal.ResidueField) : ℕ∞) :
           WithBot ℕ∞) := by
+  /-
+  Proof roadmap (the statement has the required finiteness hypothesis).
+  Write
+
+    `t := Cardinal.toENat (Algebra.trdeg k p.asIdeal.ResidueField) : ℕ∞`.
+
+  Install `Algebra.FiniteType.isNoetherianRing k S` once; this supplies the
+  `Ideal.FiniteHeight` instances used below.  The proof has three local
+  helpers and a final greatest-element argument.
+
+  1. Apply
+     `Formalization.Books.Algebra.Unit114.dimension_at_a_point_finite_type_over_field`
+     (in `Formalization/Books/Algebra/Unit114/DimensionFiniteTypeAlgebras.lean`)
+     to `p.asIdeal`.  After `dsimp`, retain
+
+       `hd : krullDimensionAt p = d` and
+       `hgreat : IsGreatest (componentDimensionsAtPoint p) d`.
+
+     The `IsLeast maximalLocalDimensionsAbove` part is not needed for this
+     component proof.  At the end, `hgreat.1` supplies a component attaining
+     `d`, while `hgreat.2` compares every other component with `d`.
+
+  2. Prove a helper for a minimal prime `q` with `q ≤ p.asIdeal`.  Set
+
+       `A := S ⧸ q`,
+       `pbar := p.asIdeal.map (Ideal.Quotient.mk q) : Ideal A`.
+
+     Give `q` its prime instance from `q ∈ minimalPrimes S`, and give `pbar`
+     its prime instance with
+     `Ideal.isPrime_map_quotientMk_of_isPrime`.  The desired helper is
+
+       `topologicalKrullDim (PrimeSpectrum.zeroLocus (q : Set S)) =
+          ((pbar.height + t : ℕ∞) : WithBot ℕ∞)`.
+
+     First identify the left side with `ringKrullDim A`.  Use
+     `PrimeSpectrum.isClosedEmbedding_comap_of_surjective`
+     for `Ideal.Quotient.mk q`, its embedding homeomorphism onto the range,
+     `range_comap_of_surjective`, and `Homeomorph.setCongr` to obtain
+
+       `PrimeSpectrum A ≃ₜ PrimeSpectrum.zeroLocus (q : Set S)`.
+
+     Then use `IsHomeomorph.topologicalKrullDim_eq` from
+     `Mathlib/Topology/KrullDimension.lean` and
+     `PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim` from
+     `Mathlib/RingTheory/Spectrum/Prime/Topology.lean`.
+
+     Compute this dimension as follows.  Apply the already proved
+     `dimension_prime_polynomial_ring` twice: to the finite-type domain `A`
+     with fraction field `q.ResidueField`, obtaining a natural `r`, and to
+     `A ⨸ pbar` with fraction field `pbar.ResidueField`, obtaining a natural
+     `s`.  The canonical quotient residue-field map
+
+       `Ideal.ResidueField.mapₐ p.asIdeal pbar (Ideal.Quotient.mkₐ k q) ...`
+
+     is bijective by
+     `RingHom.SurjectiveOnStalks.residueFieldMap_bijective` applied to
+     `RingHom.surjectiveOnStalks_of_surjective Ideal.Quotient.mk_surjective`.
+     Package it with `AlgEquiv.ofBijective`; `AlgEquiv.trdeg_eq` then rewrites
+     `s` to `Algebra.trdeg k p.asIdeal.ResidueField`, hence `t = s` after
+     `Cardinal.toENat`.
+
+     It remains to show `pbar.height + s = r`.  Apply
+     `Formalization.Books.Algebra.Unit113.dimension_formula` (in
+     `Formalization/Books/Algebra/Unit113/DimensionFormula.lean`) to
+     `algebraMap k A`, the unique prime `(⊥ : Ideal k)`, and `pbar`.
+     The injectivity is `FaithfulSMul.algebraMap_injective k A`; pass the
+     finite-type hypothesis as
+     `RingHom.finiteType_algebraMap.mpr (inferInstance :
+       Algebra.FiniteType k A)`.  Supply the equality branch with
+     `Formalization.Books.Algebra.Unit105.isUniversallyCatenary_of_isCohenMacaulayRing k`;
+     the small field Cohen--Macaulay witness uses
+     `Formalization.Books.Algebra.Unit104.isCohenMacaulayLocalRing_iff_exists_regularSequence`,
+     the empty regular sequence, and `ringKrullDim_eq_zero_of_field` (the same
+     construction appears in `Books/Exercises/Unit18/Statements.lean`, but do
+     not import that later exercise file).
+
+     Two scalar-tower rewrites are important here.  Use
+     `lift_trdeg_add_eq k A q.ResidueField`,
+     `IsLocalization.isAlgebraic`, and `trdeg_eq_zero` to replace
+     `Algebra.trdeg k A` by `r`.  Use
+     `Ideal.algEquivResidueFieldOfField (⊥ : Ideal k)`,
+     `Ideal.ResidueField.map_algebraMap`, and an explicit
+     `IsScalarTower.of_algebraMap_eq` to replace the residue-field degree in
+     `Unit113.dimension_formula` by `s`.  Thus its equality reads
+     `pbar.height = r - s`.  Obtain `s ≤ r` independently from
+     `trdeg_le_of_surjective` for `A → A ⨸ pbar` followed by the two
+     fraction-field transcendence equalities; then finish with
+     `tsub_add_cancel_of_le`.  Keeping `r` and `s` as naturals avoids any
+     non-injectivity issue for `Cardinal.toENat` on infinite cardinals.
+
+  3. Prove that the relative heights in step 2 have greatest element
+     `p.asIdeal.height`:
+
+       `IsGreatest {h : ℕ∞ | ∃ q ∈ minimalPrimes S,
+          q ≤ p.asIdeal ∧
+          (p.asIdeal.map (Ideal.Quotient.mk q)).height = h}
+          p.asIdeal.height`.
+
+     For the upper bound, take the height-attaining series for the image
+     prime from `Ideal.exists_ltSeries_length_eq_height`, and map it through
+     `PrimeSpectrum.comap (Ideal.Quotient.mk q)`.  Strictness is
+     `RingHom.strictMono_comap_of_surjective Ideal.Quotient.mk_surjective`;
+     `Ideal.comap_map_quotientMk` identifies its last point with `p`.  Bound
+     its unchanged length by `Order.length_le_height_last`, then rewrite with
+     `PrimeSpectrum.height_eq_orderHeight`.
+
+     For attainment, take the series ending at `p.asIdeal` from
+     `Ideal.exists_ltSeries_length_eq_height` in
+     `Mathlib/RingTheory/Ideal/Height.lean`.  Choose a minimal prime below its
+     head with `Ideal.exists_minimalPrimes_le`.  If that inclusion were
+     strict, prepend it with `RelSeries.cons`; `RelSeries.cons_length` and
+     `Order.length_le_height` contradict the defining height bound, so the
+     head itself is a minimal prime `q`.  Transport the series to
+     `A = S ⨸ q` with the quotient spectrum order equivalence
+     `Ideal.primeSpectrumQuotientOrderIsoZeroLocus` from
+     `Mathlib/RingTheory/Spectrum/Prime/RingHom.lean`.  This gives the reverse
+     inequality for `pbar.height`, hence equality.
+
+  4. Rewrite components with `PrimeSpectrum.zeroLocus_minimalPrimes`:
+     a component through `p` is exactly `zeroLocus q` for a minimal `q` with
+     `q ≤ p.asIdeal`.  Step 2 expresses its dimension as `h + t`; step 3
+     says every such `h` is at most `p.asIdeal.height` and one equals it.
+     Therefore `hgreat` gives
+
+       `d = ((p.asIdeal.height + t : ℕ∞) : WithBot ℕ∞)`.
+
+     Finally rewrite `p.asIdeal.height` as the localization dimension with
+     `IsLocalization.AtPrime.ringKrullDim_eq_height` from
+     `Mathlib/RingTheory/Ideal/Height.lean`, use `hd`, and normalize the two
+     coercions and `WithBot.coe_add`.
+
+  Do not try to obtain the equality by iterating `tr_deg_specialization`:
+  that theorem supplies strict decrease along a chain, but not the exact
+  chain length, so it cannot identify the localization-height summand.
+  -/
   sorry
 
 /- The codimension formula for a surjective finite-type map is written using
@@ -165,6 +301,70 @@ theorem codimension
     WithBot.unbotD 0 (krullDimensionAt (PrimeSpectrum.comap f.toRingHom p)) -
         WithBot.unbotD 0 (krullDimensionAt p) =
       (PrimeSpectrum.comap f.toRingHom p).asIdeal.height - p.asIdeal.height := by
+  /-
+  Proof roadmap (both rings already carry the finite-type hypotheses needed
+  by `dimension_at_a_point_finite_type_field`).
+
+  1. Put `p' := PrimeSpectrum.comap f.toRingHom p`.  Apply
+     `dimension_at_a_point_finite_type_field` to `(S := S') p'` and to
+     `(S := S) p`.  In both equalities rewrite the localization term with the
+     fully instantiated lemma
+
+       `IsLocalization.AtPrime.ringKrullDim_eq_height
+          p.asIdeal (Localization.AtPrime p.asIdeal)`
+
+     (and similarly for `p'`).  Rewrite the sum as a single coercion with
+     `← WithBot.coe_add`; then `WithBot.unbotD_coe` turns the two local
+     dimensions into sums in `ℕ∞`.
+
+  2. Prove that the two transcendence summands agree.  The defining ideal
+     equality is
+
+       `p'.asIdeal = p.asIdeal.comap f.toRingHom`.
+
+     Form the canonical `k`-algebra map
+
+       `κf := Ideal.ResidueField.mapₐ p'.asIdeal p.asIdeal f ...`.
+
+     From `hf`, obtain
+     `RingHom.surjectiveOnStalks_of_surjective hf`; then
+     `RingHom.SurjectiveOnStalks.residueFieldMap_bijective` (both in
+     `Mathlib/RingTheory/SurjectiveOnStalks.lean` and
+     `Mathlib/RingTheory/LocalRing/ResidueField/Ideal.lean`) proves `κf`
+     bijective.  Define
+
+       `eκ : p'.asIdeal.ResidueField ≃ₐ[k] p.asIdeal.ResidueField :=
+          AlgEquiv.ofBijective κf hκf`.
+
+     Now `eκ.trdeg_eq` gives equality of the cardinal-valued degrees, and
+     applying `Cardinal.toENat` gives a common `t : ℕ∞`.
+
+  3. The common transcendence term must be shown finite before cancelling
+     it.  Put
+
+       `t := Cardinal.toENat (Algebra.trdeg k p.asIdeal.ResidueField)`.
+
+     Apply `dimension_prime_polynomial_ring` to the domain
+     `S ⧸ p.asIdeal`, with fraction field `p.asIdeal.ResidueField`; its
+     natural witness and `Cardinal.toENat_ne_top` prove `t ≠ ⊤`.  Install
+     `Algebra.FiniteType.isNoetherianRing k S` and its `S'` analogue, and use
+     `Ideal.height_ne_top_of_isPrime` to prove both heights are also not top.
+
+     After the rewrites from steps 1 and 2, the left side is
+
+       `(p'.asIdeal.height + t) - (p.asIdeal.height + t)`.
+
+     Do not apply `add_tsub_add_eq_tsub_right` directly to `ℕ∞`: it asks for
+     the unavailable global `AddLeftReflectLE ℕ∞` instance.  Instead use
+     `ENat.ne_top_iff_exists` on the two heights and `t`, rewrite all three as
+     natural casts, run `norm_cast`, and close the natural-number identity
+     with `Nat.add_sub_add_right`.  No comparison of the two heights is
+     required.
+
+  The residue fields should be compared through `Ideal.ResidueField.mapₐ`,
+  not by unfolding `Ideal.ResidueField` or the two localizations; unfolding
+  loses the canonical `k`-algebra compatibility needed by `AlgEquiv.trdeg_eq`.
+  -/
   sorry
 
 /-! ## Base change by a field extension -/

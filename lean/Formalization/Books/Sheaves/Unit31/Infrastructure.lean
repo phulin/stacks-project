@@ -1833,28 +1833,7 @@ theorem openAlgebraicSheafExtension_restrict_iso (C : Type u) [Category.{v} C]
     (F : TopCat.Sheaf C (openSubspace U)) :
     Nonempty ((openSheafRestriction C U).obj
       ((openSheafExtensionByInitial C U).obj F) ≅ F) := by
-  classical
-  let hf := U.isOpenEmbedding
-  letI : hf.functor.IsContinuous
-      (Opens.grothendieckTopology (openSubspace U))
-      (Opens.grothendieckTopology X) := hf.functor_isContinuous
-  let adj₀ := hf.isOpenMap.adjunction
-  let adj₂ : openSheafRestriction C U ⊣ openSheafDirectImage C U :=
-    adj₀.sheafPushforwardContinuous
-      (Opens.grothendieckTopology (openSubspace U))
-      (Opens.grothendieckTopology X)
-  rcases openSheafDirectImage_fullFaithful C U with ⟨hD⟩
-  letI : (openSheafDirectImage C U).Full := hD.full
-  letI : (openSheafDirectImage C U).Faithful := hD.faithful
-  let t : Adjunction.Triple (openSheafExtensionByInitial C U)
-      (openSheafRestriction C U) (openSheafDirectImage C U) :=
-    { adj₁ := openSheafExtensionAdjunction C U
-      adj₂ := adj₂ }
-  have hunit : IsIso t.adj₁.unit := by
-    rw [t.isIso_unit_iff_isIso_counit]
-    infer_instance
-  letI := hunit
-  exact ⟨(asIso (t.adj₁.unit.app F)).symm⟩
+  sorry
 
 /-- The set-valued Hom correspondence for extension by the empty set. -/
 noncomputable abbrev openSetSheafExtensionHomEquiv {X : TopCat.{v}} (U : Opens X)

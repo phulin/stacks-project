@@ -122,7 +122,7 @@ theorem emptyCover_set_sections_unique
     (F : Sheaf J (Type v)) (X : C)
     (hX : (⊥ : Sieve X) ∈ J X) :
     Nonempty (F.1.obj (op X)) ∧ Subsingleton (F.1.obj (op X)) := by
-  letI : Unique (F.1.obj (op X)) :=
+  let : Unique (F.1.obj (op X)) :=
     (CategoryTheory.Limits.Types.isTerminalEquivUnique _).toFun
       (emptyCover_sections_isTerminal F X hX)
   exact ⟨⟨default⟩, inferInstance⟩

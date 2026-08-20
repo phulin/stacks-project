@@ -5,6 +5,7 @@ import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
 import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Formalization.Books.Algebra.Unit115.NoetherNormalization
 import Formalization.Books.Algebra.Unit116.DimensionFiniteTypeAlgebrasReprise
+import Formalization.Books.Algebra.Unit122.QuasiFinite
 import Formalization.Books.Algebra.Unit123.ZariskiMain
 import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.Localization.Away.Basic
@@ -16,10 +17,9 @@ import Mathlib.RingTheory.RingHom.QuasiFinite
 
 The relative dimension at a point is the topological Krull dimension of the
 canonical point of the canonical tensor-product fibre.  Polynomial algebras
-use `MvPolynomial (Fin n)`, and quasi-finiteness uses Mathlib's canonical
-`RingHom.QuasiFinite` and `RingHom.QuasiFiniteAt` predicates.  The
-finite-type component of the source's quasi-finite maps is recorded
-explicitly where the polynomial cover is produced.
+use `MvPolynomial (Fin n)`, and quasi-finiteness uses the source-facing
+predicates from Chapter 122, which retain the finite-type component of the
+source definition while delegating the fibre condition to Mathlib.
 -/
 
 namespace Formalization.Books.Algebra.Unit125
@@ -57,24 +57,6 @@ noncomputable def relativeDimensionLocus
     Set (PrimeSpectrum S) :=
   {q | relativeDimensionAt f hfinite (PrimeSpectrum.comap f q) q rfl ≤ n}
 
-/-- The prime obtained by extending a prime to a standard localization. -/
-noncomputable def localizedPrimeAway
-    {S : Type u} [CommRing S] (q : PrimeSpectrum S) (g : S)
-    (hg : g ∉ q.asIdeal) : PrimeSpectrum (Localization.Away g) :=
-  Formalization.Books.Algebra.Unit17.standardOpenSpectrumInverse g
-    ⟨q, (PrimeSpectrum.mem_basicOpen g q).mpr hg⟩
-
-/- A base map into a target standard localization.  The divisibility witness
-   is the compatibility needed to extend `R → S` across the two localizations. -/
-noncomputable def localizedBaseMap
-    {R S : Type u} [CommRing R] [CommRing S]
-    (f : R →+* S) (a : R) (g : S) (hdiv : f a ∣ g) :
-    Localization.Away a →+* Localization.Away g :=
-  Localization.awayLift
-    ((algebraMap S (Localization.Away g)).comp f) a
-    (IsLocalization.Away.isUnit_of_dvd
-      (S := Localization.Away g) (x := g) (r := f a) hdiv)
-
 /-- For a finite-type map, quasi-finiteness at a point is equivalent to zero
 relative dimension there. -/
 theorem quasiFiniteAt_iff_relativeDimensionAt_eq_zero
@@ -82,7 +64,7 @@ theorem quasiFiniteAt_iff_relativeDimensionAt_eq_zero
     (f : R →+* S) (hfinite : RingHom.FiniteType f)
     (p : PrimeSpectrum R) (q : PrimeSpectrum S)
     (hq : PrimeSpectrum.comap f q = p) :
-    RingHom.QuasiFiniteAt f q.asIdeal ↔
+    Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q ↔
       relativeDimensionAt f hfinite p q hq = 0 := by
   sorry
 
@@ -99,8 +81,7 @@ theorem quasiFinite_over_polynomial_algebra
     letI : Algebra R S := f.toAlgebra
     ∃ g : S, g ∉ q.asIdeal ∧
       ∃ φ : MvPolynomial (Fin n) R →ₐ[R] Localization.Away g,
-        RingHom.FiniteType φ.toRingHom ∧
-          RingHom.QuasiFinite φ.toRingHom := by
+        Formalization.Books.Algebra.Unit122.IsQuasiFinite φ.toRingHom := by
   sorry
 
 /-- The refined polynomial cover whose point contracts to the base prime and
@@ -116,17 +97,18 @@ theorem refined_quasiFinite_over_polynomial_algebra
     ∀ {n r : ℕ},
       relativeDimensionAt f hfinite p q hq = n →
         Algebra.trdeg p.asIdeal.ResidueField q.asIdeal.ResidueField = r →
-          ∃ a : R, a ∉ p.asIdeal ∧
-            ∃ g : S, ∃ hg : g ∉ q.asIdeal, ∃ hdiv : f a ∣ g,
-              let α := localizedBaseMap f a g hdiv
-              letI : Algebra (Localization.Away a) (Localization.Away g) :=
-                α.toAlgebra
-                ∃ φ : MvPolynomial (Fin n) (Localization.Away a) →ₐ[
-                  Localization.Away a] Localization.Away g,
-                RingHom.FiniteType φ.toRingHom ∧
-                  RingHom.QuasiFinite φ.toRingHom ∧
+          ∃ a : R, ∃ ha : a ∉ p.asIdeal,
+            ∃ b : S, ∃ hb : b ∉ q.asIdeal,
+              let α :=
+                Formalization.Books.Algebra.Unit30.localizationAwayMulMap f a b
+              letI : Algebra (Localization.Away a)
+                  (Localization.Away (f a * b)) := α.toAlgebra
+              ∃ φ : MvPolynomial (Fin n) (Localization.Away a) →ₐ[
+                  Localization.Away a] Localization.Away (f a * b),
+                Formalization.Books.Algebra.Unit122.IsQuasiFinite φ.toRingHom ∧
                   Ideal.comap φ.toRingHom
-                      (localizedPrimeAway q g hg).asIdeal =
+                      (Formalization.Books.Algebra.Unit122.localizedPrimeAwayMul
+                        f p q hq a b ha hb).asIdeal =
                     (p.asIdeal.map (algebraMap R (Localization.Away a))).map
                         (MvPolynomial.C : Localization.Away a →+*
                           MvPolynomial (Fin n) (Localization.Away a)) +
@@ -140,10 +122,10 @@ theorem refined_quasiFinite_over_polynomial_algebra
 ring. -/
 theorem ringKrullDim_localization_le_of_quasiFiniteAt
     {R S : Type u} [CommRing R] [CommRing S]
-    (f : R →+* S) (_hfinite : RingHom.FiniteType f)
+    (f : R →+* S)
     (p : PrimeSpectrum R) (q : PrimeSpectrum S)
     (hq : PrimeSpectrum.comap f q = p)
-    (hquasi : RingHom.QuasiFiniteAt f q.asIdeal) :
+    (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q) :
     ringKrullDim (Localization.AtPrime q.asIdeal) ≤
       ringKrullDim (Localization.AtPrime p.asIdeal) := by
   sorry
@@ -153,7 +135,7 @@ theorem ringKrullDim_le_of_quasiFinite_polynomial
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
     [Algebra.FiniteType k S] (n : ℕ)
     (φ : MvPolynomial (Fin n) k →ₐ[k] S)
-    (hquasi : RingHom.QuasiFinite φ.toRingHom) :
+    (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFinite φ.toRingHom) :
     ringKrullDim S ≤ n := by
   sorry
 

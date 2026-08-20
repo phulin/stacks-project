@@ -4339,6 +4339,56 @@ private theorem fiveByFive_no_triangle
     (hlower (e 0) (e 1) ha01) (hlower (e 0) (e 2) ha02)
     (hlower (e 1) (e 2) ha12) hdetI
 
+private theorem edge_ratio_of_posDef
+    {t : ℕ} (D : LocalNumericalData t) (B : Matrix (Fin t) (Fin t) ℝ)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hpos : ∀ i, 0 < D.w i) (hBpos : B.PosDef)
+    (hB : ∀ i j, B i j = -((D.a i j : ℤ) : ℝ))
+    (i j : Fin t) (hij : 0 < D.a i j)
+    (hdivi : D.w i ∣ D.a i j) (hdivj : D.w j ∣ D.a i j) :
+    ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+      D.a i j = q * D.w j ∧ p * q < 4 := by
+  let p : ℤ := D.a i j / D.w i
+  let q : ℤ := D.a i j / D.w j
+  have hp : 0 < p := by
+    dsimp [p]
+    exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hpos i)) hdivi
+  have hq : 0 < q := by
+    dsimp [q]
+    exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hpos j)) hdivj
+  have hpa : D.a i j = p * D.w i := by
+    dsimp [p]
+    exact (Int.ediv_mul_cancel hdivi).symm
+  have hqa : D.a i j = q * D.w j := by
+    dsimp [q]
+    exact (Int.ediv_mul_cancel hdivj).symm
+  have hne : i ≠ j := by
+    intro h
+    subst j
+    rw [hdiag i] at hij
+    nlinarith [hpos i]
+  let e : Fin 2 → Fin t := fun z => if z = 0 then i else j
+  have he : Function.Injective e := by
+    intro u v h
+    fin_cases u <;> fin_cases v <;> simp [e, hne, hne.symm] at h ⊢
+  have hdet := Matrix.PosDef.det_pos (hBpos.submatrix he)
+  have hdetraw : (D.a i j : ℝ) * D.a i j <
+      2 * D.w i * (2 * D.w j) := by
+    rw [Matrix.det_fin_two] at hdet
+    simpa [Matrix.submatrix, e, hB, hdiag, hsymm] using hdet
+  have hdet' : 0 < 4 * (D.w i : ℝ) * D.w j - (D.a i j : ℝ) ^ 2 := by
+    nlinarith [hdetraw]
+  have hsq : D.a i j ^ 2 = p * q * (D.w i * D.w j) :=
+    square_factorization _ _ _ _ _ hpa hqa
+  have hsqR : (D.a i j : ℝ) ^ 2 = (p : ℝ) * q * (D.w i * D.w j) := by
+    exact_mod_cast hsq
+  have hwpqR : (0 : ℝ) < D.w i * D.w j := by
+    exact_mod_cast (mul_pos (hpos i) (hpos j))
+  have hpqR : (p : ℝ) * q < 4 := by
+    nlinarith [hdet', hsqR, hwpqR]
+  exact ⟨p, q, hp, hq, hpa, hqa, by exact_mod_cast hpqR⟩
+
 theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     (hn : 5 < T.n)
     (hedges : hasEdgeAt (localData S) 0 1 ∧ hasEdgeAt (localData S) 1 2 ∧
@@ -4451,45 +4501,8 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     have hdivj : D.w j ∣ D.a i j := by
       have h := T.w_dvd (S.index j) (S.index i)
       simpa [D, localData, T.a_symmetric (S.index j) (S.index i)] using h
-    let p : ℤ := D.a i j / D.w i
-    let q : ℤ := D.a i j / D.w j
-    have hp : 0 < p := by
-      dsimp [p]
-      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hDpos i)) hdivi
-    have hq : 0 < q := by
-      dsimp [q]
-      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hDpos j)) hdivj
-    have hpa : D.a i j = p * D.w i := by
-      dsimp [p]
-      exact (Int.ediv_mul_cancel hdivi).symm
-    have hqa : D.a i j = q * D.w j := by
-      dsimp [q]
-      exact (Int.ediv_mul_cancel hdivj).symm
-    have hne : i ≠ j := by
-      intro h
-      subst j
-      rw [hDdiag i] at hij
-      nlinarith [hDpos i]
-    let e : Fin 2 → Fin 5 := fun z => if z = 0 then i else j
-    have he : Function.Injective e := by
-      intro u v h
-      fin_cases u <;> fin_cases v <;> simp [e, hne, hne.symm] at h ⊢
-    have hdet := Matrix.PosDef.det_pos (hBpos.submatrix he)
-    have hdetraw : (D.a i j : ℝ) * D.a i j <
-        2 * D.w i * (2 * D.w j) := by
-      rw [Matrix.det_fin_two] at hdet
-      simpa [Matrix.submatrix, e, B5, hDdiag, hDsym] using hdet
-    have hdet' : 0 < 4 * (D.w i : ℝ) * D.w j - (D.a i j : ℝ) ^ 2 := by
-      nlinarith [hdetraw]
-    have hsq : D.a i j ^ 2 = p * q * (D.w i * D.w j) :=
-      square_factorization _ _ _ _ _ hpa hqa
-    have hwpq : 0 < D.w i * D.w j := mul_pos (hDpos i) (hDpos j)
-    have hsqR : (D.a i j : ℝ) ^ 2 = (p : ℝ) * q * (D.w i * D.w j) := by
-      exact_mod_cast hsq
-    have hwpqR : (0 : ℝ) < D.w i * D.w j := by exact_mod_cast hwpq
-    have hpqR : (p : ℝ) * q < 4 := by nlinarith [hdet', hsqR, hwpqR]
-    refine ⟨p, q, hp, hq, hpa, hqa, ?_⟩
-    exact_mod_cast hpqR
+    exact edge_ratio_of_posDef D B5 hDdiag hDsym hDpos hBpos
+      (fun _ _ => rfl) i j hij hdivi hdivj
   let e0123 : Fin 4 → Fin 5 := fun i =>
     if i = 0 then 0 else if i = 1 then 1 else if i = 2 then 2 else 3
   let e1234 : Fin 4 → Fin 5 := fun i =>

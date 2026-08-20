@@ -71,6 +71,99 @@ neighbourhood, use the canonical compatibility of restriction with pullback,
 and apply the pullback functor's preservation of colimits and right exactness
 to the free-sheaf epimorphism.
 -/
+/-
+Proof roadmap (the statement is sound, but the geometric square described
+below is not yet a public earlier-chapter construction).
+
+* First isolate the categorical part as the following intermediate claim.  If
+  `q : RingedSpaceHom A B`, its module pushforward has an `IsRightAdjoint`
+  instance, and `M : Mod B.structureSheaf` is `globallyGenerated`, then
+  `(ringedSpaceModulePullback q).obj M` is `globallyGenerated`.  After adding
+  the focused import
+  `Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackFree`, install
+  `PreservesColimitsOfSize.{v, v} (ringedSpaceModulePullback q)` using
+  `sheafModuleRingedSpacePullback_preserves_all_colimits q`.  Also install
+  `(Opens.map q.continuous).Final` with
+  `CategoryTheory.final_of_representablyFlat (Opens.map q.continuous)` (use an
+  anonymous `let _`, since this proposition is deliberately not a global
+  instance).  The unit comparison required by
+  `SheafOfModules.GeneratingSections.map` is
+  `(asIso (SheafOfModules.pullbackObjUnitToUnit q.sharp)).symm`; its type is
+  `SheafOfModules.unit A.structureSheaf ≅
+    (ringedSpaceModulePullback q).obj
+      (SheafOfModules.unit B.structureSheaf)`.  Thus, for
+  `σ : M.GeneratingSections`, `σ.map (ringedSpaceModulePullback q) _`
+  proves the intermediate claim.  This is preferable to manually mapping a
+  `globalGenerationMap`: `GeneratingSections.map` already uses the free-sheaf
+  comparison and preservation of epimorphisms.
+
+* For `x : X`, apply `hG` to `f.continuous x` and obtain an open
+  `V : Opens Y.carrier`, membership `hfxV`, and generators for
+  `(openModuleRestrictionFunctor Y V).obj G`.  Put
+  `U := (Opens.map f.continuous).obj V`; then `x ∈ U` follows from
+  `Opens.mem_map.mpr hfxV`.  Set
+  `i := ringedOpenInclusion X U` and `j := ringedOpenInclusion Y V`.
+
+* Canonical-open right-adjoint witnesses need not be reproved from scratch.
+  The declarations in
+  `lean/Formalization/Books/Sheaves/Unit24/Infrastructure.lean` (in the historical
+  namespace `Formalization.Books.Sheaves.Unit22`) give a public route.  For an
+  open `W` of a ringed space `Z`, install
+  `(SheafOfModules.pushforward
+    (SheafOfModules.pushforwardOver (R := Z.structureSheaf) W)).IsRightAdjoint`
+  from `(SheafOfModules.overPushforwardOverAdj
+    (R := Z.structureSheaf) W).isRightAdjoint`, and install the right-adjoint
+  instance for `(W.sheafOfModulesEquivOver Z.structureSheaf).inverse` from
+  `Equivalence.isRightAdjoint_inverse`.  Then
+  `Functor.isRightAdjoint_of_iso
+    (openModuleRestrictionRightAdjointIso W Z.structureSheaf)` proves the
+  instance for `openModuleRestrictionDirectImage W Z.structureSheaf`.  A
+  `change` turns this into
+  `(SheafOfModules.pushforward
+    (ringedOpenInclusion Z W).sharp).IsRightAdjoint`.  This recipe has been
+  checked for the present universe `v`; plain `infer_instance` still fails.
+  After `locallyGenerated` is unfolded, `openModuleRestrictionFunctor` itself
+  does unfold to `ringedSpaceModulePullback (ringedOpenInclusion _ _)`, so no
+  separate restriction comparison is needed.
+
+* The remaining construction boundary is in the open-immersion
+  infrastructure, not in this theorem.  Before this proof can be completed,
+  `lean/Formalization/Books/Sheaves/Unit31/Infrastructure.lean` must expose, for
+  `f` and `V`, a morphism
+  `g : RingedSpaceHom (ringedOpenSubspace X U)
+    (ringedOpenSubspace Y V)`, an instance
+  `(SheafOfModules.pushforward g.sharp).IsRightAdjoint`, and the equality
+  `RingedSpaceHom.comp i f = RingedSpaceHom.comp g j`.  The later declaration
+  `ringedSpaceOpenRestriction` in
+  `lean/Formalization/Books/Cohomology/Unit07/LocalityOfCohomology.lean` cannot be
+  imported chronologically and only exposes an equality of continuous maps;
+  it does not supply the ringed-space square or the adjoint instance.  Do not
+  replace the required ringed-space equality by that continuous equality.
+
+* Once that boundary is available, obtain the two composite right-adjoint
+  witnesses by applying `Functor.isRightAdjoint_of_iso` to
+  `SheafOfModules.pushforwardComp f.sharp i.sharp` and
+  `SheafOfModules.pushforwardComp j.sharp g.sharp`, respectively.  If universe
+  inference becomes ambiguous, give `SheafOfModules.pushforward` the same six
+  explicit universe arguments `.{v, v, v, v, v, v}` used by
+  `ringedSpaceModulePullback_restrict_square_iso` in
+  `lean/Formalization/Books/Sheaves/Unit26/RingedSpaceModules.lean`.  Instantiate
+  that theorem with `X₀ := ringedOpenSubspace X U`,
+  `Y₀ := ringedOpenSubspace Y V`, and `i`, `f`, `j`, `g`.  Its chosen
+  functor isomorphism, evaluated at `G`, has the needed orientation
+  `i^*(f^*G) ≅ g^*(j^*G)`.
+
+* Apply the first intermediate claim to the generators of `j^*G`, then move
+  the resulting generators of `g^*(j^*G)` across the inverse of the last
+  object isomorphism using
+  `SheafOfModules.GeneratingSections.equivOfIso`.  Package them in `Nonempty`
+  and return `⟨U, Opens.mem_map.mpr hfxV, _⟩`.
+
+Known dead ends: direct instance synthesis for either canonical open
+inclusion fails, and a continuous-map square is insufficient for
+`ringedSpaceModulePullback_restrict_square_iso`, whose hypothesis is equality
+of bundled `RingedSpaceHom`s.
+-/
 theorem locallyGenerated_pullback
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (G : Mod Y.structureSheaf) (hG : locallyGenerated G)

@@ -46,7 +46,7 @@ decomposition rather than by choosing one component as a representative. -/
 def IsFiniteProductOfDedekindDomains
     (R : Type u) [CommRing R] : Prop :=
   ∃ (n : ℕ) (S : Fin n → CommRingCat.{u}),
-    Nonempty (R ≃+* (∀ i, (S i : Type u))) ∧
+    0 < n ∧ Nonempty (R ≃+* (∀ i, (S i : Type u))) ∧
       ∀ i, IsDedekindDomain (S i : Type u)
 
 /-- The objects in Remark `remark-construction`, with the canonical objects
@@ -54,7 +54,7 @@ def IsFiniteProductOfDedekindDomains
 structure BaseChangeConstruction
     {A B K L K₁ : Type*} [CommRing A] [CommRing B] [Field K] [Field L]
     [Field K₁] [Algebra A K] [Algebra A L] [Algebra B L] [Algebra K L]
-    [Algebra K K₁] [FiniteDimensional K K₁]
+    [Algebra K K₁] [Algebra A K₁] [FiniteDimensional K K₁]
     [IsDomain A] [IsDomain B]
     [IsDiscreteValuationRing A] [IsDiscreteValuationRing B]
     (E : DVRMap A B) (F : FractionFieldExtension (K := K) (L := L) E) where
@@ -73,6 +73,16 @@ structure BaseChangeConstruction
 
 attribute [instance] BaseChangeConstruction.B₁_commRing
   BaseChangeConstruction.B₁_algebra
+
+theorem baseChange_construction_exists
+    {A B K L K₁ : Type*} [CommRing A] [CommRing B] [Field K] [Field L]
+    [Field K₁] [Algebra A K] [Algebra A L] [Algebra B L] [Algebra K L]
+    [Algebra K K₁] [Algebra A K₁] [FiniteDimensional K K₁]
+    [IsDomain A] [IsDomain B]
+    [IsDiscreteValuationRing A] [IsDiscreteValuationRing B]
+    (E : DVRMap A B) (F : FractionFieldExtension (K := K) (L := L) E) :
+    Nonempty (BaseChangeConstruction (K₁ := K₁) E F) := by
+  sorry
 
 abbrev baseChangeA₁
     (A K₁ : Type*) [CommRing A] [Field K₁] [Algebra A K₁] :=
@@ -123,8 +133,8 @@ about their places from the construction remark. -/
 This avoids identifying the different localizations appearing over different
 places. -/
 structure LocalDVRMap where
-  source : Type*
-  target : Type*
+  source : Type u
+  target : Type u
   sourceCommRing : CommRing source
   targetCommRing : CommRing target
   sourceDomain : IsDomain source
@@ -156,7 +166,7 @@ structure BaseChangePlaceData
   numberOfPlacesAbove_pos : ∀ i, 0 < numberOfPlacesAbove i
   baseRamificationIndex : Fin numberOfPlaces → ℕ
   localExtension : ∀ (i : Fin numberOfPlaces)
-    (j : Fin (numberOfPlacesAbove i)),
+    (_j : Fin (numberOfPlacesAbove i)),
     LocalDVRMap
 
 def IsHenselianConstruction
@@ -281,10 +291,12 @@ theorem pullRoot_uniformizer
         Algebra.adjoin K {θ} = ⊤ ∧
         ∃ X : FiniteSeparableExtensionData A K K₁,
           Module.finrank K K₁ = n ∧ IsTotallyRamified X ∧
-            ∃ A₁ : Type*,
-              ∃ (hA₁ : CommRing A₁),
-                letI := hA₁
-                Nonempty (A₁ ≃+* integralClosureIn A K₁) := by
+            ∃ (hA₁ : IsDiscreteValuationRing (integralClosureIn A K₁)),
+              letI := hA₁
+              ∃ E₁ : DVRMap A (integralClosureIn A K₁),
+                ramificationIndex E₁ = n ∧
+                  Nonempty (Algebra.adjoin A {θ} ≃ₐ[A]
+                    integralClosureIn A K₁) := by
   sorry
 
 theorem pullRoot_uniformizer_tame_subextensions
@@ -340,9 +352,15 @@ theorem abhyankar_lemma
     [IsDiscreteValuationRing A] [IsDiscreteValuationRing B]
     (E : DVRMap A B) (F : FractionFieldExtension (K := K) (L := L) E)
     (P : BaseChangePlaceData E)
-    (hchar : ∃ p : ℕ, p = 0 ∨ ∃ hp : 0 < p, CharP A p)
+    (hchar : CharP (DVRResidueField A) 0 ∨
+      ∃ p : ℕ, 0 < p ∧ CharP (DVRResidueField A) p ∧
+        Nat.Coprime (ramificationIndex E) p)
+    (hsep : letI := residueFieldAlgebra E
+      Algebra.IsSeparable (DVRResidueField A) (DVRResidueField B))
     (hdiv : ∃ i, ramificationIndex E ∣ P.baseRamificationIndex i) :
-    ∀ i j, (P.localExtension i j).formallySmooth := by
+    ∃ i, ramificationIndex E ∣ P.baseRamificationIndex i ∧
+      ∀ j : Fin (P.numberOfPlacesAbove i),
+        (P.localExtension i j).formallySmooth := by
   sorry
 
 /-! ## Tame composition, subextensions, and characterization -/
@@ -362,6 +380,10 @@ structure TameTowerData
   middle_ramification_factor : ∀ i, ∃ d : ℕ,
     XMK.ramificationIndex i =
       XML.ramificationIndex (restrictionMiddle i) * d
+  ramification_multiplicative : ∀ i,
+    XMK.ramificationIndex i =
+      XL.ramificationIndex (restrictionBase i) *
+        XML.ramificationIndex (restrictionMiddle i)
   residue_separable : ∀ i, XMK.residueFieldSeparable i
 
 theorem tame_composition
@@ -450,10 +472,11 @@ def HasTamelyRamifiedGaloisClosure
     letI := hGalois
     letI := hLM
     ∃ (hAM : Algebra A M),
-      letI := hAM
+    letI := hAM
       ∃ (Y : FiniteSeparableExtensionData A K M)
-        (j : L →ₐ[K] M),
-        Function.Injective j ∧ TamelyRamifiedWithRespectTo Y
+        (j : L →ₐ[K] M) (R : PlaceRestrictionData X Y),
+        Function.Injective j ∧ Function.Surjective R.restriction ∧
+          TamelyRamifiedWithRespectTo Y
 
 def HasTamelyRamifiedCommonCompositum
     {A K L₁ L₂ : Type*} [CommRing A] [Field K] [Field L₁] [Field L₂]
@@ -464,11 +487,17 @@ def HasTamelyRamifiedCommonCompositum
   ∃ (L : Type*) (hL : Field L) (hKL : Algebra K L),
     letI := hL
     letI := hKL
-    ∃ (hAL : Algebra A L),
+    ∃ (hAL : Algebra A L) (hL₁ : Algebra L₁ L) (hL₂ : Algebra L₂ L),
       letI := hAL
+      letI := hL₁
+      letI := hL₂
       ∃ (j₁ : L₁ →ₐ[K] L) (j₂ : L₂ →ₐ[K] L)
-        (Y : FiniteSeparableExtensionData A K L),
+        (Y : FiniteSeparableExtensionData A K L)
+        (R₁ : PlaceRestrictionData X₁ Y)
+        (R₂ : PlaceRestrictionData X₂ Y),
         Function.Injective j₁ ∧ Function.Injective j₂ ∧
+          Function.Surjective R₁.restriction ∧
+          Function.Surjective R₂.restriction ∧
           Algebra.adjoin K (Set.range j₁ ∪ Set.range j₂) = ⊤ ∧
           TamelyRamifiedWithRespectTo Y
 

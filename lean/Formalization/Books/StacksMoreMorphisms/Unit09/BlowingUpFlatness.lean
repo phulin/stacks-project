@@ -27,14 +27,14 @@ namespace Formalization.Books.StacksMoreMorphisms.Unit09
 /-
 The preceding algebraic-stack interface already supplies flatness, local
 finite presentation, quasi-compactness, quasi-separatedness, and closed
-immersions.  Finite type, finite presentation, and blowup are not supplied by
-that interface or by Mathlib, so they are the three additional predicates
-needed by this chapter.
+immersions.  Finite type and blowup are not supplied by that interface or by
+Mathlib, so they are the additional geometric predicates needed by this
+chapter.  Finite presentation is the standard combination of
+quasi-compactness and local finite presentation already supplied above.
 -/
 class BlowingUpFlatnessGeometry (C : Type u) [Category.{v} C]
     [AlgebraicStackCategory C] where
   finiteType : ∀ {X Y : C}, (X ⟶ Y) → Prop
-  finitePresentation : ∀ {X Y : C}, (X ⟶ Y) → Prop
   isBlowup : ∀ {X Y : C}, (X ⟶ Y) → Prop
 
 def FiniteType {C : Type u} [Category.{v} C]
@@ -43,9 +43,9 @@ def FiniteType {C : Type u} [Category.{v} C]
   BlowingUpFlatnessGeometry.finiteType f
 
 def FinitePresentation {C : Type u} [Category.{v} C]
-    [AlgebraicStackCategory C] [BlowingUpFlatnessGeometry C]
+    [HasPullbacks C] [AlgebraicStackCategory C]
     {X Y : C} (f : X ⟶ Y) : Prop :=
-  BlowingUpFlatnessGeometry.finitePresentation f
+  QuasiCompact f ∧ LocallyOfFinitePresentation f
 
 def IsBlowup {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [BlowingUpFlatnessGeometry C]
@@ -113,11 +113,11 @@ abbrev stackBaseChange {C : Type u} [Category.{v} C]
   pullback f B.map
 
 /-
-The following definition expresses the source's equality
-`X'_V = X_V` by the canonical categorical replacement: an isomorphism between
-the two pullback objects.  The displayed object on the left is the
-restriction of a closed substack along the inverse of the admissible blowup
-over `V`.
+The following definitions express the source's equality
+`X'_V = X_V` by the canonical categorical replacement: an isomorphism of the
+two pullback objects compatible with their maps to `X` and `V`.  The displayed
+object on the left is the restriction of a closed substack along the inverse
+of the admissible blowup over `V`.
 -/
 def restrictedClosedSubstack {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
@@ -129,13 +129,40 @@ def restrictedClosedSubstack {C : Type u} [Category.{v} C]
     (X'.inclusion ≫ pullback.snd f B.map)
     B.liftToCarrier
 
+/-
+The two canonical maps record the ambient maps that are part of the
+statement that the restricted closed substack agrees with `X_V`.
+-/
+def restrictedClosedSubstack.toX {C : Type u} [Category.{v} C]
+    [AlgebraicStackCategory C] [HasPullbacks C]
+    [BlowingUpFlatnessGeometry C]
+    {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
+    (B : VAdmissibleBlowup V)
+    (X' : ClosedSubstack (X := stackBaseChange f V B)) :
+    restrictedClosedSubstack f V B X' ⟶ X :=
+  pullback.fst (X'.inclusion ≫ pullback.snd f B.map) B.liftToCarrier ≫
+    X'.inclusion ≫ pullback.fst f B.map
+
+def restrictedClosedSubstack.toV {C : Type u} [Category.{v} C]
+    [AlgebraicStackCategory C] [HasPullbacks C]
+    [BlowingUpFlatnessGeometry C]
+    {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
+    (B : VAdmissibleBlowup V)
+    (X' : ClosedSubstack (X := stackBaseChange f V B)) :
+    restrictedClosedSubstack f V B X' ⟶ V.carrier :=
+  pullback.snd (X'.inclusion ≫ pullback.snd f B.map) B.liftToCarrier
+
 def AgreesOnOpen {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
     [BlowingUpFlatnessGeometry C]
     {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
     (B : VAdmissibleBlowup V)
     (X' : ClosedSubstack (X := stackBaseChange f V B)) : Prop :=
-  Nonempty (restrictedClosedSubstack f V B X' ≅ stackRestriction f V)
+  ∃ e : restrictedClosedSubstack f V B X' ≅ stackRestriction f V,
+    e.hom ≫ pullback.fst f V.inclusion =
+        restrictedClosedSubstack.toX f V B X' ∧
+      e.hom ≫ pullback.snd f V.inclusion =
+        restrictedClosedSubstack.toV f V B X'
 
 /-! ## Flattening after a `V`-admissible blowup -/
 

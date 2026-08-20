@@ -85,7 +85,45 @@ theorem produce_finite
       IsUnit (algebraMap S' (S' ⊗[R] p.asIdeal.ResidueField) s)) :
     ∃ r : R, r ∉ p.asIdeal ∧
       RingHom.Finite (Localization.awayMap (g.comp f) r) := by
-  sorry
+  letI : Algebra R S' := f.toAlgebra
+  letI : Algebra S' S := g.toAlgebra
+  letI : Algebra R S := (g.comp f).toAlgebra
+  letI : IsScalarTower R S' S := by
+    apply IsScalarTower.of_algebraMap_eq'
+    ext x
+    rfl
+  let F : S' →ₐ[R] S :=
+    { g with
+      commutes' := by
+        intro r
+        rfl }
+  letI : Algebra.FiniteType R S := hfiniteType
+  let hintegral' : (algebraMap R S').IsIntegral := by
+    simpa [RingHom.algebraMap_toAlgebra] using hintegral
+  letI : Algebra.IsIntegral R S' := algebraMap_isIntegral_iff.mp hintegral'
+  have hsurj : Function.Surjective (Localization.awayMapₐ F s) := by
+    have hmap : (Localization.awayMapₐ F s).toRingHom = Localization.awayMap g s := by
+      ext x
+      rfl
+    change Function.Surjective (Localization.awayMapₐ F s).toRingHom
+    rw [hmap]
+    simpa using hloc.2
+  have hunit : IsUnit (1 ⊗ₜ[R] s : p.asIdeal.Fiber S') := by
+    have h := hinvertible
+    have h' := h.map (Algebra.TensorProduct.commRight R S' p.asIdeal.ResidueField).toRingHom
+    simpa [Algebra.TensorProduct.commRight_tmul] using h'
+  obtain ⟨r, hr, hfin⟩ :=
+    Localization.exists_finite_awayMapₐ_of_surjective_awayMapₐ F s hsurj
+      p.asIdeal hunit
+  refine ⟨r, hr, ?_⟩
+  have hF : F.toRingHom = g := by
+    ext x
+    rfl
+  have hmap : (Localization.awayMapₐ (Algebra.ofId R S) r).toRingHom =
+      Localization.awayMap (g.comp f) r := by
+    ext x
+    rfl
+  exact hmap ▸ hfin
 
 /-- Data for the étale neighborhood and product decomposition around one
 quasi-finite prime.  Bijectivity of the canonical residue-field map records
@@ -136,7 +174,201 @@ theorem etale_makes_quasiFinite_finite_one_prime
     (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q) :
     letI : Algebra R S := f.toAlgebra
     Nonempty (EtaleFiniteAtPrimeData f p q hq) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra.FiniteType R S := hfiniteType
+  letI : Algebra.QuasiFiniteAt R q.asIdeal := hquasi.2
+  have hq' : q.asIdeal.LiesOver p.asIdeal := by
+    rw [Ideal.liesOver_iff, Ideal.under_def]
+    simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+      (congrArg PrimeSpectrum.asIdeal hq).symm
+  obtain ⟨R', _, _, hEtale, P, hPprime, hPover, e, he, P', hP'prime,
+      hP'over, hPq, heP', hres, hfinite, hunique⟩ :=
+    Algebra.exists_etale_isIdempotentElem_forall_liesOver_eq
+      (p := p.asIdeal) (q := q.asIdeal)
+  let pprime : PrimeSpectrum R' := ⟨P, hPprime⟩
+  have hpprime : PrimeSpectrum.comap (algebraMap R R') pprime = p := by
+    apply PrimeSpectrum.ext
+    change P.comap (algebraMap R R') = p.asIdeal
+    exact hPover.over.symm
+  have hresprime : Function.Bijective
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap R R') p pprime hpprime) := by
+    simpa [Formalization.Books.Algebra.Unit113.residueFieldMapAt, pprime,
+      Ideal.ResidueField.mapₐ, RingHom.algebraMap_toAlgebra] using hres
+  let A := Localization.Away e
+  let B := Localization.Away (1 - e)
+  letI : IsLocalization.Away e
+      ((R' ⊗[R] S) ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S))) :=
+    IsLocalization.Away.quotient_of_isIdempotentElem he
+  letI : IsLocalization.Away (1 - e)
+      ((R' ⊗[R] S) ⧸ Ideal.span ({e} : Set (R' ⊗[R] S))) := by
+    have h := IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
+    rw [sub_sub_cancel] at h
+    exact h
+  let awayE : A ≃ₐ[R']
+      ((R' ⊗[R] S) ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S))) :=
+    (IsLocalization.algEquiv (Submonoid.powers e) A _).restrictScalars R'
+  let awayOneSub : B ≃ₐ[R']
+      ((R' ⊗[R] S) ⧸ Ideal.span ({e} : Set (R' ⊗[R] S))) :=
+    (IsLocalization.algEquiv (Submonoid.powers (1 - e)) B _).restrictScalars R'
+  let qprod : (R' ⊗[R] S) ≃ₐ[R']
+      ((R' ⊗[R] S) ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S))) ×
+        ((R' ⊗[R] S) ⧸ Ideal.span ({e} : Set (R' ⊗[R] S))) :=
+    (AlgEquiv.prodQuotientOfIsIdempotentElem (R := R' ⊗[R] S) he.one_sub he
+      (by ring) (by simpa using he.one_sub_mul_self)).restrictScalars R'
+  let decomposition : (R' ⊗[R] S) ≃ₐ[R'] A × B :=
+    qprod.trans (AlgEquiv.prodCongr awayE.symm awayOneSub.symm)
+  let binary : BinaryAlgebraProduct R' (R' ⊗[R] S) :=
+    { A := A, B := B, equiv := decomposition }
+  let etale' : RingHom.Etale (algebraMap R R') := RingHom.etale_algebraMap.mpr hEtale
+  refine ⟨EtaleFiniteAtPrimeData.mk (R' := R') etale' pprime hpprime hresprime
+    binary ?_ ?_ ?_ ?_⟩
+  · simpa [binary] using hfinite
+  · let r0Ideal : Ideal A := P'.map (algebraMap (R' ⊗[R] S) A)
+    have hdisj : Disjoint (Submonoid.powers e : Set (R' ⊗[R] S)) (P' : Set (R' ⊗[R] S)) := by
+      rw [Ideal.disjoint_powers_iff_notMem_of_isPrime]
+      exact heP'
+    have hr0prime : r0Ideal.IsPrime := by
+      exact IsLocalization.isPrime_of_isPrime_disjoint
+        (Submonoid.powers e) A P' hP'prime hdisj
+    let r0 : PrimeSpectrum A := ⟨r0Ideal, hr0prime⟩
+    have hr0under : r0Ideal.comap (algebraMap (R' ⊗[R] S) A) = P' := by
+      exact IsLocalization.under_map_of_isPrime_disjoint
+        (Submonoid.powers e) A hP'prime hdisj
+    have hr0over : PrimeSpectrum.comap (algebraMap R' A) r0 = pprime := by
+      apply PrimeSpectrum.ext
+      change r0Ideal.comap (algebraMap R' A) = P
+      rw [IsScalarTower.algebraMap_eq R' (R' ⊗[R] S) A]
+      rw [← Ideal.comap_comap, hr0under]
+      exact (hP'over.over).symm
+    refine ⟨r0, hr0over, ?_⟩
+    intro r hr
+    let P'' : Ideal (R' ⊗[R] S) := r.asIdeal.comap (algebraMap (R' ⊗[R] S) A)
+    have hP''prime : P''.IsPrime := Ideal.comap_isPrime _ _
+    have hP''over : P''.LiesOver P := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [P'', ← IsScalarTower.algebraMap_eq R' (R' ⊗[R] S) A,
+        Ideal.comap_comap, PrimeSpectrum.comap_asIdeal, binary] using
+        (congrArg PrimeSpectrum.asIdeal hr).symm
+    have heP'' : e ∉ P'' := by
+      intro heP''
+      change algebraMap (R' ⊗[R] S) A e ∈ r.asIdeal at heP''
+      exact (Ideal.notMem_of_isUnit _
+        (IsLocalization.Away.algebraMap_isUnit e)) heP''
+    have hEq : P'' = P' := hunique P'' hP''prime hP''over heP''
+    apply PrimeSpectrum.localization_comap_injective A (Submonoid.powers e)
+    apply PrimeSpectrum.ext
+    simpa [P'', r0, r0Ideal, hr0under] using hEq
+  · intro r hr
+    have hleft : BinaryAlgebraProduct.leftMap binary =
+        algebraMap (R' ⊗[R] S) A := by
+      ext x
+      · change (IsLocalization.algEquiv (Submonoid.powers e)
+          (R' ⊗[R] S ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S))) A)
+          ((Ideal.Quotient.mk (Ideal.span ({1 - e} : Set (R' ⊗[R] S))))
+            (x ⊗ₜ[R] 1)) =
+          (algebraMap (R' ⊗[R] S) A) (x ⊗ₜ[R] 1)
+        have hmk :
+            (Ideal.Quotient.mk (Ideal.span ({1 - e} : Set (R' ⊗[R] S))))
+                (x ⊗ₜ[R] 1) =
+              IsLocalization.mk' (M := Submonoid.powers e)
+                (R' ⊗[R] S ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S)))
+                (x ⊗ₜ[R] 1) (1 : Submonoid.powers e) := by
+          rw [IsLocalization.mk'_one]
+          rfl
+        rw [hmk, IsLocalization.algEquiv_mk', IsLocalization.mk'_one]
+      · change (IsLocalization.algEquiv (Submonoid.powers e)
+          (R' ⊗[R] S ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S))) A)
+          ((Ideal.Quotient.mk (Ideal.span ({1 - e} : Set (R' ⊗[R] S))))
+            (1 ⊗ₜ[R] x)) =
+          (algebraMap (R' ⊗[R] S) A) (1 ⊗ₜ[R] x)
+        have hmk :
+            (Ideal.Quotient.mk (Ideal.span ({1 - e} : Set (R' ⊗[R] S))))
+                (1 ⊗ₜ[R] x) =
+              IsLocalization.mk' (M := Submonoid.powers e)
+                (R' ⊗[R] S ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S)))
+                (1 ⊗ₜ[R] x) (1 : Submonoid.powers e) := by
+          rw [IsLocalization.mk'_one]
+          rfl
+        rw [hmk, IsLocalization.algEquiv_mk', IsLocalization.mk'_one]
+    let P'' : Ideal (R' ⊗[R] S) := r.asIdeal.comap (algebraMap (R' ⊗[R] S) A)
+    have hP''prime : P''.IsPrime := Ideal.comap_isPrime _ _
+    have hP''over : P''.LiesOver P := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [P'', ← IsScalarTower.algebraMap_eq R' (R' ⊗[R] S) A,
+        Ideal.comap_comap, PrimeSpectrum.comap_asIdeal, binary] using
+        (congrArg PrimeSpectrum.asIdeal hr).symm
+    have heP'' : e ∉ P'' := by
+      intro heP''
+      change algebraMap (R' ⊗[R] S) A e ∈ r.asIdeal at heP''
+      exact (Ideal.notMem_of_isUnit _
+        (IsLocalization.Away.algebraMap_isUnit e)) heP''
+    have hEq : P'' = P' := hunique P'' hP''prime hP''over heP''
+    apply PrimeSpectrum.ext
+    rw [hleft]
+    change P''.comap Algebra.TensorProduct.includeRight.toRingHom = q.asIdeal
+    rw [hEq]
+    exact hPq
+  · intro r hr
+    have hright : BinaryAlgebraProduct.rightMap binary =
+        algebraMap (R' ⊗[R] S) B := by
+      ext x
+      · change (IsLocalization.algEquiv (Submonoid.powers (1 - e))
+          (R' ⊗[R] S ⧸ Ideal.span ({e} : Set (R' ⊗[R] S))) B)
+          ((Ideal.Quotient.mk (Ideal.span ({e} : Set (R' ⊗[R] S))))
+            (x ⊗ₜ[R] 1)) =
+          (algebraMap (R' ⊗[R] S) B) (x ⊗ₜ[R] 1)
+        have hmk :
+            (Ideal.Quotient.mk (Ideal.span ({e} : Set (R' ⊗[R] S))))
+                (x ⊗ₜ[R] 1) =
+              IsLocalization.mk' (M := Submonoid.powers (1 - e))
+                (R' ⊗[R] S ⧸ Ideal.span ({e} : Set (R' ⊗[R] S)))
+                (x ⊗ₜ[R] 1) (1 : Submonoid.powers (1 - e)) := by
+          rw [IsLocalization.mk'_one]
+          rfl
+        rw [hmk, IsLocalization.algEquiv_mk', IsLocalization.mk'_one]
+      · change (IsLocalization.algEquiv (Submonoid.powers (1 - e))
+          (R' ⊗[R] S ⧸ Ideal.span ({e} : Set (R' ⊗[R] S))) B)
+          ((Ideal.Quotient.mk (Ideal.span ({e} : Set (R' ⊗[R] S))))
+            (1 ⊗ₜ[R] x)) =
+          (algebraMap (R' ⊗[R] S) B) (1 ⊗ₜ[R] x)
+        have hmk :
+            (Ideal.Quotient.mk (Ideal.span ({e} : Set (R' ⊗[R] S))))
+                (1 ⊗ₜ[R] x) =
+              IsLocalization.mk' (M := Submonoid.powers (1 - e))
+                (R' ⊗[R] S ⧸ Ideal.span ({e} : Set (R' ⊗[R] S)))
+                (1 ⊗ₜ[R] x) (1 : Submonoid.powers (1 - e)) := by
+          rw [IsLocalization.mk'_one]
+          rfl
+        rw [hmk, IsLocalization.algEquiv_mk', IsLocalization.mk'_one]
+    let P'' : Ideal (R' ⊗[R] S) := r.asIdeal.comap (algebraMap (R' ⊗[R] S) B)
+    have hP''prime : P''.IsPrime := Ideal.comap_isPrime _ _
+    have hP''over : P''.LiesOver P := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [P'', ← IsScalarTower.algebraMap_eq R' (R' ⊗[R] S) B,
+        Ideal.comap_comap, PrimeSpectrum.comap_asIdeal] using
+        (congrArg PrimeSpectrum.asIdeal hr).symm
+    have hzero : algebraMap (R' ⊗[R] S) B e = 0 := by
+      rw [IsLocalization.map_eq_zero_iff (M := Submonoid.powers (1 - e))]
+      refine ⟨⟨1 - e, Submonoid.mem_powers _⟩, ?_⟩
+      simpa [mul_comm] using he.one_sub_mul_self
+    have heP'' : e ∈ P'' := by
+      change algebraMap (R' ⊗[R] S) B e ∈ r.asIdeal
+      rw [hzero]
+      exact r.asIdeal.zero_mem
+    intro hqeq
+    have hP''q : P''.comap Algebra.TensorProduct.includeRight.toRingHom =
+        P'.comap Algebra.TensorProduct.includeRight.toRingHom := by
+      rw [hPq]
+      simpa [P'', hright, PrimeSpectrum.comap_asIdeal, Ideal.comap_comap] using
+        (congrArg PrimeSpectrum.asIdeal hqeq)
+    letI : P''.IsPrime := hP''prime
+    letI : P''.LiesOver P := hP''over
+    letI : P'.IsPrime := hP'prime
+    letI : P'.LiesOver P := hP'over
+    have hEq : P'' = P' :=
+      Ideal.eq_of_comap_eq_comap_of_bijective_residueFieldMap hres P'' P' hP''q
+    exact heP' (hEq ▸ heP'')
 
 /-! The finite-product version is indexed by the finite set of isolated
 closed points in the fibre. -/

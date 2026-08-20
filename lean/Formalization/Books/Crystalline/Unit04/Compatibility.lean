@@ -200,13 +200,31 @@ abbrev bigAffineCrystallineSite (S : CompatibilitySetup.{u}) :=
 
 /-! ## The `I C = 0` simplification -/
 
+private theorem dpow_transport_eq
+    {R : Type u} [CommRing R] {I J : Ideal R} (h : I = J)
+    (δ : DividedPowers J) (n : ℕ) (x : R) :
+    (h.symm ▸ δ).dpow n x = δ.dpow n x := by
+  cases h
+  rfl
+
 /-- In the special case `I C = 0`, commutativity of the quotient square forces
 the extended ideal `I B` to lie in `J`. -/
 theorem idealMap_le_of_zeroIdealExtension
     (S : CompatibilitySetup.{u}) (hIC : IsZeroIdealExtension S)
     (X : CrystallineSystem S) :
     Ideal.map X.AtoB S.A.ideal ≤ X.B.ideal := by
-  sorry
+  rw [Ideal.map_le_iff_le_comap]
+  intro x hx
+  have hxIC : S.AtoC x ∈ idealExtension S :=
+    Ideal.mem_map_of_mem S.AtoC hx
+  rw [hIC] at hxIC
+  have hxC : S.AtoC x = 0 := by
+    simpa using hxIC
+  have hcomm := congrArg (fun g => g x) X.commutes
+  change X.AtoB x ∈ X.B.ideal
+  have hquot : Ideal.Quotient.mk X.B.ideal (X.AtoB x) = 0 := by
+    simpa [RingHom.comp_apply, hxC] using hcomm.symm
+  exact Ideal.Quotient.eq_zero_iff_mem.mp hquot
 
 /-- Under the same hypotheses, the source's compatibility condition is
 equivalent to the fixed map `(A, I, γ) → (B, J, δ)` being a divided-power-ring
@@ -216,7 +234,77 @@ theorem compatible_iff_dividedPowerHom
     (X : CrystallineSystem S) :
     DividedPowerCompatible S.A X.B X.AtoB ↔
       IsDividedPowerHomAlong S.A X.B X.AtoB := by
-  sorry
+  constructor
+  · rintro ⟨bar, ⟨hA, hAeq⟩, ⟨hB, hBeq⟩⟩
+    refine ⟨{
+      hom := X.AtoB
+      ideal_map := ?_
+      dpow_comm := ?_ }, rfl⟩
+    · intro x hx
+      apply idealMap_le_of_zeroIdealExtension S hIC X
+      exact Ideal.mem_map_of_mem X.AtoB hx
+    · intro n x hx
+      have hxB : X.AtoB x ∈ X.B.ideal := by
+        apply idealMap_le_of_zeroIdealExtension S hIC X
+        exact Ideal.mem_map_of_mem X.AtoB hx
+      calc
+        X.B.dividedPowers.dpow n (X.AtoB x) =
+            bar.dpow n (X.AtoB x) := by
+              have hh := hB.dpow_comm (n := n) (x := X.AtoB x) hxB
+              rw [hBeq] at hh
+              change bar.dpow n (X.AtoB x) =
+                X.B.dividedPowers.dpow n (X.AtoB x) at hh
+              exact hh.symm
+        _ = X.AtoB (S.A.dividedPowers.dpow n x) := by
+              have hh := hA.dpow_comm (n := n) (x := x) hx
+              rw [hAeq] at hh
+              change bar.dpow n (X.AtoB x) =
+                X.AtoB (S.A.dividedPowers.dpow n x) at hh
+              exact hh
+  · rintro ⟨h, hEq⟩
+    have hmap : Ideal.map X.AtoB S.A.ideal ≤ X.B.ideal :=
+      idealMap_le_of_zeroIdealExtension S hIC X
+    have hjoin : X.B.ideal ⊔ Ideal.map X.AtoB S.A.ideal = X.B.ideal :=
+      sup_eq_left.mpr hmap
+    let bar : DividedPowers (X.B.ideal ⊔ Ideal.map X.AtoB S.A.ideal) :=
+      hjoin.symm ▸ X.B.dividedPowers
+    refine ⟨bar, ?_, ?_⟩
+    · refine ⟨{
+        hom := X.AtoB
+        ideal_map := ?_
+        dpow_comm := ?_ }, rfl⟩
+      · intro x hx
+        change X.AtoB x ∈ X.B.ideal ⊔ Ideal.map X.AtoB S.A.ideal
+        have hxB : X.AtoB x ∈ X.B.ideal := by
+          rw [← hEq]
+          exact h.ideal_map hx
+        exact (le_sup_left : X.B.ideal ≤
+          X.B.ideal ⊔ Ideal.map X.AtoB S.A.ideal) hxB
+      · intro n x hx
+        have hbar : bar.dpow n (X.AtoB x) =
+            X.B.dividedPowers.dpow n (X.AtoB x) := by
+          simpa [bar] using
+            (dpow_transport_eq hjoin X.B.dividedPowers n (X.AtoB x))
+        calc
+          bar.dpow n (X.AtoB x) =
+              X.B.dividedPowers.dpow n (X.AtoB x) := hbar
+          _ = X.AtoB (S.A.dividedPowers.dpow n x) := by
+            rw [← hEq]
+            exact h.dpow_comm hx
+    · refine ⟨{
+        hom := RingHom.id X.B
+        ideal_map := ?_
+        dpow_comm := ?_ }, rfl⟩
+      · intro y hy
+        change y ∈ X.B.ideal ⊔ Ideal.map X.AtoB S.A.ideal
+        exact (le_sup_left : X.B.ideal ≤
+          X.B.ideal ⊔ Ideal.map X.AtoB S.A.ideal) hy
+      · intro n y hy
+        have hbar : bar.dpow n y = X.B.dividedPowers.dpow n y := by
+          simpa [bar] using
+            (dpow_transport_eq hjoin X.B.dividedPowers n y)
+        change bar.dpow n y = X.B.dividedPowers.dpow n y
+        exact hbar
 
 /-!
 The source also explains that Berthelot uses extension of `γ` to `I C` and

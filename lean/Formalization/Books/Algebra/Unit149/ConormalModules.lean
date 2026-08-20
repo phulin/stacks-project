@@ -134,7 +134,71 @@ theorem quotientFirstOrderThickeningMap_surjective
 theorem universal_first_order_thickening_quotient
     {R : Type u} [CommRing R] (I : Ideal R) :
     IsUniversalFirstOrderThickening (quotientFirstOrderThickening I) := by
-  sorry
+  let hI : I ^ 2 ≤ I := Ideal.pow_le_self two_ne_zero
+  change IsUniversalFirstOrderThickening
+    (Algebra.Extension.ofSurjective (Ideal.Quotient.factorₐ R hI)
+      (by
+        intro x
+        obtain ⟨y, hy⟩ := Ideal.Quotient.factor_surjective hI x
+        exact ⟨y, by simpa only [Ideal.Quotient.factorₐ_apply] using hy⟩))
+  unfold IsUniversalFirstOrderThickening
+  constructor
+  · change (RingHom.ker (Ideal.Quotient.factorₐ R hI).toRingHom) ^ 2 = ⊥
+    have hker : RingHom.ker (Ideal.Quotient.factorₐ R hI).toRingHom =
+        I.cotangentIdeal := by
+      ext x
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mkₐ_surjective R (I ^ 2) x
+      change (Ideal.Quotient.factorₐ R hI) (Ideal.Quotient.mk (I ^ 2) x) = 0 ↔
+        Ideal.Quotient.mk (I ^ 2) x ∈ I.cotangentIdeal
+      rw [Ideal.Quotient.factorₐ_apply_mk]
+      simp only [Ideal.Quotient.eq_zero_iff_mem, Ideal.mk_mem_cotangentIdeal]
+    rw [hker]
+    exact Ideal.cotangentIdeal_square I
+  · intro A _ _ K hK a
+    have hIle : I ≤ Ideal.comap (algebraMap R A) K := by
+      intro x hx
+      change algebraMap R A x ∈ K
+      rw [← Ideal.Quotient.eq_zero_iff_mem]
+      change algebraMap R (A ⧸ K) x = 0
+      calc
+        algebraMap R (A ⧸ K) x = a (algebraMap R (R ⧸ I) x) :=
+          (AlgHom.commutes a x).symm
+        _ = 0 := by
+          change a (Ideal.Quotient.mk I x) = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem.mpr hx, map_zero]
+    have hI2 : I ^ 2 ≤ RingHom.ker (algebraMap R A) := by
+      rw [pow_two]
+      refine Ideal.mul_le.mpr fun r hr s hs => ?_
+      change algebraMap R A (r * s) = 0
+      rw [map_mul]
+      have hmul : algebraMap R A r * algebraMap R A s ∈ K * K :=
+        Ideal.mul_mem_mul (hIle hr) (hIle hs)
+      have hmul' : algebraMap R A r * algebraMap R A s ∈ K ^ 2 := by
+        simpa only [pow_two] using hmul
+      rw [hK] at hmul'
+      simpa only [Submodule.mem_bot] using hmul'
+    let b : (R ⧸ I ^ 2) →ₐ[R] A :=
+      Ideal.Quotient.liftₐ (I ^ 2) (Algebra.ofId R A)
+        (fun x hx => hI2 hx)
+    refine ⟨b, ?_, ?_⟩
+    · apply AlgHom.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mkₐ_surjective R (I ^ 2) x
+      change algebraMap R (A ⧸ K) x = a (algebraMap R (R ⧸ I) x)
+      exact (AlgHom.commutes a x).symm
+    · intro c hc
+      apply Ideal.Quotient.algHom_ext (R₁ := R) (I := I ^ 2)
+      have hc' : c.comp (Ideal.Quotient.mkₐ R (I ^ 2)) = Algebra.ofId R A := by
+        apply AlgHom.ext
+        intro x
+        change c (algebraMap R (R ⧸ I ^ 2) x) = algebraMap R A x
+        exact AlgHom.commutes c x
+      have hb' : b.comp (Ideal.Quotient.mkₐ R (I ^ 2)) = Algebra.ofId R A := by
+        apply AlgHom.ext
+        intro x
+        change b (algebraMap R (R ⧸ I ^ 2) x) = algebraMap R A x
+        exact AlgHom.commutes b x
+      exact hc'.trans hb'.symm
 
 /-- The quotient description of the conormal module is `I/I²`. -/
 abbrev quotientConormalModule
@@ -145,14 +209,170 @@ theorem quotient_first_order_thickening_conormal
     Nonempty
       ((quotientFirstOrderThickening I).Cotangent ≃ₗ[R ⧸ I]
         quotientConormalModule I) := by
-  sorry
+  let hI : I ^ 2 ≤ I := Ideal.pow_le_self two_ne_zero
+  let P : Algebra.Extension R (R ⧸ I) :=
+    Algebra.Extension.ofSurjective (Ideal.Quotient.factorₐ R hI)
+      (by
+        intro x
+        obtain ⟨y, hy⟩ := Ideal.Quotient.factor_surjective hI x
+        exact ⟨y, by simpa only [Ideal.Quotient.factorₐ_apply] using hy⟩)
+  have hker : P.ker = I.cotangentIdeal := by
+    change RingHom.ker (Ideal.Quotient.factorₐ R hI).toRingHom = _
+    ext x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mkₐ_surjective R (I ^ 2) x
+    change (Ideal.Quotient.factorₐ R hI) (Ideal.Quotient.mk (I ^ 2) x) = 0 ↔
+      Ideal.Quotient.mk (I ^ 2) x ∈ I.cotangentIdeal
+    rw [Ideal.Quotient.factorₐ_apply_mk]
+    simp only [Ideal.Quotient.eq_zero_iff_mem, Ideal.mk_mem_cotangentIdeal]
+  have heq : P.ker.comap (algebraMap R (R ⧸ I ^ 2)) =
+      RingHom.ker (algebraMap R (R ⧸ I ^ 2)) ⊔ I := by
+    rw [hker]
+    change I.cotangentIdeal.comap (Ideal.Quotient.mk (I ^ 2)) =
+      RingHom.ker (Ideal.Quotient.mk (I ^ 2)) ⊔ I
+    rw [Ideal.comap_cotangentIdeal, Ideal.mk_ker]
+    exact (sup_eq_right.mpr (show I ^ 2 ≤ I from Ideal.pow_le_self two_ne_zero)).symm
+  let m : I.Cotangent →ₗ[R] P.ker.Cotangent :=
+    Ideal.mapCotangent I P.ker (Algebra.ofId R (R ⧸ I ^ 2))
+      (le_of_le_of_eq le_sup_right heq.symm)
+  have hm_surj : Function.Surjective m := by
+    exact Ideal.mapCotangent_surjective_of_comap_eq
+      Ideal.Quotient.mk_surjective heq
+  have hm_inj : Function.Injective m := by
+    intro x y hxy
+    obtain ⟨x, rfl⟩ := I.toCotangent_surjective x
+    obtain ⟨y, rfl⟩ := I.toCotangent_surjective y
+    have hdiff : m (I.toCotangent (x - y)) = 0 := by
+      rw [map_sub I.toCotangent, m.map_sub, sub_eq_zero.mpr hxy]
+    have hdiff' : P.ker.toCotangent
+        ⟨algebraMap R (R ⧸ I ^ 2) (x - y),
+          (le_of_le_of_eq le_sup_right heq.symm) (sub_mem x.2 y.2)⟩ = 0 := by
+      let z : I := x - y
+      calc
+        P.ker.toCotangent ⟨algebraMap R (R ⧸ I ^ 2) (x - y), _⟩ =
+            m (I.toCotangent z) :=
+          (Ideal.mapCotangent_toCotangent I P.ker
+            (Algebra.ofId R (R ⧸ I ^ 2))
+            (le_of_le_of_eq le_sup_right heq.symm) z).symm
+        _ = 0 := by simpa only [z] using hdiff
+    have hsq : P.ker ^ 2 = ⊥ := by
+      rw [hker]
+      exact Ideal.cotangentIdeal_square I
+    have hdiffK : algebraMap R (R ⧸ I ^ 2) (x - y) ∈ P.ker ^ 2 :=
+      (P.ker.toCotangent_eq_zero _).mp hdiff'
+    rw [hsq] at hdiffK
+    have hdiff0 : algebraMap R (R ⧸ I ^ 2) (x - y) = 0 := by
+      exact Ideal.mem_bot.mp hdiffK
+    apply I.toCotangent_eq.mpr
+    exact Ideal.Quotient.eq_zero_iff_mem.mp hdiff0
+  let m' : I.Cotangent →ₗ[R ⧸ I] P.Cotangent :=
+    { toFun := fun x => Algebra.Extension.Cotangent.of (m x)
+      map_add' := m.map_add
+      map_smul' := by
+        intro r x
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+        obtain ⟨x, rfl⟩ := I.toCotangent_surjective x
+        apply Algebra.Extension.Cotangent.ext
+        change m (r • I.toCotangent x) = P.σ (Ideal.Quotient.mk I r) • m (I.toCotangent x)
+        rw [m.map_smul]
+        have hσ : P.σ (Ideal.Quotient.mk I r) -
+            algebraMap R P.Ring r ∈ P.ker := by
+          apply RingHom.mem_ker.mp
+          change algebraMap P.Ring (R ⧸ I) (P.σ (Ideal.Quotient.mk I r) -
+            algebraMap R P.Ring r) = 0
+          rw [map_sub, P.algebraMap_σ]
+          rw [← IsScalarTower.algebraMap_apply R P.Ring (R ⧸ I),
+            Ideal.Quotient.algebraMap_eq]
+          exact sub_self _
+        have hz := Algebra.Extension.Cotangent.smul_eq_zero_of_mem
+          (P.σ (Ideal.Quotient.mk I r) - algebraMap R P.Ring r) hσ
+          (m (I.toCotangent x))
+        rw [sub_smul] at hz
+        rw [← algebraMap_smul P.Ring]
+        exact (sub_eq_zero.mp hz).symm }
+  have hm'_inj : Function.Injective m' := by
+    intro x y hxy
+    change Algebra.Extension.Cotangent.of (m x) =
+      Algebra.Extension.Cotangent.of (m y) at hxy
+    apply hm_inj
+    exact congrArg Algebra.Extension.Cotangent.val hxy
+  have hm'_surj : Function.Surjective m' := by
+    intro x
+    obtain ⟨y, hy⟩ := hm_surj x.val
+    refine ⟨y, ?_⟩
+    change Algebra.Extension.Cotangent.of (m y) = x
+    apply Algebra.Extension.Cotangent.ext
+    simpa only [Algebra.Extension.Cotangent.val_of] using hy
+  have hm'_bij : Function.Bijective m' := ⟨hm'_inj, hm'_surj⟩
+  change Nonempty (P.Cotangent ≃ₗ[R ⧸ I] I.Cotangent)
+  exact ⟨(LinearEquiv.ofBijective m' hm'_bij).symm⟩
 
 theorem conormalModule_quotient
     {R : Type u} [CommRing R] (I : Ideal R)
     (h : Algebra.FormallyUnramified R (R ⧸ I)) :
     Nonempty
       (conormalModule h ≃ₗ[R ⧸ I] quotientConormalModule I) := by
-  sorry
+  let P := universalFirstOrderThickening h
+  let Q := quotientFirstOrderThickening I
+  have hP : IsUniversalFirstOrderThickening P :=
+    universalFirstOrderThickening_isUniversal h
+  have hQ : IsUniversalFirstOrderThickening Q :=
+    universal_first_order_thickening_quotient I
+  obtain ⟨e, he, _⟩ := universal_first_order_thickening_unique P Q hP hQ
+  have he' :
+      (IsScalarTower.toAlgHom R Q.Ring (R ⧸ I)).comp e.toAlgHom =
+        IsScalarTower.toAlgHom R P.Ring (R ⧸ I) := he
+  let f : P.Hom Q := Algebra.Extension.Hom.ofAlgHom e.toAlgHom he'
+  let g : Q.Hom P :=
+    Algebra.Extension.Hom.ofAlgHom e.symm.toAlgHom (by
+      apply AlgHom.ext
+      intro x
+      have hx := congrArg (fun k => k (e.symm x)) he'
+      change (IsScalarTower.toAlgHom R P.Ring (R ⧸ I)) (e.symm x) =
+        (IsScalarTower.toAlgHom R Q.Ring (R ⧸ I)) x
+      have hx' :
+          (IsScalarTower.toAlgHom R P.Ring (R ⧸ I)) (e.symm x) =
+            (IsScalarTower.toAlgHom R Q.Ring (R ⧸ I))
+              (e.toAlgHom (e.symm x)) := by
+        simpa only [AlgHom.comp_apply] using hx.symm
+      exact hx'.trans (congrArg (IsScalarTower.toAlgHom R Q.Ring (R ⧸ I))
+        (e.apply_symm_apply x)))
+  have hgf : g.comp f = Algebra.Extension.Hom.id P := by
+    ext x
+    change e.symm (e x) = x
+    exact e.symm_apply_apply x
+  have hfg : f.comp g = Algebra.Extension.Hom.id Q := by
+    ext x
+    change e (e.symm x) = x
+    exact e.apply_symm_apply x
+  let mf : P.Cotangent →ₗ[R ⧸ I] Q.Cotangent :=
+    Algebra.Extension.Cotangent.map f
+  let mg : Q.Cotangent →ₗ[R ⧸ I] P.Cotangent :=
+    Algebra.Extension.Cotangent.map g
+  have hmgf :
+      mg.restrictScalars (R ⧸ I) ∘ₗ mf = LinearMap.id := by
+    rw [← Algebra.Extension.Cotangent.map_comp, hgf,
+      Algebra.Extension.Cotangent.map_id]
+  have hmfg :
+      mf.restrictScalars (R ⧸ I) ∘ₗ mg = LinearMap.id := by
+    rw [← Algebra.Extension.Cotangent.map_comp, hfg,
+      Algebra.Extension.Cotangent.map_id]
+  have hmf_inj : Function.Injective mf := by
+    intro x y hxy
+    have hx := LinearMap.congr_fun hmgf x
+    have hy := LinearMap.congr_fun hmgf y
+    calc
+      x = mg (mf x) := by simpa using hx.symm
+      _ = mg (mf y) := by rw [hxy]
+      _ = y := by simpa using hy
+  have hmf_surj : Function.Surjective mf := by
+    intro y
+    refine ⟨mg y, ?_⟩
+    simpa using LinearMap.congr_fun hmfg y
+  let E : P.Cotangent ≃ₗ[R ⧸ I] Q.Cotangent :=
+    LinearEquiv.ofBijective mf ⟨hmf_inj, hmf_surj⟩
+  obtain ⟨q⟩ := quotient_first_order_thickening_conormal I
+  exact ⟨by
+    simpa [P, Q, conormalModule, quotientConormalModule] using E.trans q⟩
 
 /-! ## Localization -/
 

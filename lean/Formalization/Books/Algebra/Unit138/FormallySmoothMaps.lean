@@ -1,8 +1,7 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
-import Formalization.Books.Algebra.Unit137.SmoothRingMaps
+import Formalization.Books.Algebra.Unit134.NaiveCotangentComplex
 import Formalization.Books.Algebra.Unit14.BaseChange
-import Mathlib.RingTheory.Etale.Descent
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.RingHom.Smooth
@@ -78,6 +77,26 @@ noncomputable def surjectiveExtensionOver
     (h : Function.Surjective (algebraMap B C)) :
     Algebra.Extension A C :=
   Algebra.Extension.ofSurjective (IsScalarTower.toAlgHom A B C) h
+
+/-- The map of extensions induced by `A → B` when both surjections are viewed
+as extensions over `A`.  This keeps the cotangent complex of `B → C` over
+`A`, so its target is `C ⊗[B] Ω[B⁄A]`. -/
+noncomputable def surjectiveExtensionOverHom
+    {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
+    (hAC : Function.Surjective (algebraMap A C))
+    (hBC : Function.Surjective (algebraMap B C)) :
+    (Formalization.Books.Algebra.Unit134.surjectiveExtension hAC).Hom
+      (surjectiveExtensionOver (A := A) hBC) :=
+  { toRingHom := algebraMap A B
+    toRingHom_algebraMap := by
+      intro a
+      change algebraMap A B a = algebraMap A B a
+      rfl
+    algebraMap_toRingHom := by
+      intro a
+      change algebraMap B C (algebraMap A B a) = algebraMap A C a
+      exact (IsScalarTower.algebraMap_apply A B C a).symm }
 
 /-- The tensor product appearing when a stage of a directed system of ring
 maps is base changed to the represented source ring. -/
@@ -191,6 +210,22 @@ theorem surjective_of_composite_algebraMap
     Function.Surjective (algebraMap B C) := by
   sorry
 
+/-- The source's application lemma with its canonical differential map. -/
+theorem application_NL_formallySmooth_canonical
+    {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
+    (hAC : Function.Surjective (algebraMap A C))
+    (hAB : Algebra.FormallySmooth A B) :
+    IsSplitExactLinearSequence
+      (Algebra.Extension.Cotangent.map
+        (surjectiveExtensionOverHom hAC
+          (surjective_of_composite_algebraMap (B := B) hAC)))
+      (surjectiveExtensionOver (A := A)
+        (surjective_of_composite_algebraMap (B := B) hAC)).cotangentComplex := by
+  sorry
+
+/-- Compatibility form of `application_NL_formallySmooth_canonical` retained
+for clients which supplied the differential map as an existential. -/
 theorem application_NL_formallySmooth
     {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
     [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]

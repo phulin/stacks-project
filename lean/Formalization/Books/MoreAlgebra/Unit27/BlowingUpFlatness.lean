@@ -39,8 +39,9 @@ abbrev strictTransformModule
   (@Submodule.hasQuotient T N inferInstance inferInstance inferInstance).Quotient P
 
 /- The following ideal is the ring-theoretic version of the same construction
-for an `R`-algebra.  It is the canonical `baseChangeTorsionIdeal` of
-Algebra, Chapter 70, written with the existing `R`-algebra instance on `S`. -/
+for an `R`-algebra.  It adapts the canonical `baseChangeTorsionIdeal` of
+Algebra, Chapter 70 to the existing `R`-algebra instance on `S`; the explicit
+definition avoids the instance mismatch in that declaration's ring-hom API. -/
 noncomputable def strictTransformTorsionIdeal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (I : Ideal R) (a : R) : Ideal (S ⊗[R] affineBlowup I a) :=
@@ -140,29 +141,30 @@ noncomputable instance strictTransformModuleOverModule
 
 /-! ## Flattening on an affine blowup -/
 
-/- A valuation ring has a center on an `R`-algebra when the algebra admits a
-local map to that valuation ring extending the given map into its fraction
-field.  This is the source-facing center interface used for the affine chart
-in the flattening statement. -/
+/- A valuation ring has a center on an affine `R`-scheme when its coordinate
+   ring maps into the valuation ring, compatibly with the map from `R`.  The
+   corresponding map from the localization at the center is local; requiring
+   the map from the whole affine coordinate ring to be local would incorrectly
+   force the center to be a maximal point of the affine chart. -/
 def HasValuationCenter
     {R K : Type*} [CommRing R] [Field K] [Algebra R K]
     (A : ValuationSubring K) (B : Type*)
     [CommRing B] [Algebra R B]
     : Prop :=
-  ∃ φ : B →+* A, IsLocalHom φ ∧
+  ∃ φ : B →+* A,
     ∀ r : R, ((φ (algebraMap R B r) : A) : K) = algebraMap R K r
 
 /-- A weak flattening-by-affine-blowup theorem, with the four conclusions in
 the source: finite generation of the blowup ideal, a valuation center, a
 nonzero closed fibre, and flat/finitely presented strict transforms. -/
 theorem flattenOnAffineBlowup
-    {R S M K : Type*}
+    {R K : Type u} {S : Type v} {M : Type w}
     [CommRing R] [IsDomain R] [IsLocalRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     [CommRing S] [Algebra R S] [Algebra.FiniteType R S]
     [AddCommGroup M] [Module S M] [Module.Finite S M]
     (A : ValuationSubring K)
-    (hA : CenteredOn A (algebraMap R K).range) :
+    (hA : DominatesValuationSubring (R := R) (K := K) A) :
     ∃ (I : Ideal R) (a : R), ∃ ha : a ∈ I,
       I ≤ IsLocalRing.maximalIdeal R ∧
       a ≠ 0 ∧

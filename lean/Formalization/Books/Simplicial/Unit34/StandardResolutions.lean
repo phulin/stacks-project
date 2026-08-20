@@ -436,51 +436,8 @@ theorem standardResolution_outer_inverse_section
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     standardResolutionOuterHomotopyInverse T ≫
-        standardResolutionOuterAugmentation T =
+      standardResolutionOuterAugmentation T =
       𝟙 ((SimplicialObject.const (A ⥤ S)).obj T.V) := by
-  /-
-  apply NatTrans.ext
-  funext n
-  let q : op (SimplexCategory.mk 0) ⟶ n :=
-    (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
-  have hraw := (standardResolutionOuterRawAugmentation T).naturality q
-  have hconst : ((SimplicialObject.const (A ⥤ S)).obj
-      (𝟭 A ⋙ T.V)).map q = 𝟙 (𝟭 A ⋙ T.V) := by
-    simp
-  rw [hconst] at hraw
-  dsimp [q] at hraw
-  have hraw_u := congrArg (fun k => k ≫ (Functor.leftUnitor T.V).hom) hraw
-  simp only [Category.assoc] at hraw_u
-  have haug0 := standardResolution_augmentation_formula T 0
-  rw [(standardResolutionAugmentationData T).component_zero] at haug0
-  dsimp [godementAugmentationComponent] at haug0
-  have haug0' := congrArg (fun k => Functor.whiskerRight k T.V) haug0
-  let transport :
-      T.V ⋙ (T.U ⋙ T.V) ⟶
-        (standardResolutionDegree T (some 0)) ⋙ T.V := by
-    exact (Functor.associator T.V T.U T.V).inv ≫
-      Functor.whiskerRight
-        (Functor.rightUnitor (standardResolutionBase T)).inv T.V ≫
-      Functor.whiskerRight
-        (eqToHom (show standardResolutionBase T ⋙ 𝟭 A =
-          standardResolutionDegree T (some 0) from rfl)) T.V
-  have haug0'' := congrArg (fun k =>
-      ((Functor.rightUnitor T.V).inv ≫
-        Functor.whiskerLeft T.V T.adjunction.unit ≫ transport) ≫ k) haug0'
-  have haug0''' := congrArg (fun k => k ≫ (Functor.leftUnitor T.V).hom) haug0''
-  rw [Functor.whiskerRight_comp] at haug0'''
-  dsimp [transport] at haug0'''
-  simp only [Category.assoc] at haug0'''
-  dsimp [standardResolutionOuterHomotopyInverse]
-  simp only [Category.assoc]
-  rw [hraw_u]
-  dsimp [standardResolutionOuterRawAugmentation]
-  simpa only [id, Category.assoc, Category.comp_id, Category.id_comp] using haug0'''
-  ext X
-  simp
-  rw [← T.U.map_comp, T.adjunction.right_triangle_components]
-  simp
-  -/
   sorry
 
 theorem standardResolution_inner_inverse_section
@@ -489,41 +446,6 @@ theorem standardResolution_inner_inverse_section
     standardResolutionInnerHomotopyInverse T ≫
         standardResolutionInnerAugmentation T =
       𝟙 ((SimplicialObject.const (S ⥤ A)).obj T.U) := by
-  /-
-  apply NatTrans.ext
-  funext n
-  let q : op (SimplexCategory.mk 0) ⟶ n :=
-    (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
-  have hraw := (standardResolutionInnerRawAugmentation T).naturality q
-  have hconst : ((SimplicialObject.const (S ⥤ A)).obj
-      (T.U ⋙ 𝟭 A)).map q = 𝟙 (T.U ⋙ 𝟭 A) := by
-    simp
-  rw [hconst] at hraw
-  dsimp [q] at hraw
-  have hraw_u := congrArg (fun k => k ≫ (Functor.rightUnitor T.U).hom) hraw
-  simp only [Category.assoc] at hraw_u
-  have haug0 := standardResolution_augmentation_formula T 0
-  rw [(standardResolutionAugmentationData T).component_zero] at haug0
-  dsimp [godementAugmentationComponent] at haug0
-  have haug0' := congrArg (fun k => Functor.whiskerLeft T.U k) haug0
-  dsimp [standardResolutionInnerHomotopyInverse]
-  simp only [Category.assoc]
-  rw [hraw_u]
-  dsimp [standardResolutionInnerRawAugmentation]
-  change ((Functor.leftUnitor T.U).inv ≫
-      Functor.whiskerRight T.adjunction.unit T.U) ≫
-    Functor.whiskerLeft T.U
-      (eqToHom (standardResolution_object_degree T 0).symm ≫
-        (standardResolutionAugmentation T).app
-          (op (SimplexCategory.mk 0))) ≫
-    𝟙 (T.U ⋙ 𝟭 A) ≫ (Functor.rightUnitor T.U).hom = 𝟙 T.U
-  rw [← Functor.whiskerLeft_comp]
-  rw [haug0']
-  ext X
-  simp
-  rw [← T.V.map_comp, T.adjunction.left_triangle_components]
-  simp
-  -/
   sorry
 
 /-- Both augmented whiskered resolutions are homotopy equivalences. The
@@ -535,7 +457,6 @@ theorem standardResolution_homotopy_equivalences
     Unit26.IsHomotopyEquivalence (standardResolutionOuterAugmentation T) ∧
       Unit26.IsHomotopyEquivalence (standardResolutionInnerAugmentation T) := by
   sorry
-
 /-! ## The module and polynomial-algebra examples -/
 
 /-- The free/forgetful adjunction used in Example 34.4. -/
@@ -593,9 +514,49 @@ def commutativePolynomialFree {A : Type u} [CommRing A] :
       (ConcreteCategory.hom f) (ConcreteCategory.hom g)).symm
 
 /-- The free/forgetful adjunction for commutative `A`-algebras. -/
+private noncomputable def commutativePolynomialHomEquiv {A : Type u} [CommRing A]
+    (X : Type u) (Y : CommAlgCat.{u} A) :
+    ((commutativePolynomialFree (A := A)).obj X ⟶ Y) ≃
+      (X ⟶ (CategoryTheory.forget (CommAlgCat.{u} A)).obj Y) :=
+  { toFun := fun f => TypeCat.ofHom (fun x => f.hom (MvPolynomial.X x))
+    invFun := fun g =>
+      CommAlgCat.ofHom (MvPolynomial.aeval (fun x => g x))
+    left_inv := by
+      intro f
+      apply CommAlgCat.hom_ext
+      apply MvPolynomial.algHom_ext
+      intro x
+      change MvPolynomial.aeval (R := A)
+          (fun x : X => f.hom (MvPolynomial.X x)) (MvPolynomial.X x) =
+        f.hom (MvPolynomial.X x)
+      simp
+    right_inv := by
+      intro g
+      apply ConcreteCategory.hom_ext
+      intro x
+      exact MvPolynomial.aeval_X (f := g) x }
+
+/-- The free/forgetful adjunction for commutative `A`-algebras. -/
 noncomputable def commutativePolynomialAdjunction {A : Type u} [CommRing A] :
     commutativePolynomialFree (A := A) ⊣ CategoryTheory.forget (CommAlgCat.{u} A) := by
-  sorry
+  exact CategoryTheory.Adjunction.mkOfHomEquiv
+    { homEquiv := fun X Y => by
+        exact commutativePolynomialHomEquiv X Y
+      homEquiv_naturality_left_symm := by
+        intro X' X Y f g
+        apply CommAlgCat.hom_ext
+        apply MvPolynomial.algHom_ext
+        intro x
+        change MvPolynomial.aeval (R := A)
+            (fun x : X' => g (f x)) (MvPolynomial.X x) =
+          MvPolynomial.aeval (R := A) (fun x : X => g x)
+            (MvPolynomial.rename (R := A) f (MvPolynomial.X x))
+        simp
+      homEquiv_naturality_right := by
+        intro X Y Y' f g
+        apply ConcreteCategory.hom_ext
+        intro x
+        rfl }
 
 /-- The free/forgetful adjunction used in Example 34.5. -/
 def polynomialAlgebraStandardResolutionSituation {A : Type u} [CommRing A] :

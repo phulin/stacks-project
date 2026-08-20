@@ -1042,12 +1042,410 @@ theorem fittingIdeal_eq_top_of_surjective
     simpa only [Nat.sub_self] using (minorIdeal_zero (relationMatrix p z0))
   rw [hz]
 
+private def prodSurjection
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    {n m : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (q : (Fin m → R) →ₗ[R] N) :
+    (Fin (n + m) → R) →ₗ[R] (M × N) :=
+  { toFun := fun x => (p (x ∘ Fin.castAdd m), q (x ∘ Fin.natAdd n))
+    map_add' := by
+      intro x y
+      apply Prod.ext
+      · change p ((x + y) ∘ Fin.castAdd m) =
+          p (x ∘ Fin.castAdd m) + p (y ∘ Fin.castAdd m)
+        rw [show (x + y) ∘ Fin.castAdd m =
+          (x ∘ Fin.castAdd m) + (y ∘ Fin.castAdd m) by
+            funext i
+            rfl, map_add]
+      · change q ((x + y) ∘ Fin.natAdd n) =
+          q (x ∘ Fin.natAdd n) + q (y ∘ Fin.natAdd n)
+        rw [show (x + y) ∘ Fin.natAdd n =
+          (x ∘ Fin.natAdd n) + (y ∘ Fin.natAdd n) by
+            funext i
+            rfl, map_add]
+    map_smul' := by
+      intro c x
+      apply Prod.ext
+      · change p ((c • x) ∘ Fin.castAdd m) =
+          c • p (x ∘ Fin.castAdd m)
+        rw [show (c • x) ∘ Fin.castAdd m =
+          c • (x ∘ Fin.castAdd m) by
+            funext i
+            rfl, map_smul]
+      · change q ((c • x) ∘ Fin.natAdd n) =
+          c • q (x ∘ Fin.natAdd n)
+        rw [show (c • x) ∘ Fin.natAdd n =
+          c • (x ∘ Fin.natAdd n) by
+            funext i
+            rfl, map_smul] }
+
+private theorem prodSurjection_surjective
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    {n m : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (q : (Fin m → R) →ₗ[R] N)
+    (hp : Function.Surjective p) (hq : Function.Surjective q) :
+    Function.Surjective (prodSurjection p q) := by
+  rintro ⟨y, z⟩
+  obtain ⟨x, rfl⟩ := hp y
+  obtain ⟨x', rfl⟩ := hq z
+  refine ⟨Fin.addCases x x', ?_⟩
+  simp [prodSurjection, Function.comp_def]
+
+private theorem minorIdeal_eq_bot_of_rows_lt
+    {R : Type*} [CommRing R] {n m r : ℕ}
+    (A : Matrix (Fin n) (Fin m) R) (h : n < r) :
+    minorIdeal A r = ⊥ := by
+  apply le_antisymm
+  · apply Ideal.span_le.2
+    rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+    have hcard : rows.card ≤ n := by
+      simpa only [Fintype.card_fin] using rows.card_le_univ
+    omega
+  · exact bot_le
+
+private theorem minorIdeal_mono_of_le
+    {R : Type*} [CommRing R] {n m r s : ℕ}
+    (A : Matrix (Fin n) (Fin m) R) (h : r ≤ s) :
+    minorIdeal A s ≤ minorIdeal A r := by
+  induction s, h using Nat.le_induction with
+  | base => exact le_rfl
+  | succ s h ih =>
+      exact (minorIdeal_mono_succ A s).trans ih
+
+private theorem fittingIdealOfSurjection_eq_top_of_le
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (hp : Function.Surjective p) {k : ℕ} (h : n ≤ k) :
+    fittingIdealOfSurjection p hp k = ⊤ := by
+  have minorIdeal_zero
+      {r m : ℕ} (A : Matrix (Fin r) (Fin m) R) : minorIdeal A 0 = ⊤ := by
+    apply (Ideal.eq_top_iff_one _).mpr
+    apply Ideal.subset_span
+    refine ⟨∅, ∅, by simp, by simp, ?_⟩
+    simp [matrixMinor]
+  apply le_antisymm le_top
+  unfold fittingIdealOfSurjection
+  have hsub : n - k = 0 := Nat.sub_eq_zero_of_le h
+  let z0 : Fin (n - k) → LinearMap.ker p := fun i =>
+    Fin.elim0 (hsub ▸ i)
+  have hz : minorIdeal (relationMatrix p z0) (n - k) = ⊤ := by
+    simpa [hsub] using minorIdeal_zero (relationMatrix p z0)
+  rw [← hz]
+  exact le_iSup (fun z : Fin (n - k) → LinearMap.ker p =>
+    minorIdeal (relationMatrix p z) (n - k)) z0
+
+private theorem minorIdeal_right_mul
+    {R : Type*} [CommRing R] {n m p r : ℕ}
+    (A : Matrix (Fin n) (Fin m) R) (C : Matrix (Fin m) (Fin p) R) :
+    minorIdeal (A * C) r ≤ minorIdeal A r := by
+  classical
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let erows : Fin r → Fin n := fun i => rows.orderIsoOfFin hrows i
+  let ecols : Fin r → Fin p := fun j => cols.orderIsoOfFin hcols j
+  have hprod :
+      (A * C).submatrix erows ecols =
+        (A.submatrix erows id) * (C.submatrix id ecols) := by
+    apply Matrix.ext
+    intro i j
+    simp [Matrix.mul_apply, Matrix.submatrix_apply, erows, ecols]
+  change ((A * C).submatrix erows ecols).det ∈ minorIdeal A r
+  rw [hprod, Formalization.Books.Algebra.Unit03.cauchyBinet]
+  apply Ideal.sum_mem
+  intro S hS
+  apply Ideal.mul_mem_right
+  apply Ideal.subset_span
+  refine ⟨rows, S.1, hrows, S.2, ?_⟩
+  rfl
+
+private theorem fittingIdealOfSurjection_prod
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    {n m : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (q : (Fin m → R) →ₗ[R] N)
+    (hp : Function.Surjective p) (hq : Function.Surjective q) (l : ℕ) :
+    fittingIdealOfSurjection (prodSurjection p q)
+        (prodSurjection_surjective p q hp hq) l =
+      ⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
+        fittingIdealOfSurjection p hp k * fittingIdealOfSurjection q hq k' := by
+  classical
+  let r := n + m - l
+  let pp := prodSurjection p q
+  let hpp := prodSurjection_surjective p q hp hq
+  unfold fittingIdealOfSurjection
+  apply le_antisymm
+  · refine iSup_le ?_
+    intro w
+    let u : Fin r → LinearMap.ker p := fun j =>
+      ⟨fun i => (w j).1 (Fin.castAdd m i), by
+        apply LinearMap.mem_ker.mpr
+        have hw := (w j).property
+        change pp (w j).1 = 0 at hw
+        exact congrArg Prod.fst hw⟩
+    let v : Fin r → LinearMap.ker q := fun j =>
+      ⟨fun i => (w j).1 (Fin.natAdd n i), by
+        apply LinearMap.mem_ker.mpr
+        have hw := (w j).property
+        change pp (w j).1 = 0 at hw
+        exact congrArg Prod.snd hw⟩
+    let U : Matrix (Fin n) (Fin r) R := fun i j => (u j).1 i
+    let V : Matrix (Fin m) (Fin r) R := fun i j => (v j).1 i
+    let D := Matrix.reindex finSumFinEquiv finSumFinEquiv
+      (Matrix.fromBlocks U
+        (0 : Matrix (Fin n) (Fin r) R)
+        (0 : Matrix (Fin m) (Fin r) R) V)
+    let C : Matrix (Fin (r + r)) (Fin r) R := fun i j =>
+      Fin.addCases (Pi.single j 1) (Pi.single j 1) i
+    have hmat : relationMatrix pp w = D * C := by
+      ext i j
+      have hsingle (a : Fin r → R) :
+          ∑ x : Fin r, a x * (Pi.single j (1 : R) : Fin r → R) x = a j := by
+        rw [Finset.sum_eq_single j]
+        · simp
+        · intro b hb hbj
+          simp [Pi.single_apply, hbj]
+        · simp
+      change (w j).1 i = ∑ x : Fin (r + r), D i x * C x j
+      induction i using Fin.addCases with
+      | left i =>
+          simp [D, C, U, V, u, v, pp, prodSurjection, relationMatrix,
+            Matrix.mul_apply, Fin.sum_univ_add, Function.comp_def,
+            Fin.addCases, finSumFinEquiv, hsingle, Matrix.fromBlocks]
+      | right i =>
+          simp [D, C, U, V, u, v, pp, prodSurjection, relationMatrix,
+            Matrix.mul_apply, Fin.sum_univ_add, Function.comp_def,
+            Fin.addCases, finSumFinEquiv, hsingle, Matrix.fromBlocks]
+    rw [hmat]
+    refine (minorIdeal_right_mul D C).trans ?_
+    change minorIdeal
+        (Matrix.reindex finSumFinEquiv finSumFinEquiv
+          (Matrix.fromBlocks U
+            (0 : Matrix (Fin n) (Fin r) R)
+            (0 : Matrix (Fin m) (Fin r) R) V)) (n + m - l) ≤ _
+    rw [minorIdeal_blockDiagonal]
+    refine iSup_le ?_
+    intro r₁
+    refine iSup_le ?_
+    intro r₂
+    refine iSup_le ?_
+    intro hr
+    by_cases hl : l ≤ n + m
+    · by_cases h₁ : r₁ ≤ n
+      · by_cases h₂ : r₂ ≤ m
+        · let k₁ := n - r₁
+          let k₂ := m - r₂
+          have hsum : k₁ + k₂ = l := by
+            dsimp [k₁, k₂]
+            have hn := Nat.sub_add_cancel h₁
+            have hm := Nat.sub_add_cancel h₂
+            omega
+          refine le_iSup_of_le k₁ (le_iSup_of_le k₂ ?_)
+          refine le_iSup_of_le hsum ?_
+          apply mul_le_mul
+          · have hsub := minorIdeal_kerMatrix_subfamily_le
+              (p := p) (z := u) (r := r₁)
+            have hfitU : minorIdeal U r₁ ≤
+                fittingIdealOfSurjection p hp k₁ := by
+              unfold fittingIdealOfSurjection
+              change minorIdeal U r₁ ≤
+                ⨆ z : Fin (n - k₁) → LinearMap.ker p,
+                  minorIdeal (fun i j => (z j).1 i) (n - k₁)
+              have heq : n - k₁ = r₁ := by
+                dsimp [k₁]
+                omega
+              have hsub' := minorIdeal_kerMatrix_subfamily_le
+                (p := p) (z := u) (r := n - k₁)
+              simpa [U, heq] using hsub'
+            exact hfitU
+          · have hsub := minorIdeal_kerMatrix_subfamily_le
+              (p := q) (z := v) (r := r₂)
+            have hfitV : minorIdeal V r₂ ≤
+                fittingIdealOfSurjection q hq k₂ := by
+              unfold fittingIdealOfSurjection
+              change minorIdeal V r₂ ≤
+                ⨆ z : Fin (m - k₂) → LinearMap.ker q,
+                  minorIdeal (fun i j => (z j).1 i) (m - k₂)
+              have heq : m - k₂ = r₂ := by
+                dsimp [k₂]
+                omega
+              have hsub' := minorIdeal_kerMatrix_subfamily_le
+                (p := q) (z := v) (r := m - k₂)
+              simpa [V, heq] using hsub'
+            exact hfitV
+          · exact bot_le
+          · exact bot_le
+        · rw [minorIdeal_eq_bot_of_rows_lt V (Nat.lt_of_not_ge h₂)]
+          rw [Ideal.mul_bot]
+          exact bot_le
+      · rw [minorIdeal_eq_bot_of_rows_lt U (Nat.lt_of_not_ge h₁)]
+        rw [Ideal.bot_mul]
+        exact bot_le
+    · have htop :
+          (⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
+            fittingIdealOfSurjection p hp k *
+              fittingIdealOfSurjection q hq k') = ⊤ := by
+        apply top_unique
+        have hnl : n ≤ l := by omega
+        have hml : m ≤ l - n := by omega
+        have hsum : n + (l - n) = l := by omega
+        refine le_iSup_of_le n (le_iSup_of_le (l - n) ?_)
+        refine le_iSup_of_le hsum ?_
+        rw [fittingIdealOfSurjection_eq_top_of_le p hp le_rfl,
+          fittingIdealOfSurjection_eq_top_of_le q hq hml]
+        simp
+      change minorIdeal U r₁ * minorIdeal V r₂ ≤
+        (⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
+          fittingIdealOfSurjection p hp k *
+            fittingIdealOfSurjection q hq k')
+      rw [htop]
+      exact le_top
+  · refine iSup_le ?_
+    intro k
+    refine iSup_le ?_
+    intro k'
+    refine iSup_le ?_
+    intro hkk'
+    refine (Ideal.mul_le).2 ?_
+    intro a ha b hb
+    refine Submodule.iSup_induction _
+      (motive := fun a' => a' * b ∈
+        ⨆ w : Fin (n + m - l) → LinearMap.ker pp,
+          minorIdeal (relationMatrix pp w) (n + m - l)) ha ?_
+      (by
+        rw [zero_mul]
+        exact Submodule.zero_mem _) ?_
+    · intro z₁ a ha
+      refine Submodule.iSup_induction _
+        (motive := fun b' => a * b' ∈
+          ⨆ w : Fin (n + m - l) → LinearMap.ker pp,
+            minorIdeal (relationMatrix pp w) (n + m - l)) hb ?_
+        (by
+          rw [mul_zero]
+          exact Submodule.zero_mem _) ?_
+      · intro z₂ b hb
+        let r₁ := n - k
+        let r₂ := m - k'
+        let U₁ : Matrix (Fin n) (Fin r₁) R := fun i j => (z₁ j).1 i
+        let V₁ : Matrix (Fin m) (Fin r₂) R := fun i j => (z₂ j).1 i
+        let D₁ := Matrix.reindex finSumFinEquiv finSumFinEquiv
+          (Matrix.fromBlocks U₁
+            (0 : Matrix (Fin n) (Fin r₂) R)
+            (0 : Matrix (Fin m) (Fin r₁) R) V₁)
+        let w₁ : Fin (r₁ + r₂) → LinearMap.ker pp := fun j =>
+          ⟨fun i => D₁ i j, by
+            apply LinearMap.mem_ker.mpr
+            change pp (fun i => D₁ i j) = 0
+            dsimp [D₁]
+            cases finSumFinEquiv.symm j <;>
+              simp [U₁, V₁, pp, prodSurjection, Function.comp_def,
+                finSumFinEquiv, Fin.addCases, Matrix.fromBlocks,
+                (z₁ _).property, (z₂ _).property, map_zero] <;>
+              try { change p 0 = 0; exact p.map_zero } <;>
+              try { change q 0 = 0; exact q.map_zero }⟩
+        have hts : n + m - l ≤ r₁ + r₂ := by
+          dsimp [r₁, r₂]
+          omega
+        have hD : minorIdeal D₁ (n + m - l) ≤
+            ⨆ w : Fin (n + m - l) → LinearMap.ker pp,
+              minorIdeal (relationMatrix pp w) (n + m - l) := by
+          have hsubD := minorIdeal_kerMatrix_subfamily_le
+            (p := pp) (z := w₁) (r := n + m - l)
+          change minorIdeal (fun i j => D₁ i j) (n + m - l) ≤
+            ⨆ w : Fin (n + m - l) → LinearMap.ker pp,
+              minorIdeal (fun i j => (w j).1 i) (n + m - l)
+          exact hsubD
+        have hterm : minorIdeal U₁ r₁ * minorIdeal V₁ r₂ ≤
+            minorIdeal D₁ (n + m - l) := by
+          have hblock : minorIdeal U₁ r₁ * minorIdeal V₁ r₂ ≤
+              minorIdeal D₁ (r₁ + r₂) := by
+            change minorIdeal U₁ r₁ * minorIdeal V₁ r₂ ≤
+              minorIdeal
+                (Matrix.reindex finSumFinEquiv finSumFinEquiv
+                  (Matrix.fromBlocks U₁
+                    (0 : Matrix (Fin n) (Fin r₂) R)
+                    (0 : Matrix (Fin m) (Fin r₁) R) V₁)) (r₁ + r₂)
+            rw [minorIdeal_blockDiagonal]
+            exact le_iSup_of_le r₁ (le_iSup_of_le r₂
+              (le_iSup_of_le (show r₁ + r₂ = r₁ + r₂ from rfl) le_rfl))
+          exact hblock.trans (minorIdeal_mono_of_le D₁ hts)
+        exact hD (hterm (Ideal.mul_mem_mul ha hb))
+      · intro x y hx hy
+        rw [mul_add]
+        exact add_mem hx hy
+    · intro x y hx hy
+      rw [add_mul]
+      exact add_mem hx hy
+
+private theorem fittingIdeal_prod_formula
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N] (l : ℕ) :
+    fittingIdeal R (M × N) l =
+      ⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
+        fittingIdeal R M k * fittingIdeal R N k' := by
+  let hM := Module.Finite.exists_fin' R M
+  let hN := Module.Finite.exists_fin' R N
+  let hP := Module.Finite.exists_fin' R (M × N)
+  let pM := hM.choose_spec.choose
+  let hpM := hM.choose_spec.choose_spec
+  let qN := hN.choose_spec.choose
+  let hqN := hN.choose_spec.choose_spec
+  let pP := hP.choose_spec.choose
+  let hpP := hP.choose_spec.choose_spec
+  have hMfit (k : ℕ) :
+      fittingIdealOfSurjection pM hpM k = fittingIdeal R M k := by
+    unfold fittingIdeal
+    dsimp
+  have hNfit (k : ℕ) :
+      fittingIdealOfSurjection qN hqN k = fittingIdeal R N k := by
+    unfold fittingIdeal
+    dsimp
+  have hPfit (k : ℕ) :
+      fittingIdealOfSurjection pP hpP k = fittingIdeal R (M × N) k := by
+    unfold fittingIdeal
+    dsimp
+  calc
+    fittingIdeal R (M × N) l = fittingIdealOfSurjection pP hpP l :=
+      (hPfit l).symm
+    _ = ⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
+        fittingIdealOfSurjection pM hpM k * fittingIdealOfSurjection qN hqN k' :=
+      (fittingIdealOfSurjection_eq pP (prodSurjection pM qN) hpP
+          (prodSurjection_surjective pM qN hpM hqN) l).trans
+        (fittingIdealOfSurjection_prod pM qN hpM hqN l)
+    _ = ⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
+        fittingIdeal R M k * fittingIdeal R N k' := by
+      simp_rw [hMfit, hNfit]
+
 theorem fittingIdeal_prod_zero
     {R M N : Type*} [CommRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     [AddCommGroup N] [Module R N] [Module.Finite R N] :
     fittingIdeal R (M × N) 0 = fittingIdeal R M 0 * fittingIdeal R N 0 := by
-  sorry
+  calc
+    fittingIdeal R (M × N) 0 =
+        ⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = 0),
+          fittingIdeal R M k * fittingIdeal R N k' :=
+      fittingIdeal_prod_formula (R := R) (M := M) (N := N) 0
+    _ = fittingIdeal R M 0 * fittingIdeal R N 0 := by
+      apply le_antisymm
+      · refine iSup_le ?_
+        intro k
+        refine iSup_le ?_
+        intro k'
+        refine iSup_le ?_
+        intro h
+        have hk : k = 0 := by omega
+        have hk' : k' = 0 := by omega
+        subst k
+        subst k'
+        exact le_rfl
+      · refine le_iSup_of_le 0 (le_iSup_of_le 0 ?_)
+        exact le_iSup_of_le (by simp) le_rfl
 
 theorem fittingIdeal_prod
     {R M N : Type*} [CommRing R]
@@ -1056,7 +1454,7 @@ theorem fittingIdeal_prod
     fittingIdeal R (M × N) l =
       ⨆ k : ℕ, ⨆ k' : ℕ, ⨆ (_h : k + k' = l),
         fittingIdeal R M k * fittingIdeal R N k' := by
-  sorry
+  exact fittingIdeal_prod_formula (R := R) (M := M) (N := N) l
 
 theorem fittingIdeal_baseChange
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -1418,11 +1816,75 @@ theorem fittingIdeal_extendScalars
     (N := M) e k
   simpa only [RingHom.algebraMap_toAlgebra] using hequiv.symm.trans hbase
 
+private theorem minorIdeal_fg
+    {R : Type*} [CommRing R] {n m r : ℕ}
+    (A : Matrix (Fin n) (Fin m) R) : (minorIdeal A r).FG := by
+  classical
+  unfold minorIdeal
+  apply Submodule.fg_span
+  let f : Finset (Fin n) × Finset (Fin m) → R := fun s =>
+    if hrows : s.1.card = r then
+      if hcols : s.2.card = r then matrixMinor A s.1 s.2 hrows hcols else 0
+    else 0
+  apply (Set.finite_range f).subset
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  exact ⟨(rows, cols), by simp [f, hrows, hcols]⟩
+
 theorem fittingIdeal_fg
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.FinitePresentation R M] (k : ℕ) :
     (fittingIdeal R M k).FG := by
-  sorry
+  classical
+  let h := Module.Finite.exists_fin' R M
+  let p := h.choose_spec.choose
+  let hp := h.choose_spec.choose_spec
+  have hker : (LinearMap.ker p).FG :=
+    Module.FinitePresentation.fg_ker p hp
+  obtain ⟨m, g, hg⟩ :=
+    (Submodule.fg_iff_exists_fin_linearMap R (Fin h.choose → R)
+      (N := LinearMap.ker p)).mp hker
+  let b : Fin m → LinearMap.ker p := fun i =>
+    ⟨g (Pi.single i 1), by
+      rw [← hg]
+      exact LinearMap.mem_range.mpr ⟨Pi.single i 1, rfl⟩⟩
+  have hsurj : ∀ x : LinearMap.ker p, ∃ c, g c = x.1 := by
+    intro x
+    have hx : x.1 ∈ LinearMap.range g := by
+      rw [hg]
+      exact x.property
+    exact LinearMap.mem_range.mp hx
+  let r := h.choose - k
+  let B : Matrix (Fin h.choose) (Fin m) R := fun i j => (b j).1 i
+  have hfit : fittingIdealOfSurjection p hp k = minorIdeal B r := by
+    apply le_antisymm
+    · unfold fittingIdealOfSurjection
+      refine iSup_le ?_
+      intro z
+      choose c hc using fun j => hsurj (z j)
+      let C : Matrix (Fin m) (Fin r) R := fun i j => c j i
+      have hmat : relationMatrix p z = B * C := by
+        ext i j
+        simp only [Matrix.mul_apply, B, C, relationMatrix]
+        rw [← hc j]
+        have hsum : c j = ∑ x : Fin m, c j x • (Pi.single x 1) := by
+          exact pi_eq_sum_univ' (c j)
+        rw [hsum, map_sum]
+        simp only [map_smul, Finset.sum_apply, Pi.smul_apply, smul_eq_mul,
+          B, b, C, Matrix.mul_apply]
+        change (∑ x : Fin m, c j x * g (Pi.single x 1) i) =
+          ∑ x : Fin m, g (Pi.single x 1) i * c j x
+        simp [mul_comm]
+      rw [hmat]
+      exact minorIdeal_right_mul B C
+    · unfold fittingIdealOfSurjection
+      change minorIdeal (fun i j => (b j).1 i) r ≤
+        ⨆ w : Fin r → LinearMap.ker p,
+          minorIdeal (fun i j => (w j).1 i) r
+      exact minorIdeal_kerMatrix_subfamily_le (p := p) (z := b) (r := r)
+  unfold fittingIdeal
+  dsimp
+  rw [hfit]
+  exact minorIdeal_fg _
 
 theorem fittingIdeal_mono_of_surjective
     {R M N : Type*} [CommRing R]
@@ -1430,19 +1892,176 @@ theorem fittingIdeal_mono_of_surjective
     [AddCommGroup N] [Module R N] [Module.Finite R N]
     (φ : M →ₗ[R] N) (hφ : Function.Surjective φ) (k : ℕ) :
     fittingIdeal R M k ≤ fittingIdeal R N k := by
-  sorry
+  let hM := Module.Finite.exists_fin' R M
+  let hN := Module.Finite.exists_fin' R N
+  let p := hM.choose_spec.choose
+  let hp := hM.choose_spec.choose_spec
+  let q := hN.choose_spec.choose
+  let hq := hN.choose_spec.choose_spec
+  have hφp : Function.Surjective (φ.comp p) := hφ.comp hp
+  have hkernel :
+      fittingIdealOfSurjection p hp k ≤
+        fittingIdealOfSurjection (φ.comp p) hφp k := by
+    unfold fittingIdealOfSurjection
+    refine iSup_le ?_
+    intro z
+    let z' : Fin (hM.choose - k) → LinearMap.ker (φ.comp p) := fun j =>
+      ⟨(z j).1, by
+        apply LinearMap.mem_ker.mpr
+        change φ (p (z j).1) = 0
+        rw [(z j).property]
+        simp⟩
+    have hz : relationMatrix (φ.comp p) z' = relationMatrix p z := by
+      ext i j
+      rfl
+    rw [← hz]
+    exact le_iSup (fun w : Fin (hM.choose - k) → LinearMap.ker (φ.comp p) =>
+      minorIdeal (relationMatrix (φ.comp p) w) (hM.choose - k)) z'
+  calc
+    fittingIdeal R M k = fittingIdealOfSurjection p hp k := by rfl
+    _ ≤ fittingIdealOfSurjection (φ.comp p) hφp k := hkernel
+    _ = fittingIdealOfSurjection q hq k :=
+      fittingIdealOfSurjection_eq (φ.comp p) q hφp hq k
+    _ = fittingIdeal R N k := by rfl
 
 theorem fittingIdeal_zero_le_annihilator
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] :
     fittingIdeal R M 0 ≤ Module.annihilator R M := by
-  sorry
+  let h := Module.Finite.exists_fin' R M
+  let p := h.choose_spec.choose
+  let hp := h.choose_spec.choose_spec
+  unfold fittingIdeal
+  dsimp
+  refine iSup_le ?_
+  intro z
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let A : Matrix (Fin h.choose) (Fin h.choose) R := relationMatrix p z
+  have hdet : A.det ∈ Module.annihilator R M := by
+    rw [Module.mem_annihilator]
+    intro y
+    obtain ⟨v, hv⟩ := hp y
+    have hker (w : Fin h.choose → R) : p (Matrix.mulVec A w) = 0 := by
+      change p (fun i => ∑ j, (z j).1 i * w j) = 0
+      rw [show (fun i => ∑ j, (z j).1 i * w j) =
+          ∑ j, w j • (z j).1 by
+        funext i
+        simp [smul_eq_mul, mul_comm]]
+      simp only [map_sum, map_smul]
+      apply Finset.sum_eq_zero
+      intro j hj
+      rw [LinearMap.mem_ker.mp (z j).property, smul_zero]
+    have hzero : p (Matrix.mulVec A (Matrix.mulVec A.adjugate v)) = 0 := hker _
+    have hzero' : p (Matrix.mulVec (A * A.adjugate) v) = 0 := by
+      simpa only [Matrix.mulVec_mulVec] using hzero
+    rw [Matrix.mul_adjugate] at hzero'
+    rw [Matrix.smul_mulVec, Matrix.one_mulVec, map_smul, hv] at hzero'
+    exact hzero'
+  have hrows' : rows = (Finset.univ : Finset (Fin h.choose)) := by
+    apply Finset.eq_univ_of_card
+    simpa only [Nat.sub_zero, Fintype.card_fin] using hrows
+  have hcols' : cols = (Finset.univ : Finset (Fin h.choose)) := by
+    apply Finset.eq_univ_of_card
+    simpa only [Nat.sub_zero, Fintype.card_fin] using hcols
+  subst rows
+  subst cols
+  have huniv : (fun i : Fin h.choose =>
+      (Finset.univ.orderEmbOfFin hrows i : Fin h.choose)) = id := by
+    have h := Finset.orderEmbOfFin_unique
+      (s := (Finset.univ : Finset (Fin h.choose)))       (by simpa only [Nat.sub_zero, Fintype.card_fin] using hrows)
+      (f := (id : Fin h.choose → Fin h.choose))
+      (fun _ => Finset.mem_univ _) strictMono_id
+    exact h.symm
+  have huniv' : (fun i : Fin h.choose =>
+      (Finset.univ.orderEmbOfFin hcols i : Fin h.choose)) = id := by
+    have h := Finset.orderEmbOfFin_unique
+      (s := (Finset.univ : Finset (Fin h.choose)))
+      (by simpa only [Nat.sub_zero, Fintype.card_fin] using hcols)
+      (f := (id : Fin h.choose → Fin h.choose))
+      (fun _ => Finset.mem_univ _) strictMono_id
+    exact h.symm
+  dsimp [matrixMinor]
+  rw [huniv]
+  have hsub : (relationMatrix p z).submatrix id id = relationMatrix p z := by
+    rfl
+  rw [hsub]
+  exact hdet
 
 theorem zeroLocus_fittingIdeal_zero_eq_support
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] :
     PrimeSpectrum.zeroLocus (fittingIdeal R M 0 : Set R) = Module.support R M := by
-  sorry
+  let h := Module.Finite.exists_fin' R M
+  let p := h.choose_spec.choose
+  let hp := h.choose_spec.choose_spec
+  let hfull : ∀ A : Matrix (Fin h.choose) (Fin h.choose) R,
+      A.det ∈ minorIdeal A h.choose := by
+    intro A
+    apply Ideal.subset_span
+    refine ⟨Finset.univ, Finset.univ, Finset.card_fin _, Finset.card_fin _, ?_⟩
+    dsimp [matrixMinor]
+    have horder : (fun i : Fin h.choose =>
+        (Finset.univ.orderEmbOfFin (Finset.card_fin h.choose) i : Fin h.choose)) = id := by
+      have h' := Finset.orderEmbOfFin_unique
+        (s := (Finset.univ : Finset (Fin h.choose))) (Finset.card_fin h.choose)
+        (f := (id : Fin h.choose → Fin h.choose))
+        (fun _ => Finset.mem_univ _) strictMono_id
+      exact h'.symm
+    rw [horder]
+    rfl
+  have hpow : ∀ a : R, a ∈ Module.annihilator R M →
+      a ^ h.choose ∈ fittingIdeal R M 0 := by
+    intro a ha
+    let zN : Fin h.choose → LinearMap.ker p := fun j =>
+      ⟨a • Pi.single j 1, by
+        apply LinearMap.mem_ker.mpr
+        rw [map_smul]
+        simpa using (Module.mem_annihilator.mp ha (p (Pi.single j 1)))⟩
+    let z : Fin (h.choose - 0) → LinearMap.ker p := fun j =>
+      zN (Fin.cast (Nat.sub_zero h.choose) j)
+    let A : Matrix (Fin h.choose) (Fin h.choose) R := fun i j => (zN j).1 i
+    have hzN : A =
+        a • (1 : Matrix (Fin h.choose) (Fin h.choose) R) := by
+      ext i j
+      simp [A, zN, smul_eq_mul, Matrix.one_apply, Pi.single_apply]
+    have hdetN : A.det = a ^ h.choose := by
+      rw [hzN, Matrix.det_smul, Matrix.det_one, mul_one, Fintype.card_fin]
+    unfold fittingIdeal
+    dsimp
+    have hmemN : A.det ∈
+        ⨆ w : Fin h.choose → LinearMap.ker p,
+          minorIdeal (fun i j => (w j).1 i) h.choose := by
+      apply (le_iSup (fun w : Fin h.choose → LinearMap.ker p =>
+        minorIdeal (fun i j => (w j).1 i) h.choose) zN)
+      exact hfull A
+    rw [hdetN] at hmemN
+    change a ^ h.choose ∈
+      ⨆ w : Fin h.choose → LinearMap.ker p,
+        minorIdeal (fun i j => (w j).1 i) h.choose
+    exact hmemN
+  have hrad : Module.annihilator R M ≤
+      (fittingIdeal R M 0).radical := by
+    intro a ha
+    rw [Ideal.mem_radical_iff]
+    exact ⟨h.choose, hpow a ha⟩
+  have hfit : fittingIdeal R M 0 ≤ Module.annihilator R M :=
+    fittingIdeal_zero_le_annihilator
+  have hrad_eq : (fittingIdeal R M 0).radical =
+      (Module.annihilator R M).radical := by
+    apply le_antisymm
+    · exact Ideal.radical_mono hfit
+    · simpa only [Ideal.radical_idem] using Ideal.radical_mono hrad
+  rw [Module.support_eq_zeroLocus (M := M)]
+  calc
+    PrimeSpectrum.zeroLocus (fittingIdeal R M 0 : Set R) =
+        PrimeSpectrum.zeroLocus ((fittingIdeal R M 0).radical : Set R) :=
+      (PrimeSpectrum.zeroLocus_radical _).symm
+    _ = PrimeSpectrum.zeroLocus ((Module.annihilator R M).radical : Set R) :=
+      congrArg PrimeSpectrum.zeroLocus
+        (congrArg (fun I : Ideal R => (I : Set R)) hrad_eq)
+    _ = PrimeSpectrum.zeroLocus (Module.annihilator R M : Set R) :=
+      PrimeSpectrum.zeroLocus_radical _
 
 theorem fittingIdeal_quotient_zero
     {R : Type*} [CommRing R] (I : Ideal R) :

@@ -230,6 +230,32 @@ def IsIrreducibleAfterFiniteSeparableBaseChange
     [FiniteDimensional k k'] [Algebra.IsSeparable k k'],
     IrreducibleSpace (PrimeSpectrum (k' ⊗[k] S))
 
+/-- Geometric irreducibility can be checked after finite separable field
+extensions.  Both sides deliberately use the same test-field universe. -/
+theorem isGeometricallyIrreducible_iff_finiteSeparable
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsGeometricallyIrreducible.{u, v, u} k S ↔
+      IsIrreducibleAfterFiniteSeparableBaseChange k S := by
+  sorry
+
+/-- The finite-separable test is equivalent to testing on the canonical
+separable closure. -/
+theorem isIrreducibleAfterFiniteSeparableBaseChange_iff_separableClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsIrreducibleAfterFiniteSeparableBaseChange k S ↔
+      IrreducibleSpace
+        (PrimeSpectrum (SeparableClosure k ⊗[k] S)) := by
+  sorry
+
+/-- The separable-closure and algebraic-closure tests for geometric
+irreducibility agree. -/
+theorem irreducibleSpace_separableClosure_iff_algebraicClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IrreducibleSpace (PrimeSpectrum (SeparableClosure k ⊗[k] S)) ↔
+      IrreducibleSpace
+        (PrimeSpectrum (AlgebraicClosure k ⊗[k] S)) := by
+  sorry
+
 /-- The four equivalent tests for geometric irreducibility: arbitrary field
 extensions, finite separable extensions, a separable closure, and an
 algebraic closure. -/
@@ -284,7 +310,9 @@ theorem isGeometricallyIrreducible_iff_finiteSeparable_iff_separableClosure_iff_
     target with `Omega ⊗[k] S`; irreducibility is preserved by the resulting
     homeomorphism.
   -/
-  sorry
+  exact ⟨isGeometricallyIrreducible_iff_finiteSeparable,
+    isIrreducibleAfterFiniteSeparableBaseChange_iff_separableClosure,
+    irreducibleSpace_separableClosure_iff_algebraicClosure⟩
 
 /-- Over a separably closed field, geometric irreducibility is ordinary
 irreducibility of the spectrum. -/

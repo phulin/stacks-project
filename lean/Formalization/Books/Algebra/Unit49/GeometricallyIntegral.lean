@@ -126,6 +126,24 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
 
 /-- Geometric integrality can be tested after finite field extensions and
 after passage to an algebraic closure. -/
+theorem isGeometricallyIntegral_iff_finiteExtension
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsGeometricallyIntegral.{u, v, u} k S ↔
+      ∀ (k' : Type u) [Field k'] [Algebra k k']
+        [FiniteDimensional k k'], IsDomain (k' ⊗[k] S) := by
+  sorry
+
+/-- The finite-extension test for geometric integrality is equivalent to the
+single test on the canonical algebraic closure. -/
+theorem isDomain_finiteExtension_iff_algebraicClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    (∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'], IsDomain (k' ⊗[k] S)) ↔
+        IsDomain (AlgebraicClosure k ⊗[k] S) := by
+  sorry
+
+/-- Geometric integrality can be tested after finite field extensions and
+after passage to an algebraic closure. -/
 theorem isGeometricallyIntegral_iff_finiteExtension_iff_algebraicClosure
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
     (IsGeometricallyIntegral.{u, v, u} k S ↔
@@ -136,7 +154,8 @@ theorem isGeometricallyIntegral_iff_finiteExtension_iff_algebraicClosure
         [FiniteDimensional k k'],
         IsDomain (k' ⊗[k] S)) ↔
         IsDomain (AlgebraicClosure k ⊗[k] S)) := by
-  sorry
+  exact ⟨isGeometricallyIntegral_iff_finiteExtension,
+    isDomain_finiteExtension_iff_algebraicClosure⟩
 
 /-- Tensoring a geometrically integral algebra with an integral-domain
 `k`-algebra remains an integral domain. -/

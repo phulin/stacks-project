@@ -11,6 +11,7 @@ import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.RightExactness
+import Mathlib.LinearAlgebra.TensorProduct.Tower
 
 /-!
 # Commutative Algebra, Chapter 88: Mittag-Leffler modules
@@ -2092,7 +2093,156 @@ theorem isMittagLefflerModule_of_restrictScalars
   have hQR : Module.FinitePresentation R (Q : Type (max v w)) :=
     Module.FinitePresentation.trans R Q S
   refine ⟨ModuleCat.of R (Q : Type (max v w)), hQR, gR, ?_⟩
-  sorry
+  have transfer
+      {N₁ N₂ : Type (max v w)} [AddCommGroup N₁] [Module S N₁]
+      [Module R N₁] [IsScalarTower R S N₁]
+      [AddCommGroup N₂] [Module S N₂]
+      [Module R N₂] [IsScalarTower R S N₂]
+      (a : (P' : Type (max v w)) →ₗ[S] N₁)
+      (b : (P' : Type (max v w)) →ₗ[S] N₂)
+      (hab : dominates a b) :
+      dominates ((a.restrictScalars R).comp ι)
+        ((b.restrictScalars R).comp ι) := by
+    refine (dominates_iff_finitelyPresented
+      ((a.restrictScalars R).comp ι) ((b.restrictScalars R).comp ι)).2 ?_
+    intro X _ _ hX
+    intro z hz
+    letI : Module.FinitePresentation R (X : Type (max u v w)) := hX
+    let T : Type (max u v w) := S ⊗[R] (X : Type (max u v w))
+    letI : AddCommGroup T := inferInstance
+    letI : Module S T := inferInstance
+    letI : IsScalarTower R S T := inferInstance
+    letI : Module.FinitePresentation S T := by
+      dsimp [T]
+      infer_instance
+    obtain ⟨L, iL, mL, K, e, hLfree, hLfinite, hK⟩ :=
+      Module.FinitePresentation.equiv_quotient (R := S) (M := T)
+    letI : AddCommGroup L := iL
+    letI : Module S L := mL
+    letI : Module.Free S L := hLfree
+    letI : Module.Finite S L := hLfinite
+    let Y : Type v := L ⧸ K
+    let Y' : Type (max v w) := ULift.{w} Y
+    let e' : T ≃ₗ[S] Y' := e.trans ULift.moduleEquiv.symm
+    let zT : (P' : Type (max v w)) ⊗[S] T :=
+      (TensorProduct.AlgebraTensorModule.cancelBaseChange R S S
+        (P' : Type (max v w)) (X : Type (max u v w))).symm
+        (TensorProduct.map ι LinearMap.id z)
+    let zY : (P' : Type (max v w)) ⊗[S] Y' :=
+      TensorProduct.map LinearMap.id e'.toLinearMap zT
+    let cP := TensorProduct.AlgebraTensorModule.cancelBaseChange R S S
+      (P' : Type (max v w)) (X : Type (max u v w))
+    let cN₁ := TensorProduct.AlgebraTensorModule.cancelBaseChange R S S
+      N₁ (X : Type (max u v w))
+    let cN₂ := TensorProduct.AlgebraTensorModule.cancelBaseChange R S S
+      N₂ (X : Type (max u v w))
+    have hcancel₁ (a₀ : (P' : Type (max v w)) ⊗[S] T) :
+        cN₁ (a.rTensor T a₀) =
+          (a.restrictScalars R).rTensor (X : Type (max u v w)) (cP a₀) := by
+      induction a₀ using TensorProduct.induction_on with
+      | zero => simp [cP, cN₁]
+      | add x y hx hy => simp [map_add, hx, hy]
+      | tmul p' t =>
+          induction t using TensorProduct.induction_on with
+          | zero => simp [cP, cN₁]
+          | add x y hx hy =>
+              simpa only [TensorProduct.tmul_add, map_add,
+                LinearMap.map_add, hx, hy]
+          | tmul s x =>
+              simp only [cP, cN₁,
+                TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
+                LinearMap.rTensor_tmul]
+              exact congrArg (fun q => q ⊗ₜ[R] x) (a.map_smul s p').symm
+    have hcancel₂ (a₀ : (P' : Type (max v w)) ⊗[S] T) :
+        cN₂ (b.rTensor T a₀) =
+          (b.restrictScalars R).rTensor (X : Type (max u v w)) (cP a₀) := by
+      induction a₀ using TensorProduct.induction_on with
+      | zero => simp [cP, cN₂]
+      | add x y hx hy => simp [map_add, hx, hy]
+      | tmul p' t =>
+          induction t using TensorProduct.induction_on with
+          | zero => simp [cP, cN₂]
+          | add x y hx hy =>
+              simpa only [TensorProduct.tmul_add, map_add,
+                LinearMap.map_add, hx, hy]
+          | tmul s x =>
+              simp only [cP, cN₂,
+                TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
+                LinearMap.rTensor_tmul]
+              exact congrArg (fun q => q ⊗ₜ[R] x) (b.map_smul s p').symm
+    have hz₂ :
+        ((b.restrictScalars R).comp ι).rTensor
+            (X : Type (max u v w)) z = 0 :=
+      LinearMap.mem_ker.mp (show z ∈ LinearMap.ker _ from hz)
+    have hz₂' :
+        (b.restrictScalars R).rTensor (X : Type (max u v w))
+            (TensorProduct.map ι LinearMap.id z) = 0 := by
+      rw [LinearMap.rTensor_map]
+      simpa [LinearMap.rTensor_comp_apply, LinearMap.rTensor_def] using hz₂
+    have hzT : b.rTensor T zT = 0 := by
+      apply cN₂.injective
+      rw [hcancel₂]
+      simpa [zT, cP] using hz₂'
+    have hzY : b.rTensor Y' zY = 0 := by
+      rw [LinearMap.rTensor_map]
+      calc
+        TensorProduct.map (b ∘ₗ LinearMap.id) e'.toLinearMap zT =
+            TensorProduct.map LinearMap.id e'.toLinearMap
+              ((b.rTensor T) zT) := by
+                change TensorProduct.map b e'.toLinearMap zT =
+                  (TensorProduct.map LinearMap.id e'.toLinearMap)
+                    ((TensorProduct.map b LinearMap.id) zT)
+                have hmap := TensorProduct.map_comp (R := S)
+                  (f₂ := (LinearMap.id : N₂ →ₗ[S] N₂)) (f₁ := b)
+                  (g₂ := e'.toLinearMap)
+                  (g₁ := (LinearMap.id : T →ₗ[S] T))
+                simpa using congrArg (fun h => h zT) hmap
+        _ = 0 := by rw [hzT]; simp
+    have haY : a.rTensor Y' zY = 0 :=
+      LinearMap.mem_ker.mp
+        (hab (Y' : Type (max v w)) (LinearMap.mem_ker.mpr hzY))
+    have haT : a.rTensor T zT = 0 := by
+      have h := congrArg
+        (TensorProduct.map LinearMap.id e'.symm.toLinearMap) haY
+      change (TensorProduct.map LinearMap.id e'.symm.toLinearMap)
+          ((TensorProduct.map a LinearMap.id)
+            ((TensorProduct.map LinearMap.id e'.toLinearMap) zT)) =
+        (TensorProduct.map LinearMap.id e'.symm.toLinearMap) 0 at h
+      have hmap (q : (P' : Type (max v w)) ⊗[S] T) :
+          (TensorProduct.map LinearMap.id e'.symm.toLinearMap)
+              ((TensorProduct.map a LinearMap.id)
+                ((TensorProduct.map LinearMap.id e'.toLinearMap) q)) =
+            (TensorProduct.map a LinearMap.id) q := by
+        induction q using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp [map_add, hx, hy]
+        | tmul p' t => simp
+      rw [hmap zT] at h
+      simpa [LinearMap.rTensor_def] using h
+    have haR :
+        (a.restrictScalars R).rTensor (X : Type (max u v w))
+            (TensorProduct.map ι LinearMap.id z) = 0 := by
+      have h := hcancel₁ zT
+      rw [haT, map_zero] at h
+      simpa [zT, cP] using h.symm
+    have hmap :
+        TensorProduct.map ((a.restrictScalars R).comp ι) LinearMap.id z =
+          TensorProduct.map (a.restrictScalars R) LinearMap.id
+            (TensorProduct.map ι LinearMap.id z) := by
+      have hcomp := TensorProduct.map_comp (R := R)
+        (f₂ := a.restrictScalars R) (f₁ := ι)
+        (g₂ := (LinearMap.id : (X : Type (max u v w)) →ₗ[R] X))
+        (g₁ := (LinearMap.id : (X : Type (max u v w)) →ₗ[R] X))
+      simpa using congrArg (fun h => h z) hcomp
+    apply LinearMap.mem_ker.mpr
+    change TensorProduct.map ((a.restrictScalars R).comp ι) LinearMap.id z = 0
+    rw [hmap]
+    exact haR
+  refine ⟨?_, ?_⟩
+  · simpa [gR, hι] using
+      (transfer (N₁ := Q) (N₂ := M) g' f' hg'.1)
+  · simpa [gR, hι] using
+      (transfer (N₁ := M) (N₂ := Q) f' g' hg'.2)
 
 /-- For a finitely generated ideal, the Mittag-Leffler condition is unchanged
 when passing between a ring and its quotient. -/
@@ -2124,7 +2274,44 @@ theorem exists_dualNumber_restriction_counterexample
       ∃ M : ModuleCat.{w} (DualNumber R),
         IsMittagLefflerModule (dualNumberRestriction.obj M) ∧
           ¬ IsMittagLefflerModule M := by
-  sorry
+  refine ⟨?_, ?_, ?_⟩
+  · rw [RingHom.finite_algebraMap]
+    let p : (R × R) →ₗ[R] DualNumber R :=
+      { toFun := fun x => TrivSqZeroExt.inl x.1 + x.2 • DualNumber.eps
+        map_add' := by
+          intro x y
+          apply TrivSqZeroExt.ext <;> simp
+        map_smul' := by
+          intro r x
+          simp [Algebra.smul_def, TrivSqZeroExt.algebraMap_eq_inl, mul_add, mul_assoc] }
+    exact Module.Finite.of_surjective p (by
+      intro x
+      exact ⟨(x.fst, x.snd), by
+        simpa [p, DualNumber.inr_eq_smul_eps] using x.inl_fst_add_inr_snd_eq⟩)
+  · rw [RingHom.finitePresentation_algebraMap]
+    let p : (R × R) →ₗ[R] DualNumber R :=
+      { toFun := fun x => TrivSqZeroExt.inl x.1 + x.2 • DualNumber.eps
+        map_add' := by
+          intro x y
+          apply TrivSqZeroExt.ext <;> simp
+        map_smul' := by
+          intro r x
+          simp [Algebra.smul_def, TrivSqZeroExt.algebraMap_eq_inl, mul_add, mul_assoc] }
+    have hp : Function.Surjective p := by
+      intro x
+      exact ⟨(x.fst, x.snd), by
+        simpa [p, DualNumber.inr_eq_smul_eps] using x.inl_fst_add_inr_snd_eq⟩
+    have hi : Function.Injective p := by
+      intro x y hxy
+      apply Prod.ext
+      · simpa [p] using congrArg TrivSqZeroExt.fst hxy
+      · simpa [p] using congrArg TrivSqZeroExt.snd hxy
+    letI : Module.FinitePresentation R (DualNumber R) := by
+      apply Module.finitePresentation_of_free_of_surjective p hp
+      rw [LinearMap.ker_eq_bot.mpr hi]
+      exact Submodule.fg_bot
+    exact Algebra.FinitePresentation.of_finitePresentation R (DualNumber R)
+  · sorry
 
 end
 

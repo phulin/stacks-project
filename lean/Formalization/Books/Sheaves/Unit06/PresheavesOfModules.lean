@@ -534,8 +534,17 @@ theorem sectionwiseExtensionOfScalarsMap_id
     sectionwiseExtensionOfScalarsMap α G (𝟙 U) =
       (ModuleCat.restrictScalarsId' (O'.map (𝟙 U)).hom
         (congrArg CommRingCat.Hom.hom (O'.map_id U))).inv.app _ := by
-  sorry
+  change pointwiseExtensionMap α G (𝟙 U) = _
+  apply ModuleCat.ExtendScalars.hom_ext
+  intro m
+  change pointwiseExtensionMap α G (𝟙 U)
+      ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m) = _
+  rw [pointwiseExtensionMap_one_tmul]
+  rw [G.map_id]
+  simp only [ModuleCat.restrictScalarsId'_inv_app]
+  rfl
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Composition coherence for the sectionwise extension restriction maps. -/
 theorem sectionwiseExtensionOfScalarsMap_comp
     {X : TopCat.{w}} {O O' : CommRingPresheaf X}
@@ -548,7 +557,27 @@ theorem sectionwiseExtensionOfScalarsMap_comp
         (ModuleCat.restrictScalarsComp' (O'.map i).hom (O'.map j).hom
           (O'.map (i ≫ j)).hom
           (congrArg CommRingCat.Hom.hom (O'.map_comp i j))).inv.app _ := by
-  sorry
+  change pointwiseExtensionMap α G (i ≫ j) = _
+  apply ModuleCat.ExtendScalars.hom_ext
+  intro m
+  change pointwiseExtensionMap α G (i ≫ j)
+      ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m) = _
+  rw [pointwiseExtensionMap_one_tmul]
+  change (1 : O'.obj W) ⊗ₜ[(O.obj W), (α.app W).hom]
+      (show G.obj W from G.map (i ≫ j) m) =
+    (ModuleCat.restrictScalarsComp' (O'.map i).hom (O'.map j).hom
+        (O'.map (i ≫ j)).hom
+        (congrArg CommRingCat.Hom.hom (O'.map_comp i j))).inv.app _
+      ((ModuleCat.restrictScalars (O'.map i).hom).map
+        (pointwiseExtensionMap α G j)
+        (pointwiseExtensionMap α G i
+          ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m)))
+  simp only [ModuleCat.restrictScalars.map_apply,
+    ModuleCat.restrictScalarsComp'_inv_app,
+    ModuleCat.restrictScalarsComp'App_inv_apply]
+  rw [pointwiseExtensionMap_one_tmul, pointwiseExtensionMap_one_tmul,
+    G.map_comp_apply]
+  rfl
 
 /-- The presheaf whose sections are the explicit sectionwise extensions of scalars. -/
 noncomputable def sectionwiseExtensionOfScalars
@@ -568,7 +597,11 @@ theorem tensorProductPresheaf_sectionwiseIso_exists
       (sectionwiseExtensionOfScalars α G ≅
         tensorProductPresheaf
           (commRingPresheafMorphismToRingPresheaf α) G) := by
-  sorry
+  refine ⟨?_⟩
+  have hobj : sectionwiseExtensionOfScalars α G = (pointwiseExtension α).obj G := by
+    rfl
+  rw [hobj]
+  exact (pointwiseExtensionIsoChangeOfRings α).app G
 
 /-- The coherent sectionwise extension-of-scalars comparison. -/
 noncomputable def tensorProductPresheaf_sectionwiseIso

@@ -159,7 +159,7 @@ theorem inseparable_necessary_example
     [IsDiscreteValuationRing B]
     (X : InseparableNecessaryExample A B K)
     {L : Type u} [Field L] [Algebra A L] [Algebra B L] [Algebra K L]
-    [IsDomain B] (D : DVRFieldDiagram A B K L)
+    (D : DVRFieldDiagram A B K L)
     {K₁ : Type u} [Field K₁] [Algebra K K₁] [Algebra A K₁]
     [FiniteDimensional K K₁]
     (h : WeakSolutionFor D K₁) : ¬ Algebra.IsSeparable K K₁ := by
@@ -382,8 +382,8 @@ structure PurelyInseparableRootData
     {A K : Type*} [CommRing A] [Field K] [Algebra A K]
     [IsDomain A] [IsDiscreteValuationRing A]
     (a : A) (p : ℕ) where
-  L : Type*
-  B : Type*
+  L : Type uL
+  B : Type uL
   fieldL : Field L
   commRingB : CommRing B
   algebraKL : Algebra K L
@@ -638,7 +638,7 @@ def FiniteLevel
     {A K L : Type*} [CommRing A] [Field K] [Field L]
     [Algebra A K] [Algebra A L] [Algebra K L]
     [IsDomain A] [IsDiscreteValuationRing A]
-    (e₁ p : ℕ) (π w : A) (P : Polynomial A) : ℚ := by
+    (e₁ _p : ℕ) (π _w : A) (P : Polynomial A) : ℚ := by
   classical
   let S : Set ℚ := {q : ℚ |
     ∃ z : L, ∃ ξ : K, ∃ n : ℕ,
@@ -651,7 +651,7 @@ def NicePolynomialCase
     {A K : Type*} {L : Type uL} [CommRing A] [Field K] [Field L]
     [Algebra A K] [Algebra A L] [Algebra K L]
     [IsDomain A] [IsDiscreteValuationRing A] (p : ℕ)
-    (P : Polynomial A) : Prop :=
+    (_P : Polynomial A) : Prop :=
   IsTrivialFieldExtension (K := K) (L := L) ∨
     ArtinSchreierUnramifiedOfDegree (A := A) (K := K) (L := L) p ∨
     ArtinSchreierTotallyRamifiedOfDegree (A := A) (K := K) (L := L) p ∨
@@ -688,7 +688,7 @@ def FiniteLevelBaseChangeAlternative
     [Algebra B L] [Algebra B M] [Algebra K L]
     [Algebra K M] [Algebra L M] [IsDomain B]
     [IsDiscreteValuationRing B]
-    (p : ℕ) (w : B) (P : Polynomial B) : Prop :=
+    (p : ℕ) (w : B) (_P : Polynomial B) : Prop :=
   ∃ (B₁ : Type uB) (L₁ : Type uL) (M₁ : Type uM)
     (hB₁ : CommRing B₁) (hL₁ : Field L₁)
     (hM₁ : Field M₁) (hB₁L₁ : Algebra B₁ L₁)

@@ -1353,8 +1353,72 @@ private theorem unit20ProdLeft_two_eq_zero :
   rw [hm2, hm0]
   apply (CategoryTheory.Limits.Concrete.prodEquiv
     (F.obj unit20O2Left) (F.obj unit20O2Right)).injective
-  ext <;> simp [F, e, unit20O2Left, unit20O2Right, skyscraperPresheaf,
-    unit20Left, unit20Right, Alexandrov.principalOpen]
+  have hL :
+      F.obj unit20O2Left = CommRingCat.of (ULift.{v} (ZMod 2)) := by
+    dsimp [F, unit20O2Left]
+    change
+      (if unit20Left ∈
+          (Alexandrov.principalOpen unit20Left : Opens unit20X) then
+        CommRingCat.of (ULift.{v} (ZMod 2)) else ⊤_ CommRingCat) =
+      CommRingCat.of (ULift.{v} (ZMod 2))
+    have hmem : unit20Left ∈
+        (Alexandrov.principalOpen unit20Left : Opens unit20X) := by
+      change unit20Left ≤ unit20Left
+      exact @le_rfl (Topology.WithUpperSet (ULift.{v} unit20VPoint)) _ unit20Left
+    rw [if_pos hmem]
+  have hR : F.obj unit20O2Right = ⊤_ CommRingCat := by
+    dsimp [F, unit20O2Right]
+    change
+      (if unit20Right ∈
+          (Alexandrov.principalOpen unit20Left : Opens unit20X) then
+        CommRingCat.of (ULift.{v} ℤ) else ⊤_ CommRingCat) =
+      ⊤_ CommRingCat
+    have hmem : unit20Right ∉
+        (Alexandrov.principalOpen unit20Left : Opens unit20X) := by
+      change ¬unit20Left ≤ unit20Right
+      simp [unit20Left, unit20Right, LE.le]
+    rw [if_neg hmem]
+  rw [map_one]
+  apply Prod.ext
+  · calc
+      (Concrete.prodEquiv (F.obj unit20O2Left) (F.obj unit20O2Right)
+          (1 + 1)).1 =
+          ConcreteCategory.hom
+            (prod.fst (X := F.obj unit20O2Left) (Y := F.obj unit20O2Right))
+            (1 + 1) :=
+        CategoryTheory.Limits.Concrete.prodEquiv_apply_fst _ _ _
+      _ = ConcreteCategory.hom
+            (prod.fst (X := F.obj unit20O2Left) (Y := F.obj unit20O2Right)) 1 +
+          ConcreteCategory.hom
+            (prod.fst (X := F.obj unit20O2Left) (Y := F.obj unit20O2Right)) 1 :=
+        map_add _ _ _
+      _ = 0 := by
+        rw [map_one, hL]
+        congr 1
+      _ = (Concrete.prodEquiv (F.obj unit20O2Left) (F.obj unit20O2Right) 0).1 := by
+        rw [CategoryTheory.Limits.Concrete.prodEquiv_apply_fst]
+        exact (map_zero _).symm
+  · calc
+      (Concrete.prodEquiv (F.obj unit20O2Left) (F.obj unit20O2Right)
+          (1 + 1)).2 =
+          ConcreteCategory.hom
+            (prod.snd (X := F.obj unit20O2Left) (Y := F.obj unit20O2Right))
+            (1 + 1) :=
+        CategoryTheory.Limits.Concrete.prodEquiv_apply_snd _ _ _
+      _ = ConcreteCategory.hom
+            (prod.snd (X := F.obj unit20O2Left) (Y := F.obj unit20O2Right)) 1 +
+          ConcreteCategory.hom
+            (prod.snd (X := F.obj unit20O2Left) (Y := F.obj unit20O2Right)) 1 :=
+        map_add _ _ _
+      _ = 0 := by
+        rw [map_one, hR]
+        letI : Subsingleton (⊤_ CommRingCat : Type v) :=
+          CommRingCat.subsingleton_of_isTerminal
+            (terminalIsTerminal : IsTerminal (⊤_ CommRingCat))
+        exact Subsingleton.elim _ _
+      _ = (Concrete.prodEquiv (F.obj unit20O2Left) (F.obj unit20O2Right) 0).2 := by
+        rw [CategoryTheory.Limits.Concrete.prodEquiv_apply_snd]
+        exact (map_zero _).symm
 
 private noncomputable abbrev unit20A : Opens unit20X :=
   Alexandrov.principalOpen unit20Left
@@ -1509,28 +1573,226 @@ private theorem unit20T_restrict_topTensor_right :
               α) G).presheaf U)) := by
   refine ⟨unit20X, unit20O1, unit20O2, unit20Alpha, unit20G, unit20Cover, ?_⟩
   rintro ⟨hlim⟩
-  simp only [TopCat.Presheaf.SheafConditionEqualizerProducts.fork,
-    unit20Cover_iSup] at hlim
+  simp only [TopCat.Presheaf.SheafConditionEqualizerProducts.fork] at hlim
   let q : unit20T.presheaf.obj (op (⊤ : Opens unit20X)) ⟶
       unit20T.presheaf.obj (op (iSup unit20Cover)) :=
     eqToHom (congrArg (fun U : Opens unit20X =>
       unit20T.presheaf.obj (op U)) unit20Cover_iSup.symm)
+  have hq : q = unit20T.presheaf.map (eqToHom unit20Cover_iSup).op := by
+    dsimp [q]
+    rw [CategoryTheory.eqToHom_op, CategoryTheory.eqToHom_map]
   have hz : unit20ZeroMap ≫ q = unit20DoubleMap ≫ q := by
     apply hlim.hom_ext
     intro j
-    simp only [Fork.ofι_π_app]
-    apply TopCat.Presheaf.SheafConditionEqualizerProducts.piOpens.hom_ext
-    intro i
-    rw [← Category.assoc, ← Category.assoc,
-      TopCat.Presheaf.SheafConditionEqualizerProducts.res_π]
-    rcases i with ⟨i⟩
-    fin_cases i
-    · ext z
-      simp [q, unit20ZeroMap, unit20DoubleMap, unit20Cover, unit20A,
-        unit20T_restrict_double_left]
-    · ext z
-      simp [q, unit20ZeroMap, unit20DoubleMap, unit20Cover, unit20B,
-        unit20T_restrict_topTensor_right]
+    rcases j with (_ | _)
+    all_goals
+      simp only [Fork.ofι_π_app]
+      set_option backward.isDefEq.respectTransparency false in
+      have hres :
+          (unit20ZeroMap ≫ q) ≫
+              TopCat.Presheaf.SheafConditionEqualizerProducts.res
+                (sheafTensorProductPresheaf
+                  (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                    unit20Alpha) unit20G).presheaf unit20Cover =
+            (unit20DoubleMap ≫ q) ≫
+              TopCat.Presheaf.SheafConditionEqualizerProducts.res
+                (sheafTensorProductPresheaf
+                  (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                    unit20Alpha) unit20G).presheaf unit20Cover := by
+        apply TopCat.Presheaf.SheafConditionEqualizerProducts.piOpens.hom_ext
+          (sheafTensorProductPresheaf
+            (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+              unit20Alpha) unit20G).presheaf unit20Cover
+        intro i
+        rcases i with ⟨i⟩
+        simp only [Category.assoc,
+          TopCat.Presheaf.SheafConditionEqualizerProducts.res_π]
+        fin_cases i
+        · ext z
+          have hrel :
+              (eqToHom unit20Cover_iSup).op ≫
+                  (Opens.leSupr unit20Cover (Equiv.ulift.symm 0)).op =
+                (homOfLE (show unit20A ≤ ⊤ from le_top)).op := by
+            change _ = (homOfLE (show unit20A ≤ ⊤ from le_top)).op
+            apply Subsingleton.elim
+          have hmap :
+              unit20T.presheaf.map (eqToHom unit20Cover_iSup).op ≫
+                  (sheafTensorProductPresheaf
+                    (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                      unit20Alpha) unit20G).presheaf.map
+                    (Opens.leSupr unit20Cover (Equiv.ulift.symm 0)).op =
+                unit20T.presheaf.map
+                  (homOfLE (show unit20A ≤ ⊤ from le_top)).op := by
+            rw [← unit20T.presheaf.map_comp, hrel]
+          have hzero_comp :
+              unit20ZeroMap ≫
+                  (unit20T.presheaf.map (eqToHom unit20Cover_iSup).op ≫
+                    (sheafTensorProductPresheaf
+                      (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                        unit20Alpha) unit20G).presheaf.map
+                      (Opens.leSupr unit20Cover (Equiv.ulift.symm 0)).op) =
+                unit20ZeroMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20A ≤ ⊤ from le_top)).op := by
+            rw [hmap]
+          have hdouble_comp :
+              unit20DoubleMap ≫
+                  (unit20T.presheaf.map (eqToHom unit20Cover_iSup).op ≫
+                    (sheafTensorProductPresheaf
+                      (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                        unit20Alpha) unit20G).presheaf.map
+                      (Opens.leSupr unit20Cover (Equiv.ulift.symm 0)).op) =
+                unit20DoubleMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20A ≤ ⊤ from le_top)).op := by
+            rw [hmap]
+          have hzero_app := congrArg
+            (fun f : AddCommGrpCat.of (ULift.{v} ℤ) ⟶
+                unit20T.presheaf.obj (op unit20A) =>
+              ConcreteCategory.hom f z) hzero_comp
+          have hdouble_app := congrArg
+            (fun f : AddCommGrpCat.of (ULift.{v} ℤ) ⟶
+                unit20T.presheaf.obj (op unit20A) =>
+              ConcreteCategory.hom f z) hdouble_comp
+          rw [hq]
+          calc
+            _ = ConcreteCategory.hom
+                (unit20ZeroMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20A ≤ ⊤ from le_top)).op) z := by
+              convert hzero_app using 1
+              congr 2
+            _ = ConcreteCategory.hom
+                (unit20DoubleMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20A ≤ ⊤ from le_top)).op) z := by
+              have hmap_underlying :
+                  ∀ x : unit20T.obj (op (⊤ : Opens unit20X)),
+                    AddCommGrpCat.Hom.hom
+                        (unit20T.presheaf.map
+                          (homOfLE (show unit20A ≤ ⊤ from le_top)).op) x =
+                      ConcreteCategory.hom
+                        (unit20T.map
+                          (homOfLE (show unit20A ≤ ⊤ from le_top)).op) x := by
+                intro x
+                rfl
+              have hpresheaf :
+                  z.down • (2 : ℤ) • AddCommGrpCat.Hom.hom
+                      (unit20T.presheaf.map
+                        (homOfLE (show unit20A ≤ ⊤ from le_top)).op)
+                      unit20TopTensorInT = 0 := by
+                calc
+                  _ = z.down • AddCommGrpCat.Hom.hom
+                      (unit20T.presheaf.map
+                        (homOfLE (show unit20A ≤ ⊤ from le_top)).op)
+                      ((2 : ℤ) • unit20TopTensorInT) := by
+                    rw [map_zsmul]
+                  _ = z.down • ConcreteCategory.hom
+                      (unit20T.map
+                        (homOfLE (show unit20A ≤ ⊤ from le_top)).op)
+                      ((2 : ℤ) • unit20TopTensorInT) := by
+                    exact congrArg (fun w => z.down • w)
+                      (hmap_underlying ((2 : ℤ) • unit20TopTensorInT))
+                  _ = 0 := by
+                    rw [unit20T_restrict_double_left, smul_zero]
+              simp [unit20ZeroMap, unit20DoubleMap]
+              exact hpresheaf.symm
+            _ = _ := by
+              convert hdouble_app.symm using 1
+              congr 2
+        · ext z
+          have hrel :
+              (eqToHom unit20Cover_iSup).op ≫
+                  (Opens.leSupr unit20Cover (Equiv.ulift.symm 1)).op =
+                (homOfLE (show unit20B ≤ ⊤ from le_top)).op := by
+            change _ = (homOfLE (show unit20B ≤ ⊤ from le_top)).op
+            apply Subsingleton.elim
+          have hmap :
+              unit20T.presheaf.map (eqToHom unit20Cover_iSup).op ≫
+                  (sheafTensorProductPresheaf
+                    (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                      unit20Alpha) unit20G).presheaf.map
+                    (Opens.leSupr unit20Cover (Equiv.ulift.symm 1)).op =
+                unit20T.presheaf.map
+                  (homOfLE (show unit20B ≤ ⊤ from le_top)).op := by
+            rw [← unit20T.presheaf.map_comp, hrel]
+          have hzero_comp :
+              unit20ZeroMap ≫
+                  (unit20T.presheaf.map (eqToHom unit20Cover_iSup).op ≫
+                    (sheafTensorProductPresheaf
+                      (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                        unit20Alpha) unit20G).presheaf.map
+                      (Opens.leSupr unit20Cover (Equiv.ulift.symm 1)).op) =
+                unit20ZeroMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20B ≤ ⊤ from le_top)).op := by
+            rw [hmap]
+          have hdouble_comp :
+              unit20DoubleMap ≫
+                  (unit20T.presheaf.map (eqToHom unit20Cover_iSup).op ≫
+                    (sheafTensorProductPresheaf
+                      (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                        unit20Alpha) unit20G).presheaf.map
+                      (Opens.leSupr unit20Cover (Equiv.ulift.symm 1)).op) =
+                unit20DoubleMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20B ≤ ⊤ from le_top)).op := by
+            rw [hmap]
+          have hzero_app := congrArg
+            (fun f : AddCommGrpCat.of (ULift.{v} ℤ) ⟶
+                unit20T.presheaf.obj (op unit20B) =>
+              ConcreteCategory.hom f z) hzero_comp
+          have hdouble_app := congrArg
+            (fun f : AddCommGrpCat.of (ULift.{v} ℤ) ⟶
+                unit20T.presheaf.obj (op unit20B) =>
+              ConcreteCategory.hom f z) hdouble_comp
+          rw [hq]
+          calc
+            _ = ConcreteCategory.hom
+                (unit20ZeroMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20B ≤ ⊤ from le_top)).op) z := by
+              convert hzero_app using 1
+              congr 2
+            _ = ConcreteCategory.hom
+                (unit20DoubleMap ≫ unit20T.presheaf.map
+                  (homOfLE (show unit20B ≤ ⊤ from le_top)).op) z := by
+              have hmap_underlying :
+                  ∀ x : unit20T.obj (op (⊤ : Opens unit20X)),
+                    AddCommGrpCat.Hom.hom
+                        (unit20T.presheaf.map
+                          (homOfLE (show unit20B ≤ ⊤ from le_top)).op) x =
+                      ConcreteCategory.hom
+                        (unit20T.map
+                          (homOfLE (show unit20B ≤ ⊤ from le_top)).op) x := by
+                intro x
+                rfl
+              have hpresheaf :
+                  z.down • (2 : ℤ) • AddCommGrpCat.Hom.hom
+                      (unit20T.presheaf.map
+                        (homOfLE (show unit20B ≤ ⊤ from le_top)).op)
+                      unit20TopTensorInT = 0 := by
+                calc
+                  _ = z.down • AddCommGrpCat.Hom.hom
+                      (unit20T.presheaf.map
+                        (homOfLE (show unit20B ≤ ⊤ from le_top)).op)
+                      ((2 : ℤ) • unit20TopTensorInT) := by
+                    rw [map_zsmul]
+                  _ = z.down • ConcreteCategory.hom
+                      (unit20T.map
+                        (homOfLE (show unit20B ≤ ⊤ from le_top)).op)
+                      ((2 : ℤ) • unit20TopTensorInT) := by
+                    exact congrArg (fun w => z.down • w)
+                      (hmap_underlying ((2 : ℤ) • unit20TopTensorInT))
+                  _ = 0 := by
+                    rw [map_zsmul, unit20T_restrict_topTensor_right]
+                    simp only [smul_zero]
+              simp [unit20ZeroMap, unit20DoubleMap]
+              exact hpresheaf.symm
+            _ = _ := by
+              convert hdouble_app.symm using 1
+              congr 2
+      first
+      | simpa only [Category.assoc] using hres
+      | simpa only [Category.assoc] using congrArg
+          (fun k => k ≫
+            TopCat.Presheaf.SheafConditionEqualizerProducts.leftRes
+              (sheafTensorProductPresheaf
+                (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+                  unit20Alpha) unit20G).presheaf unit20Cover) hres
   apply unit20ZeroMap_ne_unit20DoubleMap
   exact (cancel_mono q).1 hz
 

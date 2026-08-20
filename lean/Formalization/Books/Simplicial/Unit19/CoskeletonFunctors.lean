@@ -24,7 +24,7 @@ open CategoryTheory.Limits
 open Opposite
 open scoped _root_.Simplicial
 
-universe v u
+universe v u v₁ u₁ v₂ u₂
 
 /-! ## The right Kan extension and its mapping property -/
 
@@ -816,6 +816,7 @@ theorem formula_limit_of_representable {C : Type u} [Category.{v} C]
       (SimplexCategory.Truncated.δ (n + 1) (j.pred hij.ne_zero)
         (by simp) (by simp)).op (by
         apply Opposite.unop_injective
+        dsimp [faceObj, faceArrow, commonObj, commonMap, L]
         change SimplexCategory.δ (j.pred hij.ne_zero) ≫ SimplexCategory.δ i =
           SimplexCategory.δ ⟨i.val, by omega⟩ ≫ SimplexCategory.δ j
         exact (SimplexCategory.δ_comp_δ' (i := ⟨i.val, by omega⟩)
@@ -832,7 +833,8 @@ theorem formula_limit_of_representable {C : Type u} [Category.{v} C]
           U.map (SimplexCategory.Truncated.δ (n + 1)
             ⟨i.val, by omega⟩ (by simp) (by simp)).op
       exact wI.trans wJ.symm⟩
-  let qU : CompatibleBoundary n U Uplus := hRep.homEquiv (𝟙 Uplus)
+  let qU : (compatibleBoundaryFunctor n U).obj (op Uplus) :=
+    hRep.homEquiv (𝟙 Uplus)
   let a : limit D ⟶ Uplus := hRep.homEquiv.symm qL
   let b : Uplus ⟶ limit D := (limit.isLimit D).lift (boundaryCone qU)
   have hqa (i : Fin (n + 3)) :
@@ -951,11 +953,635 @@ structure NextTruncatedObjectData {C : Type u} [Category.{v} C]
     (V ⟶ tildeU) ≃
       ((SimplicialObject.Truncated.trunc C (n + 2) (n + 1)).obj V ⟶ U)
 
+private theorem has_limit_one_step_index {C : Type u} [Category.{v} C]
+    (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)
+    (hRep : (compatibleBoundaryFunctor n U).RepresentableBy Uplus) :
+    HasLimit (StructuredArrow.proj
+      (op ⟨SimplexCategory.mk (n + 2), by simp⟩)
+      (SimplexCategory.Truncated.incl (n + 1) (n + 2)).op ⋙ U) := by
+  classical
+  let L := (SimplexCategory.Truncated.incl (n + 1) (n + 2)).op
+  let I := StructuredArrow (op ⟨SimplexCategory.mk (n + 2), by simp⟩) L
+  let D := StructuredArrow.proj
+    (op ⟨SimplexCategory.mk (n + 2), by simp⟩) L ⋙ U
+  let targetEq :
+      (SimplexCategory.mk (n + 2) : SimplexCategory) =
+        SimplexCategory.mk ((n + 1) + 1) := by
+    congr 1
+  let alpha (j : I) :
+      j.right.unop.1 ⟶ SimplexCategory.mk ((n + 1) + 1) :=
+    j.hom.unop.hom ≫ eqToHom targetEq
+  have alpha_not_surjective (j : I) :
+      ¬ Function.Surjective (alpha j).toOrderHom := by
+    intro hs
+    have hEpi : Epi (alpha j) := (SimplexCategory.epi_iff_surjective).2 hs
+    let _ : Epi (alpha j) := hEpi
+    have hlen := SimplexCategory.len_le_of_epi (alpha j)
+    have hk := j.right.unop.property
+    dsimp [alpha] at hlen
+    omega
+  let facIdx (j : I) : Fin (n + 3) :=
+    Classical.choose
+      (SimplexCategory.eq_comp_δ_of_not_surjective (alpha j)
+        (alpha_not_surjective j))
+  let facMap (j : I) : j.right.unop.1 ⟶ SimplexCategory.mk (n + 1) :=
+    Classical.choose
+      (Classical.choose_spec
+        (SimplexCategory.eq_comp_δ_of_not_surjective (alpha j)
+          (alpha_not_surjective j)))
+  have facEq (j : I) :
+      alpha j = facMap j ≫ SimplexCategory.δ (facIdx j) :=
+    Classical.choose_spec
+      (Classical.choose_spec
+        (SimplexCategory.eq_comp_δ_of_not_surjective (alpha j)
+          (alpha_not_surjective j)))
+  let faceArrow (i : Fin (n + 3)) :
+      (op ⟨SimplexCategory.mk (n + 2), by simp⟩) ⟶
+        L.obj (op ⟨SimplexCategory.mk (n + 1), by simp⟩) :=
+      (SimplexCategory.Truncated.Hom.tr (n := n + 2)
+        (SimplexCategory.δ i ≫ eqToHom targetEq.symm)
+        (by simp) (by simp)).op
+  let faceObj (i : Fin (n + 3)) : I := StructuredArrow.mk (faceArrow i)
+  let faceToJ (j : I) : faceObj (facIdx j) ⟶ j :=
+    StructuredArrow.homMk
+      (SimplexCategory.Truncated.Hom.tr (facMap j)
+        j.right.unop.property (by simp)).op (by
+        apply Opposite.unop_injective
+        dsimp [faceObj, faceArrow, L]
+        apply SimplexCategory.Truncated.Hom.ext
+        convert congrArg (fun z => z.toOrderHom) (facEq j).symm using 1 <;>
+          simp [alpha] <;> try { congr 1 })
+  have hαf {j k : I} (f : j ⟶ k) :
+      alpha k = f.right.unop.hom ≫ alpha j := by
+    have hw0 := f.w
+    have hw : (L.map f.right).unop.hom ≫ j.hom.unop.hom =
+        k.hom.unop.hom := by
+      exact congrArg (fun z => z.unop.hom) hw0
+    dsimp [L] at hw
+    simpa [alpha, Category.assoc] using
+      (congrArg (fun z => z ≫ eqToHom targetEq) hw).symm
+  have hcomp {j k : I} (f : j ⟶ k) :
+      (SimplexCategory.Truncated.Hom.tr (facMap j)
+        j.right.unop.property (by simp)).op ≫ f.right =
+      (SimplexCategory.Truncated.Hom.tr
+        (f.right.unop.hom ≫ facMap j)
+        k.right.unop.property (by simp)).op := by
+    apply Opposite.unop_injective
+    exact (SimplexCategory.Truncated.Hom.tr_comp' (n := n + 1)
+      (f := f.right.unop.hom)
+      (g := SimplexCategory.Truncated.Hom.tr (facMap j)
+        j.right.unop.property (by simp))
+      (ha := k.right.unop.property)).symm
+  let component (q : CompatibleBoundary n U Uplus) (j : I) :
+      Uplus ⟶ D.obj j :=
+    q.1 (facIdx j) ≫
+      U.map (SimplexCategory.Truncated.Hom.tr (facMap j)
+        j.right.unop.property (by simp)).op
+  let boundaryCone (q : CompatibleBoundary n U Uplus) : Cone D :=
+    { pt := Uplus
+      π := NatTrans.mk (fun j => component q j) (by
+          intro j k f
+          have hfac :
+              alpha k =
+                (f.right.unop.hom ≫ facMap j) ≫
+                  SimplexCategory.δ (facIdx j) := by
+            rw [hαf f, facEq j]
+            simp [Category.assoc]
+          have hfactor :
+              q.1 (facIdx j) ≫
+                  U.map (SimplexCategory.Truncated.Hom.tr
+                    (f.right.unop.hom ≫ facMap j)
+                    k.right.unop.property (by simp)).op =
+                q.1 (facIdx k) ≫
+                  U.map (SimplexCategory.Truncated.Hom.tr (facMap k)
+                    k.right.unop.property (by simp)).op := by
+            by_cases heq : facIdx j = facIdx k
+            · rw [← heq]
+              have hmap : f.right.unop.hom ≫ facMap j = facMap k := by
+                apply (cancel_mono (SimplexCategory.δ (facIdx j))).1
+                calc
+                  (f.right.unop.hom ≫ facMap j) ≫
+                      SimplexCategory.δ (facIdx j) = alpha k := hfac.symm
+                  _ = facMap k ≫ SimplexCategory.δ (facIdx j) := by
+                    simpa [heq] using facEq k
+              rw [hmap]
+            · obtain hlt | hgt := lt_or_gt_of_ne heq
+              · exact compatibleBoundary_factor_eq n U q
+                    k.right.unop.property (alpha k) hlt
+                    (f.right.unop.hom ≫ facMap j) (facMap k) hfac (facEq k)
+              · exact (compatibleBoundary_factor_eq n U q
+                    k.right.unop.property (alpha k) hgt
+                    (facMap k) (f.right.unop.hom ≫ facMap j)
+                    (facEq k) hfac).symm
+          dsimp [component, D]
+          rw [Category.id_comp]
+          have hmap_comp :
+              U.map (SimplexCategory.Truncated.Hom.tr
+                (f.right.unop.hom ≫ facMap j)
+                k.right.unop.property (by simp)).op =
+                U.map (SimplexCategory.Truncated.Hom.tr (facMap j)
+                  j.right.unop.property (by simp)).op ≫ U.map f.right := by
+            rw [← hcomp f]
+            exact U.map_comp _ _
+          calc
+            q.1 (facIdx k) ≫
+                  U.map (SimplexCategory.Truncated.Hom.tr (facMap k)
+                    k.right.unop.property (by simp)).op =
+                q.1 (facIdx j) ≫
+                  U.map (SimplexCategory.Truncated.Hom.tr
+                    (f.right.unop.hom ≫ facMap j)
+                    k.right.unop.property (by simp)).op := hfactor.symm
+            _ = q.1 (facIdx j) ≫
+                  (U.map (SimplexCategory.Truncated.Hom.tr (facMap j)
+                    j.right.unop.property (by simp)).op ≫ U.map f.right) := by
+              exact congrArg (fun z => q.1 (facIdx j) ≫ z) hmap_comp
+            _ = (q.1 (facIdx j) ≫
+                  U.map (SimplexCategory.Truncated.Hom.tr (facMap j)
+                    j.right.unop.property (by simp)).op) ≫ U.map f.right := by
+              simp only [Category.assoc]) }
+  let commonMap (i j : Fin (n + 3)) (hij : i < j) :
+      (faceObj j).right ⟶
+        (op ⟨SimplexCategory.mk n, by simp⟩) :=
+    (SimplexCategory.Truncated.δ (n + 1) ⟨i.val, by omega⟩
+      (by simp) (by simp)).op
+  let commonObj (i j : Fin (n + 3)) (hij : i < j) : I :=
+    StructuredArrow.mk ((faceObj j).hom ≫ L.map (commonMap i j hij))
+  let faceToCommonJ (i j : Fin (n + 3)) (hij : i < j) :
+      faceObj j ⟶ commonObj i j hij :=
+    StructuredArrow.homMk' (faceObj j) (commonMap i j hij)
+  let faceToCommonI (i j : Fin (n + 3)) (hij : i < j) :
+      faceObj i ⟶ commonObj i j hij :=
+    StructuredArrow.homMk (f := faceObj i) (f' := commonObj i j hij)
+      (SimplexCategory.Truncated.δ (n + 1) (j.pred hij.ne_zero)
+        (by simp) (by simp)).op (by
+        apply Opposite.unop_injective
+        dsimp [faceObj, faceArrow, commonObj, commonMap, L]
+        apply SimplexCategory.Truncated.Hom.ext
+        simp only
+        convert congrArg (fun z => z.toOrderHom)
+            (SimplexCategory.δ_comp_δ' (i := ⟨i.val, by omega⟩)
+              (j := j) (by simpa using hij)).symm using 1 <;>
+          simp <;> try { congr 1 })
+  let qU : CompatibleBoundary n U Uplus := hRep.homEquiv (𝟙 Uplus)
+  let isLimit : IsLimit (boundaryCone qU) :=
+    { lift := fun s =>
+        let qL : (compatibleBoundaryFunctor n U).obj (op s.pt) :=
+          ⟨fun i => s.π.app (faceObj i), by
+            intro i j hij
+            have wI := s.π.naturality (faceToCommonI i j hij)
+            have wJ := s.π.naturality (faceToCommonJ i j hij)
+            dsimp [D] at wI wJ
+            simp only [Category.id_comp] at wI wJ
+            have hI : s.π.app (faceObj i) ≫
+                D.map (faceToCommonI i j hij) =
+                s.π.app (commonObj i j hij) := by
+              exact wI.symm
+            have hJ : s.π.app (faceObj j) ≫
+                D.map (faceToCommonJ i j hij) =
+                s.π.app (commonObj i j hij) := by
+              exact wJ.symm
+            have hh := hI.trans hJ.symm
+            dsimp [D, StructuredArrow.proj, Comma.snd, Comma.map,
+              StructuredArrow.homMk,
+              StructuredArrow.homMk', faceToCommonI, faceToCommonJ,
+              commonObj, commonMap, faceObj, faceArrow, L] at hh
+            convert hh using 1;
+              simp [faceObj, faceArrow, truncatedFace];
+              try { congr 1 }
+            rfl⟩
+        hRep.homEquiv.symm qL
+      fac := by
+        intro s j
+        let qL : (compatibleBoundaryFunctor n U).obj (op s.pt) :=
+          ⟨fun i => s.π.app (faceObj i), by
+            intro i k hik
+            have wI := s.π.naturality (faceToCommonI i k hik)
+            have wJ := s.π.naturality (faceToCommonJ i k hik)
+            dsimp [D] at wI wJ
+            simp only [Category.id_comp] at wI wJ
+            have hI : s.π.app (faceObj i) ≫
+                D.map (faceToCommonI i k hik) =
+                s.π.app (commonObj i k hik) := by
+              exact wI.symm
+            have hJ : s.π.app (faceObj k) ≫
+                D.map (faceToCommonJ i k hik) =
+                s.π.app (commonObj i k hik) := by
+              exact wJ.symm
+            have hh := hI.trans hJ.symm
+            dsimp [D, StructuredArrow.proj, Comma.snd, Comma.map,
+              StructuredArrow.homMk,
+              StructuredArrow.homMk', faceToCommonI, faceToCommonJ,
+              commonObj, commonMap, faceObj, faceArrow, L] at hh
+            convert hh using 1;
+              simp [faceObj, faceArrow, truncatedFace];
+              try { congr 1 }
+            rfl⟩
+        let a := hRep.homEquiv.symm qL
+        have ha : hRep.homEquiv a = qL :=
+          hRep.homEquiv.apply_symm_apply qL
+        have h := hRep.homEquiv_eq a
+        have hi := congrArg (fun q : CompatibleBoundary n U s.pt =>
+          q.1 (facIdx j)) h
+        change (hRep.homEquiv a).1 (facIdx j) =
+          a ≫ qU.1 (facIdx j) at hi
+        rw [ha] at hi
+        change hRep.homEquiv.symm qL ≫ qU.1 (facIdx j) ≫
+          U.map (SimplexCategory.Truncated.Hom.tr (facMap j)
+            j.right.unop.property (by simp)).op = s.π.app j
+        dsimp [a] at hi
+        let g := U.map (SimplexCategory.Truncated.Hom.tr (facMap j)
+          j.right.unop.property (by simp)).op
+        change hRep.homEquiv.symm qL ≫ qU.1 (facIdx j) ≫ g = s.π.app j
+        have hg := congrArg (fun f => f ≫ g) hi
+        have hn : qL.1 (facIdx j) ≫ g = s.π.app j := by
+          change s.π.app (faceObj (facIdx j)) ≫ D.map (faceToJ j) = s.π.app j
+          calc
+            s.π.app (faceObj (facIdx j)) ≫ D.map (faceToJ j) =
+                𝟙 s.pt ≫ s.π.app j := by
+              simpa only [Functor.const_obj_map] using
+                (s.π.naturality (faceToJ j)).symm
+            _ = s.π.app j := Category.id_comp _
+        simpa only [Category.assoc] using hg.symm.trans hn
+      uniq := by
+        intro s m hm
+        let qL : (compatibleBoundaryFunctor n U).obj (op s.pt) :=
+          ⟨fun i => s.π.app (faceObj i), by
+            intro i k hik
+            have wI := s.π.naturality (faceToCommonI i k hik)
+            have wJ := s.π.naturality (faceToCommonJ i k hik)
+            dsimp [D] at wI wJ
+            simp only [Category.id_comp] at wI wJ
+            have hI : s.π.app (faceObj i) ≫
+                D.map (faceToCommonI i k hik) =
+                s.π.app (commonObj i k hik) := by
+              exact wI.symm
+            have hJ : s.π.app (faceObj k) ≫
+                D.map (faceToCommonJ i k hik) =
+                s.π.app (commonObj i k hik) := by
+              exact wJ.symm
+            have hh := hI.trans hJ.symm
+            dsimp [D, StructuredArrow.proj, Comma.snd, Comma.map,
+              StructuredArrow.homMk,
+              StructuredArrow.homMk', faceToCommonI, faceToCommonJ,
+              commonObj, commonMap, faceObj, faceArrow, L] at hh
+            convert hh using 1;
+              simp [faceObj, faceArrow, truncatedFace];
+              try { congr 1 }
+            rfl⟩
+        let a := hRep.homEquiv.symm qL
+        have ha : hRep.homEquiv a = qL :=
+          hRep.homEquiv.apply_symm_apply qL
+        have hmface (i : Fin (n + 3)) : m ≫ qU.1 i =
+            s.π.app (faceObj i) := by
+          have hci := hm (faceObj i)
+          have hcomponent_face : component qU (faceObj i) = qU.1 i := by
+            have hface : alpha (faceObj i) =
+                (𝟙 (SimplexCategory.mk (n + 1))) ≫ SimplexCategory.δ i := by
+              change (faceArrow i).unop.hom = SimplexCategory.δ i
+              dsimp [faceArrow, targetEq]
+              rfl
+            by_cases heq : facIdx (faceObj i) = i
+            · have hmap : facMap (faceObj i) = 𝟙 _ := by
+                apply (cancel_mono (SimplexCategory.δ i)).1
+                calc
+                  facMap (faceObj i) ≫ SimplexCategory.δ i =
+                      alpha (faceObj i) := by simpa [heq] using (facEq (faceObj i)).symm
+                  _ = (𝟙 _) ≫ SimplexCategory.δ i := hface
+              dsimp [component]
+              rw [heq, hmap]
+              change qU.1 i ≫ U.map
+                (𝟙 ((op ⟨SimplexCategory.mk (n + 1), by simp⟩) :
+                  (SimplexCategory.Truncated (n + 1))ᵒᵖ)) = qU.1 i
+              rw [U.map_id]
+              simp
+            · obtain hlt | hgt := lt_or_gt_of_ne heq
+              · have hh := compatibleBoundary_factor_eq n U qU
+                    (faceObj i).right.unop.property (alpha (faceObj i)) hlt
+                    (facMap (faceObj i)) (𝟙 _) (facEq (faceObj i)) hface
+                change qU.1 (facIdx (faceObj i)) ≫
+                    U.map (SimplexCategory.Truncated.Hom.tr
+                      (facMap (faceObj i))
+                      (faceObj i).right.unop.property (by simp)).op = qU.1 i
+                exact hh.trans (by
+                  change qU.1 i ≫ U.map
+                    (𝟙 ((op ⟨SimplexCategory.mk (n + 1), by simp⟩) :
+                      (SimplexCategory.Truncated (n + 1))ᵒᵖ)) = qU.1 i
+                  rw [U.map_id]
+                  simp)
+              · have hh := compatibleBoundary_factor_eq n U qU
+                    (faceObj i).right.unop.property (alpha (faceObj i)) hgt
+                    (𝟙 _) (facMap (faceObj i)) hface (facEq (faceObj i))
+                change qU.1 (facIdx (faceObj i)) ≫
+                    U.map (SimplexCategory.Truncated.Hom.tr
+                      (facMap (faceObj i))
+                      (faceObj i).right.unop.property (by simp)).op = qU.1 i
+                exact hh.symm.trans (by
+                  change qU.1 i ≫ U.map
+                    (𝟙 ((op ⟨SimplexCategory.mk (n + 1), by simp⟩) :
+                      (SimplexCategory.Truncated (n + 1))ᵒᵖ)) = qU.1 i
+                  rw [U.map_id]
+                  simp)
+          dsimp [boundaryCone] at hci
+          rw [hcomponent_face] at hci
+          exact hci
+        apply hRep.homEquiv.injective
+        apply Subtype.ext
+        funext i
+        change (hRep.homEquiv m).1 i = (hRep.homEquiv a).1 i
+        rw [hRep.homEquiv_eq m, hRep.homEquiv_eq a]
+        change m ≫ qU.1 i = a ≫ qU.1 i
+        rw [hmface i]
+        have h := hRep.homEquiv_eq a
+        have hi := congrArg (fun q : CompatibleBoundary n U s.pt => q.1 i) h
+        change (hRep.homEquiv a).1 i = a ≫ qU.1 i at hi
+        rw [ha] at hi
+        simpa [qL] using hi }
+  exact HasLimit.mk { cone := boundaryCone qU, isLimit := isLimit }
+
+private def strictifyFunctor {B : Type u₁} [Category.{v₁} B]
+    {C : Type u₂} [Category.{v₂} C] (G : B ⥤ C) (obj : B → C)
+    (e : ∀ X, obj X ≅ G.obj X) : B ⥤ C where
+  obj := obj
+  map {X Y} f := (e X).hom ≫ G.map f ≫ (e Y).inv
+  map_id := by
+    intro X
+    simp
+  map_comp := by
+    intro X Y Z f g
+    simp only [Functor.map_comp, Category.assoc, Iso.inv_hom_id_assoc]
+
 theorem work_out_next_truncated_object {C : Type u} [Category.{v} C]
     (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)
     (hRep : (compatibleBoundaryFunctor n U).RepresentableBy Uplus) :
     Nonempty (NextTruncatedObjectData n U Uplus) := by
-  sorry
+  classical
+  let L := (SimplexCategory.Truncated.incl (n + 1) (n + 2)).op
+  let hTop := has_limit_one_step_index n U Uplus hRep
+  let hAll : ∀ Y : (SimplexCategory.Truncated (n + 2))ᵒᵖ,
+      HasLimit (StructuredArrow.proj Y L ⋙ U) := by
+    intro Y
+    by_cases hY : Y.unop.1.len ≤ n + 1
+    · let X : (SimplexCategory.Truncated (n + 1))ᵒᵖ :=
+        op ⟨Y.unop.1, hY⟩
+      have e : L.obj X = Y := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        rfl
+      rw [← e]
+      let hInitial : IsInitial (StructuredArrow.mk (𝟙 (L.obj X))) :=
+        StructuredArrow.mkIdInitial
+      exact HasLimit.mk
+        { cone := coneOfDiagramInitial hInitial
+            (StructuredArrow.proj (L.obj X) L ⋙ U)
+          isLimit := limitOfDiagramInitial hInitial
+            (StructuredArrow.proj (L.obj X) L ⋙ U) }
+    · have hlen : Y.unop.1.len = n + 2 := by
+        have hy := Y.unop.property
+        omega
+      have e : Y = op ⟨SimplexCategory.mk (n + 2), by simp⟩ := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        simpa using hlen
+      rw [e]
+      exact hTop
+  let hAllInst : ∀ Y : (SimplexCategory.Truncated (n + 2))ᵒᵖ,
+      HasLimit (StructuredArrow.proj Y L ⋙ U) := hAll
+  let G := @Functor.pointwiseRightKanExtension _ _ _ _ _ _ L U hAllInst
+  let counitG := @Functor.pointwiseRightKanExtensionCounit _ _ _ _ _ _ L U hAllInst
+  have hCounitIso : ∀ X : (SimplexCategory.Truncated (n + 1))ᵒᵖ,
+      IsIso (counitG.app X) := by
+    intro X
+    change IsIso (limit.π (StructuredArrow.proj (L.obj X) L ⋙ U)
+      (StructuredArrow.mk (𝟙 (L.obj X))))
+    exact isIso_π_of_isInitial
+      (StructuredArrow.mkIdInitial (T := L) (Y := X)) _
+  let obj : (SimplexCategory.Truncated (n + 2))ᵒᵖ → C := fun Y =>
+    if hY : Y.unop.1.len ≤ n + 1 then
+      U.obj (op ⟨Y.unop.1, hY⟩)
+    else
+      Uplus
+  let eObj : ∀ Y : (SimplexCategory.Truncated (n + 2))ᵒᵖ,
+      obj Y ≅ G.obj Y := by
+    intro Y
+    by_cases hY : Y.unop.1.len ≤ n + 1
+    · let X : (SimplexCategory.Truncated (n + 1))ᵒᵖ :=
+        op ⟨Y.unop.1, hY⟩
+      have eY : L.obj X = Y := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        rfl
+      have hobj : obj Y = U.obj X := by
+        dsimp [obj]
+        simp only [dif_pos hY]
+        rfl
+      letI : IsIso (counitG.app X) := hCounitIso X
+      exact eqToIso hobj ≪≫ (asIso (counitG.app X)).symm ≪≫
+        G.mapIso (eqToIso eY)
+    · have hlen : Y.unop.1.len = n + 2 := by
+        have hy := Y.unop.property
+        omega
+      have eY : Y = op ⟨SimplexCategory.mk (n + 2), by simp⟩ := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        simpa using hlen
+      have hobj : obj Y = Uplus := by
+        dsimp [obj]
+        simp only [dif_neg hY]
+      rw [hobj, eY]
+      let J := (SimplexCategory.Truncated.inclusion (n + 2)).op
+      let S : (SimplexCategory.Truncated (n + 2))ᵒᵖ :=
+        op ⟨SimplexCategory.mk (n + 2), by simp⟩
+      let P := StructuredArrow.post S L J
+      let D0 := coskeletonIndexDiagram (n + 1) (n + 2) U
+      let D1 := StructuredArrow.proj S L ⋙ U
+      have hRight (X : StructuredArrow S L) : (P.obj X).right = X.right := by
+        rfl
+      have hDobj (X : StructuredArrow S L) :
+          D0.obj (P.obj X) = D1.obj X := by
+        change U.obj ((P.obj X).right) = U.obj X.right
+        exact congrArg U.obj (hRight X)
+      let w : P ⋙ D0 ≅ D1 := NatIso.ofComponents
+          (fun X => eqToIso (hDobj X)) (by
+        intro X Y f
+        have hX := hRight X
+        have hY := hRight Y
+        cases hX
+        cases hY
+        have hdx := hDobj X
+        have hdy := hDobj Y
+        cases hdx
+        cases hdy
+        cases X
+        cases Y
+        dsimp [P]
+        simp only [D0, D1, coskeletonIndexDiagram, Functor.comp_map,
+          StructuredArrow.proj_map, StructuredArrow.post_map]
+        apply (comp_eqToHom_iff _ _ _).2
+        rw [Category.assoc]
+        apply (conj_eqToHom_iff_heq' _ _ _ _).2
+        change U.map ((P.map f).right) ≍ U.map f.right
+        dsimp [P, StructuredArrow.post]
+        rfl)
+      letI : HasLimit (P.asEquivalence.functor ⋙ D0) := by
+        change HasLimit (P ⋙ D0)
+        exact hasLimit_of_iso w.symm
+      letI : HasLimit D0 :=
+        hasLimit_of_equivalence_comp P.asEquivalence
+      let eTop := Classical.choice (formula_limit_of_representable n U Uplus hRep)
+      let eLim : limit D1 ≅ limit D0 :=
+        HasLimit.isoOfEquivalence P.asEquivalence w
+      have eTop' : Uplus ≅ limit (StructuredArrow.proj S L ⋙ U) :=
+        eTop ≪≫ eLim.symm
+      simpa [G, Functor.pointwiseRightKanExtension, S, L] using eTop'
+  let F := strictifyFunctor
+    (B := (SimplexCategory.Truncated (n + 2))ᵒᵖ) (C := C) G obj eObj
+  let eNat : F ≅ G := NatIso.ofComponents eObj (by
+    intro X Y f
+    dsimp [F, strictifyFunctor]
+    simp)
+  have hrestrict :
+      (SimplicialObject.Truncated.trunc C (n + 2) (n + 1)).obj F = U := by
+    refine CategoryTheory.Functor.ext (fun X => ?_) (fun X Y f => ?_)
+    · dsimp [SimplicialObject.Truncated.trunc, F, strictifyFunctor]
+      have hx :
+          ((SimplexCategory.Truncated.incl (n + 1) (n + 2)).obj X.unop).obj.len ≤
+            n + 1 := X.unop.property
+      have hX : op ⟨((SimplexCategory.Truncated.incl (n + 1) (n + 2)).obj X.unop).obj,
+          hx⟩ = X := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        rfl
+      simp only [obj, dif_pos hx]
+      rw [hX]
+    · dsimp [SimplicialObject.Truncated.trunc, F, strictifyFunctor]
+      have hx :
+          X.unop.obj.len ≤ n + 1 := X.unop.property
+      have hy :
+          Y.unop.obj.len ≤ n + 1 := Y.unop.property
+      have hLx : (L.obj X).unop.obj.len ≤ n + 1 := by
+        change X.unop.obj.len ≤ n + 1
+        exact hx
+      have hLy : (L.obj Y).unop.obj.len ≤ n + 1 := by
+        change Y.unop.obj.len ≤ n + 1
+        exact hy
+      have hX0 : op ⟨(L.obj X).unop.obj, hLx⟩ = X := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        rfl
+      have hY0 : op ⟨(L.obj Y).unop.obj, hLy⟩ = Y := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        rfl
+      change (eObj (L.obj X)).hom ≫ G.map (L.map f) ≫
+          (eObj (L.obj Y)).inv = _
+      dsimp [eObj, obj]
+      simp only [dif_pos hLx, dif_pos hLy]
+      simp only [Iso.trans_hom, Iso.trans_inv, Functor.mapIso_hom,
+        Functor.mapIso_inv, Iso.symm_hom, Iso.symm_inv, Iso.refl_hom,
+        Iso.refl_inv, eqToIso.hom, eqToIso.inv]
+      simp only [asIso_hom, asIso_inv, Category.assoc]
+      have hmapX :
+          G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) = G.map (L.map f) := by
+        rw [← G.map_comp]
+        congr 1
+        cases hX0
+        exact Category.id_comp (L.map f)
+      have hmapY :
+          G.map (L.map f) ≫
+              G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) =
+            G.map (L.map f) := by
+        rw [← G.map_comp]
+        congr 1
+        cases hY0
+        exact Category.comp_id (L.map f)
+      have hcore :
+          G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) =
+            G.map (L.map f) := by
+        calc
+          _ = (G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f)) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) := by
+            simp only [Category.assoc]
+          _ = G.map (L.map f) ≫
+              G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) := by
+            rw [hmapX]
+          _ = G.map (L.map f) := hmapY
+      have hnat :
+          G.map (L.map f) ≫ counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩) =
+            counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f := by
+        have hleft :
+            G.map (L.map f) ≫ counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩) ≍
+              G.map (L.map f) ≫ counitG.app Y := by
+          cases hY0
+          rfl
+        have hright :
+            counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f ≍
+              counitG.app X ≫ U.map f := by
+          cases hX0
+          rfl
+        have hn :
+            G.map (L.map f) ≫ counitG.app Y =
+              counitG.app X ≫ U.map f := by
+          simpa only [Functor.comp_obj, Functor.comp_map, G] using
+            counitG.naturality f
+        exact eq_of_heq (hleft.trans ((heq_of_eq hn).trans hright.symm))
+      have hcore_assoc {Z : C}
+          (k : G.obj (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩)) ⟶ Z) :
+          G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) ≫ k =
+            G.map (L.map f) ≫ k := by
+        calc
+          _ = (G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩)))) ≫ k := by
+            simp only [Category.assoc]
+          _ = G.map (L.map f) ≫ k := by rw [hcore]
+      have hnat_assoc {Z : C}
+          (k : U.obj (op ⟨(L.obj Y).unop.obj, hLy⟩) ⟶ Z) :
+          G.map (L.map f) ≫ counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩) ≫ k =
+            counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f ≫ k := by
+        calc
+          _ = (G.map (L.map f) ≫
+              counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩)) ≫ k := by
+            simp only [Category.assoc]
+          _ = (counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f) ≫ k := by
+            rw [hnat]
+          _ = _ := by simp only [Category.assoc]
+      rw [hcore_assoc]
+      rw [hnat_assoc]
+      have hIso : IsIso (counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩)) :=
+        hCounitIso _
+      simpa only [Category.assoc] using
+        congrArg
+          (fun k => eqToHom _ ≫ k)
+          (@IsIso.inv_hom_id_assoc _ _ _ _
+            (counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩)) hIso _
+            (U.map f ≫ eqToHom _))
+  have htop : F.obj (op ⟨SimplexCategory.mk (n + 2), by simp⟩) = Uplus := by
+    dsimp [F, strictifyFunctor, obj]
+    simp
+  have hG : G.IsRightKanExtension counitG := by
+    dsimp [G, counitG]
+    infer_instance
+  let alpha := Functor.whiskerLeft L eNat.hom ≫ counitG
+  have hF : F.IsRightKanExtension alpha := by
+    exact @Functor.isRightKanExtension_of_iso _ _ _ _ _ _ G F eNat.symm L U
+      counitG alpha (by
+      dsimp [alpha]
+      rw [← Functor.whiskerLeft_comp_assoc, eNat.inv_hom_id,
+        Functor.whiskerLeft_id', Category.id_comp]) hG
+  refine ⟨{ tildeU := F, restrict_eq := hrestrict, top_eq := htop, homEquiv := ?_ }⟩
+  intro V
+  simpa [SimplicialObject.Truncated.trunc] using
+    (@Functor.homEquivOfIsRightKanExtension _ _ _ _ _ _ F L U alpha hF V)
 
 /-! ## Explicit maps in the one-step extension -/
 

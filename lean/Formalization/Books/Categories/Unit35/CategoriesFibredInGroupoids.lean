@@ -3353,11 +3353,9 @@ theorem isomorphicOverBase_exists_equivalenceOverFunctor
   refine ⟨F, G, hF, hG, ?_, ?_⟩
   · refine ⟨eqToIso hFG, congrArg (fun H : S ⥤ S => H ⋙ p) hFG, ?_⟩
     intro X
-    change p.map ((eqToIso hFG).hom.app X) = _
     simp only [eqToIso.hom, eqToHom_app, eqToHom_map]
   · refine ⟨eqToIso hGF, congrArg (fun H : T ⥤ T => H ⋙ q) hGF, ?_⟩
     intro X
-    change q.map ((eqToIso hGF).hom.app X) = _
     simp only [eqToIso.hom, eqToHom_app, eqToHom_map]
 
 def IsSplitFibredCategory

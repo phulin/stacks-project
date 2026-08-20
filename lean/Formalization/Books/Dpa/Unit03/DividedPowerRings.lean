@@ -343,10 +343,9 @@ theorem hasLimits : HasLimits (DividedPowerRing.{u}) := by
     hasEqualizers_of_hasLimit_parallelPair (C := DividedPowerRing.{u})
   exact has_limits_of_hasEqualizers_and_products
 
-/-- Limits of divided-power rings are created by the underlying-ring functor. -/
-@[instance_reducible]
-noncomputable def forget_creates_limits :
-    CreatesLimits (forget : DividedPowerRing.{u} ⥤ CommRingCat.{u}) := by
+/-- The underlying-ring functor preserves the limits of divided-power rings. -/
+theorem forget_preserves_limits :
+    PreservesLimits (forget : DividedPowerRing.{u} ⥤ CommRingCat.{u}) := by
   sorry
 
 /-- The small-source hypothesis in the chapter's version of Brown's lemma. -/

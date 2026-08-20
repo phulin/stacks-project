@@ -59,9 +59,16 @@ abbrev AbelianSheafSurjective {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G
 
 /-- In `Ab(X)`, categorical epimorphisms are exactly locally surjective maps. -/
 theorem abelianSheaf_epi_iff_surjective
-    {X : TopCat.{w}} {F G : Ab.{w, w} X} (φ : F ⟶ G) :
+    {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G) :
     Epi φ ↔ AbelianSheafSurjective φ := by
-  exact (TopCat.Sheaf.isLocallySurjective_iff_epi φ).symm
+  /- Prior attempt: the former same-universe statement was discharged by
+  `TopCat.Sheaf.isLocallySurjective_iff_epi`; the universe-polymorphic site
+  route was also checked with
+  `CategoryTheory.Sheaf.isLocallySurjective_iff_epi' AddCommGrpCat φ`,
+  but it requires the unavailable
+  `(Opens.grothendieckTopology X).WEqualsLocallyBijective AddCommGrpCat`.
+  -/
+  sorry
 noncomputable def countableProductMap {C : Type u} [Category.{v} C]
     [HasCountableProducts C] (A B : ℕ → C) (φ : ∀ n, A n ⟶ B n) :
     limit (Discrete.functor A) ⟶ limit (Discrete.functor B) :=

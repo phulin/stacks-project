@@ -157,7 +157,7 @@ def envelopeQuotientKernelIdeal
     {f : (A : Type u) →+* B}
     {J : Ideal B} {hIJ : Ideal.map f A.ideal ≤ J}
     (E : DividedPowerEnvelope A f J hIJ)
-    (K : Ideal B) (hK : K ≤ J) : Ideal (E.D : Type u) :=
+    (K : Ideal B) (_hK : K ≤ J) : Ideal (E.D : Type u) :=
   Ideal.span
     {y | ∃ n : ℕ, n ≠ 0 ∧ ∃ k : B, k ∈ K ∧
       y = E.D.dividedPowers.dpow n (E.toD k)}
@@ -206,7 +206,7 @@ theorem kernel_le_preimage_ideal
   intro x hx
   rw [envelopeIdealPreimage, Ideal.mem_comap]
   rw [RingHom.mem_ker] at hx
-  simpa [hx] using J.zero_mem
+  simp [hx]
 
 /-- The base ideal in B is carried into the inverse image ideal in B'. -/
 theorem preimage_base_ideal_le

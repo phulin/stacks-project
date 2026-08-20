@@ -989,8 +989,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
           (closedSubsetInclusion Z)).unit.app G).hom ≫
     (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
-    (closedSubsetPullbackStalkIso G z).hom := by
-  sorry
+    (closedSubsetPullbackStalkIso G z).hom := by sorry
 private theorem closedSubsetPushforward_mem_essImage_iff_of_category
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}

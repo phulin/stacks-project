@@ -59,6 +59,55 @@ noncomputable def localizedRingHom {A : Type u} {B : Type v} [CommRing A] [CommR
     Localization M →+* Localization (M.map f) :=
   IsLocalization.map (Localization (M.map f)) f M.le_comap_map
 
+/-- A surjective ring map induces an equivalence on the local rings at a
+prime when its kernel is killed after localizing at the corresponding prime.
+The kernel hypothesis is the reusable quotient-cancellation step; it is
+deliberately stated independently of finite-presentation or flatness data. -/
+theorem localization_atPrime_equiv_of_surjective_of_kernel_torsion
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
+    (f : A →+* B) (q : Ideal B) [hq : q.IsPrime]
+    (hf : Function.Surjective f)
+    (hkill : ∀ x : A, f x = 0 →
+      ∃ s : (q.comap f).primeCompl, (s : A) * x = 0) :
+    Nonempty
+      (Localization.AtPrime (q.comap f) ≃+*
+        Localization.AtPrime q) := by
+  have hsub : Submonoid.map f (q.comap f).primeCompl = q.primeCompl :=
+    Ideal.map_primeCompl_comap_of_surjective f hf q
+  let : IsLocalization (Submonoid.map f (q.comap f).primeCompl)
+      (Localization.AtPrime q) := by
+    rw [hsub]
+    infer_instance
+  let locMap : Localization.AtPrime (q.comap f) →+*
+      Localization.AtPrime q :=
+    IsLocalization.map (Localization.AtPrime q) f
+      (Submonoid.le_comap_map (q.comap f).primeCompl)
+  have hsurj : Function.Surjective locMap := by
+    simpa [locMap] using
+      (IsLocalization.map_surjective_of_surjective
+        (q.comap f).primeCompl (Localization.AtPrime (q.comap f))
+        (Localization.AtPrime q) hf)
+  have hkerloc : RingHom.ker locMap =
+      (RingHom.ker f).map
+        (algebraMap A (Localization.AtPrime (q.comap f))) := by
+    convert IsLocalization.ker_map (Localization.AtPrime q) f hsub using 1
+    congr 1
+  have hkerzero : RingHom.ker locMap = ⊥ := by
+    rw [hkerloc]
+    apply le_antisymm
+    · apply Ideal.map_le_iff_le_comap.mpr
+      intro x hx
+      change algebraMap A (Localization.AtPrime (q.comap f)) x ∈
+        (⊥ : Ideal (Localization.AtPrime (q.comap f)))
+      rw [Ideal.mem_bot]
+      apply (IsLocalization.map_eq_zero_iff
+        (q.comap f).primeCompl (Localization.AtPrime (q.comap f)) x).2
+      change f x = 0 at hx
+      exact hkill x hx
+    · exact bot_le
+  exact ⟨RingEquiv.ofBijective locMap
+    ⟨(RingHom.injective_iff_ker_eq_bot locMap).2 hkerzero, hsurj⟩⟩
+
 /-! ### Descent of finite type and finite presentation -/
 
 /-- Finite type descends and ascends along a faithfully flat base change. -/

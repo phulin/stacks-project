@@ -34,7 +34,36 @@ theorem smallExtension_kernel_square_zero
     {B' B : Type*} [CommRing B'] [CommRing B]
     (φ : B' →+* B) (hφ : IsSmallExtension φ) :
     (RingHom.ker φ) ^ 2 = ⊥ := by
-  sorry
+  let _ : IsLocalRing B' := hφ.1
+  let _ : IsLocalRing B := hφ.2.2.1
+  have hker_ne_top : RingHom.ker φ ≠ ⊤ := by
+    intro htop
+    have h1 : (1 : B') ∈ RingHom.ker φ := by
+      rw [htop]
+      trivial
+    have hzero : (1 : B) = 0 := by
+      simp [RingHom.mem_ker] at h1
+    exact one_ne_zero hzero
+  have hsimple : IsSimpleModule B' (RingHom.ker φ) :=
+    (Module.length_eq_one_iff).mp hφ.2.2.2.2.2
+  let _ : IsSimpleModule B' (RingHom.ker φ) := hsimple
+  have hann :
+      Module.annihilator B' (RingHom.ker φ) =
+        IsLocalRing.maximalIdeal B' := by
+    exact IsLocalRing.eq_maximalIdeal IsSimpleModule.annihilator_isMaximal
+  rw [pow_two]
+  apply le_antisymm
+  · apply Ideal.mul_le.2
+    intro a ha b hb
+    have ha_max : a ∈ IsLocalRing.maximalIdeal B' :=
+      IsLocalRing.le_maximalIdeal hker_ne_top ha
+    have ha_ann : a ∈ Module.annihilator B' (RingHom.ker φ) := by
+      rw [hann]
+      exact ha_max
+    have hab := Module.mem_annihilator.mp ha_ann (⟨b, hb⟩ : RingHom.ker φ)
+    change a * b = 0
+    simpa [smul_eq_mul] using congrArg Subtype.val hab
+  · exact bot_le
 
 /-- The kernel of a small extension is principal and is annihilated by the
 maximal ideal of the source. -/
@@ -44,7 +73,29 @@ theorem smallExtension_kernel_principal
     ∃ x : B',
       RingHom.ker φ = Ideal.span ({x} : Set B') ∧
         ∀ y : B', y ∈ IsLocalRing.maximalIdeal B' → y * x = 0 := by
-  sorry
+  have hsimple : IsSimpleModule B' (RingHom.ker φ) :=
+    (Module.length_eq_one_iff).mp hφ.2.2.2.2.2
+  let _ : IsSimpleModule B' (RingHom.ker φ) := hsimple
+  have hmodprin : Module.IsPrincipal B' (RingHom.ker φ) := by
+    infer_instance
+  have hprincipal : (RingHom.ker φ : Submodule B' B').IsPrincipal :=
+    Module.isPrincipal_submodule_iff.mp hmodprin
+  obtain ⟨x, hx⟩ := hprincipal.principal
+  have hxmem : x ∈ RingHom.ker φ := by
+    rw [hx]
+    exact Submodule.mem_span_singleton_self x
+  refine ⟨x, ?_, ?_⟩
+  · simpa only [Ideal.submodule_span_eq] using hx
+  · intro y hy
+    have hann :
+        Module.annihilator B' (RingHom.ker φ) =
+          IsLocalRing.maximalIdeal B' := by
+      exact IsLocalRing.eq_maximalIdeal IsSimpleModule.annihilator_isMaximal
+    have hy_ann : y ∈ Module.annihilator B' (RingHom.ker φ) := by
+      rw [hann]
+      exact hy
+    have hyx := Module.mem_annihilator.mp hy_ann (⟨x, hxmem⟩ : RingHom.ker φ)
+    simpa [smul_eq_mul] using congrArg Subtype.val hyx
 
 /-! ## Lifting conditions -/
 

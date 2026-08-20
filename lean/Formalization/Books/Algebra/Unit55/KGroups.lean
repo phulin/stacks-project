@@ -1105,46 +1105,44 @@ private theorem kZeroClass_subsingleton
     _ = kZeroClass (R := R) (M := M) - kZeroClass (R := R) (M := M) := by rw [h']
     _ = 0 := sub_self _
 
+private lemma finiteProjectiveRank_field
+    (k : Type u) [Field k] (P : FiniteProjectivePresentation k) :
+    finiteProjectiveRank P = Module.finrank k P.presentation.module := by
+  let e := Classical.choice (Classical.choose_spec
+    (finite_projective_is_finite_free_over_local (R := k) (M := P.presentation.module)))
+  simpa [finiteProjectiveRank, Module.finrank_pi] using e.finrank_eq.symm
+
+private lemma kZeroClass_fin_free_field (k : Type u) [Field k] (n : ℕ) :
+    kZeroClass (R := k) (M := Fin n → k) =
+      (n : ℤ) • kZeroClass (R := k) (M := k) := by
+  induction n with
+  | zero => simpa using (kZeroClass_subsingleton (R := k) (M := Fin 0 → k))
+  | succ n ih =>
+      let e := LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
+        (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
+      rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
+      simp [add_smul, add_comm]
+
+private lemma kPrimeZeroClass_fin_free_field (k : Type u) [Field k] (n : ℕ) :
+    kPrimeZeroClass (R := k) (M := Fin n → k) =
+      (n : ℤ) • kPrimeZeroClass (R := k) (M := k) := by
+  induction n with
+  | zero => simpa using (kPrimeZeroClass_subsingleton (R := k) (M := Fin 0 → k))
+  | succ n ih =>
+      let e := LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
+        (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
+      rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
+      simp [add_smul, add_comm]
+
 theorem kGroups_field
     (k : Type u) [Field k] :
     ∃ e₀ : KZero k ≃+ ℤ, ∃ e₀' : KPrimeZero k ≃+ ℤ,
       (∀ x, e₀ x = kZeroRank x) ∧
       (∀ x, e₀' x = kPrimeZeroLength x) ∧
       (∀ x, e₀' (kZeroToKPrime x) = e₀ x) := by
-  have hfiniteProjectiveRank (P : FiniteProjectivePresentation k) :
-      finiteProjectiveRank P = Module.finrank k P.presentation.module := by
-    let e := Classical.choice
-      (Classical.choose_spec
-        (finite_projective_is_finite_free_over_local
-          (R := k) (M := P.presentation.module)))
-    have he := e.finrank_eq
-    simpa [finiteProjectiveRank, Module.finrank_pi] using he.symm
-  have hfreeZero (n : ℕ) :
-      kZeroClass (R := k) (M := Fin n → k) =
-        (n : ℤ) • kZeroClass (R := k) (M := k) := by
-    induction n with
-    | zero =>
-        simpa using
-          (kZeroClass_subsingleton (R := k) (M := Fin 0 → k))
-    | succ n ih =>
-        let e :=
-          LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
-            (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
-        rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
-        simp [add_smul, add_comm]
-  have hfreePrime (n : ℕ) :
-      kPrimeZeroClass (R := k) (M := Fin n → k) =
-        (n : ℤ) • kPrimeZeroClass (R := k) (M := k) := by
-    induction n with
-    | zero =>
-        simpa using
-          (kPrimeZeroClass_subsingleton (R := k) (M := Fin 0 → k))
-    | succ n ih =>
-        let e :=
-          LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
-            (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
-        rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
-        simp [add_smul, add_comm]
+  have hfiniteProjectiveRank := finiteProjectiveRank_field k
+  have hfreeZero := kZeroClass_fin_free_field k
+  have hfreePrime := kPrimeZeroClass_fin_free_field k
   have hclassZero (P : FiniteProjectivePresentation k) :
       kZeroClassOfPresentation P =
         (finiteProjectiveRank P : ℤ) •

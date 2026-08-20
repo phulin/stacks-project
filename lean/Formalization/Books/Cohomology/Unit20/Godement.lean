@@ -91,7 +91,7 @@ structure GodementResolution
     (ShortComplex.mk (differential n) (differential (n + 1))
       (differential_square n)).Exact
   flasque : ∀ n : ℤ, FlasqueModule X (term n)
-  stalkwise_homotopy_equivalence : ∀ x : X, Prop
+  stalkwise_homotopy_equivalence : ∀ _x : X, Prop
 
 theorem exists_godementResolution
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
@@ -110,7 +110,7 @@ structure BoundedBelowGodementResolutionData
   quasiIso : QuasiIso map
   boundedBelow : IsBoundedBelow resolution
   termwiseFlasque : ∀ n : ℤ, FlasqueModule X (resolution.X n)
-  stalkwiseHomotopyEquivalence : ∀ x : X, Prop
+  stalkwiseHomotopyEquivalence : ∀ _x : X, Prop
 
 theorem exists_boundedBelowGodementResolution
     {X : RingedSpace.{v}} (K : ModuleComplex X)

@@ -111,7 +111,7 @@ structure LerayUnboundedData
   left : Type v
   right : Type v
   comparison : left ≃ right
-  open_comparison : ∀ (V : Opens Y.carrier), Type v
+  open_comparison : ∀ (_V : Opens Y.carrier), Type v
 
 theorem leray_unbounded
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
@@ -122,7 +122,7 @@ structure HigherDirectImageDescription
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (K : ModuleDerived X) (i : ℤ) where
   higherDirectImage : Type v
-  presheafValue : ∀ V : Opens Y.carrier, Type v
+  presheafValue : ∀ (_V : Opens Y.carrier), Type v
   comparison : ∀ V : Opens Y.carrier, presheafValue V ≃ higherDirectImage
 
 theorem describe_higher_direct_images
@@ -135,8 +135,8 @@ theorem describe_higher_direct_images
 
 structure ModulesAbelianComparisonData
     (X : RingedSpace.{v}) (K : ModuleDerived X) where
-  on_open : ∀ U : Opens X.carrier, Type v
-  comparison_on_open : ∀ U : Opens X.carrier, Type v
+  on_open : ∀ (_U : Opens X.carrier), Type v
+  comparison_on_open : ∀ (_U : Opens X.carrier), Type v
   open_isomorphism : ∀ U : Opens X.carrier,
     on_open U ≃ comparison_on_open U
   direct_image_comparison : Type v

@@ -114,38 +114,6 @@ theorem exists_kFlatResolution
     Nonempty (KFlatResolution T G) := by
   sorry
 
-structure DerivedPullbackData
-    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (P : PullbackPushforwardData f) (T : TensorComplexData Y) where
-  functor : ModuleDerived Y ⥤ ModuleDerived X
-  exact : ∃ h : functor.CommShift ℤ,
-    letI : functor.CommShift ℤ := h
-    functor.IsTriangulated
-  computed_on_kFlat : ∀ (G : ModuleComplex Y),
-    ∀ R : KFlatResolution T G,
-      Nonempty (functor.obj (derivedObjectOfComplex Y G) ≅
-        derivedObjectOfComplex X ((pullbackComplexFunctor P).obj R.complex))
-
-theorem exists_derivedPullbackData
-    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (P : PullbackPushforwardData f) (T : TensorComplexData Y) :
-    Nonempty (DerivedPullbackData f P T) := by
-  sorry
-
-noncomputable def derivedPullback
-    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
-    ModuleDerived Y ⥤ ModuleDerived X :=
-  let P := pullbackPushforwardData f
-  let T := tensorComplexData _
-  (Classical.choice (exists_derivedPullbackData f P T)).functor
-
-theorem derivedPullback_isExact
-    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
-    ∃ h : (derivedPullback f).CommShift ℤ,
-      letI : (derivedPullback f).CommShift ℤ := h
-      (derivedPullback f).IsTriangulated := by
-  sorry
-
 /-! ## Unbounded right-derived functors and adjunctions -/
 
 structure UnboundedRightDerivedData

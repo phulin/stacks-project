@@ -305,7 +305,31 @@ theorem regular_local_global_dimension_le
        M (d - e)).out 6 0`, and enlarge the bound to `d` with
      `CategoryTheory.hasProjectiveDimensionLT_of_ge` and `Nat.sub_le`.
   -/
-  sorry
+  apply ((finite_global_dimension_criterion (R := R) d).out 1 0).mp
+  intro M hM
+  change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R (M : Type u)) d
+  by_cases hnontrivial : Nontrivial (M : Type u)
+  · letI : Nontrivial (M : Type u) := hnontrivial
+    obtain ⟨e, hdepth, _, _⟩ := localDepth_eq_min_ext (R := R) (M := (M : Type u))
+    have hresolution := regular_local_finite_free_resolution
+      (R := R) (M := (M : Type u)) d e hdim hdepth
+    have hpd : CategoryTheory.HasProjectiveDimensionLE
+        (ModuleCat.of R (M : Type u)) (d - e) :=
+      ((projective_dimension_resolution_criteria_noetherian_local
+        (M := ModuleCat.of R (M : Type u)) (d - e)).out 0 6).mpr hresolution
+    letI : CategoryTheory.HasProjectiveDimensionLE
+        (ModuleCat.of R (M : Type u)) (d - e) := hpd
+    exact CategoryTheory.hasProjectiveDimensionLT_of_ge
+      (ModuleCat.of R (M : Type u)) ((d - e) + 1) (d + 1) (by omega)
+  · have hsubsingleton : Subsingleton (M : Type u) :=
+      not_nontrivial_iff_subsingleton.mp hnontrivial
+    letI : Subsingleton (M : Type u) := hsubsingleton
+    have hzero : CategoryTheory.Limits.IsZero (ModuleCat.of R (M : Type u)) :=
+      ModuleCat.isZero_iff_subsingleton.mpr hsubsingleton
+    letI : CategoryTheory.HasProjectiveDimensionLT
+        (ModuleCat.of R (M : Type u)) 0 := hzero.hasProjectiveDimensionLT_zero
+    exact CategoryTheory.hasProjectiveDimensionLT_of_ge
+      (ModuleCat.of R (M : Type u)) 0 (d + 1) (by omega)
 
 /-- Over a Noetherian ring, a global-dimension bound can be checked at the
 maximal localizations. -/

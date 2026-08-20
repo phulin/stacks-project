@@ -1,4 +1,5 @@
 import Formalization.Books.Modules.Unit16.TensorProduct
+import Formalization.Books.Modules.Unit17.FlatModules
 import Formalization.Books.Injectives.Unit08.ModulesOnRingedSite
 import Formalization.Books.Sheaves.Unit26.RingedSpaceModules
 import Formalization.Books.Sheaves.Unit31.Infrastructure
@@ -26,7 +27,7 @@ universe v
 
 noncomputable section
 
-/-! ## Flat morphisms -/
+/-! ## Flatness of modules over a sheaf of rings -/
 
 abbrev RingedSpace := Formalization.Books.Sheaves.Unit25.RingedSpace
 
@@ -45,11 +46,35 @@ noncomputable abbrev sourceStalkAsTargetModule
   Formalization.Books.Sheaves.Unit22.moduleSheafFMapStalkTarget f.sharp
     (SheafOfModules.unit X.structureSheaf) x
 
-/-- A morphism of ringed spaces is flat at `x` when its map on structure-sheaf
-stalks makes the source stalk a flat module over the target stalk. -/
-def flatAt {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) (x : X) : Prop :=
+/- The project represents a flat module over a `RingCat` ring by the
+`PointwiseFlatModule` witness from the earlier modules-on-ringed-sites API.
+The witness retains the commutative-semiring structure required by Mathlib's
+flatness class while keeping the scalar ring and module object visible. -/
+def moduleFlatAt {X Y : TopCat.{v}}
+    {O_X : Formalization.Books.Sheaves.Unit10.RingSheaf X}
+    {O_Y : Formalization.Books.Sheaves.Unit10.RingSheaf Y}
+    (f : X ⟶ Y)
+    (α : O_Y ⟶ (Formalization.Books.Sheaves.Unit22.moduleRingSheafPushforward f).obj O_X)
+    (F : Formalization.Books.Sheaves.Unit10.Mod O_X) (x : X) : Prop :=
   Nonempty (Formalization.Books.Injectives.Unit08.PointwiseFlatModule
-    (targetStalk f x) (sourceStalkAsTargetModule f x))
+    (TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x))
+    (Formalization.Books.Sheaves.Unit22.moduleSheafFMapStalkTarget α F x))
+
+def moduleFlat {X Y : TopCat.{v}}
+    {O_X : Formalization.Books.Sheaves.Unit10.RingSheaf X}
+    {O_Y : Formalization.Books.Sheaves.Unit10.RingSheaf Y}
+    (f : X ⟶ Y)
+    (α : O_Y ⟶ (Formalization.Books.Sheaves.Unit22.moduleRingSheafPushforward f).obj O_X)
+    (F : Formalization.Books.Sheaves.Unit10.Mod O_X) : Prop :=
+  ∀ x : X, moduleFlatAt f α F x
+
+/-! ## Flat morphisms -/
+
+/-- A morphism of ringed spaces is flat at `x` when its structure sheaf is flat
+as a module over the inverse-image structure sheaf. -/
+def flatAt {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) (x : X) : Prop :=
+  moduleFlatAt f.continuous f.sharp
+    (SheafOfModules.unit X.structureSheaf) x
 
 /-- A morphism of ringed spaces is flat when it is flat at every point of its
 source. -/
@@ -58,6 +83,12 @@ def flat {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) : Prop :=
 
 /-- The pointwise definition unfolds to flatness of the scalar-restricted
 source stalk module. -/
+theorem flatAt_iff_structureSheaf_flatAt {X Y : RingedSpace.{v}}
+    (f : RingedSpaceHom X Y) (x : X) :
+    flatAt f x ↔ moduleFlatAt f.continuous f.sharp
+      (SheafOfModules.unit X.structureSheaf) x :=
+  Iff.rfl
+
 theorem flatAt_iff_stalkModule {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) (x : X) :
     flatAt f x ↔ Nonempty (Formalization.Books.Injectives.Unit08.PointwiseFlatModule
@@ -67,6 +98,12 @@ theorem flatAt_iff_stalkModule {X Y : RingedSpace.{v}}
 /-- The global definition unfolds to pointwise flatness. -/
 theorem flat_iff_forall_flatAt {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
     flat f ↔ ∀ x : X, flatAt f x :=
+  Iff.rfl
+
+theorem flat_iff_structureSheaf_moduleFlat {X Y : RingedSpace.{v}}
+    (f : RingedSpaceHom X Y) :
+    flat f ↔ moduleFlat f.continuous f.sharp
+      (SheafOfModules.unit X.structureSheaf) :=
   Iff.rfl
 
 /-! ## Open immersions -/
@@ -93,23 +130,18 @@ theorem pullback_isExact {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
 stalk of `O_Y` at the image of `x`. -/
 def flatOverAt {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (F : Mod X.structureSheaf) (x : X) : Prop :=
-  Nonempty (Formalization.Books.Injectives.Unit08.PointwiseFlatModule
-    (targetStalk f x)
-    (Formalization.Books.Sheaves.Unit22.moduleSheafFMapStalkTarget f.sharp F x))
+  moduleFlatAt f.continuous f.sharp F x
 
 /-- An `O_X`-module is flat over `Y` when it is flat over `Y` at every point
 of `X`. -/
 def flatOver {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (F : Mod X.structureSheaf) : Prop :=
-  ∀ x : X, flatOverAt f F x
+  moduleFlat f.continuous f.sharp F
 
 /-- The pointwise definition of flatness over a base. -/
 theorem flatOverAt_iff_stalkModule {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) (F : Mod X.structureSheaf) (x : X) :
-    flatOverAt f F x ↔
-      Nonempty (Formalization.Books.Injectives.Unit08.PointwiseFlatModule
-        (targetStalk f x)
-        (Formalization.Books.Sheaves.Unit22.moduleSheafFMapStalkTarget f.sharp F x)) :=
+    flatOverAt f F x ↔ moduleFlatAt f.continuous f.sharp F x :=
   Iff.rfl
 
 /-- The global definition of flatness over a base. -/
@@ -130,7 +162,7 @@ introducing a second tensor-product implementation for the weaker `RingCat`
 ringed-space interface.
 -/
 
-noncomputable def commutativePullbackTensorFunctor
+noncomputable abbrev commutativePullbackTensorFunctor
     {X Y : TopCat.{v}} {OX : Formalization.Books.Sheaves.Unit17.CommRingSheaf X}
     {OY : Formalization.Books.Sheaves.Unit17.CommRingSheaf Y}
     (f : X ⟶ Y)
@@ -140,19 +172,24 @@ noncomputable def commutativePullbackTensorFunctor
     [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
     (F : Formalization.Books.Sheaves.Unit17.CommRingSheafModule OX) :
     Formalization.Books.Sheaves.Unit17.CommRingSheafModule OY ⥤
-      Formalization.Books.Sheaves.Unit17.CommRingSheafModule OX where
-  obj G := Formalization.Books.Modules.Unit16.tensorProductSheaf OX
-    ((Formalization.Books.Modules.Unit16.pullbackModule f α).obj G) F
-  map φ := Formalization.Books.Modules.Unit16.tensorProductMap
-    ((Formalization.Books.Modules.Unit16.pullbackModule f α).map φ) (𝟙 F)
-  map_id G := by
-    rw [(Formalization.Books.Modules.Unit16.pullbackModule f α).map_id]
-    exact Formalization.Books.Modules.Unit16.tensorProductMap_id
-  map_comp φ ψ := by
-    rw [(Formalization.Books.Modules.Unit16.pullbackModule f α).map_comp]
-    simpa using (Formalization.Books.Modules.Unit16.tensorProductMap_comp
-      ((Formalization.Books.Modules.Unit16.pullbackModule f α).map φ)
-      ((Formalization.Books.Modules.Unit16.pullbackModule f α).map ψ) (𝟙 F) (𝟙 F))
+      Formalization.Books.Sheaves.Unit17.CommRingSheafModule OX :=
+  Formalization.Books.Modules.Unit16.pullbackModule f α ⋙
+    Formalization.Books.Modules.Unit17.tensorRightFunctor OX F
+
+theorem commutativePullbackTensorFunctor_obj
+    {X Y : TopCat.{v}} {OX : Formalization.Books.Sheaves.Unit17.CommRingSheaf X}
+    {OY : Formalization.Books.Sheaves.Unit17.CommRingSheaf Y}
+    (f : X ⟶ Y)
+    (α : Formalization.Books.Sheaves.Unit17.commRingSheafToRingSheaf OY ⟶
+      (Formalization.Books.Sheaves.Unit24.sheafRingPushforward f).obj
+        (Formalization.Books.Sheaves.Unit17.commRingSheafToRingSheaf OX))
+    [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
+    (F : Formalization.Books.Sheaves.Unit17.CommRingSheafModule OX)
+    (G : Formalization.Books.Sheaves.Unit17.CommRingSheafModule OY) :
+    (commutativePullbackTensorFunctor f α F).obj G =
+      Formalization.Books.Modules.Unit16.tensorProductSheaf OX
+        ((Formalization.Books.Modules.Unit16.pullbackModule f α).obj G) F :=
+  rfl
 
 /-- Flatness over `Y` for a module in the commutative sheaf model. -/
 def commutativeFlatOverAt
@@ -163,10 +200,7 @@ def commutativeFlatOverAt
       (Formalization.Books.Sheaves.Unit24.sheafRingPushforward f).obj
         (Formalization.Books.Sheaves.Unit17.commRingSheafToRingSheaf OX))
     (F : Formalization.Books.Sheaves.Unit17.CommRingSheafModule OX) (x : X) : Prop :=
-  Nonempty (Formalization.Books.Injectives.Unit08.PointwiseFlatModule
-    (TopCat.Presheaf.stalk (C := RingCat.{v})
-      (Formalization.Books.Sheaves.Unit17.commRingSheafToRingSheaf OY).obj (f x))
-      (Formalization.Books.Sheaves.Unit22.moduleSheafFMapStalkTarget α F x))
+  moduleFlatAt f α F x
 
 /-- The commutative sheaf-model form of the source's final exactness lemma. -/
 theorem commutativePullbackTensor_flatOver_isExact

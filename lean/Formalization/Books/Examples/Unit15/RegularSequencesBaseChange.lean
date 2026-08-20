@@ -365,7 +365,6 @@ noncomputable def strangeTopLeftToTopMiddle (k : Type u) [Field k] :
         (xTimesYLocalization k).subtype)
   exact (strangeTopLeftDenominator k).liftQ f (by
     intro a ha
-    rw [LinearMap.mem_ker]
     change (yTimesXLocalizationInXY k).mkQ
       (yLocalizationToXY k (a : YLocalization k)) = 0
     apply (Submodule.Quotient.mk_eq_zero
@@ -472,10 +471,42 @@ noncomputable def strangeBottomLeftToStrangeRight (k : Type u) [Field k] :
   let fxy : YLocalization k →ₗ[PolynomialRing k] XYLocalization k :=
     { toFun := yLocalizationToXY k
       map_add' := by intro a b; exact (yLocalizationToXY k).map_add a b
-      map_smul' := by sorry }
+      map_smul' := by
+        intro r a
+        simp only [Algebra.smul_def, map_mul, yLocalizationToXY,
+          IsLocalization.Away.awayToAwayLeft_eq, RingHom.id_apply] }
   let f : YLocalization k →ₗ[PolynomialRing k] StrangeRight k :=
     (strangeRightDenominator k).mkQ.comp fxy
-  exact (yzPolynomialSubmodule k).liftQ f (by sorry)
+  exact (yzPolynomialSubmodule k).liftQ f (by
+    apply (Submodule.span_le).2
+    rintro _ ⟨rfl⟩
+    change f (algebraMap (PolynomialRing k) (YLocalization k)
+      (yPolynomial k * zPolynomial k)) = 0
+    change (strangeRightDenominator k).mkQ (fxy
+      (algebraMap (PolynomialRing k) (YLocalization k)
+        (yPolynomial k * zPolynomial k))) = 0
+    apply (Submodule.Quotient.mk_eq_zero
+      (p := strangeRightDenominator k) (x := fxy
+        (algebraMap (PolynomialRing k) (YLocalization k)
+          (yPolynomial k * zPolynomial k)))).2
+    apply Submodule.mem_sup_left
+    apply Submodule.subset_span
+    refine ⟨algebraMap (PolynomialRing k) (XLocalization k)
+      (zPolynomial k), ?_⟩
+    have hz : xLocalizationToXY k
+          (algebraMap (PolynomialRing k) (XLocalization k) (zPolynomial k)) =
+        algebraMap (PolynomialRing k) (XYLocalization k) (zPolynomial k) := by
+      simp [xLocalizationToXY, IsLocalization.Away.awayToAwayRight_eq]
+    change algebraMap (PolynomialRing k) (XYLocalization k) (yPolynomial k) *
+        xLocalizationToXY k
+          (algebraMap (PolynomialRing k) (XLocalization k) (zPolynomial k)) =
+      yLocalizationToXY k
+        (algebraMap (PolynomialRing k) (YLocalization k)
+          (yPolynomial k * zPolynomial k))
+    rw [hz]
+    simp [fxy, yLocalizationToXY,
+      IsLocalization.Away.awayToAwayLeft_eq,
+      IsLocalization.Away.awayToAwayRight_eq, map_mul, mul_comm, mul_left_comm])
 
 noncomputable def strangeTopMiddleToModule (k : Type u) [Field k] :
     StrangeTopMiddle k →ₗ[PolynomialRing k] StrangeModule k := by

@@ -1,5 +1,6 @@
 import Formalization.Books.MoreAlgebra.Unit92
 import Formalization.Books.MoreAlgebra.Unit87
+import Formalization.Books.MoreAlgebra.Unit88
 import Formalization.Books.MoreAlgebra.Unit11
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Polynomial.Basic
@@ -29,6 +30,8 @@ open Formalization.Books.MoreAlgebra.Unit87
 open Formalization.Books.MoreAlgebra.Unit89
 open Formalization.Books.MoreAlgebra.Unit92
 open Formalization.Books.MoreAlgebra.Unit65
+open Formalization.Books.Derived.Unit34
+open Formalization.Books.MoreAlgebra.Unit88
 open scoped BigOperators CategoryTheory.Pretriangulated.Opposite ZeroObject
 
 universe u w
@@ -65,9 +68,14 @@ def PrincipalPowerTorsionStabilizes (A : Type u) [CommRing A]
   0 < c ∧ ∀ n : ℕ, c ≤ n →
     principalPowerTorsionAt A f n = principalPowerTorsionAt A f c
 
+theorem principalPowerTorsionStabilizes_of_isNoetherian
+    (A : Type u) [CommRing A] [IsNoetherianRing A] (f : A) :
+    ∃ c : ℕ, PrincipalPowerTorsionStabilizes A f c := by
+  sorry
+
 /-- The map of copies of A given by multiplication by f^n. -/
 noncomputable def principalMultiplicationMap (A : Type u) [CommRing A]
-    (f : A) (n : ℕ) : Mod A ⟶ Mod A :=
+    (f : A) (n : ℕ) : ModuleCat.of A A ⟶ ModuleCat.of A A :=
   ModuleCat.ofHom (LinearMap.mulLeft A (f ^ n))
 
 /-- A complex realization of the two-term complex
@@ -79,7 +87,7 @@ structure PrincipalTwoTermComplexData (A : Type u) [CommRing A]
   degree_zero : complex.X 0 ≅ ModuleCat.of A A
   degree_one : complex.X 1 ≅ ModuleCat.of A A
   differential :
-    degree_zero.hom ≫ complex.d 0 1 ≫ degree_one.hom =
+    degree_zero.inv ≫ complex.d 0 1 ≫ degree_one.hom =
       principalMultiplicationMap A f n
 
 theorem exists_principalTwoTermComplexData (A : Type u) [CommRing A]
@@ -144,9 +152,9 @@ noncomputable def principalKoszulSystemData {A : Type u} [CommRing A]
 structure PrincipalLiftUniversallyData (A : Type u) [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (c : ℕ) where
   to_quotient : ∀ n : ℕ, 0 < n →
-    principalKoszulObject f n ⟶ principalQuotientObject f n
+    (principalKoszulObject f n ⟶ principalQuotientObject f n)
   from_quotient : ∀ n : ℕ, 0 < n →
-    principalQuotientObject f (n + c) ⟶ principalKoszulObject f n
+    (principalQuotientObject f (n + c) ⟶ principalKoszulObject f n)
   pro_isomorphism :
     IsProIsomorphism
       (principalQuotientSystemData f).system
@@ -163,17 +171,51 @@ theorem principal_lift_universally {A : Type u} [CommRing A]
 /-- Bounded f-power torsion of the ring. This is the source condition
 f^(n-1) A[f^n] = 0, written elementwise. -/
 def PrincipalPowerTorsionBounded (A : Type u) [CommRing A] (f : A) : Prop :=
-  ∃ n : ℕ, 0 < n ∧ ∀ x : A, f ^ n • x = 0 → f ^ (n - 1) • x = 0
+  ∃ n : ℕ, 0 < n ∧
+    principalPowerTorsionAt A f n = principalPowerTorsionAt A f (n + 1)
+
+/- The product needed after tensoring the quotient system is not supplied by
+   the product of the quotient stages alone.  It is therefore recorded once
+   as the precise existence datum used by the naive completion. -/
+structure PrincipalNaiveCompletionProductData (A : Type u) [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) where
+  hasProduct : ∀ K : D A,
+    HasProduct (fun n : ℕ =>
+      (derivedTensorInverseSystem K (principalQuotientSystemData f).system).obj
+        (Opposite.op n))
+
+theorem exists_principalNaiveCompletionProductData {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) :
+    Nonempty (PrincipalNaiveCompletionProductData A f) := by
+  sorry
+
+noncomputable def principalNaiveCompletionProductData {A : Type u}
+    [CommRing A] [HasDerivedCategory.{w} (Mod A)] (f : A) :
+    PrincipalNaiveCompletionProductData A f :=
+  Classical.choice (exists_principalNaiveCompletionProductData f)
 
 noncomputable def naivePrincipalCompletion {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (K : D A) : D A :=
-  let S := principalQuotientSystemData f
+  let S := principalNaiveCompletionProductData f
+  letI := S.hasProduct K
   derivedLimitWithProduct
-    ((fun n : ℕ => Unit74.derivedTensor K
-      (principalQuotientObject f (n + 1))) : D A)
-    (by
-      letI := S.hasProduct
-      exact inferInstance)
+    (derivedTensorInverseSystem K (principalQuotientSystemData f).system)
+    (S.hasProduct K)
+
+structure PrincipalNaiveCompletionFunctorData (A : Type u) [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) where
+  naive : D A ⥤ D A
+  stage_formula : ∀ K : D A,
+    Nonempty (naive.obj K ≅ naivePrincipalCompletion f K)
+
+theorem exists_principalNaiveCompletionFunctorData {A : Type u}
+    [CommRing A] [HasDerivedCategory.{w} (Mod A)] (f : A) :
+    Nonempty (PrincipalNaiveCompletionFunctorData A f) := by
+  sorry
+
+noncomputable def principalNaiveCompletionFunctor {A : Type u}
+    [CommRing A] [HasDerivedCategory.{w} (Mod A)] (f : A) : D A ⥤ D A :=
+  (Classical.choice (exists_principalNaiveCompletionFunctorData f)).naive
 
 noncomputable abbrev principalDerivedCompletionFunctor
     {A : Type u} [CommRing A] [HasDerivedCategory.{w} (Mod A)]
@@ -186,10 +228,11 @@ noncomputable abbrev principalDerivedCompletion {A : Type u} [CommRing A]
 
 structure PrincipalCompletionComparisonData (A : Type u) [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) where
-  naive : D A ⥤ D A
-  comparison : principalDerivedCompletionFunctor f ⟶ naive
+  comparison : principalDerivedCompletionFunctor f ⟶
+    principalNaiveCompletionFunctor f
   stage_identification : ∀ K : D A,
-    Nonempty (naive.obj K ≅ naivePrincipalCompletion f K)
+    Nonempty ((principalNaiveCompletionFunctor f).obj K ≅
+      naivePrincipalCompletion f K)
 
 theorem exists_principalCompletionComparisonData {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) :
@@ -210,12 +253,12 @@ def PrincipalTorsionFree {A : Type u} [CommRing A] (f : A) (M : Mod A) : Prop :=
 
 structure PrincipalDerivedCompletePresentation (A : Type u) [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (M : Mod A) where
-  K L : Mod A
+  K : Mod A
+  L : Mod A
   left : K ⟶ L
   right : L ⟶ M
   zero : left ≫ right = 0
-  exact : CategoryTheory.ShortComplex.ShortExact
-    { f := left, g := right, zero := zero }
+  exact : (CategoryTheory.ShortComplex.mk left right zero).ShortExact
   K_complete : IsAdicComplete (principalIdeal A f) (K : Type u)
   L_complete : IsAdicComplete (principalIdeal A f) (L : Type u)
   K_torsion_free : PrincipalTorsionFree f K
@@ -233,11 +276,14 @@ theorem derived_complete_module_iff_principal_presentation
 noncomputable def padicPolynomialMap (p : ℕ) [Fact p.Prime] :
     Polynomial (PadicInt p) →+* Polynomial (PadicInt p) :=
   Polynomial.eval₂RingHom (Polynomial.C : PadicInt p →+* Polynomial (PadicInt p))
-    ((p : PadicInt p) * Polynomial.X)
+    (Polynomial.C (p : PadicInt p) * Polynomial.X)
 
 noncomputable def padicPolynomialIdeal (p : ℕ) [Fact p.Prime] :
-    Ideal (Polynomial (PadicInt p)) :=
-  Ideal.span ({Polynomial.C (p : PadicInt p)} : Set (Polynomial (PadicInt p)))
+    Ideal (PadicInt p) :=
+  Ideal.span ({(p : PadicInt p)} : Set (PadicInt p))
+
+abbrev padicPolynomialCompletion (p : ℕ) [Fact p.Prime] :=
+  AdicCompletion (padicPolynomialIdeal p) (Polynomial (PadicInt p))
 
 /-- Data for the induced map on ordinary completions in the polynomial example.
 The completion map is retained as a module morphism so its cokernel is the
@@ -245,10 +291,14 @@ source's module M. -/
 structure PadicPolynomialCompletionData (p : ℕ) [Fact p.Prime] where
   completionMap :
     ModuleCat.of (PadicInt p)
-        (AdicCompletion (padicPolynomialIdeal p) (Polynomial (PadicInt p))) ⟶
+        (padicPolynomialCompletion p) ⟶
       ModuleCat.of (PadicInt p)
-        (AdicCompletion (padicPolynomialIdeal p) (Polynomial (PadicInt p)))
-  inducedBy : Prop
+        (padicPolynomialCompletion p)
+  induced_by : ∀ x : Polynomial (PadicInt p),
+    completionMap.hom (AdicCompletion.of (padicPolynomialIdeal p)
+      (Polynomial (PadicInt p)) x) =
+      AdicCompletion.of (padicPolynomialIdeal p) (Polynomial (PadicInt p))
+        (padicPolynomialMap p x)
 
 theorem exists_padicPolynomialCompletionData (p : ℕ) [Fact p.Prime] :
     Nonempty (PadicPolynomialCompletionData p) := by
@@ -280,14 +330,29 @@ theorem padic_polynomial_cokernel_is_derived_complete_not_adic_complete
 
 /-! ## 94.5. The principal spectral sequence -/
 
+def principalPowerTorsionAtModule {A : Type u} [CommRing A]
+    (f : A) (M : Mod A) (n : ℕ) : Submodule A (M : Type u) :=
+  idealPowerTorsionSubmodule (M := (M : Type u)) (principalIdeal A f) n
+
+def principalTateStage {A : Type u} [CommRing A]
+    (f : A) (M : Mod A) (n : ℕ) : Mod A :=
+  ModuleCat.of A (principalPowerTorsionAtModule f M (n + 1))
+
 structure PrincipalTateSystemData (A : Type u) [CommRing A] (f : A)
     (M : Mod A) where
   system : ℕᵒᵖ ⥤ Mod A
   stage_iso : ∀ n : ℕ,
-    Nonempty (system.obj (Opposite.op n) ≅
-      ModuleCat.of A (idealPowerTorsionSubmodule
-        (principalIdeal A f) (n + 1)))
-  transition_is_multiplication : ∀ n : ℕ, Prop
+    system.obj (Opposite.op n) ≅ principalTateStage f M n
+  transition : ∀ n : ℕ,
+    system.obj (Opposite.op (n + 1)) ⟶ system.obj (Opposite.op n)
+  multiplication : ∀ n : ℕ,
+    principalTateStage f M (n + 1) ⟶ principalTateStage f M n
+  transition_is_multiplication : ∀ n : ℕ,
+    transition n ≫ (stage_iso n).hom =
+      (stage_iso (n + 1)).hom ≫ multiplication n
+  multiplication_formula : ∀ (n : ℕ)
+    (x : (principalTateStage f M (n + 1) : Type u)),
+    ((multiplication n).hom x).val = f • x.val
   hasLimit : HasLimit system
 
 theorem exists_principalTateSystemData {A : Type u} [CommRing A]
@@ -304,30 +369,126 @@ noncomputable def principalTateModule {A : Type u} [CommRing A]
   letI := S.hasLimit
   limit S.system
 
-def PrincipalRlimModuleData (A : Type u) [CommRing A]
-    (S : ℕᵒᵖ ⥤ Mod A) where
-  first : Mod A
-  first_is_R_one_lim : Prop
+noncomputable def principalModuleInDerivedFunctor {A : Type u}
+    [CommRing A] [HasDerivedCategory.{w} (Mod A)] : Mod A ⥤ D A :=
+  (CochainComplex.singleFunctor (Mod A) 0) ⋙
+    (DerivedCategory.Q : Comp A ⥤ D A)
+
+def principalDerivedModuleSystem {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (S : ℕᵒᵖ ⥤ Mod A) :
+    DerivedInverseSystem (D A) :=
+  S ⋙ principalModuleInDerivedFunctor
+
+structure PrincipalRlimModuleData (A : Type u) [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (S : ℕᵒᵖ ⥤ Mod A) where
+  hasProduct : HasProduct (fun n : ℕ =>
+    (principalDerivedModuleSystem S).obj (Opposite.op n))
+
+noncomputable def principalROneLimit {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (S : ℕᵒᵖ ⥤ Mod A)
+    (hS : HasProduct (fun n : ℕ =>
+      (principalDerivedModuleSystem S).obj (Opposite.op n))) : Mod A :=
+  letI := hS
+  (derivedCohomologyFunctor A 1).obj
+    (derivedLimitWithProduct (principalDerivedModuleSystem S) hS)
+
+structure PrincipalShortExactData (A : Type u) [CommRing A]
+    (X Y Z : Mod A) where
+  left : X ⟶ Y
+  right : Y ⟶ Z
+  zero : left ≫ right = 0
+  exact : (CategoryTheory.ShortComplex.mk left right zero).ShortExact
+
+def principalQuotientSubmodule {A : Type u} [CommRing A]
+    (f : A) (M : Mod A) (n : ℕ) : Submodule A (M : Type u) :=
+  (principalIdeal A f) ^ n • (⊤ : Submodule A (M : Type u))
+
+def principalQuotientModuleStage {A : Type u} [CommRing A]
+    (f : A) (M : Mod A) (n : ℕ) : Mod A :=
+  ModuleCat.of A ((M : Type u) ⧸ principalQuotientSubmodule f M (n + 1))
+
+theorem principalQuotientSubmodule_succ_le {A : Type u} [CommRing A]
+    (f : A) (M : Mod A) (n : ℕ) :
+    principalQuotientSubmodule f M (n + 2) ≤
+      principalQuotientSubmodule f M (n + 1) := by
+  sorry
+
+structure PrincipalQuotientModuleSystemData (A : Type u) [CommRing A]
+    (f : A) (M : Mod A) where
+  system : ℕᵒᵖ ⥤ Mod A
+  stage_iso : ∀ n : ℕ,
+    system.obj (Opposite.op n) ≅ principalQuotientModuleStage f M n
+  transition : ∀ n : ℕ,
+    system.obj (Opposite.op (n + 1)) ⟶ system.obj (Opposite.op n)
+  transition_is_quotient : ∀ (n : ℕ) (x : (system.obj
+    (Opposite.op (n + 1)) : Type u)),
+    (stage_iso n).hom.hom ((transition n).hom x) =
+      Submodule.factor (principalQuotientSubmodule_succ_le f M n)
+        ((stage_iso (n + 1)).hom.hom x)
+  hasLimit : HasLimit system
+
+theorem exists_principalQuotientModuleSystemData {A : Type u}
+    [CommRing A] (f : A) (M : Mod A) :
+    Nonempty (PrincipalQuotientModuleSystemData A f M) := by
+  sorry
+
+noncomputable def principalQuotientModuleSystemData {A : Type u}
+    [CommRing A] (f : A) (M : Mod A) :
+    PrincipalQuotientModuleSystemData A f M :=
+  Classical.choice (exists_principalQuotientModuleSystemData f M)
+
+noncomputable def principalQuotientLimitModule {A : Type u} [CommRing A]
+    (f : A) (M : Mod A) : Mod A :=
+  let S := principalQuotientModuleSystemData f M
+  letI := S.hasLimit
+  limit S.system
+
+noncomputable def principalHZeroModule {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) (M : Mod A) : Mod A :=
+  (derivedCohomologyFunctor A 0).obj
+    (principalDerivedCompletion f (moduleInDerived A M))
+
+structure PrincipalHZeroSequenceData (A : Type u) [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) (M : Mod A) where
+  r_one_torsion : PrincipalRlimModuleData A
+    (principalTateSystemData f M).system
+  r_one_quotient : PrincipalRlimModuleData A
+    (principalQuotientModuleSystemData f M).system
+  sequence : PrincipalShortExactData A
+    (principalROneLimit _ r_one_torsion.hasProduct)
+    (principalHZeroModule f M)
+    (principalQuotientLimitModule f M)
+
+structure PrincipalCohomologyShortExactData (A : Type u) [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) (K : D A) (p : ℤ) where
+  sequence : PrincipalShortExactData A
+    ((derivedCohomologyFunctor A 0).obj
+      (principalDerivedCompletion f
+        (moduleInDerived A
+          ((derivedCohomologyFunctor A p).obj K))))
+    ((derivedCohomologyFunctor A p).obj
+      (principalDerivedCompletion f K))
+    (principalTateModule f
+      ((derivedCohomologyFunctor A (p + 1)).obj K))
 
 structure PrincipalSpectralSequenceData (A : Type u) [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (M : Mod A) where
   h_minus_one :
-    Nonempty ((derivedCohomologyFunctor (Mod A) (-1)).obj
+    Nonempty ((derivedCohomologyFunctor A (-1)).obj
       (principalDerivedCompletion f (moduleInDerived A M)) ≅
       principalTateModule f M)
   r_one_torsion : PrincipalRlimModuleData A
     (principalTateSystemData f M).system
   r_one_quotient : PrincipalRlimModuleData A
-    (principalQuotientSystemData f).system
-  h_zero : PrincipalDerivedCompletePresentation A f M
-  h_one_zero : IsZero ((derivedCohomologyFunctor (Mod A) 1).obj
+    (principalQuotientModuleSystemData f M).system
+  h_zero : PrincipalHZeroSequenceData A f M
+  h_one_zero : IsZero ((derivedCohomologyFunctor A 1).obj
     (principalDerivedCompletion f (moduleInDerived A M)))
   other_cohomology_zero : ∀ i : ℤ, i < -1 ∨ 1 < i →
-    IsZero ((derivedCohomologyFunctor (Mod A) i).obj
+    IsZero ((derivedCohomologyFunctor A i).obj
       (principalDerivedCompletion f (moduleInDerived A M)))
   cohomology_window : ∀ (K : D A) (p : ℤ),
-    Nonempty (PrincipalDerivedCompletePresentation A f
-      ((derivedCohomologyFunctor (Mod A) (p + 1)).obj K))
+    Nonempty (PrincipalCohomologyShortExactData A f K p)
 
 theorem principal_spectral_sequence_statements {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (M : Mod A) :
@@ -336,40 +497,77 @@ theorem principal_spectral_sequence_statements {A : Type u} [CommRing A]
 
 /-! ## 94.6. Comparison with ordinary completion and the ML remark -/
 
+def principalKoszulCohomologySystem {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (f : A) (K : D A) (p : ℤ) :
+    ℕᵒᵖ ⥤ Mod A :=
+  (derivedTensorInverseSystem K (principalKoszulSystemData f).system) ⋙
+    derivedCohomologyFunctor A p
+
 noncomputable def principalUsualCompletion {A : Type u} [CommRing A]
     (f : A) (M : Mod A) : Mod A :=
   ModuleCat.of A (AdicCompletion (principalIdeal A f) (M : Type u))
 
 structure PrincipalCompletionComparisonDiagram (A : Type u) [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (K : D A) (p : ℤ) where
-  usual_completion : Mod A
-  usual_completion_identification :
-    Nonempty (usual_completion ≅
-      principalUsualCompletion f ((derivedCohomologyFunctor (Mod A) p).obj K))
-  lim_cohomology : Mod A
-  lim_cohomology_identification : Prop
-  tate_next : Mod A
-  tate_next_identification :
-    Nonempty (tate_next ≅ principalTateModule f
-      ((derivedCohomologyFunctor (Mod A) (p + 1)).obj K))
-  h0_completion : Mod A
-  middle_cohomology : Mod A
-  r_one_torsion : Mod A
-  r_one_koszul : Mod A
-  top_row : CategoryTheory.ShortComplex.ShortExact
-    { f := (0 : usual_completion ⟶ lim_cohomology),
-      g := (0 : lim_cohomology ⟶ tate_next), zero := by simp }
-  middle_row : CategoryTheory.ShortComplex.ShortExact
-    { f := (0 : h0_completion ⟶ middle_cohomology),
-      g := (0 : middle_cohomology ⟶ tate_next), zero := by simp }
-  left_column : CategoryTheory.ShortComplex.ShortExact
-    { f := (0 : usual_completion ⟶ h0_completion),
-      g := (0 : h0_completion ⟶ r_one_torsion), zero := by simp }
-  middle_column : CategoryTheory.ShortComplex.ShortExact
-    { f := (0 : lim_cohomology ⟶ middle_cohomology),
-      g := (0 : middle_cohomology ⟶ r_one_koszul), zero := by simp }
-  right_column_identification : Nonempty (tate_next ≅ tate_next)
-  right_square_commutes : Prop
+  r_one_torsion_data : PrincipalRlimModuleData A
+    (principalTateSystemData f
+      ((derivedCohomologyFunctor A p).obj K)).system
+  r_one_koszul_data : PrincipalRlimModuleData A
+    (principalKoszulCohomologySystem f K (p - 1))
+  top_left :
+    principalUsualCompletion f ((derivedCohomologyFunctor A p).obj K) ⟶
+      limit (principalKoszulCohomologySystem f K p)
+  top_right :
+    limit (principalKoszulCohomologySystem f K p) ⟶
+      principalTateModule f ((derivedCohomologyFunctor A (p + 1)).obj K)
+  top_zero : top_left ≫ top_right = 0
+  top_exact : (CategoryTheory.ShortComplex.mk top_left top_right top_zero).ShortExact
+  middle_left :
+    (derivedCohomologyFunctor A 0).obj
+      (principalDerivedCompletion f
+        (moduleInDerived A ((derivedCohomologyFunctor A p).obj K))) ⟶
+      (derivedCohomologyFunctor A p).obj
+        (principalDerivedCompletion f K)
+  middle_right :
+    (derivedCohomologyFunctor A p).obj
+        (principalDerivedCompletion f K) ⟶
+      principalTateModule f ((derivedCohomologyFunctor A (p + 1)).obj K)
+  middle_zero : middle_left ≫ middle_right = 0
+  middle_exact :
+    (CategoryTheory.ShortComplex.mk middle_left middle_right middle_zero).ShortExact
+  left_bottom :
+    principalROneLimit _ r_one_torsion_data.hasProduct ⟶
+      (derivedCohomologyFunctor A 0).obj
+        (principalDerivedCompletion f
+          (moduleInDerived A ((derivedCohomologyFunctor A p).obj K)))
+  left_top :
+    (derivedCohomologyFunctor A 0).obj
+        (principalDerivedCompletion f
+          (moduleInDerived A ((derivedCohomologyFunctor A p).obj K))) ⟶
+      principalUsualCompletion f ((derivedCohomologyFunctor A p).obj K)
+  left_zero : left_bottom ≫ left_top = 0
+  left_exact : (CategoryTheory.ShortComplex.mk left_bottom left_top left_zero).ShortExact
+  middle_bottom :
+    principalROneLimit _ r_one_koszul_data.hasProduct ⟶
+      (derivedCohomologyFunctor A p).obj
+        (principalDerivedCompletion f K)
+  middle_top :
+    (derivedCohomologyFunctor A p).obj
+        (principalDerivedCompletion f K) ⟶
+      limit (principalKoszulCohomologySystem f K p)
+  middle_column_zero : middle_bottom ≫ middle_top = 0
+  middle_column_exact :
+    (CategoryTheory.ShortComplex.mk middle_bottom middle_top
+      middle_column_zero).ShortExact
+  bottom_identification : Nonempty
+    (principalROneLimit _ r_one_torsion_data.hasProduct ≅
+      principalROneLimit _ r_one_koszul_data.hasProduct)
+  right_vertical :
+    principalTateModule f ((derivedCohomologyFunctor A (p + 1)).obj K) ⟶
+      principalTateModule f ((derivedCohomologyFunctor A (p + 1)).obj K)
+  right_vertical_is_identity : right_vertical = 𝟙 _
+  left_square_commutes : left_top ≫ top_left = middle_left ≫ middle_top
+  right_square_commutes : middle_right ≫ right_vertical = middle_top ≫ top_right
 
 theorem principal_completion_comparison_diagram
     {A : Type u} [CommRing A] [HasDerivedCategory.{w} (Mod A)]
@@ -377,20 +575,24 @@ theorem principal_completion_comparison_diagram
     Nonempty (PrincipalCompletionComparisonDiagram A f K p) := by
   sorry
 
+def PrincipalModuleSystemHasML {A : Type u} [CommRing A]
+    (S : ℕᵒᵖ ⥤ Mod A) : Prop :=
+  (S ⋙ CategoryTheory.forget (ModuleCat A)).IsMittagLeffler
+
 def PrincipalCompletionSystemHasML {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (f : A) (K : D A) (p : ℤ) : Prop :=
-  ∀ n : ℕ, Prop
+  PrincipalModuleSystemHasML (principalKoszulCohomologySystem f K p)
 
 def PrincipalTateSystemHasML {A : Type u} [CommRing A]
     (f : A) (M : Mod A) : Prop :=
-  ∀ n : ℕ, Prop
+  PrincipalModuleSystemHasML (principalTateSystemData f M).system
 
 theorem principal_completion_ML_iff_tate_ML
     {A : Type u} [CommRing A] [HasDerivedCategory.{w} (Mod A)]
     (f : A) (K : D A) (p : ℤ) :
     PrincipalCompletionSystemHasML f K p ↔
       PrincipalTateSystemHasML f
-        ((derivedCohomologyFunctor (Mod A) (p + 1)).obj K) := by
+        ((derivedCohomologyFunctor A (p + 1)).obj K) := by
   sorry
 
 /-! ## 94.7. Bounded torsion, kernels, henselianity, and reduced rings -/
@@ -401,7 +603,7 @@ def IsAnnihilatedByIdealPower {A : Type u} [CommRing A]
 
 theorem torsion_and_derived_complete_bounded
     {A : Type u} [CommRing A] [HasDerivedCategory.{w} (Mod A)]
-    (I : Ideal A) (M : Mod A)
+    (I : Ideal A) (hI : I.FG) (M : Mod A)
     (hM : derivedCompleteModule I M)
     (hT : IsIPowerTorsion I (M : Type u)) :
     ∃ n : ℕ, IsAnnihilatedByIdealPower I n M := by
@@ -457,6 +659,7 @@ theorem ideal_power_intersection_nilpotent
 theorem reduced_derived_complete_is_adic_complete
     {A : Type u} [CommRing A] [IsReduced A]
     [HasDerivedCategory.{w} (Mod A)] (I : Ideal A)
+    (hI : I.FG)
     (hA : derivedComplete I (moduleInDerived A (ModuleCat.of A A))) :
     IsAdicComplete I A := by
   sorry

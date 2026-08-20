@@ -53,25 +53,36 @@ theorem differential_seq_smooth
 
 /- The quotient `B/J` in the source is represented by `C` through the given
    surjection.  Chapter 138's canonical surjective-extension interface then
-   exposes the sequence `I/I² → J/J² → C ⊗[B] Ω[B/A]`. -/
+   exposes the exact sequence `0 → I/I² → J/J² →
+   C ⊗[B] Ω[B/A] → 0` with its canonical differential map. -/
 theorem application_NL_smooth
     {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
     [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
     (hAC : Function.Surjective (algebraMap A C))
     [Algebra.Smooth A B] :
-    ∃ d :
-        (Formalization.Books.Algebra.Unit134.surjectiveExtension
-            (Formalization.Books.Algebra.Unit138.surjective_of_composite_algebraMap
-              (B := B) hAC)).Cotangent →ₗ[C]
-          C ⊗[B] Formalization.Books.Algebra.Unit131.ModuleOfDifferentials A B,
-      Formalization.Books.Algebra.Unit138.IsSplitExactLinearSequence
+    Function.Injective
         (Algebra.Extension.Cotangent.map
-          (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC
+          (Formalization.Books.Algebra.Unit138.surjectiveExtensionOverHom hAC
             (Formalization.Books.Algebra.Unit138.surjective_of_composite_algebraMap
-              (B := B) hAC))) d := by
+              (B := B) hAC))) ∧
+      Function.Exact
+        (Algebra.Extension.Cotangent.map
+          (Formalization.Books.Algebra.Unit138.surjectiveExtensionOverHom hAC
+            (Formalization.Books.Algebra.Unit138.surjective_of_composite_algebraMap
+              (B := B) hAC)))
+        (Formalization.Books.Algebra.Unit138.surjectiveExtensionOver
+          (A := A)
+          (Formalization.Books.Algebra.Unit138.surjective_of_composite_algebraMap
+            (B := B) hAC)).cotangentComplex ∧
+      Function.Surjective
+        (Formalization.Books.Algebra.Unit138.surjectiveExtensionOver
+          (A := A)
+          (Formalization.Books.Algebra.Unit138.surjective_of_composite_algebraMap
+            (B := B) hAC)).cotangentComplex := by
   have hformal : Algebra.FormallySmooth A B := inferInstance
-  exact Formalization.Books.Algebra.Unit138.application_NL_formallySmooth
+  have h := Formalization.Books.Algebra.Unit138.application_NL_formallySmooth_canonical
     (A := A) (B := B) (C := C) hAC hformal
+  exact ⟨h.1, h.2.1, h.2.2.1⟩
 
 /-! ## A smooth retraction and its conormal module -/
 

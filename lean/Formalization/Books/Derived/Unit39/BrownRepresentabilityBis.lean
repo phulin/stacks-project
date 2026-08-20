@@ -98,7 +98,7 @@ theorem exact_right_adjoint_of_brown_representability
     [Pretriangulated D'] [CategoryTheory.IsTriangulated D']
     (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
     (hF : ∀ I : Type v, PreservesColimitsOfShape (Discrete I) F)
-    (𝓔 : Set D) (h𝓔 : BrownGeneratorConditions 𝓔) :
+    (h𝓔 : ∃ 𝓔 : Set D, BrownGeneratorConditions 𝓔) :
     Formalization.Books.Derived.Unit38.HasExactRightAdjoint F := by
   sorry
 

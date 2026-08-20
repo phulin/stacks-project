@@ -6,6 +6,7 @@ import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.LinearAlgebra.Dual.Basis
 import Mathlib.LinearAlgebra.StdBasis
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.Quotient.Pi
 import Mathlib.RingTheory.TensorProduct.Free
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.Finiteness.Basic
@@ -30,6 +31,7 @@ open Formalization.Books.Algebra.Unit37
 open Formalization.Books.Algebra.Unit63
 open Formalization.Books.Algebra.Unit72
 open Formalization.Books.Algebra.Unit157
+open scoped Pointwise
 open scoped TensorProduct
 
 universe u v w
@@ -1067,6 +1069,164 @@ theorem reflexiveHullFactor_unique
 
 /-! ## Hom modules, depth, and Serre conditions -/
 
+private theorem exists_regular_sequence_two_of_depth
+    {R N : Type*} [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R]
+    [AddCommGroup N] [Module R N] [Module.Finite R N] [Nontrivial N]
+    (hN : 2 ≤ localDepth R N) :
+    ∃ a b : R, a ∈ IsLocalRing.maximalIdeal R ∧
+      b ∈ IsLocalRing.maximalIdeal R ∧ IsSMulRegular N a ∧
+        IsSMulRegular (QuotSMulTop a N) b := by
+  have hmax : IsLocalRing.maximalIdeal R • (⊤ : Submodule R N) ≠ ⊤ :=
+    smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) N
+      (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+  have hdepthtop : localDepth R N < ⊤ :=
+    depth_lt_top_of_noetherian (IsLocalRing.maximalIdeal R) N hmax
+  have hdepth_mem : localDepth R N ∈ {n : ℕ∞ | ∃ rs : List R,
+      n = (rs.length : ℕ∞) ∧
+        (∀ r ∈ rs, r ∈ IsLocalRing.maximalIdeal R) ∧
+          RingTheory.Sequence.IsRegular N rs} := by
+    let _ : Nonempty {n : ℕ∞ | ∃ rs : List R,
+        n = (rs.length : ℕ∞) ∧
+          (∀ r ∈ rs, r ∈ IsLocalRing.maximalIdeal R) ∧
+            RingTheory.Sequence.IsRegular N rs} :=
+      ⟨⟨0, ⟨[], by simp, by simp,
+        RingTheory.Sequence.IsRegular.nil R N⟩⟩⟩
+    unfold localDepth depth
+    rw [dif_neg hmax]
+    apply ENat.sSup_mem_of_nonempty_of_lt_top
+    simpa [localDepth, depth, hmax] using hdepthtop
+  obtain ⟨rs, hlen, hmem, hreg⟩ := hdepth_mem
+  have hlen_ge : 2 ≤ rs.length := by
+    have hle : (2 : ℕ∞) ≤ (rs.length : ℕ∞) := by
+      simpa [hlen] using hN
+    exact_mod_cast hle
+  cases rs with
+  | nil => simp at hlen_ge
+  | cons a rs =>
+      cases rs with
+      | nil => simp at hlen_ge
+      | cons b rs =>
+          have hparts :=
+            (RingTheory.Sequence.isRegular_cons_iff N a (b :: rs)).mp hreg
+          have hparts' :=
+            (RingTheory.Sequence.isRegular_cons_iff
+              (QuotSMulTop a N) b rs).mp hparts.2
+          exact ⟨a, b, hmem a (by simp), hmem b (by simp),
+            hparts.1, hparts'.1⟩
+
+private theorem isSMulRegular_quotSMulTop_pi
+    {R N ι : Type*} [CommRing R]
+    [AddCommGroup N] [Module R N] [Fintype ι] [DecidableEq ι]
+    {a b : R} (hb : IsSMulRegular (QuotSMulTop a N) b) :
+    IsSMulRegular (QuotSMulTop a (ι → N)) b := by
+  classical
+  let P : ι → Submodule R N := fun _ => a • (⊤ : Submodule R N)
+  let Ppi : Submodule R (ι → N) := Submodule.pi Set.univ P
+  have hP : Ppi =
+      a • (⊤ : Submodule R (ι → N)) := by
+    change Submodule.pi Set.univ
+        (fun _ : ι => a • (⊤ : Submodule R N)) = _
+    ext x
+    constructor
+    · intro hx
+      rw [Submodule.mem_pi] at hx
+      apply (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+      choose y hy hxy using fun i =>
+        (Submodule.mem_smul_pointwise_iff_exists (x i) a
+          (⊤ : Submodule R N)).mp (by
+            simpa using hx i (Set.mem_univ i))
+      refine ⟨y, Submodule.mem_top, ?_⟩
+      funext i
+      exact hxy i
+    · intro hx
+      rcases (Submodule.mem_smul_pointwise_iff_exists _ _ _).mp hx with
+        ⟨y, hy, hxy⟩
+      rw [Submodule.mem_pi]
+      intro i hi
+      apply (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+      exact ⟨y i, Submodule.mem_top, congrFun hxy i⟩
+  let e₁ : QuotSMulTop a (ι → N) ≃ₗ[R]
+      (ι → N) ⧸ Ppi :=
+    Submodule.quotEquivOfEq _ _ hP.symm
+  let e₂ : ((ι → N) ⧸ Ppi) ≃ₗ[R]
+      (∀ i, (N ⧸ P i)) :=
+    Submodule.quotientPi P
+  have hb' : IsSMulRegular
+      (∀ i, N ⧸ P i) b := by
+    simpa [P] using (IsSMulRegular.pi (fun _ : ι => hb))
+  exact ((e₁.trans e₂).isSMulRegular_congr b).mpr hb'
+
+private noncomputable def hom_fin_pi_equiv
+    {R N : Type*} [CommRing R] [AddCommGroup N] [Module R N]
+    (n : ℕ) : ((Fin n → R) →ₗ[R] N) ≃ₗ[R] (Fin n → N) := by
+  let eSum : (Fin n → (R →ₗ[R] N)) ≃ₗ[R]
+      ((Fin n →₀ R) →ₗ[R] N) := Finsupp.lsum R
+  let eDom : (Fin n →₀ R) ≃ₗ[R] (Fin n → R) :=
+    Finsupp.linearEquivFunOnFinite R R (Fin n)
+  let eCoord : (Fin n → (R →ₗ[R] N)) ≃ₗ[R] (Fin n → N) :=
+    LinearEquiv.piCongrRight (fun _ => LinearMap.ringLmapEquivSelf R R N)
+  exact ((eDom.arrowCongr (LinearEquiv.refl R N)).symm.trans eSum.symm).trans eCoord
+
+private theorem isSMulRegular_hom_fin_pi
+    {R N : Type*} [CommRing R] [AddCommGroup N] [Module R N]
+    {a : R} (n : ℕ) (hN : IsSMulRegular N a) :
+    IsSMulRegular ((Fin n → R) →ₗ[R] N) a := by
+  exact ((hom_fin_pi_equiv n).isSMulRegular_congr a).mpr
+    (IsSMulRegular.pi (fun _ => hN))
+
+private theorem isSMulRegular_quotSMulTop_hom_fin_pi
+    {R N : Type*} [CommRing R] [AddCommGroup N] [Module R N]
+    {a b : R} (n : ℕ) (hN : IsSMulRegular (QuotSMulTop a N) b) :
+    IsSMulRegular (QuotSMulTop a ((Fin n → R) →ₗ[R] N)) b := by
+    exact ((QuotSMulTop.congr (r := a)
+      (hom_fin_pi_equiv (R := R) (N := N) n)).isSMulRegular_congr b).mpr
+      (isSMulRegular_quotSMulTop_pi hN)
+
+private theorem quotSMulTop_map_injective_of_exact
+    {R M₁ M₂ M₃ : Type*} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M₂] [AddCommGroup M₃]
+    [Module R M₁] [Module R M₂] [Module R M₃]
+    (f : M₁ →ₗ[R] M₂) (g : M₂ →ₗ[R] M₃)
+    (hf : Function.Injective f) (hfg : Function.Exact f g)
+    (hg : Function.Surjective g) (r : R) (hr : IsSMulRegular M₃ r) :
+    Function.Injective (QuotSMulTop.map r f) := by
+  intro x
+  induction x using Submodule.Quotient.induction_on with
+  | _ x =>
+      intro y hxy
+      induction y using Submodule.Quotient.induction_on with
+      | _ y =>
+          have hzero :
+              (Submodule.Quotient.mk (f x - f y) : QuotSMulTop r M₂) = 0 := by
+            rw [Submodule.Quotient.mk_sub]
+            simpa only [QuotSMulTop.map_apply_mk] using sub_eq_zero.mpr hxy
+          have hmem : f x - f y ∈ r • (⊤ : Submodule R M₂) :=
+            (Submodule.Quotient.mk_eq_zero _).mp hzero
+          obtain ⟨z, _, hz⟩ :=
+            (Submodule.mem_smul_pointwise_iff_exists (f x - f y) r
+              (⊤ : Submodule R M₂)).mp hmem
+          have hz' : r • z = f (x - y) := by
+            rw [f.map_sub]
+            exact hz
+          have hgz0 : r • g z = 0 := by
+            rw [← g.map_smul, hz']
+            exact (hfg (f (x - y))).mpr ⟨x - y, rfl⟩
+          have hgz : g z = 0 := by
+            apply hr
+            simpa only [smul_zero] using hgz0
+          obtain ⟨w, hw⟩ := (hfg z).mp hgz
+          have hxy' : x - y = r • w := by
+            apply hf
+            rw [f.map_sub, f.map_smul, hw]
+            exact (f.map_sub x y).symm.trans hz'.symm
+          apply sub_eq_zero.mp
+          rw [← Submodule.Quotient.mk_sub,
+            Submodule.Quotient.mk_eq_zero]
+          rw [hxy']
+          exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).2
+            ⟨w, Submodule.mem_top, rfl⟩
+
 /-- Hom into a module of depth at least one has depth at least one. -/
 theorem hom_depth_ge_one
     {R M N : Type*} [CommRing R] [IsLocalRing R]
@@ -1115,16 +1275,500 @@ theorem hom_depth_ge_two
     [AddCommGroup N] [Module R N] [Module.Finite R N]
     (hN : 2 ≤ localDepth R N) :
     2 ≤ localDepth R (M →ₗ[R] N) := by
-  sorry
+  by_cases hNsub : Subsingleton N
+  · let _ : Subsingleton N := hNsub
+    let _ : Subsingleton (M →ₗ[R] N) := by
+      constructor
+      intro f g
+      apply LinearMap.ext
+      intro x
+      exact Subsingleton.elim _ _
+    have htop : localDepth R (M →ₗ[R] N) = ⊤ := by
+      exact depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R)
+        (M →ₗ[R] N)
+    rw [htop]
+    exact le_top
+  · let _ : Nontrivial N := not_subsingleton_iff_nontrivial.mp hNsub
+    let _ : Module.FinitePresentation R M := finitePresentation_of_finite R M
+    obtain ⟨n, m, p, q, hp, hpq⟩ :=
+      Module.FinitePresentation.exists_fin' R M
+    let H := M →ₗ[R] N
+    let V := (Fin n → R) →ₗ[R] N
+    let W := (Fin m → R) →ₗ[R] N
+    let i : H →ₗ[R] V :=
+      { toFun := fun f => f.comp p
+        map_add' := by intro f g; rfl
+        map_smul' := by intro r f; rfl }
+    let j : V →ₗ[R] W :=
+      { toFun := fun f => f.comp q
+        map_add' := by intro f g; rfl
+        map_smul' := by intro r f; rfl }
+    have hi : Function.Injective i := by
+      intro f g hfg
+      apply LinearMap.ext
+      intro x
+      obtain ⟨y, hy⟩ := hp x
+      have h := congrArg (fun k : V => k y) hfg
+      change f (p y) = g (p y) at h
+      simpa [hy] using h
+    have hqp : p.comp q = 0 := hpq.linearMap_comp_eq_zero
+    have hij : Function.Exact (i : H → V) (j : V → W) := by
+      apply LinearMap.exact_iff.mpr
+      apply le_antisymm
+      · intro f hf
+        have hfj : f.comp q = 0 := by
+          simpa [j] using hf
+        have hker : LinearMap.ker p ≤ LinearMap.ker f := by
+          intro x hx
+          have hx' : x ∈ LinearMap.range q := by
+            rw [← LinearMap.exact_iff.mp hpq]
+            exact hx
+          obtain ⟨y, hy⟩ := hx'
+          rw [← hy]
+          change f (q y) = 0
+          rw [← LinearMap.comp_apply, hfj, LinearMap.zero_apply]
+        let l := (LinearMap.ker p).liftQ f hker
+        let e := p.quotKerEquivOfSurjective hp
+        let a := l.comp e.symm.toLinearMap
+        have hcomp : a.comp p = f := by
+          apply LinearMap.ext
+          intro x
+          change l (e.symm (p x)) = f x
+          rw [LinearMap.quotKerEquivOfSurjective_symm_apply]
+          exact congrArg (fun k : V => k x)
+            ((LinearMap.ker p).liftQ_mkQ f hker)
+        exact ⟨a, hcomp⟩
+      · rintro _ ⟨a, rfl⟩
+        apply LinearMap.mem_ker.mpr
+        apply LinearMap.ext
+        intro y
+        change a (p (q y)) = 0
+        have hzero : p (q y) = 0 := by
+          change (p.comp q) y = 0
+          rw [hqp, LinearMap.zero_apply]
+        rw [hzero, map_zero]
+    let k : V →ₗ[R] LinearMap.range j := j.rangeRestrict
+    have hk : Function.Surjective k := by
+      intro z
+      rcases z.property with ⟨v, hv⟩
+      exact ⟨v, Subtype.ext hv⟩
+    have hik : Function.Exact (i : H → V) k := by
+      apply LinearMap.exact_iff.mpr
+      apply le_antisymm
+      · intro v hv
+        have hvj : j v = 0 := by
+          exact congrArg Subtype.val (LinearMap.mem_ker.mp hv)
+        have hvker : v ∈ LinearMap.ker j := LinearMap.mem_ker.mpr hvj
+        rw [LinearMap.exact_iff.mp hij] at hvker
+        exact hvker
+      · rintro _ ⟨f, rfl⟩
+        apply LinearMap.mem_ker.mpr
+        apply Subtype.ext
+        change j (i f) = 0
+        apply LinearMap.ext
+        intro y
+        change f (p (q y)) = 0
+        have hzero : p (q y) = 0 := by
+          change (p.comp q) y = 0
+          rw [hqp, LinearMap.zero_apply]
+        rw [hzero, map_zero]
+    obtain ⟨a, b, ha, hb, hregN, hregQ⟩ :=
+      exists_regular_sequence_two_of_depth (R := R) (N := N) hN
+    have hHsub : Subsingleton H → 2 ≤ localDepth R H := by
+      intro hsub
+      let _ : Subsingleton H := hsub
+      change 2 ≤ depth (IsLocalRing.maximalIdeal R) H
+      rw [depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) H]
+      exact le_top
+    by_cases hH : Subsingleton H
+    · exact hHsub hH
+    · let _ : Nontrivial H := not_subsingleton_iff_nontrivial.mp hH
+      have hVnon : Nontrivial V := by
+        by_contra hVnon
+        have hVsub : Subsingleton V :=
+          not_nontrivial_iff_subsingleton.mp hVnon
+        apply hH
+        constructor
+        intro f g
+        apply hi
+        exact Subsingleton.elim _ _
+      let _ : Nontrivial V := hVnon
+      let _ : Nontrivial (QuotSMulTop a V) :=
+        nontrivial_quotSMulTop_of_mem_maximalIdeal V ha
+      let _ : Nontrivial (QuotSMulTop b (QuotSMulTop a V)) :=
+        nontrivial_quotSMulTop_of_mem_maximalIdeal (QuotSMulTop a V) hb
+      have hregV : RingTheory.Sequence.IsRegular V [a, b] := by
+        exact RingTheory.Sequence.IsRegular.cons
+          (isSMulRegular_hom_fin_pi n hregN)
+          (RingTheory.Sequence.IsRegular.cons
+          (isSMulRegular_quotSMulTop_hom_fin_pi n hregQ)
+            (RingTheory.Sequence.IsRegular.nil R
+              (QuotSMulTop b (QuotSMulTop a V))))
+      have hVdepth : 2 ≤ localDepth R V := by
+        have hmaxV : IsLocalRing.maximalIdeal R • (⊤ : Submodule R V) ≠ ⊤ :=
+          smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) V
+            (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+        unfold localDepth depth
+        rw [dif_neg hmaxV]
+        apply le_sSup
+        exact ⟨[a, b], by simp, by
+          intro r hr
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+          rcases hr with rfl | rfl
+          · exact ha
+          · exact hb, hregV⟩
+      by_cases hK : Subsingleton (LinearMap.range j)
+      · let _ : Subsingleton (LinearMap.range j) := hK
+        have hi_surj : Function.Surjective i := by
+          intro v
+          have hvj : j v = 0 := by
+            have : k v = 0 := Subsingleton.elim _ _
+            exact congrArg Subtype.val this
+          have hvker : v ∈ LinearMap.ker j := LinearMap.mem_ker.mpr hvj
+          rw [LinearMap.exact_iff.mp hij] at hvker
+          exact hvker
+        let e : H ≃ₗ[R] V := LinearEquiv.ofBijective i ⟨hi, hi_surj⟩
+        have hregH : RingTheory.Sequence.IsRegular H [a, b] :=
+          (e.isRegular_congr [a, b]).mpr hregV
+        have hmaxH : IsLocalRing.maximalIdeal R • (⊤ : Submodule R H) ≠ ⊤ :=
+          smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) H
+            (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+        unfold localDepth depth
+        rw [dif_neg hmaxH]
+        exact le_sSup ⟨[a, b], by simp, by
+          intro r hr
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+          rcases hr with rfl | rfl
+          · exact ha
+          · exact hb, hregH⟩
+      · let _ : Nontrivial (LinearMap.range j) :=
+          not_subsingleton_iff_nontrivial.mp hK
+        let _ : Nontrivial (QuotSMulTop a (LinearMap.range j)) :=
+          nontrivial_quotSMulTop_of_mem_maximalIdeal (LinearMap.range j) ha
+        have hregK : IsSMulRegular (LinearMap.range j) a :=
+          IsSMulRegular.submodule _ a (isSMulRegular_hom_fin_pi m hregN)
+        have hKdepth : 1 ≤ localDepth R (LinearMap.range j) := by
+          have hmaxK : IsLocalRing.maximalIdeal R •
+              (⊤ : Submodule R (LinearMap.range j)) ≠ ⊤ :=
+            smul_top_ne_top_of_le_ring_jacobson
+              (IsLocalRing.maximalIdeal R) (LinearMap.range j)
+              (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+          unfold localDepth depth
+          rw [dif_neg hmaxK]
+          exact le_sSup ⟨[a], by simp, by
+            intro r hr
+            simpa only [List.mem_singleton.mp hr] using ha,
+            RingTheory.Sequence.IsRegular.cons hregK
+              (RingTheory.Sequence.IsRegular.nil R (QuotSMulTop a
+                (LinearMap.range j)))⟩
+        have hregVa : IsSMulRegular V a :=
+          (RingTheory.Sequence.isRegular_cons_iff V a [b]).mp hregV |>.1
+        have hregVb : IsSMulRegular (QuotSMulTop a V) b :=
+          ((RingTheory.Sequence.isRegular_cons_iff
+            (QuotSMulTop a V) b []).mp
+            ((RingTheory.Sequence.isRegular_cons_iff V a [b]).mp hregV).2).1
+        have hregHa : IsSMulRegular H a :=
+          IsSMulRegular.of_injective i hi hregVa
+        have hmap : Function.Injective (QuotSMulTop.map a i) :=
+          quotSMulTop_map_injective_of_exact i k hi hik hk a hregK
+        have hregHb : IsSMulRegular (QuotSMulTop a H) b :=
+          IsSMulRegular.of_injective (QuotSMulTop.map a i) hmap hregVb
+        let _ : Nontrivial (QuotSMulTop a H) :=
+          nontrivial_quotSMulTop_of_mem_maximalIdeal H ha
+        have hmaxQa : IsLocalRing.maximalIdeal R •
+            (⊤ : Submodule R (QuotSMulTop a H)) ≠ ⊤ :=
+          smul_top_ne_top_of_le_ring_jacobson
+            (IsLocalRing.maximalIdeal R) (QuotSMulTop a H)
+            (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+        have hspan : Ideal.span ({b} : Set R) ≤ IsLocalRing.maximalIdeal R :=
+          (Ideal.span_singleton_le_iff_mem
+            (I := IsLocalRing.maximalIdeal R)).mpr hb
+        have hquot : b • (⊤ : Submodule R (QuotSMulTop a H)) ≠ ⊤ := by
+          intro htop
+          apply hmaxQa
+          apply top_unique
+          calc
+            (⊤ : Submodule R (QuotSMulTop a H)) =
+                b • (⊤ : Submodule R (QuotSMulTop a H)) := htop.symm
+            _ = Ideal.span ({b} : Set R) •
+                (⊤ : Submodule R (QuotSMulTop a H)) := by
+              rw [Submodule.ideal_span_singleton_smul]
+            _ ≤ IsLocalRing.maximalIdeal R •
+                (⊤ : Submodule R (QuotSMulTop a H)) :=
+              Submodule.smul_mono_left hspan
+        let _ : Nontrivial (QuotSMulTop b (QuotSMulTop a H)) :=
+          Submodule.Quotient.nontrivial_iff.mpr hquot
+        have hregH : RingTheory.Sequence.IsRegular H [a, b] :=
+          RingTheory.Sequence.IsRegular.cons hregHa
+            (RingTheory.Sequence.IsRegular.cons hregHb
+              (RingTheory.Sequence.IsRegular.nil R
+                (QuotSMulTop b (QuotSMulTop a H))))
+        have hmaxH : IsLocalRing.maximalIdeal R • (⊤ : Submodule R H) ≠ ⊤ :=
+          smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) H
+            (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+        unfold localDepth depth
+        rw [dif_neg hmaxH]
+        exact le_sSup ⟨[a, b], by simp, by
+          intro r hr
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+          rcases hr with rfl | rfl
+          · exact ha
+          · exact hb, hregH⟩
 
 /-- Hom preserves the module `(S_1)` and `(S_2)` conditions. -/
+private theorem supportDim_pi_le
+    {R N ι : Type*} [CommRing R]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    [Fintype ι] :
+    Module.supportDim R (ι → N) ≤ Module.supportDim R N := by
+  classical
+  cases isEmpty_or_nonempty ι with
+  | inl hι =>
+      letI : IsEmpty ι := hι
+      letI : Subsingleton (ι → N) :=
+        ⟨fun f g => funext fun i => isEmptyElim i⟩
+      rw [Module.supportDim_eq_bot_of_subsingleton]
+      exact bot_le
+  | inr hι =>
+      letI : Nonempty ι := hι
+      have hAnn : Module.annihilator R (ι → N) = Module.annihilator R N := by
+        rw [Module.annihilator_pi]
+        simp
+      rw [Module.supportDim_eq_ringKrullDim_quotient_annihilator,
+        Module.supportDim_eq_ringKrullDim_quotient_annihilator, hAnn]
+
+private theorem supportDim_hom_le
+    {R M N : Type*} [CommRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N] :
+    Module.supportDim R (M →ₗ[R] N) ≤ Module.supportDim R N := by
+  let _ : Module.FinitePresentation R M := finitePresentation_of_finite R M
+  obtain ⟨n, m, p, q, hp, hpq⟩ :=
+    Module.FinitePresentation.exists_fin' R M
+  let i : (M →ₗ[R] N) →ₗ[R] ((Fin n → R) →ₗ[R] N) :=
+    { toFun := fun f => f.comp p
+      map_add' := by intro f g; ext x; simp
+      map_smul' := by intro r f; ext x; simp }
+  have hi : Function.Injective i := by
+    intro f g hfg
+    apply LinearMap.ext
+    intro x
+    obtain ⟨y, hy⟩ := hp x
+    have h := congrArg (fun k : (Fin n → R) →ₗ[R] N => k y) hfg
+    simpa [i, hy] using h
+  let eSum : (Fin n → (R →ₗ[R] N)) ≃ₗ[R]
+      ((Fin n →₀ R) →ₗ[R] N) := Finsupp.lsum R
+  let eDom : (Fin n →₀ R) ≃ₗ[R] (Fin n → R) :=
+    Finsupp.linearEquivFunOnFinite R R (Fin n)
+  let eCoord : (Fin n → (R →ₗ[R] N)) ≃ₗ[R] (Fin n → N) :=
+    LinearEquiv.piCongrRight (fun _ => LinearMap.ringLmapEquivSelf R R N)
+  let e : ((Fin n → R) →ₗ[R] N) ≃ₗ[R] (Fin n → N) :=
+    ((eDom.arrowCongr (LinearEquiv.refl R N)).symm.trans eSum.symm).trans eCoord
+  calc
+    Module.supportDim R (M →ₗ[R] N) ≤
+        Module.supportDim R ((Fin n → R) →ₗ[R] N) :=
+      Module.supportDim_le_of_injective i hi
+    _ = Module.supportDim R (Fin n → N) := Module.supportDim_eq_of_equiv e
+    _ ≤ Module.supportDim R N := supportDim_pi_le
+
+private theorem one_le_of_ne_bot_of_ne_zero
+    {x : WithBot ℕ∞} (hbot : x ≠ ⊥) (hzero : x ≠ 0) :
+    (1 : WithBot ℕ∞) ≤ x := by
+  cases x with
+  | bot => exact (hbot rfl).elim
+  | coe d =>
+      apply WithBot.coe_le_coe.mpr
+      exact ENat.one_le_iff_ne_zero.mpr (by
+        intro hd
+        apply hzero
+        simp [hd])
+
+private theorem le_one_of_not_two_le
+    {x : WithBot ℕ∞} (h : ¬ (2 : WithBot ℕ∞) ≤ x) :
+    x ≤ 1 := by
+  cases x with
+  | bot => exact bot_le
+  | coe d =>
+      apply WithBot.coe_le_coe.mpr
+      have hdlt : d < (2 : ℕ∞) :=
+        WithBot.coe_lt_coe.mp (lt_of_not_ge h)
+      exact (ENat.lt_add_one_iff (ENat.natCast_ne_top 1)).mp
+        (by convert hdlt using 1 <;> norm_num)
+
+private theorem hom_local_hasPropertySk_one
+    {R M N : Type*} [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    (hN : min ((1 : ℕ∞) : WithBot ℕ∞) (Module.supportDim R N) ≤
+      ((localDepth R N : ℕ∞) : WithBot ℕ∞)) :
+    min ((1 : ℕ∞) : WithBot ℕ∞) (Module.supportDim R (M →ₗ[R] N)) ≤
+      ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by
+  have hdim := supportDim_hom_le (R := R) (M := M) (N := N)
+  by_cases hbot : Module.supportDim R N = ⊥
+  · have hHbot : Module.supportDim R (M →ₗ[R] N) = ⊥ :=
+      bot_unique (by simpa [hbot] using hdim)
+    rw [hHbot]
+    exact bot_le
+  by_cases hzero : Module.supportDim R N = 0
+  · calc
+      min ((1 : ℕ∞) : WithBot ℕ∞)
+          (Module.supportDim R (M →ₗ[R] N)) ≤
+          Module.supportDim R (M →ₗ[R] N) := min_le_right _ _
+      _ ≤ 0 := hdim.trans_eq hzero
+      _ ≤ ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by simp
+  · have hone : (1 : WithBot ℕ∞) ≤ Module.supportDim R N :=
+      one_le_of_ne_bot_of_ne_zero hbot hzero
+    have hdepthN' : (1 : WithBot ℕ∞) ≤
+        ((localDepth R N : ℕ∞) : WithBot ℕ∞) := by
+      simpa [min_eq_left hone] using hN
+    have hdepthN : 1 ≤ localDepth R N := WithBot.coe_le_coe.mp hdepthN'
+    have hdepthH := hom_depth_ge_one (R := R) (M := M) (N := N) hdepthN
+    have hdepthH' : (1 : WithBot ℕ∞) ≤
+        ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by
+      exact WithBot.coe_le_coe.mpr hdepthH
+    exact (min_le_left _ _).trans hdepthH'
+
+private theorem hom_local_hasPropertySk_two
+    {R M N : Type*} [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    (hN : min ((2 : ℕ∞) : WithBot ℕ∞) (Module.supportDim R N) ≤
+      ((localDepth R N : ℕ∞) : WithBot ℕ∞)) :
+    min ((2 : ℕ∞) : WithBot ℕ∞) (Module.supportDim R (M →ₗ[R] N)) ≤
+      ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by
+  have hdim := supportDim_hom_le (R := R) (M := M) (N := N)
+  by_cases hbot : Module.supportDim R N = ⊥
+  · have hHbot : Module.supportDim R (M →ₗ[R] N) = ⊥ :=
+      bot_unique (by simpa [hbot] using hdim)
+    rw [hHbot]
+    exact bot_le
+  by_cases hzero : Module.supportDim R N = 0
+  · calc
+      min ((2 : ℕ∞) : WithBot ℕ∞)
+          (Module.supportDim R (M →ₗ[R] N)) ≤
+          Module.supportDim R (M →ₗ[R] N) := min_le_right _ _
+      _ ≤ 0 := hdim.trans_eq hzero
+      _ ≤ ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by simp
+  · have hone : (1 : WithBot ℕ∞) ≤ Module.supportDim R N :=
+      one_le_of_ne_bot_of_ne_zero hbot hzero
+    by_cases htwo : (2 : WithBot ℕ∞) ≤ Module.supportDim R N
+    · have hdepthN' : (2 : WithBot ℕ∞) ≤
+          ((localDepth R N : ℕ∞) : WithBot ℕ∞) := by
+        simpa [min_eq_left htwo] using hN
+      have hdepthN : 2 ≤ localDepth R N := WithBot.coe_le_coe.mp hdepthN'
+      have hdepthH := hom_depth_ge_two (R := R) (M := M) (N := N) hdepthN
+      have hdepthH' : (2 : WithBot ℕ∞) ≤
+          ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by
+        exact WithBot.coe_le_coe.mpr hdepthH
+      exact (min_le_left _ _).trans hdepthH'
+    · have hNle : Module.supportDim R N ≤ 1 := le_one_of_not_two_le htwo
+      have hHle : Module.supportDim R (M →ₗ[R] N) ≤ 1 := hdim.trans hNle
+      have hsupport_eq_one : Module.supportDim R N = 1 :=
+        le_antisymm hNle hone
+      have hdepthN' : (1 : WithBot ℕ∞) ≤
+          ((localDepth R N : ℕ∞) : WithBot ℕ∞) := by
+        simpa [hsupport_eq_one] using hN
+      have hdepthN : 1 ≤ localDepth R N := WithBot.coe_le_coe.mp hdepthN'
+      have hdepthH := hom_depth_ge_one (R := R) (M := M) (N := N) hdepthN
+      have hdepthH' : (1 : WithBot ℕ∞) ≤
+          ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := by
+        exact WithBot.coe_le_coe.mpr hdepthH
+      calc
+        min ((2 : ℕ∞) : WithBot ℕ∞)
+            (Module.supportDim R (M →ₗ[R] N)) ≤
+            Module.supportDim R (M →ₗ[R] N) := min_le_right _ _
+        _ ≤ 1 := hHle
+        _ ≤ ((localDepth R (M →ₗ[R] N) : ℕ∞) : WithBot ℕ∞) := hdepthH'
+
+private theorem localDepth_eq_of_linearEquiv
+    {R : Type u} {M : Type v} {N : Type w}
+    [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    (e : M ≃ₗ[R] N) :
+    localDepth R M = localDepth R N := by
+  unfold localDepth
+  rw [depth_eq_sSup_weaklyRegular, depth_eq_sSup_weaklyRegular]
+  congr 1
+  ext n
+  constructor
+  · rintro ⟨rs, rfl, hmem, hreg⟩
+    refine ⟨rs, rfl, hmem, ?_⟩
+    exact (e.toAddEquiv.isWeaklyRegular_congr
+      (List.forall₂_same.mpr fun r _ x => e.map_smul r x)).mp hreg
+  · rintro ⟨rs, rfl, hmem, hreg⟩
+    refine ⟨rs, rfl, hmem, ?_⟩
+    exact (e.symm.toAddEquiv.isWeaklyRegular_congr
+      (List.forall₂_same.mpr fun r _ x => e.symm.map_smul r x)).mp hreg
+
 theorem hom_hasPropertySkModule
     {R M N : Type*} [CommRing R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     [AddCommGroup N] [Module R N] [Module.Finite R N] :
     (HasPropertySkModule R N 1 → HasPropertySkModule R (M →ₗ[R] N) 1) ∧
       (HasPropertySkModule R N 2 → HasPropertySkModule R (M →ₗ[R] N) 2) := by
-  sorry
+  let _ : Module.FinitePresentation R M := finitePresentation_of_finite R M
+  constructor
+  · intro hN
+    unfold HasPropertySkModule at hN ⊢
+    intro p
+    let S := p.asIdeal.primeCompl
+    let A := Localization S
+    have hN' : min ((1 : ℕ∞) : WithBot ℕ∞)
+        (Module.supportDim A (LocalizedModule S N)) ≤
+        ((localDepth A (LocalizedModule S N) : ℕ∞) : WithBot ℕ∞) := by
+      simpa [S, A] using hN p
+    let e : LocalizedModule S (M →ₗ[R] N) ≃ₗ[A]
+        (LocalizedModule S M →ₗ[A] LocalizedModule S N) :=
+      (Module.FinitePresentation.linearEquivMapExtendScalars
+        (M := M) (N := N) S).extendScalarsOfIsLocalization S A
+    have heq : Module.supportDim A (LocalizedModule S (M →ₗ[R] N)) =
+        Module.supportDim A
+          (LocalizedModule S M →ₗ[A] LocalizedModule S N) :=
+      Module.supportDim_eq_of_equiv e
+    have hdepth_eq :
+        localDepth A (LocalizedModule S (M →ₗ[R] N)) =
+          localDepth A
+            (LocalizedModule S M →ₗ[A] LocalizedModule S N) :=
+      localDepth_eq_of_linearEquiv e
+    change min ((1 : ℕ∞) : WithBot ℕ∞)
+        (Module.supportDim A (LocalizedModule S (M →ₗ[R] N))) ≤
+      ((localDepth A (LocalizedModule S (M →ₗ[R] N)) : ℕ∞) : WithBot ℕ∞)
+    rw [heq]
+    rw [hdepth_eq]
+    exact hom_local_hasPropertySk_one (R := A)
+      (M := LocalizedModule S M) (N := LocalizedModule S N) hN'
+  · intro hN
+    unfold HasPropertySkModule at hN ⊢
+    intro p
+    let S := p.asIdeal.primeCompl
+    let A := Localization S
+    have hN' : min ((2 : ℕ∞) : WithBot ℕ∞)
+        (Module.supportDim A (LocalizedModule S N)) ≤
+        ((localDepth A (LocalizedModule S N) : ℕ∞) : WithBot ℕ∞) := by
+      simpa [S, A] using hN p
+    let e : LocalizedModule S (M →ₗ[R] N) ≃ₗ[A]
+        (LocalizedModule S M →ₗ[A] LocalizedModule S N) :=
+      (Module.FinitePresentation.linearEquivMapExtendScalars
+        (M := M) (N := N) S).extendScalarsOfIsLocalization S A
+    have heq : Module.supportDim A (LocalizedModule S (M →ₗ[R] N)) =
+        Module.supportDim A
+          (LocalizedModule S M →ₗ[A] LocalizedModule S N) :=
+      Module.supportDim_eq_of_equiv e
+    have hdepth_eq :
+        localDepth A (LocalizedModule S (M →ₗ[R] N)) =
+          localDepth A
+            (LocalizedModule S M →ₗ[A] LocalizedModule S N) :=
+      localDepth_eq_of_linearEquiv e
+    change min ((2 : ℕ∞) : WithBot ℕ∞)
+        (Module.supportDim A (LocalizedModule S (M →ₗ[R] N))) ≤
+      ((localDepth A (LocalizedModule S (M →ₗ[R] N)) : ℕ∞) : WithBot ℕ∞)
+    rw [heq]
+    rw [hdepth_eq]
+    exact hom_local_hasPropertySk_two (R := A)
+      (M := LocalizedModule S M) (N := LocalizedModule S N) hN'
 
 /-- Over a domain, Hom into a torsion-free `(S_2)` module is torsion-free and
 `(S_2)`. -/
@@ -1136,7 +1780,13 @@ theorem hom_torsionFree_hasPropertySkModule
     (hN₂ : HasPropertySkModule R N 2) :
     Module.IsTorsionFree R (M →ₗ[R] N) ∧
       HasPropertySkModule R (M →ₗ[R] N) 2 := by
-  sorry
+  refine ⟨?_, (hom_hasPropertySkModule (R := R) (M := M) (N := N)).2 hN₂⟩
+  constructor
+  intro r hr f g hfg
+  apply LinearMap.ext
+  intro x
+  apply hN₁.isSMulRegular hr
+  simpa using congrArg (fun k : M →ₗ[R] N => k x) hfg
 
 /-! ## Associated-prime tests for maps -/
 
@@ -1151,7 +1801,57 @@ theorem injective_of_localized_injective_or_not_associated
           (LocalizedModule.map p.asIdeal.primeCompl φ) ∨
         p ∉ Formalization.Books.Algebra.Unit63.associatedPrimes R M) :
     Function.Injective φ := by
-  sorry
+  have hker_subsingleton : Subsingleton (LinearMap.ker φ) := by
+    by_contra hK
+    let _ : Nontrivial (LinearMap.ker φ) :=
+      not_subsingleton_iff_nontrivial.mp hK
+    have hass_ne :
+        Formalization.Books.Algebra.Unit63.associatedPrimes R
+            (LinearMap.ker φ) ≠ ∅ := by
+      intro hass
+      apply hK
+      exact (Formalization.Books.Algebra.Unit63.ass_eq_empty_iff_subsingleton
+        (R := R) (M := LinearMap.ker φ)).mpr hass
+    obtain ⟨p, hp⟩ := Set.nonempty_iff_ne_empty.mpr hass_ne
+    have hpM : p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M :=
+      Formalization.Books.Algebra.Unit63.associatedPrimes_subset_of_injective
+        (LinearMap.ker φ).subtype (LinearMap.ker φ).injective_subtype hp
+    rcases hφ p with hloc | hpnot
+    · let S := p.asIdeal.primeCompl
+      have hKloc_subsingleton :
+          Subsingleton (LocalizedModule S (LinearMap.ker φ)) := by
+        constructor
+        intro x y
+        apply LocalizedModule.map_injective S (LinearMap.ker φ).subtype
+          (LinearMap.ker φ).injective_subtype
+        apply hloc
+        induction x using LocalizedModule.induction_on with
+        | h k s =>
+          induction y using LocalizedModule.induction_on with
+          | h k' s' =>
+              simp [S, LocalizedModule.map_mk,
+                LinearMap.mem_ker.mp k.property,
+                LinearMap.mem_ker.mp k'.property]
+      have hassloc :=
+        (Formalization.Books.Algebra.Unit63.associated_primes_localize_at_prime
+          p).1 hp
+      have hassloc_empty :
+          Formalization.Books.Algebra.Unit63.associatedPrimes
+              (Localization.AtPrime p.asIdeal)
+              (LocalizedModule.AtPrime p.asIdeal (LinearMap.ker φ)) = ∅ := by
+        exact (Formalization.Books.Algebra.Unit63.ass_eq_empty_iff_subsingleton
+          (R := Localization.AtPrime p.asIdeal)
+          (M := LocalizedModule.AtPrime p.asIdeal (LinearMap.ker φ))).mp
+          (by simpa [S] using hKloc_subsingleton)
+      exact Set.notMem_empty _ (hassloc_empty ▸ hassloc)
+    · exact hpnot hpM
+  intro x y hxy
+  have hsub : x - y ∈ LinearMap.ker φ := by
+    rw [LinearMap.mem_ker]
+    simpa [map_sub] using sub_eq_zero.mpr hxy
+  have hz : (⟨x - y, hsub⟩ : LinearMap.ker φ) = 0 :=
+    Subsingleton.elim _ _
+  exact sub_eq_zero.mp (congrArg Subtype.val hz)
 
 /-- A finite map is an isomorphism when it is locally an isomorphism or its
 source has depth at least two away from the associated primes of the target. -/

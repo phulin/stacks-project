@@ -1007,6 +1007,27 @@ theorem smooth_at_iff_local_cotangent_conditions
         H1VanishingAt R S q ∧ DifferentialsFlatAt R S q ] := by
   sorry
 
+theorem smoothAt_iff_h1Vanishing_and_differentialsFiniteFree
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.FinitePresentation R S] (q : PrimeSpectrum S) :
+    IsSmoothAt R S q ↔
+      H1VanishingAt R S q ∧ DifferentialsFiniteFreeAt R S q := by
+  exact (smooth_at_iff_local_cotangent_conditions q).out 0 1
+
+theorem smoothAt_iff_h1Vanishing_and_differentialsProjective
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.FinitePresentation R S] (q : PrimeSpectrum S) :
+    IsSmoothAt R S q ↔
+      H1VanishingAt R S q ∧ DifferentialsProjectiveAt R S q := by
+  exact (smooth_at_iff_local_cotangent_conditions q).out 0 2
+
+theorem smoothAt_iff_h1Vanishing_and_differentialsFlat
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.FinitePresentation R S] (q : PrimeSpectrum S) :
+    IsSmoothAt R S q ↔
+      H1VanishingAt R S q ∧ DifferentialsFlatAt R S q := by
+  exact (smooth_at_iff_local_cotangent_conditions q).out 0 3
+
 theorem smooth_iff_smooth_at_all_primes
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.Smooth R S ↔ ∀ q : PrimeSpectrum S, IsSmoothAt R S q := by

@@ -472,9 +472,9 @@ theorem equivalence_to_fibredInSets_gives_setoidFibres
         obtain ⟨g, hg⟩ := hF.full.map_surjective e.inv
         refine ⟨{ hom := f, inv := g, hom_inv_id := ?_, inv_hom_id := ?_ }⟩
         · apply hF.faithful.map_injective
-          simpa [Functor.map_comp, hf, hg] using e.hom_inv_id
+          simp [Functor.map_comp, hf, hg]
         · apply hF.faithful.map_injective
-          simpa [Functor.map_comp, hf, hg] using e.inv_hom_id
+          simp [Functor.map_comp, hf, hg]
       · rintro ⟨e⟩
         exact hdiscrete.eq_of_hom (F.map e.hom)
 
@@ -1032,7 +1032,7 @@ theorem fibredSlicePresentation_lift_comparison
       eP eP_over := by
     intro Z
     dsimp [eP]
-    simp only [Category.id_comp, Category.comp_id, Category.assoc]
+    simp only [Category.comp_id]
     have hQmap := Functor.congr_hom Q.forward_over
       (F.map (P.unit.hom.app Z))
     have hFmap := Functor.congr_hom F_over (P.unit.hom.app Z)
@@ -1096,7 +1096,7 @@ theorem fibredSlicePresentation_lift_comparison
   have heRight : IsNatIsoOver q (Functor.rightUnitor F).symm
       eRight_over := by
     intro Z
-    simp [eRight_over]
+    simp
   have heQUnitInv : IsNatIsoOver q Q.unit.symm Q.unit_over.symm :=
     fibred_isNatIsoOver_symm q Q.unit Q.unit_over Q.unit_isOver
   let eQUnitLeft_over :
@@ -1115,7 +1115,7 @@ theorem fibredSlicePresentation_lift_comparison
   have heAssoc : IsNatIsoOver q
       (Functor.associator F Q.forward Q.inverse).symm eAssoc_over := by
     intro Z
-    simp [eAssoc_over]
+    simp
   have heFBRight : IsNatIsoOver q
       (Functor.isoWhiskerRight eFB Q.inverse) _ :=
     fibred_isNatIsoOver_whiskerRight
@@ -1152,7 +1152,7 @@ theorem fibredMorphismVerticalNatTrans_object_class_map_eq
       objectIsoClassMap (fibreFunctor p q G G_over U) := by
   let hqgroup : IsGroupoid (Functor.Fiber q U) :=
     (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1 U
-  letI : IsGroupoid (Functor.Fiber q U) := hqgroup
+  let _ : IsGroupoid (Functor.Fiber q U) := hqgroup
   funext x
   refine Quotient.inductionOn x ?_
   intro x
@@ -1346,7 +1346,7 @@ theorem fibredMorphismOverBaseVerticalIsoRelation_isEquivalence
 theorem fibredSlicePresentation_class_is_represented_by_a_slice_morphism
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}
-    (hq : q.IsFibredInGroupoids)
+    (_hq : q.IsFibredInGroupoids)
     (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
     (F : FibredMorphismOverBase p q) :
     ∃ φ : P.representingObject ⟶ Q.representingObject,

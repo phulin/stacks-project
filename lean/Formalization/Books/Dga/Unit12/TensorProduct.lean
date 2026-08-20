@@ -131,7 +131,18 @@ theorem relativeTensorProduct_universal
     (hf : IsABalanced (R := R) (A := A) (M := M) (N := N) (Q := Q) f) :
     ∃! F : relativeTensorProduct (R := R) (A := A) (M := M) (N := N) →ₗ[R] Q,
       ∀ m n, F (relativeTensorProductMk (R := R) (A := A) (M := M) (N := N) m n) = f m n := by
-  sorry
+  refine ⟨relativeTensorProductLift f hf, ?_, ?_⟩
+  · intro m n
+    exact relativeTensorProductLift_mk f hf m n
+  · intro G hG
+    apply Submodule.linearMap_qext
+    apply TensorProduct.ext'
+    intro m n
+    change G (Submodule.Quotient.mk (m ⊗ₜ[R] n)) =
+      relativeTensorProductLift f hf (Submodule.Quotient.mk (m ⊗ₜ[R] n))
+    change G (relativeTensorProductMk m n) =
+      relativeTensorProductLift f hf (relativeTensorProductMk m n)
+    rw [hG, relativeTensorProductLift_mk]
 
 /-! ## Right exactness and colimits -/
 
@@ -209,7 +220,7 @@ theorem relativeTensorProductMap_mk
         (relativeTensorProductMk (R := R) (A := A) (M := M) (N := N) m n) =
       relativeTensorProductMk (R := R) (A := A) (M := M') (N := N')
         (f.toLinearMap m) (g.toLinearMap n) := by
-  sorry
+  rfl
 
 /- The module-category presentation makes the colimit assertion precise.  The
 base-ring action on an `A`-module is obtained by restriction of scalars along
@@ -256,8 +267,42 @@ noncomputable def relativeTensorProductRightFunctor
     (N : ModuleCat.{u} A) : ModuleCat.{u} Aᵐᵒᵖ ⥤ ModuleCat.{u} R where
   obj M := relativeTensorProductModuleCat (R := R) (A := A) M N
   map f := relativeTensorProductModuleCatMap (R := R) (A := A) f (𝟙 N)
-  map_id := by sorry
-  map_comp := by sorry
+  map_id := by
+    intro X
+    exact letI : Module R (X : Type u) := Module.compHom (X : Type u) (algebraMap R Aᵐᵒᵖ)
+      letI : Module R (N : Type u) := Module.compHom (N : Type u) (algebraMap R A)
+      by
+        apply ModuleCat.hom_ext
+        apply Submodule.linearMap_qext
+        apply TensorProduct.ext'
+        intro m n
+        change (relativeTensorProductModuleCatMap (R := R) (A := A) (𝟙 X) (𝟙 N)).hom
+            (relativeTensorProductMk (R := R) (A := A) (M := (X : Type u))
+              (N := (N : Type u)) m n) =
+          relativeTensorProductMk (R := R) (A := A) (M := (X : Type u))
+            (N := (N : Type u)) m n
+        dsimp [relativeTensorProductModuleCatMap]
+        rfl
+  map_comp := by
+    intro X Y Z f g
+    exact letI : Module R (X : Type u) := Module.compHom (X : Type u) (algebraMap R Aᵐᵒᵖ)
+      letI : Module R (Y : Type u) := Module.compHom (Y : Type u) (algebraMap R Aᵐᵒᵖ)
+      letI : Module R (Z : Type u) := Module.compHom (Z : Type u) (algebraMap R Aᵐᵒᵖ)
+      letI : Module R (N : Type u) := Module.compHom (N : Type u) (algebraMap R A)
+      by
+        apply ModuleCat.hom_ext
+        apply Submodule.linearMap_qext
+        apply TensorProduct.ext'
+        intro m n
+        change (relativeTensorProductModuleCatMap (R := R) (A := A) (f ≫ g) (𝟙 N)).hom
+            (relativeTensorProductMk (R := R) (A := A) (M := (X : Type u))
+              (N := (N : Type u)) m n) =
+          (relativeTensorProductModuleCatMap (R := R) (A := A) f (𝟙 N) ≫
+            relativeTensorProductModuleCatMap (R := R) (A := A) g (𝟙 N)).hom
+            (relativeTensorProductMk (R := R) (A := A) (M := (X : Type u))
+              (N := (N : Type u)) m n)
+        dsimp [relativeTensorProductModuleCatMap]
+        rfl
 
 /-- Tensoring on the left is a functor from left `A`-modules to `R`-modules. -/
 noncomputable def relativeTensorProductLeftFunctor
@@ -265,8 +310,42 @@ noncomputable def relativeTensorProductLeftFunctor
     (M : ModuleCat.{u} Aᵐᵒᵖ) : ModuleCat.{u} A ⥤ ModuleCat.{u} R where
   obj N := relativeTensorProductModuleCat (R := R) (A := A) M N
   map g := relativeTensorProductModuleCatMap (R := R) (A := A) (𝟙 M) g
-  map_id := by sorry
-  map_comp := by sorry
+  map_id := by
+    intro X
+    exact letI : Module R (M : Type u) := Module.compHom (M : Type u) (algebraMap R Aᵐᵒᵖ)
+      letI : Module R (X : Type u) := Module.compHom (X : Type u) (algebraMap R A)
+      by
+        apply ModuleCat.hom_ext
+        apply Submodule.linearMap_qext
+        apply TensorProduct.ext'
+        intro m n
+        change (relativeTensorProductModuleCatMap (R := R) (A := A) (𝟙 M) (𝟙 X)).hom
+            (relativeTensorProductMk (R := R) (A := A) (M := (M : Type u))
+              (N := (X : Type u)) m n) =
+          relativeTensorProductMk (R := R) (A := A) (M := (M : Type u))
+            (N := (X : Type u)) m n
+        dsimp [relativeTensorProductModuleCatMap]
+        rfl
+  map_comp := by
+    intro X Y Z f g
+    exact letI : Module R (M : Type u) := Module.compHom (M : Type u) (algebraMap R Aᵐᵒᵖ)
+      letI : Module R (X : Type u) := Module.compHom (X : Type u) (algebraMap R A)
+      letI : Module R (Y : Type u) := Module.compHom (Y : Type u) (algebraMap R A)
+      letI : Module R (Z : Type u) := Module.compHom (Z : Type u) (algebraMap R A)
+      by
+        apply ModuleCat.hom_ext
+        apply Submodule.linearMap_qext
+        apply TensorProduct.ext'
+        intro m n
+        change (relativeTensorProductModuleCatMap (R := R) (A := A) (𝟙 M) (f ≫ g)).hom
+            (relativeTensorProductMk (R := R) (A := A) (M := (M : Type u))
+              (N := (X : Type u)) m n) =
+          (relativeTensorProductModuleCatMap (R := R) (A := A) (𝟙 M) f ≫
+            relativeTensorProductModuleCatMap (R := R) (A := A) (𝟙 M) g).hom
+            (relativeTensorProductMk (R := R) (A := A) (M := (M : Type u))
+              (N := (X : Type u)) m n)
+        dsimp [relativeTensorProductModuleCatMap]
+        rfl
 
 /-- Relative tensor product commutes with arbitrary colimits in either
 variable; arbitrary direct sums are the coproduct special case. -/

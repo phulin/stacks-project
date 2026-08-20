@@ -3696,6 +3696,84 @@ private theorem affine_second_nontrivial_of_aux (a : ℚ) (ha0 : a ≠ 0) (ha1 :
       exact ⟨pM, hpMt, hpMne⟩
   exact hsecond
 
+private def affineSecondOffset (a : ℚ) : ℚ := 2 - a
+
+private def affineSecondConstant (a : ℚ) : ℚ := 2 * a * (1 - a)
+
+private def affineSecondRemainder (a : ℚ) : Polynomial ℚ :=
+  -(Polynomial.C (affineSecondOffset a ^ 2 + affineSecondOffset a) * Polynomial.X ^ 2) -
+    Polynomial.C (affineSecondConstant a * (2 * affineSecondOffset a + 1)) * Polynomial.X -
+    Polynomial.C (affineSecondConstant a ^ 2)
+
+private def affineSecondPolynomial (a : ℚ) : Polynomial ℚ :=
+  Polynomial.X ^ 3 + affineSecondRemainder a
+
+private lemma affine_second_generator_formula (a : ℚ) :
+    affineG a = affineB +
+      algebraMap ℚ affineBaseSubalgebra (affineSecondOffset a) * affineA +
+      algebraMap ℚ affineBaseSubalgebra (affineSecondConstant a) := by
+  apply Subtype.ext
+  norm_num [affineG, affinePolynomialG, affineQuadratic, affineA, affineB,
+    affineBaseElement, affineSecondOffset, affineSecondConstant]
+  rw [map_ofNat (Polynomial.C : ℚ →+* Polynomial ℚ) 2]
+  ring
+
+private lemma affine_second_presentation_relation :
+    affineA ^ 3 - affineB ^ 2 + affineA * affineB = 0 := by
+  have h := affine_presentation_relation_mem_kernel
+  change affinePresentationMap affinePresentationRelation = 0 at h
+  simpa [affinePresentationRelation, affinePresentationMap,
+    affinePresentationValues, affinePresentationA, affinePresentationB] using h
+
+private lemma affine_second_polynomial_mem (a : ℚ) :
+    Polynomial.aeval affineA (affineSecondPolynomial a) ∈
+      Ideal.span ({affineG a} : Set affineBaseSubalgebra) := by
+  let I := Ideal.span ({affineG a} : Set affineBaseSubalgebra)
+  have hGmem : affineG a ∈ I := Ideal.subset_span (by simp)
+  have hP_eq : Polynomial.aeval affineA (affineSecondPolynomial a) =
+      (affineA ^ 3 - affineB ^ 2 + affineA * affineB) +
+        (affineB - algebraMap ℚ affineBaseSubalgebra (affineSecondOffset a + 1) * affineA -
+          algebraMap ℚ affineBaseSubalgebra (affineSecondConstant a)) * affineG a := by
+    rw [affine_second_generator_formula]
+    norm_num [affineSecondPolynomial, affineSecondRemainder, affineSecondOffset,
+      affineSecondConstant, Polynomial.aeval_add, Polynomial.aeval_sub,
+      Polynomial.aeval_mul, Polynomial.aeval_X, Polynomial.aeval_C]
+    simp only [map_ofNat]
+    ring
+  rw [hP_eq, affine_second_presentation_relation]
+  exact I.add_mem I.zero_mem (I.mul_mem_left _ hGmem)
+
+private lemma affine_second_remainder_degree (a : ℚ) :
+    (affineSecondRemainder a).degree < (3 : WithBot ℕ) := by
+  let d := affineSecondOffset a
+  let c := affineSecondConstant a
+  have h2 : (Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2).degree ≤
+      (2 : WithBot ℕ) := by
+    calc
+      _ ≤ (Polynomial.C (d ^ 2 + d)).degree + (Polynomial.X ^ 2).degree :=
+        Polynomial.degree_mul_le _ _
+      _ ≤ 0 + 2 := add_le_add Polynomial.degree_C_le (by simp)
+      _ = 2 := by simp
+  have h1 : (Polynomial.C (c * (2 * d + 1)) * Polynomial.X).degree ≤
+      (1 : WithBot ℕ) := by
+    calc
+      _ ≤ (Polynomial.C (c * (2 * d + 1))).degree + Polynomial.X.degree :=
+        Polynomial.degree_mul_le _ _
+      _ ≤ 0 + 1 := add_le_add Polynomial.degree_C_le (by simp)
+      _ = 1 := by simp
+  have hsub := Polynomial.degree_sub_le
+    (-(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2))
+    (Polynomial.C (c * (2 * d + 1)) * Polynomial.X)
+  change (-(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2) -
+    Polynomial.C (c * (2 * d + 1)) * Polynomial.X -
+    Polynomial.C (c ^ 2)).degree < 3
+  exact (Polynomial.degree_sub_le _ _).trans_lt <| by
+    apply max_lt
+    · apply hsub.trans_lt
+      exact (max_le_max (by simpa only [Polynomial.degree_neg] using h2) h1).trans_lt
+        (by norm_num)
+    · exact Polynomial.degree_C_le.trans_lt (by norm_num)
+
 private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
     (_ha1 : a ≠ 1) (_haHalf : a ≠ 1 / 2) :
     ∃ t : Finset (PrimeSpectrum affineBaseSubalgebra), t.card ≤ 3 ∧
@@ -3706,40 +3784,16 @@ private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
   let c : ℚ := 2 * a * (1 - a)
   let qP : Polynomial ℚ :=
       -(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2) -
-      Polynomial.C (c * (2 * d + 1)) * Polynomial.X -
-      Polynomial.C (c ^ 2)
+      Polynomial.C (c * (2 * d + 1)) * Polynomial.X - Polynomial.C (c ^ 2)
   let P : Polynomial ℚ := Polynomial.X ^ 3 + qP
   let I : Ideal affineBaseSubalgebra := Ideal.span {affineG a}
-  have hG :
-      affineG a = affineB +
-        algebraMap ℚ affineBaseSubalgebra d * affineA +
-        algebraMap ℚ affineBaseSubalgebra c := by
-    apply Subtype.ext
-    norm_num [affineG, affinePolynomialG, affineQuadratic, affineA, affineB,
-      affineBaseElement, d, c]
-    rw [map_ofNat (Polynomial.C : ℚ →+* Polynomial ℚ) 2]
-    ring
-  have hrel :
-      affineA ^ 3 - affineB ^ 2 + affineA * affineB = 0 := by
-    have h := affine_presentation_relation_mem_kernel
-    change affinePresentationMap affinePresentationRelation = 0 at h
-    simpa [affinePresentationRelation, affinePresentationMap,
-      affinePresentationValues, affinePresentationA, affinePresentationB] using h
+  have hG : affineG a = affineB +
+      algebraMap ℚ affineBaseSubalgebra d * affineA +
+      algebraMap ℚ affineBaseSubalgebra c := by
+    simpa [d, c, affineSecondOffset, affineSecondConstant] using
+      affine_second_generator_formula a
   have hPmem : Polynomial.aeval affineA P ∈ I := by
-    have hGmem : affineG a ∈ I := Ideal.subset_span (by simp)
-    have hP_eq :
-        Polynomial.aeval affineA P =
-          (affineA ^ 3 - affineB ^ 2 + affineA * affineB) +
-            (affineB - algebraMap ℚ affineBaseSubalgebra (d + 1) * affineA -
-              algebraMap ℚ affineBaseSubalgebra c) * affineG a := by
-      rw [hG]
-      norm_num [P, qP, Polynomial.aeval_add, Polynomial.aeval_sub, Polynomial.aeval_mul,
-        Polynomial.aeval_X, Polynomial.aeval_C, d, c]
-      simp only [map_ofNat]
-      ring
-    rw [hP_eq]
-    exact I.add_mem (by rw [hrel]; exact I.zero_mem)
-      (I.mul_mem_left _ hGmem)
+    exact affine_second_polynomial_mem a
   let Q := affineBaseSubalgebra ⧸ I
   let : CommRing Q := inferInstance
   let Abar : Q := Ideal.Quotient.mk I affineA
@@ -3852,43 +3906,7 @@ private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
     rcases hrep with ⟨hy, p, hp⟩
     refine ⟨p, ?_⟩
     simpa only [Subtype.coe_eta] using hp
-  have hqdeg : qP.degree < (3 : WithBot ℕ) := by
-    dsimp [qP]
-    have h2 :
-        (Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2).degree ≤ (2 : WithBot ℕ) := by
-      calc
-        _ ≤ (Polynomial.C (d ^ 2 + d)).degree + (Polynomial.X ^ 2).degree :=
-          Polynomial.degree_mul_le _ _
-        _ ≤ 0 + 2 := add_le_add Polynomial.degree_C_le (by simp)
-        _ = 2 := by simp
-    have h1 :
-        (Polynomial.C (c * (2 * d + 1)) * Polynomial.X).degree ≤ (1 : WithBot ℕ) := by
-      calc
-        _ ≤ (Polynomial.C (c * (2 * d + 1))).degree + Polynomial.X.degree :=
-          Polynomial.degree_mul_le _ _
-        _ ≤ 0 + 1 := add_le_add Polynomial.degree_C_le (by simp)
-        _ = 1 := by simp
-    have h0 : (Polynomial.C (c ^ 2)).degree ≤ (0 : WithBot ℕ) :=
-      Polynomial.degree_C_le
-    have hsub :
-        (-(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2) -
-          Polynomial.C (c * (2 * d + 1)) * Polynomial.X).degree ≤ (2 : WithBot ℕ) := by
-      calc
-        _ ≤ max
-            (-(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2)).degree
-            (Polynomial.C (c * (2 * d + 1)) * Polynomial.X).degree :=
-          Polynomial.degree_sub_le _ _
-        _ ≤ max (2 : WithBot ℕ) 1 :=
-          max_le_max (by simpa only [Polynomial.degree_neg] using h2) h1
-        _ = 2 := by norm_num
-    calc
-      _ ≤ max
-          (-(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2) -
-            Polynomial.C (c * (2 * d + 1)) * Polynomial.X).degree
-          (Polynomial.C (c ^ 2)).degree := Polynomial.degree_sub_le _ _
-      _ ≤ max 2 0 := max_le_max hsub h0
-      _ = 2 := by norm_num
-      _ < 3 := by norm_num
+  have hqdeg : qP.degree < (3 : WithBot ℕ) := affine_second_remainder_degree a
   have hPmonic : P.Monic := by
     exact Polynomial.monic_X_pow_add (by simpa [P] using hqdeg)
   have hPnat : P.natDegree ≤ 3 := by

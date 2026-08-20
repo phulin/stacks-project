@@ -183,8 +183,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
             eqToHom hGa0 ≫ (Over.forget U).map c ≫ eqToHom hcodG.symm := hGmap
         _ = eqToHom hGa ≫ f ≫ eqToHom hcodG.symm := by
           rw [h]
-          simp only [Category.assoc, eqToHom_refl, Category.id_comp,
-            Category.comp_id]
+          simp only [Category.assoc, eqToHom_refl, Category.comp_id]
           rw [← Category.assoc, eqToHom_trans]
     have hGcmap : q.map (G.functor.map c) =
         eqToHom hGa ≫ f ≫ eqToHom hcodG.symm := by
@@ -330,7 +329,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
         rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
         rw [hcancel]
-        simp only [Category.assoc, Category.id_comp, Category.comp_id]
+        simp only [Category.id_comp]
       have hζbase : (Over.forget U).obj ζ.obj.obj.left =
           (slicePullbackBase F U G).obj ζ := by
         rfl
@@ -364,7 +363,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
     have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
       rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
       rw [hcancel]
-      simp only [Category.assoc, Category.id_comp, Category.comp_id]
+      simp only [Category.id_comp]
     have hcmap' : (Over.forget U).map c = eqToHom hdomA ≫ f := by
       have hfac := CategoryTheory.IsHomLift.fac'
         (Over.forget U) f c
@@ -413,7 +412,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
     have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
       rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
       rw [hcancel]
-      simp only [Category.assoc, Category.id_comp, Category.comp_id]
+      simp only [Category.id_comp]
     have hcmap' : (Over.forget U).map c = eqToHom hdomA ≫ f := hcmap
     let : (Over.forget U).IsStronglyCartesian
         ((Over.forget U).map c) c := hc'
@@ -561,7 +560,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       rw [Functor.map_comp, hGχleftmap, ← hχmap, hχleftmapOver]
       simp [gY, gOver, hsource, hdomA, hFx', Category.assoc]
       apply (cancel_epi (eqToHom hGζ)).1
-      simp only [Category.assoc, eqToHom_trans]
+      simp only [eqToHom_trans]
       apply (cancel_epi (eqToHom hGζ)).1
       simp only [Category.assoc, eqToHom_trans]
       apply (cancel_epi (eqToHom hGζ)).1
@@ -1343,7 +1342,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       dsimp [gOver]
       cases hζbase
       simp only [Category.assoc]
-      congr 1 <;> apply Subsingleton.elim
+      congr 1
     have hκfac : κ ≫ φ = τ := by
       apply ObjectProperty.hom_ext
       apply ObjectProperty.hom_ext
@@ -1617,7 +1616,6 @@ theorem slicePullbackLeft_isFibredInGroupoids
         change g ≫ m.1 = 𝟙 B.1
         exact hgm
     · exact hbaseFibered
-  letI : (slicePullbackBase F U G).IsFibredInGroupoids := hbase
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
 
@@ -2198,6 +2196,51 @@ theorem identify_pullback_fibre
     essSurj := hforwardEssSurj }
   exact ⟨forward.asEquivalence⟩
   -/
+  /- Proof roadmap for the normal prove stage.
+
+  The statement is sound at the displayed universes.  Implement the `forward`
+  equivalence sketched above, but keep every equality transport explicit:
+
+  1. For `z : (slicePullbackLeft F U G).Fiber f`, unpack
+     `z.1.property : VerticalIsoCommaProperty ... z.1.obj`.  Combine its two
+     object-lift equalities with `congrArg Over.Hom.left z.2` to put
+     `z.1.obj.obj.right` in `p.Fiber f.left`.  Turn the comma isomorphism into a
+     morphism of `q.Fiber f.left` with `CategoryTheory.IsHomLift.of_fac'` and
+     `Functor.Fiber.homMk`; prepend the necessary `eqToHom` between
+     `pullbackFibreBaseObject (q := q) U G f` and the transported source.  This
+     gives `forwardObj z : PullbackFibreCategory F U G f`.
+  2. For a fibre morphism `m : z ⟶ z'`, obtain the left lift over `𝟙 f.left`
+     from `m.2` using `CategoryTheory.IsHomLift.fac'`.  Obtain the right lift by
+     applying `q.map` to `m.1.hom.hom.w`, then rewrite with
+     `Functor.congr_hom F.over`, `Functor.congr_hom G.over`, and the lift
+     equations for the two comma isomorphisms.  Define `forward.map m` from
+     `Functor.Fiber.homMk p f.left m.1.hom.hom.right`, conjugated by the two
+     object equalities.  Prove `PullbackFibreHom.comm` after `cases` on those
+     equalities and `apply Functor.Fiber.hom_ext`; the remaining equation is
+     exactly `m.1.hom.hom.w`.
+  3. Prove `map_id` and `map_comp` with `PullbackFibreHom.ext` and `simp`.
+     Faithfulness follows with `Functor.Fiber.hom_ext`, two
+     `ObjectProperty.hom_ext`s, and `Comma.hom_ext`: the left component is
+     fixed by the fibre lift equation, while the right component is recovered
+     from equality of `PullbackFibreHom.psi` via
+     `Functor.Fiber.fiberInclusion.map`.
+  4. For fullness, lift `h.psi` to the comma morphism whose left component is
+     `𝟙 f` and whose right component is `h.psi.1`; use `h.comm` for the comma
+     square and `CategoryTheory.IsHomLift.of_fac'` for the fibre property.
+     For essential surjectivity, send `A` to the explicit comma object
+     `(f, A.x.1, A.phi.1)`.  Its comma arrow is an isomorphism by
+     `pullbackFibreObject_phi_isIso hq F U G f A`; identify its forward image
+     with `A` using `PullbackFibreObject.ext` and `Functor.Fiber.hom_ext`.
+  5. Assemble `forward.IsEquivalence` from the three structures and return
+     `⟨forward.asEquivalence⟩` (`Functor.IsEquivalence.mk'`/`asEquivalence` are
+     in Mathlib's equivalence interface).
+
+  Reusable lift and fibre declarations are in
+  `Formalization/Books/Categories/Unit31/StronglyCartesian.lean` and the
+  vertical iso-comma definitions are in
+  `Formalization/Books/Categories/Unit34/Inertia.lean`.  Do not repeat the
+  abandoned `subst V` route: it changes dependent fibre proofs and was the
+  source of the earlier non-elaborating transports. -/
   sorry
   /- prior attempt: the active construction below did not elaborate; it is
      retained verbatim for later repair. -/
@@ -2514,6 +2557,43 @@ theorem identify_pullback_fibre_with_chosen_pullback
   obtain ⟨E⟩ := identify_pullback_fibre hp hq F U G f
   exact ⟨E.trans transport.asEquivalence⟩
   -/
+  /- Proof roadmap for the normal prove stage.
+
+  This interface is also sound.  Reduce it to `identify_pullback_fibre` by an
+  equivalence which changes only the source of each pair morphism:
+
+  1. Choose `e` from `sliceMorphism_isomorphic_to_chosenPullback U hq P G`
+     (defined above using Unit 41's `twoYoneda_groupoid_equivalence`).  Define
+     `ef : pullbackFibreBaseObject (q := q) U G f ⟶
+       chosenPullbackObject q hq P (sliceMorphismIdentityValue U G) f` as
+     `Functor.Fiber.homMk q f.left (e.hom.1.app f)`.
+  2. To supply its lift proof, use `e.hom.2` as the
+     `(twoYonedaPostcomposition q U).IsHomLift` instance, apply
+     `CategoryTheory.IsHomLift.fac'`, evaluate the resulting natural-
+     transformation equality at `f`, and simplify
+     `twoYonedaPostcomposition`, `twoYonedaPostcompositionGeneral`, and
+     `Unit28.postcompositionFunctor`.  The fibre
+     `q.Fiber f.left` is a groupoid by
+     `fibredInGroupoids_iff_fibred_groupoid_fibres`, hence `ef` is an
+     isomorphism.
+  3. Define `transport : PullbackFibreCategory F U G f ⥤
+       RelativeFibrePairCategory F U hq P
+         (sliceMorphismIdentityValue U G) f` by keeping `x` and replacing
+     `phi` with `inv ef ≫ phi`.  Define its inverse by replacing `phi` with
+     `ef ≫ phi`; both functors keep `PullbackFibreHom.psi`.  Prove functor laws
+     with `PullbackFibreHom.ext`/`RelativeFibrePairHom.ext` and associativity.
+  4. Faithfulness is immediate from equality of `psi`.  For fullness cancel
+     the epi `inv ef` in the commutative square.  For essential surjectivity
+     use the explicit inverse object, prove `transport.obj (inverse.obj A) = A`
+     by the two extensionality lemmas and `simp`, and use `eqToIso`.
+  5. Compose `identify_pullback_fibre hp hq F U G f` with
+     `transport.asEquivalence`.
+
+  The first retained attempt used the ill-typed expression
+  `pullbackFibreBaseObject F U G f`; the definition at line 1882 has no `F`
+  parameter.  Always write `(q := q) U G f`, as in the second sketch.  The
+  two-Yoneda declarations used here live in
+  `Formalization/Books/Categories/Unit41/TwoYonedaLemma.lean`. -/
   sorry
   /- prior attempt: the active construction below did not elaborate; it is
      retained verbatim for later repair. -/
@@ -2822,6 +2902,34 @@ theorem slicePullback_isCategoryFibredInSetoids
     (hfaithful : ∀ V : C, (fibredMorphismFibreFunctor F V).Faithful)
     (U : C) (G : FibredMorphism (Over.forget U) q) :
     IsCategoryFibredInSetoids (slicePullbackLeft F U G) := by
+  /- Proof roadmap for the normal prove stage.
+
+  The commented proof immediately below is the intended short proof.
+
+  1. Obtain `F.functor.Faithful` from
+     `fibredInGroupoids_faithful_iff_fibrewise p q F.functor F.over hp hq`
+     (`Formalization/Books/Categories/Unit35/CategoriesFibredInGroupoids.lean`),
+     noting that `fibredMorphismFibreFunctor F V` unfolds to the required
+     `fibreFunctor ... V`.
+  2. Prove `(slicePullbackLeft F U G).Faithful`.  Equality after the slice
+     projection is equality of the left comma components.  For the right
+     components, apply the faithfulness of `F.functor`, cancel the epi
+     `A.obj.obj.hom` (it is an isomorphism by the `IsoComma` object property),
+     and rewrite with the two comma equations `f.hom.hom.w` and
+     `g.hom.hom.w`.
+  3. Refine the result as
+     `⟨slicePullbackLeft_isFibredInGroupoids hp hq F U G, _⟩`.  For each
+     `V : Over U`, apply
+     `isSetoid_iff_isGroupoid_and_hom_subsingleton.mpr` from
+     `Formalization/Books/Categories/Unit39/CategoriesFibredInSetoids.lean`.
+     The groupoid half is the `V`-fibre supplied by
+     `fibredInGroupoids_iff_fibred_groupoid_fibres`; for hom subsingletonness,
+     use `Functor.Fiber.hom_ext`, inject with the just-proved slice
+     faithfulness, and rewrite both images using
+     `CategoryTheory.IsHomLift.fac'` over `𝟙 V`.
+
+  Keep `V` typed as `Over U` in the last step; writing it as an object of `C`
+  makes the identity-lift equations fail to elaborate. -/
   sorry
 /-
   have hFfaithful : F.functor.Faithful :=
@@ -2869,6 +2977,60 @@ theorem criterion_for_representable_fibredMorphism
         (slicePullback_isCategoryFibredInSetoids hp hq F hfaithful U
           (chosenPullbackMorphism q hq pullbacksY U y))) :
     IsRepresentableFibredMorphism hp hq F := by
+  /- Proof roadmap for the normal prove stage.
+
+  First add a private, source-adjacent comparison lemma with the following
+  mathematical interface (universe-polymorphic `Type*` parameters as here):
+
+    an isomorphism
+      `sliceMorphismAsTwoYonedaObject U G ≅
+       sliceMorphismAsTwoYonedaObject U H`
+    induces
+      `IsFibredEquivalenceOver (slicePullbackLeft F U G)
+        (slicePullbackLeft F U H)`.
+
+  Construct its forward functor on a vertical iso-comma object by keeping the
+  left and right objects and replacing `α : G(A) ≅ F(x)` with
+  `(e.inv.app A) ≫ α`; use `e.hom.app A ≫ α` for the inverse.  Naturality of
+  `e.hom`/`e.inv` proves the comma squares.  Componentwise lift proofs follow
+  from `e.hom.2`/`e.inv.2` exactly as in
+  `identify_pullback_fibre_with_chosen_pullback`.  Both functors commute
+  strictly with `slicePullbackLeft` because the left component is unchanged.
+  Their unit and counit are componentwise identities after the iso
+  cancellations, so package them with the definition of
+  `IsFibredEquivalenceOver` from
+  `Formalization/Books/Categories/Unit36/PresheavesOfCategories.lean`.
+  Cartesian preservation is automatic from
+  `fibredInGroupoids_all_morphisms_stronglyCartesian` and
+  `slicePullbackLeft_isFibredInGroupoids`; verticality of the unit/counit uses
+  `Unit34.IsOverNaturalIso`.
+
+  Then prove the theorem as follows:
+
+  1. Introduce arbitrary `U` and `G`, put
+     `y := sliceMorphismIdentityValue U G`, and put
+     `H := chosenPullbackMorphism q hq pullbacksY U y`.
+  2. Obtain representability of `slicePullbackLeft F U H` by applying the
+     reverse implication of
+     `isRepresentableCategoryFibredInGroupoids_iff_setoid_and_objectClassPresheaf`
+     from
+     `Formalization/Books/Categories/Unit40/RepresentableCategoriesFibredInGroupoids.lean`
+     to the witness
+     `⟨slicePullback_isCategoryFibredInSetoids hp hq F hfaithful U H,
+       hpresheaf U y⟩`.
+  3. Choose the two-Yoneda isomorphism from
+     `sliceMorphism_isomorphic_to_chosenPullback U hq pullbacksY G`; unfold
+     `chosenPullbackAsTwoYonedaObject` only enough to feed it to the comparison
+     lemma.
+  4. Transport representability back to `G` with
+     `isRepresentable_invariant_under_fibredEquivalenceOver`, supplying the
+     two calls of `slicePullbackLeft_isFibredInGroupoids`.  This closes the
+     arbitrary `U, G` required by `IsRepresentableFibredMorphism`.
+
+  Objectwise equivalences from `identify_pullback_fibre_with_chosen_pullback`
+  are not sufficient here: `objectClassPresheaf` needs coherent pullback maps,
+  so use the total fibred equivalence above rather than trying to assemble a
+  natural isomorphism from independent choices in each fibre. -/
   sorry
 
 /-! ## 2-products and the diagonal -/
@@ -2919,6 +3081,44 @@ theorem twoProductBase_isFibredInGroupoids
     {X C : Type*} [Category* X] [Category* C]
     (p : X ⥤ C) (hp : p.IsFibredInGroupoids) :
     (twoProductBase p p).IsFibredInGroupoids := by
+  /- Proof roadmap for the normal prove stage.
+
+  Prove the two halves of
+  `fibredInGroupoids_iff_fibred_groupoid_fibres (twoProductBase p p)` directly.
+  The needed definitions `VerticalIsoCommaProperty` and
+  `verticalIsoCommaBase` are in
+  `Formalization/Books/Categories/Unit34/Inertia.lean`; lift existence and the
+  fibre criterion are in
+  `Formalization/Books/Categories/Unit35/CategoriesFibredInGroupoids.lean`.
+
+  1. Extract `p.IsFibered` from `hp`.  Given an object `ξ` and a base arrow
+     `f : R ⟶ (twoProductBase p p).obj ξ`, take strongly cartesian lifts
+     `a : x' ⟶ ξ.left` and `b : y' ⟶ ξ.right` with
+     `fibred_category_iff_exists_stronglyCartesian p`.  Their domain
+     equalities identify both `p.obj x'` and `p.obj y'` with `R`.
+  2. Form the new comma isomorphism between these two objects of `C` from the
+     corresponding `eqToIso`s.  The comma square follows by rewriting
+     `p.map a`, `p.map b`, and the old vertical comma isomorphism with
+     `CategoryTheory.IsHomLift.fac'`; its vertical-property witness is
+     `CategoryTheory.IsHomLift.of_fac' (𝟭 C) (𝟙 R) ...`.  Package the comma
+     morphism `(a,b)` and prove it strongly cartesian for `twoProductBase`
+     componentwise from the universal properties of `a` and `b`.  Use
+     `ObjectProperty.hom_ext` and `Comma.hom_ext` for uniqueness.
+  3. For a morphism in the fibre over `V`, derive that its left and right
+     components are lifts of `𝟙 V`.  View them with
+     `Functor.Fiber.homMk p V`; the fibre groupoid supplied by `hp` makes both
+     components isomorphisms.  Define the inverse comma morphism using their
+     inverses, prove its square by applying `inv` to the original comma square,
+     and prove both inverse laws by the two extensionality lemmas.  Give the
+     inverse its lift property with
+     `CategoryTheory.IsHomLift.lift_id_inv_isIso`.
+  4. Feed the fibre groupoid and the `IsFibered` construction to the reverse
+     implication of `fibredInGroupoids_iff_fibred_groupoid_fibres`.
+
+  `slicePullbackLeft_isFibredInGroupoids` cannot be instantiated to solve this
+  goal: its target is a slice `Over U`, whereas `twoProductBase` targets `C`.
+  Its already-working componentwise lift construction is nevertheless the
+  exact template to specialize. -/
   sorry
 
 def rawDiagonalFunctor
@@ -2975,6 +3175,82 @@ theorem representable_diagonal_iff_slice_representable
       ∀ (U : C) (G : FibredMorphism (Over.forget U) p),
         IsRepresentableFibredMorphism
           (sliceProjection_isFibredInGroupoids U) hp G := by
+  /- Proof roadmap for the normal prove stage.
+
+  The interface is the fibred-category analogue of
+  `Unit08.representable_diagonal_iff` in
+  `Formalization/Books/Categories/Unit08/FibreProductsAndRepresentability.lean`.
+  The product and pullback assumptions are used to keep all auxiliary bases
+  representable; neither should be removed.
+
+  Prepare three private helpers next to this theorem:
+
+  * composition of a `FibredMorphism (Over.forget U) p` with
+    `sliceFibredMorphism f` (`Unit40/RepresentableCategoriesFibredInGroupoids.lean`),
+    with `over` proved by `Functor.hext` and cartesian preservation by the two
+    `preserves` fields;
+  * a pairing functor from two such base-changed morphisms into
+    `twoProductBase p p`, using `ObjectProperty.homMk`, the identity-base
+    `eqToIso`, and `CategoryTheory.IsHomLift.of_fac'`;
+  * fibred equivalences between the resulting vertical iso-comma categories,
+    proved by keeping the component objects and composing the two displayed
+    isomorphisms.  Package them with `IsFibredEquivalenceOver` and transport
+    representability with
+    `isRepresentable_invariant_under_fibredEquivalenceOver` from Unit 40.
+
+  Forward implication:
+
+  1. Fix `G : Over U ⥤ X`, then fix the test
+     `H : Over V ⥤ X` required by representability of `G`.  Set
+     `P := Limits.prod U V`.  Base-change `G` and `H` along `prod.fst` and
+     `prod.snd`, pair them to
+     `K : FibredMorphism (Over.forget P) (twoProductBase p p)`, and apply the
+     assumed representability of `rawDiagonalMorphism p hp` to `P, K`.
+  2. Compare the resulting diagonal pullback with
+     `slicePullbackLeft G V H`.  From `(f : T ⟶ V, g : T ⟶ U,
+     α : H(f) ≅ G(g))`, use `prod.lift g.hom f.hom : T ⟶ P`, choose the
+     diagonal object `G(g)`, and use `(𝟙 _, α)` for its two comma components.
+     Conversely, project an arrow to `P` with `prod.fst`/`prod.snd` and compose
+     the two components of its diagonal isomorphism.  These operations are
+     inverse by `Comma.hom_ext` and the product hom extensionality lemma.
+  3. The comparison is over `Over.map prod.snd`.  If the diagonal pullback is
+     represented by `R : Over P`, turn the iterated slice over `R` into the
+     ordinary slice over `R.left` using `R.iteratedSliceEquiv`,
+     `Over.iteratedSliceForward_forget`, and
+     `Over.iteratedSliceBackward_forget` from Mathlib's
+     `CategoryTheory/Comma/Over/Basic.lean`.  Regard `R.left` with the composite
+     `R.hom ≫ prod.snd` as an object of `Over V`; this is the representing
+     object for `slicePullbackLeft G V H`.
+
+  Reverse implication:
+
+  1. Fix `K : FibredMorphism (Over.forget U) (twoProductBase p p)`.  Restrict
+     `isoCommaLeft p p` and `isoCommaRight p p` to obtain its two components
+     `G,H : FibredMorphism (Over.forget U) p`.  For the right component, prove
+     the strict `over` equality with `Functor.hext` from `K.over` and the
+     `VerticalIsoCommaProperty` equalities; preservation follows from
+     `fibredInGroupoids_all_morphisms_stronglyCartesian p hp`.
+  2. Apply the hypothesis to `G`, then test its representability with `U,H`.
+     Unpack a `RepresentablePresentation` of
+     `slicePullbackLeft G U H`; its universal object supplies two maps to `U`,
+     one from the base projection and one from the second slice component.
+     The diagonal pullback of `K` is the full subproblem where these two maps
+     agree.
+  3. Represent that equality by pulling back their product map to `U ⨯ U`
+     along `Limits.diag U`.  Use `Limits.pullback`, `pullback.fst`,
+     `pullback.snd`, `pullback.condition`, and the imported
+     `Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic`; the
+     resulting pullback object is the representing object.  The equivalence
+     sends a diagonal-pullback object to its two component isomorphisms and,
+     in the other direction, composes the relative-pair isomorphism with the
+     equality supplied by the pullback square.
+  4. Transport the presentation across the helper equivalence and pair it
+     with `twoProductBase_isFibredInGroupoids p hp`.  Since `U,K` were
+     arbitrary, this is `IsRepresentableDiagonal p hp`.
+
+  Avoid trying to prove the reverse direction from independent fibre
+  equivalences: the equality of the two arrows to `U` is coherent data and is
+  precisely where `[HasPullbacks C]` is needed. -/
   sorry
 
 end

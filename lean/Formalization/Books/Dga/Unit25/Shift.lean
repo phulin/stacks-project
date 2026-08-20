@@ -879,6 +879,9 @@ structure GradedShiftFamily (R : Type u) (C : Type v)
     GradedModuleShiftIso R
       (GradedCategory.hom X ((shift n).obj Y))
       (GradedCategory.hom X Y) n
+  /-- Compatibility of the Hom-shift equivalences with homogeneous
+  composition.  The final `eqToHom` is precisely the transport occurring in
+  `LinearShiftFamily.homogeneousComp`. -/
   hom_shift_comp : ∀ {X Y Z : C} (i j : ℤ)
     (f : X ⟶ (shift i).obj Y) (g : Y ⟶ (shift j).obj Z),
     (hom_shift X Z (i + j)).total
@@ -1029,6 +1032,74 @@ theorem degree_zero_shift_family_restricts :
     IsDegreeZeroShiftRestriction S (degree_zero_shift_family S) :=
   (Classical.choice (degree_zero_shift_family_nonempty S)).2
 
+/-
+Proof roadmap for `reconstructs_from_degree_zero`.
+
+* Abbreviate `A := inferInstance : GradedCategory R C`,
+  `T := degree_zero_shift_family S`, and
+  `Q := LinearShiftFamily.GradedCategory T`.  For `U V : Q`, first build
+
+      homEquiv U V :
+        (U ⟶ V) ≃ₗ[R] (U.underlying.down ⟶ V.underlying.down).
+
+  For each `n : ℤ`, rewrite `T.shift n` with
+  `degree_zero_shift_family_restricts S n`.  After unfolding
+  `GradedFunctor.degreeZero`, the degree-`n` summand of `U ⟶ V` is the
+  degree-zero component of
+  `U.underlying.down ⟶ (S.shift n).obj V.underlying.down`.  Transporting the
+  endpoints along that rewrite and applying
+  `(S.hom_shift _ _ n).component 0` gives a linear equivalence to
+  `(GradedCategory.hom U.underlying.down V.underlying.down).component n`;
+  discharge the remaining `0 + n = n` by `simp`.  Take the direct sum of
+  these equivalences with `DirectSum.congrLinearEquiv` (Mathlib,
+  `Algebra/DirectSum/Module.lean`), then compose with
+  `(DirectSum.decomposeLinearEquiv (fun n =>
+    (GradedCategory.hom U.underlying.down V.underlying.down).component n)).symm`.
+  The required decomposition instance is exactly
+  `GradedCategory.homDecomposition R _ _` from `Unit25/Core.lean`.
+
+* Prove the key claim
+
+      homEquiv U W (f ≫ g) = homEquiv U V f ≫ homEquiv V W g.
+
+  Use nested `DirectSum.induction_on` on `f` and `g`; the zero and addition
+  cases follow from linearity and the preadditive composition laws.  On
+  `DirectSum.lof` generators, rewrite target composition with
+  `(LinearShiftFamily.categoryData T).total_comp_lof`, then with
+  `LinearShiftFamily.categoryData_homogeneous_comp`.  Normalize the shifts
+  using `degree_zero_shift_family_restricts`; equality proofs inside the two
+  `shift_comp` transports are propositionally irrelevant.  Use
+  `DirectSum.decomposeLinearEquiv_symm_lof` and
+  `GradedModuleShiftIso.component_coe` at degrees `0`, `0`, and `0` to turn
+  the three component maps into the corresponding `total` maps.  The
+  remaining generator equality is exactly `S.hom_shift_comp i j f g`.
+  This is the point for which the cross-degree field is essential;
+  `hom_shift_comp_pre` and `hom_shift_comp_post` alone only treat one fixed
+  degree and cannot replace it.
+
+* Derive identity preservation rather than adding another coherence field.
+  For `U : Q`, put
+  `p := (homEquiv U U).symm (𝟙 U.underlying.down)` and apply the key claim to
+  `𝟙 U` and `p`.  The category identity laws and
+  `LinearEquiv.apply_symm_apply` reduce it to
+  `homEquiv U U (𝟙 U) = 𝟙 U.underlying.down`.
+
+* Define `G : Q ⥤ C` by `G.obj U := U.underlying.down` and
+  `G.map := homEquiv`; the preceding two claims are its functor laws.  Define
+  `F : C ⥤ Q` by
+  `F.obj X := LinearShiftFamily.categoryObject T (DegreeZero.of A X)` and
+  `F.map f := (homEquiv (F.obj X) (F.obj Y)).symm f`.  Prove its functor laws
+  by applying the injective `homEquiv` and using the laws for `G` together
+  with `LinearEquiv.symm_apply_apply`.
+
+* Finish exactly as in `LinearShiftFamily.degree_zero_recovers` in this file:
+  the objects of `Q` are `TotalGradedObject`s whose underlying objects are
+  `ULift`s, so after cases on those two wrappers, the unit and counit
+  components are identity isomorphisms.  Assemble their naturality with
+  `NatIso.ofComponents`, using the two inverse laws of `homEquiv`, and package
+  `F`, `G`, the two natural isomorphisms, and the triangle equality into the
+  required `Nonempty (C ≌ Q)`.
+-/
 theorem reconstructs_from_degree_zero :
     Nonempty
       (C ≌ LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) := by

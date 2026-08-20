@@ -1,5 +1,7 @@
 import Formalization.Books.Categories.Unit21.LimitsAndColimitsOverPreorderedSets
+import Formalization.Books.Algebra.Unit69.QuasiRegularSequences
 import Formalization.Books.Algebra.Unit98.TakingLimits
+import Formalization.Books.Examples.Unit08.NoncompleteQuotient
 import Mathlib.Algebra.Category.CommAlgCat.Basic
 import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic

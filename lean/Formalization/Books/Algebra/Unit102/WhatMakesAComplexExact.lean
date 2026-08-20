@@ -483,11 +483,16 @@ theorem lemma_add_trivial_complex
       have hplus : i - 1 + 1 = i := Nat.sub_add_cancel hi
       have hs : tRank (i - 1 + 1) = 1 := by rw [hplus]; simp [tRank]
       have ht : tRank (i - 1) = 1 := by simp [tRank, hprev_ne_i]
-      let es : (Fin (tRank (i - 1 + 1)) → R) ≃ₗ[R] (Fin 1 → R) :=
-        LinearEquiv.piCongrLeft R (fun _ : Fin 1 => R) (finCongr hs)
-      let et : (Fin (tRank (i - 1)) → R) ≃ₗ[R] (Fin 1 → R) :=
-        LinearEquiv.piCongrLeft R (fun _ : Fin 1 => R) (finCongr ht)
-      exact et.symm.toLinearMap.comp es.toLinearMap
+      exact
+        { toFun := fun x z => x (Fin.cast hs.symm (Fin.cast ht z))
+          map_add' := by
+            intro x y
+            ext z
+            rfl
+          map_smul' := by
+            intro r x
+            ext z
+            rfl }
     · exact 0
   let g : ∀ j, ((Fin (dRank (j + 1)) → R) × (Fin (tRank (j + 1)) → R)) →ₗ[R]
       ((Fin (dRank j) → R) × (Fin (tRank j) → R)) := fun j => by
@@ -1021,60 +1026,6 @@ theorem lemma_add_trivial_complex
             (Fin (tRank (i - 1 + 1)) → R))) =
         hplus0.symm ▸ tDiff (i - 1) := by
     sorry
-    /-
-    /- Prior attempt: rewriting the dependent rank-one source and target
-    indices caused a motive error, and the subsequent finite-index
-    elimination remained dependent on those transports.
-    ext x
-    have hti : tRank (i - 1 + 1) = 1 := by
-      rw [Nat.sub_add_cancel hi]
-      simp [tRank]
-    have htm : tRank (i - 1) = 1 := by simp [tRank, hprev_ne_i]
-    simp only [Nat.sub_add_cancel hi] at x ⊢
-    have hx0 : x = Fin.cast (by simp [tRank]) (0 : Fin 1) := by
-      apply Fin.ext
-      have hxlt := x.isLt
-      simp [tRank] at hxlt ⊢
-      omega
-    rw [hx0]
-    simp [g, coord, coordI, coordIm1, srcPre, tgtPre, ss, ts,
-      sourceShear, targetShear, sp, tp, f0, f01, f10, dRank, tRank,
-      hi_ne_prev, hprev_ne_i, Nat.sub_add_cancel hi, hc, hcv, hvc, c, v,
-      pivotLinearEquiv,
-      Fin.insertNth, Fin.removeNth, LinearEquiv.piCongrLeft,
-      LinearEquiv.piCongrLeft', Equiv.piCongrLeft', Pi.single_apply] <;> ring
-    -/
-    apply LinearMap.ext
-    intro x
-    have hti : tRank (i - 1 + 1) = 1 := by
-      rw [hplus0]
-      simp [tRank]
-    let q : Fin (tRank (i - 1 + 1)) := Fin.cast hti.symm (0 : Fin 1)
-    have hx : x = x q • Pi.single q 1 := by
-      funext z
-      have hz : z = q := by
-        apply Fin.ext
-        omega
-      subst z
-      simp
-    rw [hx]
-    simp only [map_smul]
-    congr 1
-    have hq : q = hplus0.symm ▸ Fin.cast hti0.symm (0 : Fin 1) := by
-      apply Fin.ext
-      simp [q]
-    rw [hq]
-    change
-      ((coord (i - 1)).symm
-        (f (coord i (0, Pi.single (Fin.cast hti0.symm (0 : Fin 1)) 1)))).2 =
-        (hplus0.symm ▸ tDiff (i - 1))
-          (Pi.single (hplus0.symm ▸ Fin.cast hti0.symm (0 : Fin 1)) 1)
-    rw [hcoord_inr, htarget_pivot]
-    simp [tDiff, hplus0, tRank, hprev_ne_i, hti0,
-      LinearEquiv.piCongrLeft, LinearEquiv.piCongrLeft',
-      Equiv.piCongrLeft', Pi.single_apply]
-    norm_num
-    -/
   let D : FiniteFreeComplex R length :=
     { termRank := dRank
       termRank_zero := by
@@ -1089,202 +1040,6 @@ theorem lemma_add_trivial_complex
         simp [dDiff, g, hne, C.differential_zero j hj]
       differential_comp := by
         sorry
-        /-
-        intro j
-        by_cases hprev : j + 1 = i - 1
-        · have hi2 : 2 ≤ i := by omega
-          have hj : j = i - 2 := by omega
-          subst j
-          have h2 : i - 2 + 1 = i - 1 := by omega
-          have hleft :
-              (C.previousDifferential (i - 1) (by omega)).comp f = 0 := by
-            apply LinearMap.ext
-            intro y
-            have hI2 : i - 1 + 1 = i := Nat.sub_add_cancel hi
-            let y' : Fin (C.termRank (i - 1 + 1)) → R := hI2.symm ▸ y
-            have hI : i - 2 + 1 = i - 1 := by omega
-            have hC : i - 2 + 1 + 1 = i := by omega
-            have hx := congrArg (fun q => q (hC.symm ▸ y))
-              (C.differential_comp (i - 2))
-            have hnest := transport_fin_linear_map_nested (rank := C.termRank)
-              hI C.differential y'
-            have hy : hI.symm ▸ y' = hC.symm ▸ y := by
-              have transport_rank : ∀ (m n : ℕ) (h : m = n)
-                  (x : Fin (C.termRank n) → R),
-                  h.symm ▸ x =
-                    fun z => x (Fin.cast (congrArg C.termRank h) z) := by
-                intro m n h x
-                cases h
-                rfl
-              have transport_rank_succ : ∀ (m n : ℕ) (h : m = n)
-                  (x : Fin (C.termRank (n + 1)) → R),
-                  h.symm ▸ x =
-                    fun z => x
-                      (Fin.cast (congrArg (fun k => C.termRank (k + 1)) h) z) := by
-                intro m n h x
-                cases h
-                rfl
-              have hIplus : i - 2 + 1 + 1 = (i - 1) + 1 :=
-                congrArg Nat.succ hI
-              have hy' := transport_rank (i - 1 + 1) i hI2 y
-              have hyI := transport_rank_succ (i - 2 + 1) (i - 1) hI y'
-              have hyC := transport_rank (i - 2 + 1 + 1) i hC y
-              have hyI' : hI.symm ▸ y' =
-                  fun z => y'
-                    (Fin.cast
-                      (congrArg (fun k => C.termRank (k + 1)) hI) z) := by
-                simpa only using hyI
-              rw [hyI']
-              dsimp [y']
-              rw [hy', hyC]
-              funext z
-              apply congrArg y
-              apply Fin.ext
-              rfl
-            have hzero :
-                C.differential (i - 2)
-                  (hI.symm ▸ ((hI ▸ C.differential (i - 2 + 1)) y')) = 0 := by
-              rw [hnest]
-              rw [hy]
-              simpa [LinearMap.comp_apply] using hx
-            have hfixed := transport_fin_linear_map_fixed (rank := C.termRank)
-              hI (C.differential (i - 2))
-                ((hI ▸ C.differential (i - 2 + 1)) y')
-            have htrans :
-                (C.previousDifferential (i - 1) (by omega))
-                    ((hI ▸ C.differential (i - 2 + 1)) y') = 0 := by
-              dsimp [FiniteFreeComplex.previousDifferential]
-              exact
-                (transport_differential_fixed (rank := C.termRank)
-                  hI (by omega) C.differential
-                  ((hI ▸ C.differential (i - 2 + 1)) y')).trans
-                  (hfixed.symm.trans hzero)
-            have hinner :
-                f y = (hI ▸ C.differential (i - 2 + 1)) y' := by
-              have hmapI := transport_dependent hI C.differential
-              have hmapI' := congrArg (fun q => q y') hmapI
-              have hmapI2 := transport_differential_fixed (rank := C.termRank)
-                hI2 (by omega) C.differential y
-              have hmapI2' :
-                  f y = (C.differential (i - 1)) y' := by
-                convert hmapI2.symm using 1 <;>
-                  simp [f, FiniteFreeComplex.previousDifferential, hI2]
-              exact hmapI2'.trans hmapI'.symm
-            change (C.previousDifferential (i - 1) (by omega)) (f y) = 0
-            rw [hinner]
-            exact htrans
-          have ht : tRank (i - 2 + 1) = 1 := by
-            rw [h2]
-            simp [tRank, hprev_ne_i]
-          let q : Fin (tRank (i - 2 + 1)) := Fin.cast ht.symm (0 : Fin 1)
-          have hcoord :
-              h2 ▸ coord (i - 2 + 1) (0, Pi.single q 1) =
-                f (Pi.single b 1) := by
-            simp [coord, coordIm1, dRank, tRank, h2, hi_ne_prev,
-              hprev_ne_i, LinearEquiv.piCongrLeft,
-              LinearEquiv.piCongrLeft', Equiv.piCongrLeft',
-              Pi.single_apply, htarget_pivot]
-          have hg_i2_inr :
-              (g (i - 2)).comp
-                  (LinearMap.inr R (Fin (dRank (i - 2 + 1)) → R)
-                    (Fin (tRank (i - 2 + 1)) → R)) = 0 := by
-            apply LinearMap.ext
-            intro x
-            have hx : x = x q • Pi.single q 1 := by
-              funext z
-              have hz : z = q := by
-                apply Fin.ext
-                omega
-              subst z
-              simp
-            rw [hx]
-            simp only [map_smul]
-            have hz := congrArg
-              (fun q => (coord (i - 2)).symm (q (Pi.single b 1))) hleft
-            simpa [g, LinearMap.comp_apply, hcoord, f,
-              FiniteFreeComplex.previousDifferential] using hz
-          apply LinearMap.ext
-          intro x
-          have hz := congrArg
-            (fun q =>
-              (q (LinearMap.inl R (Fin (dRank (i - 2 + 1)) → R)
-                (Fin (tRank (i - 2 + 1)) → R) x)).1)
-            (hgcomp (i - 2))
-          let y := g (i - 2 + 1)
-            (LinearMap.inl R (Fin (dRank (i - 2 + 1 + 1)) → R)
-              (Fin (tRank (i - 2 + 1 + 1)) → R) x)
-          have hy :
-              y =
-                LinearMap.inl R (Fin (dRank (i - 2 + 1)) → R)
-                    (Fin (tRank (i - 2 + 1)) → R) y.1 +
-                  LinearMap.inr R (Fin (dRank (i - 2 + 1)) → R)
-                    (Fin (tRank (i - 2 + 1)) → R) y.2 := by
-            apply Prod.ext <;> simp [y]
-          have hz' :
-              (g (i - 2)
-                  (LinearMap.inl R (Fin (dRank (i - 2 + 1)) → R)
-                    (Fin (tRank (i - 2 + 1)) → R) y.1)).1 +
-                (g (i - 2)
-                  (LinearMap.inr R (Fin (dRank (i - 2 + 1)) → R)
-                    (Fin (tRank (i - 2 + 1)) → R) y.2)).1 = 0 := by
-            rw [← hy]
-            simpa [y, LinearMap.comp_apply] using hz
-          have hcross := congrArg (fun q => (q y.2).1) hg_i2_inr
-          rw [hcross] at hz'
-          simpa [dDiff, y, LinearMap.comp_apply] using hz'
-        · by_cases hnext : j + 1 = i
-          · have hj : j = i - 1 := by omega
-            subst j
-            apply LinearMap.ext
-            intro x
-            have hz := congrArg
-              (fun q =>
-                (q (LinearMap.inl R (Fin (dRank i) → R)
-                  (Fin (tRank i) → R) x)).1)
-              (hgcomp (i - 1))
-            let y := g i
-              (LinearMap.inl R (Fin (dRank (i + 1)) → R)
-                (Fin (tRank (i + 1)) → R) x)
-            have hy :
-                y =
-                  LinearMap.inl R (Fin (dRank i) → R) (Fin (tRank i) → R) y.1 +
-                    LinearMap.inr R (Fin (dRank i) → R)
-                      (Fin (tRank i) → R) y.2 := by
-              apply Prod.ext <;> simp [y]
-            have hz' :
-                (g (i - 1)
-                    (LinearMap.inl R (Fin (dRank i) → R)
-                      (Fin (tRank i) → R) y.1)).1 +
-                  (g (i - 1)
-                    (LinearMap.inr R (Fin (dRank i) → R)
-                      (Fin (tRank i) → R) y.2)).1 = 0 := by
-              rw [← hy]
-              simpa [y, LinearMap.comp_apply] using hz
-            have hcross := congrArg (fun q => q y.2) hg_firstzero
-            rw [hcross] at hz'
-            simpa [dDiff, y, LinearMap.comp_apply] using hz'
-          · have htzero : tRank (j + 1) = 0 := by
-              simp [tRank, hprev, hnext]
-            have hsource :
-                g (j + 1)
-                    (LinearMap.inl R (Fin (dRank (j + 1 + 1)) → R)
-                      (Fin (tRank (j + 1 + 1)) → R) x) =
-                  LinearMap.inl R (Fin (dRank (j + 1)) → R)
-                    (Fin (tRank (j + 1)) → R)
-                    (dDiff (j + 1) x) := by
-              apply Prod.ext
-              · rfl
-              · apply Subsingleton.elim
-            apply LinearMap.ext
-            intro x
-            have hz := congrArg
-              (fun q =>
-                (q (LinearMap.inl R (Fin (dRank (j + 1 + 1)) → R)
-                  (Fin (tRank (j + 1 + 1)) → R) x)).1)
-              (hgcomp j)
-            rw [hsource] at hz
-            simpa [dDiff, LinearMap.comp_apply] using hz
-        -/
       }
   let T : FiniteFreeComplex R length :=
     { termRank := tRank

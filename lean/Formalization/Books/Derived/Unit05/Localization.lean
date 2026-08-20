@@ -1223,8 +1223,9 @@ def triangleMorphismProperty (S : MorphismProperty C) :
   fun _ _ φ => S φ.hom₁ ∧ S φ.hom₂ ∧ S φ.hom₃
 
 abbrev TriangleLocalizationIndex (S : MorphismProperty C) (T : Triangle C) :=
-  (triangleMorphismProperty S).Under
-    (⊤ : MorphismProperty (Triangle C)) T
+  ObjectProperty.FullSubcategory
+    (fun A : (triangleMorphismProperty S).Under
+      (⊤ : MorphismProperty (Triangle C)) T => A.right ∈ distTriang C)
 
 def triangleLocalizationIndexToObject₁
     (S : MorphismProperty C) (T : Triangle C) :
@@ -1232,11 +1233,11 @@ def triangleLocalizationIndexToObject₁
   obj A :=
     MorphismProperty.Under.mk
       (P := S) (Q := (⊤ : MorphismProperty C)) (X := T.obj₁)
-      A.hom.hom₁ A.prop.1
+      A.obj.hom.hom₁ A.obj.prop.1
   map {A B} φ :=
-    MorphismProperty.Under.homMk φ.right.hom₁ (by
-      change A.hom.hom₁ ≫ φ.right.hom₁ = B.hom.hom₁
-      exact congrArg (fun k => k.hom₁) (MorphismProperty.Under.w φ))
+    MorphismProperty.Under.homMk φ.hom.right.hom₁ (by
+      change A.obj.hom.hom₁ ≫ φ.hom.right.hom₁ = B.obj.hom.hom₁
+      exact congrArg (fun k => k.hom₁) (MorphismProperty.Under.w φ.hom))
   map_id A := by
     apply MorphismProperty.Under.Hom.ext
     rfl
@@ -1250,11 +1251,11 @@ def triangleLocalizationIndexToObject₂
   obj A :=
     MorphismProperty.Under.mk
       (P := S) (Q := (⊤ : MorphismProperty C)) (X := T.obj₂)
-      A.hom.hom₂ A.prop.2.1
+      A.obj.hom.hom₂ A.obj.prop.2.1
   map {A B} φ :=
-    MorphismProperty.Under.homMk φ.right.hom₂ (by
-      change A.hom.hom₂ ≫ φ.right.hom₂ = B.hom.hom₂
-      exact congrArg (fun k => k.hom₂) (MorphismProperty.Under.w φ))
+    MorphismProperty.Under.homMk φ.hom.right.hom₂ (by
+      change A.obj.hom.hom₂ ≫ φ.hom.right.hom₂ = B.obj.hom.hom₂
+      exact congrArg (fun k => k.hom₂) (MorphismProperty.Under.w φ.hom))
   map_id A := by
     apply MorphismProperty.Under.Hom.ext
     rfl
@@ -1268,11 +1269,11 @@ def triangleLocalizationIndexToObject₃
   obj A :=
     MorphismProperty.Under.mk
       (P := S) (Q := (⊤ : MorphismProperty C)) (X := T.obj₃)
-      A.hom.hom₃ A.prop.2.2
+      A.obj.hom.hom₃ A.obj.prop.2.2
   map {A B} φ :=
-    MorphismProperty.Under.homMk φ.right.hom₃ (by
-      change A.hom.hom₃ ≫ φ.right.hom₃ = B.hom.hom₃
-      exact congrArg (fun k => k.hom₃) (MorphismProperty.Under.w φ))
+    MorphismProperty.Under.homMk φ.hom.right.hom₃ (by
+      change A.obj.hom.hom₃ ≫ φ.hom.right.hom₃ = B.obj.hom.hom₃
+      exact congrArg (fun k => k.hom₃) (MorphismProperty.Under.w φ.hom))
   map_id A := by
     apply MorphismProperty.Under.Hom.ext
     rfl
@@ -1282,13 +1283,13 @@ def triangleLocalizationIndexToObject₃
 
 theorem triangleLocalizationIndex_filtered
     {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
-    [CompatibleWithTriangulation S] (T : Triangle C) :
+    [CompatibleWithTriangulation S] (T : Triangle C) (hT : T ∈ distTriang C) :
     IsFiltered (TriangleLocalizationIndex S T) := by
   sorry
 
 theorem triangleLocalizationIndex_evaluations_cofinal
     {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
-    [CompatibleWithTriangulation S] (T : Triangle C) :
+    [CompatibleWithTriangulation S] (T : Triangle C) (hT : T ∈ distTriang C) :
     Functor.Final (triangleLocalizationIndexToObject₁ S T) ∧
       Functor.Final (triangleLocalizationIndexToObject₂ S T) ∧
       Functor.Final (triangleLocalizationIndexToObject₃ S T) := by

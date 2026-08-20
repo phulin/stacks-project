@@ -854,6 +854,95 @@ theorem rightDerived_exists_of_enough_kInjectives
 
 end DerivedFunctor
 
+open CochainComplex.HomComplex
+
+private noncomputable def splitSurjectionCochainLift
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {M K L : BookComplex A} {n : ℤ}
+    (p : K ⟶ L)
+    (hp : Formalization.Books.Derived.Unit09.termwiseSplitSurjection p)
+    (z : Cochain M L n) : Cochain M K n :=
+  Cochain.mk (fun i j hij =>
+    z.v i j hij ≫ (hp j).exists_splitEpi.some.section_)
+
+private lemma splitSurjectionCochainLift_comp
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {M K L : BookComplex A} {n : ℤ}
+    (p : K ⟶ L)
+    (hp : Formalization.Books.Derived.Unit09.termwiseSplitSurjection p)
+    (z : Cochain M L n) :
+    (splitSurjectionCochainLift p hp z).comp
+        (Cochain.ofHom p) (add_zero n) = z := by
+  ext i j hij
+  rw [Cochain.comp_v _ _ (add_zero n) i j j hij (add_zero j)]
+  rw [Cochain.ofHom_v]
+  dsimp [splitSurjectionCochainLift]
+  rw [Category.assoc, (hp j).exists_splitEpi.some.id, Category.comp_id]
+
+private lemma splitSurjection_homotopy_lift
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {M K L : BookComplex A} (p : K ⟶ L)
+    (hp : Formalization.Books.Derived.Unit09.termwiseSplitSurjection p)
+    (f : M ⟶ K) (hM : M.Acyclic) [K.IsKInjective] [L.IsKInjective]
+    (h : Homotopy (f ≫ p) 0) :
+    ∃ z : Cochain M K (-1),
+      Cochain.ofHom f = δ (-1) 0 z ∧
+        z.comp (Cochain.ofHom p) (add_zero (-1)) =
+          Cochain.ofHomotopy h := by
+  let k : Cochain M K (-1) :=
+    splitSurjectionCochainLift p hp (Cochain.ofHomotopy h)
+  have hk : k.comp (Cochain.ofHom p) (add_zero (-1)) =
+      Cochain.ofHomotopy h := by
+    exact splitSurjectionCochainLift_comp p hp (Cochain.ofHomotopy h)
+  let q : Cochain M K 0 := Cochain.ofHom f - δ (-1) 0 k
+  have hq : δ 0 1 q = 0 := by
+    dsimp [q]
+    rw [δ_sub, δ_ofHom, δ_δ]
+    simp
+  let g : M ⟶ K :=
+    Cocycle.homOf (Cocycle.mk q 1 (zero_add 1) hq)
+  have hg : Cochain.ofHom g = q := by
+    exact Cocycle.cochain_ofHom_homOf_eq_coe _
+  obtain ⟨hg'⟩ := CochainComplex.IsKInjective.nonempty_homotopy_zero g hM
+  let r₀ : Cochain M K (-1) := Cochain.ofHomotopy hg'
+  have hr₀ : δ (-1) 0 r₀ = q := by
+    dsimp [r₀]
+    rw [δ_ofHomotopy, Cochain.ofHom_zero, sub_zero, hg]
+  have hqp : q.comp (Cochain.ofHom p) (zero_add 0) = 0 := by
+    dsimp [q]
+    rw [Cochain.sub_comp, ← Cochain.ofHom_comp, ← δ_comp_ofHom, hk]
+    rw [δ_ofHomotopy h, Cochain.ofHom_zero, sub_zero]
+    simp
+  have hr₀p : δ (-1) 0 (r₀.comp (Cochain.ofHom p) (add_zero (-1))) = 0 := by
+    rw [δ_comp_ofHom, hr₀, hqp]
+  let rp : Cocycle M L (-1) :=
+    Cocycle.mk (r₀.comp (Cochain.ofHom p) (add_zero (-1))) 0
+      (by simp) hr₀p
+  obtain ⟨s, hs⟩ :=
+    CochainComplex.IsKInjective.eq_δ_of_cocycle rp hM (-2) (by simp)
+  have hs' : δ (-2) (-1) s =
+      r₀.comp (Cochain.ofHom p) (add_zero (-1)) := by
+    simpa [rp] using hs
+  let t : Cochain M K (-2) :=
+    splitSurjectionCochainLift p hp s
+  have ht : t.comp (Cochain.ofHom p) (add_zero (-2)) = s := by
+    exact splitSurjectionCochainLift_comp p hp s
+  let r : Cochain M K (-1) := r₀ - δ (-2) (-1) t
+  have hrp : r.comp (Cochain.ofHom p) (add_zero (-1)) = 0 := by
+    dsimp [r]
+    rw [Cochain.sub_comp, ← δ_comp_ofHom, ht, hs']
+    simp
+  let z : Cochain M K (-1) := k + r
+  refine ⟨z, ?_, ?_⟩
+  · dsimp [z]
+    rw [δ_add]
+    dsimp [r]
+    rw [δ_sub, hr₀, δ_δ]
+    dsimp [q]
+    abel
+  · dsimp [z]
+    rw [Cochain.add_comp, hk, hrp, add_zero]
+
 /-! ## Split inverse systems -/
 
 /- The source's inverse system is the positive-integer inverse system supplied
@@ -869,7 +958,327 @@ theorem inverseSystemLimit_isKInjective_of_split_surjective
       Formalization.Books.Derived.Unit09.termwiseSplitSurjection
         (successiveTransitionMap I n)) :
     (inverseSystemLimit I).IsKInjective := by
-  sorry
+  classical
+  refine ⟨fun {M} f hM => ?_⟩
+  let f_p (n : ℕ+) : M ⟶ I.obj (Opposite.op n) :=
+    f ≫ limit.π I (Opposite.op n)
+  have hpcomp (n : ℕ+) :
+      f_p (n + 1) ≫ successiveTransitionMap I n = f_p n := by
+    dsimp [f_p]
+    rw [Category.assoc]
+    simpa [successiveTransitionMap, transitionMap] using
+      (limit.w I (opHomOfLE (PNat.lt_add_right n 1).le))
+  let h₁ : Homotopy (f_p 1) 0 := by
+    letI : (I.obj (Opposite.op (1 : ℕ+))).IsKInjective := hI 1
+    exact CochainComplex.IsKInjective.nonempty_homotopy_zero (f_p 1) hM |>.some
+  let step (n : ℕ+) (h : Homotopy (f_p n) 0) :
+      {h' : Homotopy (f_p (n + 1)) 0 //
+        Cochain.ofHomotopy (h'.compRight (successiveTransitionMap I n)) =
+          Cochain.ofHomotopy h} := by
+    letI : (I.obj (Opposite.op (n + 1))).IsKInjective := hI (n + 1)
+    letI : (I.obj (Opposite.op n)).IsKInjective := hI n
+    let hh : Homotopy
+        (f_p (n + 1) ≫ successiveTransitionMap I n) 0 :=
+      { hom := h.hom
+        zero := h.zero
+        comm := by
+          intro i
+          rw [hpcomp n]
+          exact h.comm i }
+    let z : Cochain M (I.obj (Opposite.op (n + 1))) (-1) :=
+      Classical.choose (splitSurjection_homotopy_lift
+        (successiveTransitionMap I n) (hsplit n) (f_p (n + 1)) hM hh)
+    have hzdata := Classical.choose_spec (splitSurjection_homotopy_lift
+      (successiveTransitionMap I n) (hsplit n) (f_p (n + 1)) hM hh)
+    have hz : Cochain.ofHom (f_p (n + 1)) = δ (-1) 0 z := hzdata.1
+    have hzcomp : z.comp (Cochain.ofHom (successiveTransitionMap I n))
+        (add_zero (-1)) = Cochain.ofHomotopy hh := hzdata.2
+    let hzsub : {z : Cochain M (I.obj (Opposite.op (n + 1))) (-1) //
+        Cochain.ofHom (f_p (n + 1)) =
+          δ (-1) 0 z + Cochain.ofHom
+            (0 : M ⟶ I.obj (Opposite.op (n + 1)))} :=
+      ⟨z, by
+        have hz' : Cochain.ofHom (f_p (n + 1)) =
+            δ (-1) 0 z + Cochain.ofHom
+              (0 : M ⟶ I.obj (Opposite.op (n + 1))) := by
+          rw [Cochain.ofHom_zero, add_zero]
+          exact hz
+        exact hz'⟩
+    let h' : Homotopy (f_p (n + 1)) 0 :=
+      (Cochain.equivHomotopy (f_p (n + 1)) 0).symm hzsub
+    have hz' : Cochain.ofHomotopy h' = z := by
+      ext i j hij
+      change h'.hom i j = z.v i j hij
+      dsimp [h']
+      exact congrArg (fun w => w.1.v i j hij)
+        ((Cochain.equivHomotopy (f_p (n + 1)) 0).apply_symm_apply hzsub)
+    have hcomp : Cochain.ofHomotopy
+        (h'.compRight (successiveTransitionMap I n)) =
+        (Cochain.ofHomotopy h').comp
+          (Cochain.ofHom (successiveTransitionMap I n)) (add_zero (-1)) := by
+      ext i j hij
+      simp [Cochain.ofHomotopy, Homotopy.compRight, Cochain.comp_v]
+    have hhh : Cochain.ofHomotopy hh = Cochain.ofHomotopy h := by
+      ext i j hij
+      change hh.hom i j = h.hom i j
+      dsimp [hh]
+    exact ⟨h', by rw [hcomp, hz', hzcomp, hhh]⟩
+  let H (n : ℕ+) : Homotopy (f_p n) 0 :=
+    PNat.recOn n h₁ (fun n h => (step n h).1)
+  have Hcomp (n : ℕ+) :
+      Cochain.ofHomotopy ((H (n + 1)).compRight (successiveTransitionMap I n)) =
+        Cochain.ofHomotopy (H n) := by
+    simpa only [H, PNat.recOn_succ] using (step n (H n)).2
+  have hcompRight {K L N : BookComplex A} {a b : K ⟶ L} (h : Homotopy a b)
+      (p : L ⟶ N) :
+      Cochain.ofHomotopy (h.compRight p) =
+        (Cochain.ofHomotopy h).comp (Cochain.ofHom p) (add_zero (-1)) := by
+    ext i j hij
+    simp [Cochain.ofHomotopy, Homotopy.compRight, Cochain.comp_v]
+  have hcompRight_assoc {K L N P : BookComplex A} {a : K ⟶ L}
+      (h : Homotopy a 0) (p : L ⟶ N) (q : N ⟶ P) :
+      Cochain.ofHomotopy ((h.compRight p).compRight q) =
+        ((Cochain.ofHomotopy h).comp (Cochain.ofHom p) (add_zero (-1))).comp
+          (Cochain.ofHom q) (add_zero (-1)) := by
+    calc
+      Cochain.ofHomotopy ((h.compRight p).compRight q) =
+          (Cochain.ofHomotopy (h.compRight p)).comp
+            (Cochain.ofHom q) (add_zero (-1)) :=
+        hcompRight (h.compRight p) q
+      _ = ((Cochain.ofHomotopy h).comp (Cochain.ofHom p) (add_zero (-1))).comp
+            (Cochain.ofHom q) (add_zero (-1)) := by rw [hcompRight h p]
+  have Hmap : ∀ (n m : ℕ+) (hmn : m ≤ n),
+      Cochain.ofHomotopy ((H n).compRight (transitionMap I hmn)) =
+        Cochain.ofHomotopy (H m) := by
+    intro n
+    induction n using PNat.recOn with
+    | one =>
+        intro m hm
+        have hm1 : m = 1 := le_antisymm hm (PNat.one_le m)
+        subst m
+        have hmproof : hm = le_rfl := Subsingleton.elim _ _
+        subst hm
+        rw [transitionMap_refl]
+        ext i j hij
+        simp [Homotopy.compRight, Cochain.ofHomotopy]
+    | succ n ih =>
+        intro m hmn
+        by_cases hEq : m = n + 1
+        · subst m
+          have hmproof : hmn = le_rfl := Subsingleton.elim _ _
+          subst hmn
+          rw [transitionMap_refl]
+          ext i j hij
+          simp [Homotopy.compRight, Cochain.ofHomotopy]
+        · have hmn' : m ≤ n := PNat.lt_add_one_iff.mp (lt_of_le_of_ne hmn hEq)
+          have htrans : transitionMap I hmn =
+              successiveTransitionMap I n ≫ transitionMap I hmn' := by
+            simpa [successiveTransitionMap] using
+              (transitionMap_comp I (PNat.lt_add_right n 1).le hmn').symm
+          rw [htrans]
+          calc
+            Cochain.ofHomotopy ((H (n + 1)).compRight
+                (successiveTransitionMap I n ≫ transitionMap I hmn')) =
+                Cochain.ofHomotopy
+                  (((H (n + 1)).compRight (successiveTransitionMap I n)).compRight
+                    (transitionMap I hmn')) := by
+                  ext i j hij
+                  simp [Cochain.ofHomotopy, Homotopy.compRight]
+            _ = ((Cochain.ofHomotopy (H (n + 1))).comp
+                (Cochain.ofHom (successiveTransitionMap I n)) (add_zero (-1))).comp
+                  (Cochain.ofHom (transitionMap I hmn')) (add_zero (-1)) := by
+                  exact hcompRight_assoc (H (n + 1))
+                    (successiveTransitionMap I n) (transitionMap I hmn')
+            _ = (Cochain.ofHomotopy (H n)).comp
+                (Cochain.ofHom (transitionMap I hmn')) (add_zero (-1)) := by
+                  rw [← hcompRight (H (n + 1)) (successiveTransitionMap I n),
+                    Hcomp n]
+            _ = Cochain.ofHomotopy ((H n).compRight (transitionMap I hmn')) :=
+                (hcompRight (H n) _).symm
+            _ = Cochain.ofHomotopy (H m) := ih m hmn'
+  let e (j : ℤ) (n : ℕ+ᵒᵖ) : (I.obj n).X j =
+      (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j).obj n := rfl
+  have he (j : ℤ) (n : ℕ+ᵒᵖ) : e j n = (by rfl) := Subsingleton.elim _ _
+  let Hcone (i j : ℤ) :
+      Cone (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j) :=
+    { pt := M.X i
+      π :=
+        { app := fun n => (H n.unop).hom i j ≫ eqToHom (e j n)
+          naturality := by
+            rintro ⟨x⟩ ⟨y⟩ fxy
+            let hxy : y ≤ x := le_of_op_hom fxy
+            have hf : fxy = opHomOfLE hxy := Subsingleton.elim _ _
+            rw [hf]
+            simp only [Functor.const_obj_map, Category.id_comp, Category.assoc]
+            by_cases hij : i + (-1) = j
+            · have hval : (H x).hom i j ≫ (I.map (opHomOfLE hxy)).f j =
+                  (H y).hom i j := by
+                simpa [Cochain.ofHomotopy, Homotopy.compRight, transitionMap]
+                  using congrArg (fun z => z.v i j hij) (Hmap x y hxy)
+              have hmap : eqToHom (e j (Opposite.op x)) ≫
+                    (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j).map
+                      (opHomOfLE hxy) =
+                  (I.map (opHomOfLE hxy)).f j ≫ eqToHom (e j (Opposite.op y)) := by
+                cases e j (Opposite.op x)
+                cases e j (Opposite.op y)
+                dsimp [HomologicalComplex.eval]
+                simp
+              have hval' := congrArg
+                (fun z => z ≫ eqToHom (e j (Opposite.op y))) hval.symm
+              rw [Category.assoc, ← hmap, ← Category.assoc] at hval'
+              rw [Category.assoc] at hval'
+              simpa [he, e] using hval'
+            · rw [(H y).zero i j (by
+                    intro hrel
+                    have hrel' : j + 1 = i := by
+                      simpa only [ComplexShape.up_Rel] using hrel
+                    apply hij
+                    omega),
+                  (H x).zero i j (by
+                    intro hrel
+                    have hrel' : j + 1 = i := by
+                      simpa only [ComplexShape.up_Rel] using hrel
+                    apply hij
+                    omega)]
+              simp [he, e] } }
+  let eLimit (j : ℤ) : (inverseSystemLimit I).X j ≅
+      limit (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j) :=
+    preservesLimitIso (HomologicalComplex.eval A (ComplexShape.up ℤ) j) I
+  let hHom (i j : ℤ) : M.X i ⟶ (inverseSystemLimit I).X j :=
+    limit.lift (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j)
+        (Hcone i j) ≫ (eLimit j).inv
+  let h : Homotopy f 0 :=
+    { hom := hHom
+      zero := by
+        intro i j hij
+        have hij' : ¬ i + (-1) = j := by
+          intro hrel
+          apply hij
+          simp only [ComplexShape.up_Rel]
+          omega
+        apply (cancel_mono (eLimit j).hom).1
+        dsimp [hHom]
+        simp [Category.assoc]
+        apply (limit.isLimit (I ⋙ HomologicalComplex.eval A
+          (ComplexShape.up ℤ) j)).hom_ext
+        intro n
+        change limit.lift (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j)
+            (Hcone i j) ≫ limit.π (I ⋙ HomologicalComplex.eval A
+              (ComplexShape.up ℤ) j) n =
+          0 ≫ limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) j) n
+        rw [limit.lift_π]
+        dsimp [Hcone]
+        rw [(H n.unop).zero i j hij]
+        simp
+      comm := by
+        intro i
+        apply (cancel_mono (eLimit i).hom).1
+        apply (limit.isLimit (I ⋙ HomologicalComplex.eval A
+          (ComplexShape.up ℤ) i)).hom_ext
+        intro n
+        change (f.f i ≫ (eLimit i).hom) ≫
+            limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i) n =
+          (((dNext i) hHom + (prevD i) hHom +
+            (0 : M ⟶ inverseSystemLimit I).f i) ≫ (eLimit i).hom) ≫
+            limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i) n
+        have hπhom : (eLimit i).hom ≫
+              limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i) n =
+            (limit.π I n).f i := by
+          dsimp [eLimit]
+          exact preservesLimitIso_hom_π
+            (HomologicalComplex.eval A (ComplexShape.up ℤ) i) I n
+        have hπinv (k : ℤ) : (eLimit k).inv ≫ (limit.π I n).f k =
+              limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) k) n := by
+          dsimp [eLimit]
+          exact preservesLimitIso_inv_π
+            (HomologicalComplex.eval A (ComplexShape.up ℤ) k) I n
+        have hHomπ (k l : ℤ) : hHom k l ≫ (eLimit l).hom ≫
+              limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) l) n =
+              (Hcone k l).π.app n := by
+          dsimp [hHom]
+          simp only [Category.assoc]
+          rw [Iso.inv_hom_id_assoc]
+          exact limit.lift_π (Hcone k l) n
+        let coneApp (k l : ℤ) : M.X k ⟶
+              (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) l).obj n := by
+          change M.X k ⟶ (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) l).obj n
+          exact (Hcone k l).π.app n
+        rw [dNext_eq hHom (i' := i + 1) (by simp),
+          prevD_eq hHom (j' := i - 1) (by simp)]
+        have hstage := (H n.unop).comm i
+        dsimp [f_p] at hstage
+        have hnextTerm :
+            HomologicalComplex.dFrom M i ≫
+                fromNext i (H n.unop).hom =
+              M.d i (i + 1) ≫ (H n.unop).hom (i + 1) i := by
+          rw [← dNext_eq_dFrom_fromNext]
+          rw [dNext_eq (H n.unop).hom (i' := i + 1) (by simp)]
+        have hprevTerm :
+            toPrev i (H n.unop).hom ≫ HomologicalComplex.dTo (I.obj n) i =
+              (H n.unop).hom i (i - 1) ≫ (I.obj n).d (i - 1) i := by
+          rw [← prevD_eq_toPrev_dTo]
+          rw [prevD_eq (H n.unop).hom (j' := i - 1) (by simp)]
+        rw [hnextTerm, hprevTerm] at hstage
+        simp only [add_zero] at hstage
+        have hnext : M.d i (i + 1) ≫ hHom (i + 1) i ≫
+              (eLimit i).hom ≫
+                limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i) n =
+            M.d i (i + 1) ≫ coneApp (i + 1) i := by
+          dsimp [hHom]
+          simp only [Category.assoc]
+          rw [Iso.inv_hom_id_assoc]
+          rw [limit.lift_π]
+        have hprev : hHom i (i - 1) ≫ (inverseSystemLimit I).d (i - 1) i ≫
+              (limit.π I n).f i =
+            coneApp i (i - 1) ≫ (I.obj n).d (i - 1) i := by
+          rw [← (limit.π I n).comm' (i - 1) i (by simp)]
+          have hπhomPrev : (eLimit (i - 1)).hom ≫
+                limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) (i - 1)) n =
+              (limit.π I n).f (i - 1) := by
+            dsimp [eLimit]
+            exact preservesLimitIso_hom_π
+              (HomologicalComplex.eval A (ComplexShape.up ℤ) (i - 1)) I n
+          have hfactor : hHom i (i - 1) ≫ (limit.π I n).f (i - 1) =
+              (Hcone i (i - 1)).π.app n := by
+            rw [← hπhomPrev]
+            exact hHomπ i (i - 1)
+          rw [← Category.assoc, hfactor]
+          rfl
+        let dEval :
+            (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) (i - 1)).obj n ⟶
+              (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i).obj n := by
+          change (I.obj n).X (i - 1) ⟶ (I.obj n).X i
+          exact (I.obj n).d (i - 1) i
+        have hprevEval : hHom i (i - 1) ≫ (inverseSystemLimit I).d (i - 1) i ≫
+              (eLimit i).hom ≫
+                limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i) n =
+            coneApp i (i - 1) ≫ dEval := by
+          rw [hπhom]
+          simpa [coneApp, dEval, HomologicalComplex.eval, Category.assoc] using hprev
+        have hstageEval :
+            f.f i ≫ (limit.π I n).f i =
+              M.d i (i + 1) ≫ coneApp (i + 1) i +
+                coneApp i (i - 1) ≫ dEval := by
+          convert hstage using 1 <;>
+            (try simp [coneApp, dEval, Hcone, e, HomologicalComplex.eval,
+              Category.assoc]) <;>
+            rfl
+        have hstageEval' :
+            (f.f i ≫ (eLimit i).hom) ≫
+                limit.π (I ⋙ HomologicalComplex.eval A (ComplexShape.up ℤ) i) n =
+              M.d i (i + 1) ≫ coneApp (i + 1) i +
+                coneApp i (i - 1) ≫ dEval := by
+          simp only [Category.assoc]
+          rw [hπhom]
+          exact hstageEval
+        rw [hstageEval']
+        rw [Preadditive.add_comp, Preadditive.add_comp,
+          Preadditive.add_comp, Preadditive.add_comp,
+          HomologicalComplex.zero_f, zero_comp]
+        simp only [Category.assoc]
+        rw [hnext, hprevEval]
+        simp only [zero_comp, add_zero] }
+  exact ⟨h⟩
 
 /- The source notes that the split-tower lemma extends to larger ordinals;
    the earlier inverse-system chapter already exposes the ordinal-limit

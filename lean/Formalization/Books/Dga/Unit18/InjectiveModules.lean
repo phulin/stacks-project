@@ -123,6 +123,20 @@ end GradedLeftModuleHom
 /-! The two homogeneous action formulas are defined before the bundled
    modules so that their degree casts remain visible in the structure bodies. -/
 
+private theorem cast_zero_of_eq
+    (F : ℤ → Type u) [∀ i, Zero (F i)] {i j : ℤ} (h : i = j) :
+    cast (congrArg F h) (0 : F i) = (0 : F j) := by
+  cases h
+  rfl
+
+private theorem cast_add_of_eq
+    (F : ℤ → Type u) [∀ i, Add (F i)] {i j : ℤ} (h : i = j)
+    (x y : F i) :
+    cast (congrArg F h) (x + y) =
+      cast (congrArg F h) x + cast (congrArg F h) y := by
+  cases h
+  rfl
+
 /-- Precomposition with a homogeneous left action, in source coordinates. -/
 def gradedLeftDualAction
     (M : GradedLeftModule (R := R) (A := A))
@@ -131,8 +145,15 @@ def gradedLeftDualAction
   { toFun := fun x =>
       f (cast (congrArg M.component (by omega : m + (-(n + m)) = -n))
         (M.action a x))
-    map_zero' := by sorry
-    map_add' := by sorry }
+    map_zero' := by
+      rw [M.action_zero_left]
+      rw [cast_zero_of_eq M.component (by omega)]
+      exact f.map_zero
+    map_add' := by
+      intro x y
+      rw [M.action_add_left]
+      rw [cast_add_of_eq M.component (by omega)]
+      exact f.map_add _ _ }
 
 /-- The sign-corrected precomposition action on the dual of a right module. -/
 def gradedRightDualAction
@@ -143,8 +164,15 @@ def gradedRightDualAction
       ((n * m).negOnePow : ℤ) •
         f (cast (congrArg M.component (by omega : (-(n + m)) + n = -m))
           (M.action x a))
-    map_zero' := by sorry
-    map_add' := by sorry }
+    map_zero' := by
+      rw [M.action_zero_left]
+      rw [cast_zero_of_eq M.component (by omega)]
+      simp
+    map_add' := by
+      intro x y
+      rw [M.action_add_left]
+      rw [cast_add_of_eq M.component (by omega)]
+      simp [smul_add] }
 
 /-- The graded character dual of a left graded module, as a right module. -/
 def gradedCharacterDualOfLeft (M : GradedLeftModule (R := R) (A := A)) :

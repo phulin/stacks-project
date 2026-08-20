@@ -903,6 +903,161 @@ theorem dedekind_domain_characterization
 
 /-! ## Integral closures in finite extensions -/
 
+private lemma scalarTower_of_tower
+    {R S U T : Type*}
+    [CommSemiring R] [CommSemiring S] [CommSemiring U] [CommSemiring T]
+    [Algebra R S] [Algebra S U] [Algebra U T]
+    [Algebra R U] [Algebra S T] [Algebra R T]
+    [IsScalarTower R S U] [IsScalarTower S U T] [IsScalarTower R S T] :
+    IsScalarTower R U T := by
+  apply IsScalarTower.of_algebraMap_eq'
+  ext r
+  change algebraMap R T r = algebraMap U T (algebraMap R U r)
+  rw [IsScalarTower.algebraMap_apply R S T,
+    IsScalarTower.algebraMap_apply S U T,
+    IsScalarTower.algebraMap_apply R S U]
+
+private lemma scalarTower_algebraMap_eq
+    {A S T : Type*} [CommSemiring A] [CommSemiring S] [CommSemiring T]
+    [Algebra A S] [Algebra S T] [Algebra A T]
+    (hTower : IsScalarTower A S T) :
+    algebraMap A T = (algebraMap S T).comp (algebraMap A S) := by
+  letI := hTower
+  exact IsScalarTower.algebraMap_eq A S T
+
+private lemma fractionRing_of_localization
+    {R S T : Type*} [CommRing R] [CommRing S] [CommRing T]
+    [IsDomain R] [Algebra R S] [Algebra R T] [Algebra S T]
+    [IsScalarTower R S T] [IsFractionRing R T]
+    (M : Submonoid R) (hM : IsLocalization M S) : IsFractionRing S T := by
+  letI : IsLocalization M S := hM
+  exact IsFractionRing.isFractionRing_of_isDomain_of_isLocalization M S T
+
+private lemma scalarTower_of_localization_map
+    {R S T : Type*} [CommSemiring R] [CommSemiring S] [CommSemiring T]
+    [Algebra R S] [Algebra R T]
+    [IsFractionRing R T]
+    (M : Submonoid R) [IsLocalization M S]
+    (hM : M ≤ Submonoid.comap (RingHom.id R) (nonZeroDivisors R)) :
+    letI : Algebra S T :=
+      (IsLocalization.map T (M := M) (T := nonZeroDivisors R)
+        (RingHom.id R) hM).toAlgebra
+    IsScalarTower R S T := by
+  letI : Algebra S T :=
+    (IsLocalization.map T (M := M) (T := nonZeroDivisors R)
+      (RingHom.id R) hM).toAlgebra
+  apply IsScalarTower.of_algebraMap_eq'
+  ext r
+  change algebraMap R T r =
+    IsLocalization.map T (M := M) (T := nonZeroDivisors R)
+      (RingHom.id R) hM (algebraMap R S r)
+  simpa using (IsLocalization.map_eq T (M := M) (T := nonZeroDivisors R)
+    (RingHom.id R) hM r).symm
+
+private lemma localization_comp_compat
+    {A Ap Bp K L : Type*}
+    [CommSemiring A] [CommSemiring Ap] [CommSemiring Bp]
+    [CommSemiring K] [CommSemiring L]
+    [Algebra A Ap] [Algebra A Bp] [Algebra A K] [Algebra A L]
+    [Algebra Ap K] [Algebra Ap Bp] [Algebra K L] [Algebra Bp L]
+    [IsScalarTower A Ap K] [IsScalarTower A Ap Bp]
+    [IsScalarTower A K L] [IsScalarTower A Bp L]
+    (M : Submonoid A) [IsLocalization M Ap] :
+    (algebraMap K L).comp (algebraMap Ap K) =
+      (algebraMap Bp L).comp (algebraMap Ap Bp) := by
+  apply IsLocalization.ringHom_ext M
+  ext a
+  change algebraMap K L (algebraMap Ap K (algebraMap A Ap a)) =
+    algebraMap Bp L (algebraMap Ap Bp (algebraMap A Ap a))
+  rw [← IsScalarTower.algebraMap_apply A Ap K,
+    ← IsScalarTower.algebraMap_apply A K L,
+    ← IsScalarTower.algebraMap_apply A Ap Bp,
+    ← IsScalarTower.algebraMap_apply A Bp L]
+
+private lemma disjoint_algebraMapSubmonoid_primeCompl
+    {A B : Type*} [CommSemiring A] [CommSemiring B] [Algebra A B]
+    (p : Ideal A) [p.IsPrime] (q : Ideal B)
+    (hcomap : q.comap (algebraMap A B) = p) :
+    Disjoint (Algebra.algebraMapSubmonoid B p.primeCompl : Set B) q := by
+  rw [Set.disjoint_left]
+  intro b hbM hbq
+  rcases hbM with ⟨a, ha, rfl⟩
+  apply ha
+  have haq : a ∈ q.comap (algebraMap A B) := Ideal.mem_comap.mpr hbq
+  rw [hcomap] at haq
+  exact haq
+
+private lemma localized_prime_data
+    {R S : Type*} [CommSemiring R] [CommSemiring S] [Algebra R S]
+    (M : Submonoid R) (hLoc : IsLocalization M S)
+    (I : Ideal R) (hI : I.IsPrime)
+    (hM : Disjoint (M : Set R) I) :
+    ∃ n : Ideal S, n.IsPrime ∧ n.under R = I := by
+  letI : IsLocalization M S := hLoc
+  refine ⟨Ideal.map (algebraMap R S) I, ?_, ?_⟩
+  · exact IsLocalization.isPrime_of_isPrime_disjoint M S I hI hM
+  · exact IsLocalization.under_map_of_isPrime_disjoint M S hI hM
+
+private lemma localization_scalar_tower
+    {A B : Type*} [CommSemiring A] [CommSemiring B] [Algebra A B]
+    (I : Ideal A) [I.IsPrime] :
+    IsScalarTower A (Localization.AtPrime I)
+      (Localization (Algebra.algebraMapSubmonoid B I.primeCompl)) :=
+  isScalarTower_localizationAlgebra I.primeCompl B
+
+private lemma localization_algebraMap_eq
+    {A B : Type*} [CommSemiring A] [CommSemiring B] [Algebra A B]
+    (I : Ideal A) [I.IsPrime] :
+    algebraMap A (Localization (Algebra.algebraMapSubmonoid B I.primeCompl)) =
+      (algebraMap (Localization.AtPrime I)
+        (Localization (Algebra.algebraMapSubmonoid B I.primeCompl))).comp
+        (algebraMap A (Localization.AtPrime I)) := by
+  letI : Algebra (Localization.AtPrime I)
+      (Localization (Algebra.algebraMapSubmonoid B I.primeCompl)) :=
+    localizationAlgebra I.primeCompl B
+  exact scalarTower_algebraMap_eq (A := A) (S := Localization.AtPrime I)
+    (T := Localization (Algebra.algebraMapSubmonoid B I.primeCompl))
+    (localization_scalar_tower (A := A) (B := B) I)
+
+private lemma liesOver_of_comap
+    {A B : Type*}
+    [CommRing A] [CommRing B] [Algebra A B]
+    (p : Ideal A) (n : Ideal B)
+    (hcomap : n.comap (algebraMap A B) = p) :
+    n.LiesOver p := by
+  rw [Ideal.liesOver_iff, Ideal.under_def]
+  exact hcomap.symm
+
+private lemma comap_of_under
+    {A R B : Type*}
+    [CommRing A] [CommRing R] [CommRing B]
+    [Algebra A R] [Algebra A B] [Algebra R B]
+    (p : Ideal A) (q : Ideal R) (n : Ideal B)
+    (hnunder : n.under R = q)
+    (hqcomap : q.comap (algebraMap A R) = p)
+    (hTower : IsScalarTower A R B) :
+    n.comap (algebraMap A B) = p := by
+  letI := hTower
+  rw [IsScalarTower.algebraMap_eq A R B, ← Ideal.comap_comap]
+  change Ideal.comap (algebraMap A R) (n.under R) = p
+  rw [hnunder, hqcomap]
+
+private lemma atPrime_comap_eq_maximal_localization
+    {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
+    (p : Ideal A) [p.IsPrime]
+    {n : Ideal (Localization (Algebra.algebraMapSubmonoid B p.primeCompl))}
+    (hcomap : n.comap
+        (algebraMap A (Localization (Algebra.algebraMapSubmonoid B p.primeCompl))) = p) :
+    n.comap (algebraMap (Localization.AtPrime p)
+      (Localization (Algebra.algebraMapSubmonoid B p.primeCompl))) =
+      IsLocalRing.maximalIdeal (Localization.AtPrime p) := by
+  apply (Localization.AtPrime.eq_maximalIdeal_iff_under_eq).mp
+  change (n.comap (algebraMap (Localization.AtPrime p)
+    (Localization (Algebra.algebraMapSubmonoid B p.primeCompl)))).comap
+      (algebraMap A (Localization.AtPrime p)) = p
+  rw [Ideal.comap_comap, ← localization_algebraMap_eq (A := A) (B := B) p]
+  exact hcomap
+
 theorem integral_closure_of_one_dimensional_domain_is_dedekind
     {A K L : Type u} [CommRing A] [IsDomain A] [IsNoetherianRing A]
     [Field K] [Algebra A K] [IsFractionRing A K]
@@ -929,7 +1084,454 @@ theorem integral_closure_of_one_dimensional_domain_is_dedekind
                   (letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField :=
                       φ.toAlgebra
                    Module.Finite p.asIdeal.ResidueField q.asIdeal.ResidueField) := by
-  sorry
+  let hB : IsDedekindDomain (integralClosure A L) :=
+    Formalization.Books.Algebra.Unit119.integral_closure_is_dedekind
+      (R := A) (K := K) (L := L) hdim
+  refine ⟨hB, ?_⟩
+  haveI : IsDedekindDomain (integralClosure A L) := hB
+  haveI : IsScalarTower A (integralClosure A L) L :=
+    IsScalarTower.of_algebraMap_eq (by
+      intro a
+      rfl)
+  haveI : IsFractionRing (integralClosure A L) L :=
+    integralClosure.isFractionRing_of_finite_extension (A := A) K L
+  classical
+  have heightData (p : PrimeSpectrum A) (hp : p.asIdeal ≠ ⊥) :
+      p.asIdeal.height = 1 ∧
+        ringKrullDim (Localization.AtPrime p.asIdeal) = 1 := by
+    have hpheight_le : p.asIdeal.height ≤ 1 := by
+      have hpheight_le' : (p.asIdeal.height : ℕ∞) ≤ ringKrullDim A :=
+        p.asIdeal.height_le_ringKrullDim_of_isPrime
+      rw [hdim] at hpheight_le'
+      exact_mod_cast hpheight_le'
+    have hpheight_ne : p.asIdeal.height ≠ 0 := by
+      intro hpzero
+      exact hp ((Ideal.height_eq_zero_iff_eq_bot (R := A)).mp hpzero)
+    have hpheight_ge : (1 : ℕ∞) ≤ p.asIdeal.height := by
+      simpa only [ENat.one_le_iff_ne_zero] using hpheight_ne
+    have hpheight : p.asIdeal.height = 1 :=
+      hpheight_le.antisymm hpheight_ge
+    have hdimlocal' : ringKrullDim (Localization.AtPrime p.asIdeal) =
+        p.asIdeal.height :=
+      IsLocalization.AtPrime.ringKrullDim_eq_height
+        (R := A) (I := p.asIdeal) (A := Localization.AtPrime p.asIdeal)
+    have hpheight' : (p.asIdeal.height : WithBot ℕ∞) = 1 := by
+      exact_mod_cast hpheight
+    exact ⟨hpheight, hdimlocal'.trans hpheight'⟩
+  constructor
+  · apply RingHom.IsIntegral.comap_surjective
+      (integralClosure.isIntegral :
+        (algebraMap A (integralClosure A L)).IsIntegral)
+    intro a b hab
+    apply (IsFractionRing.injective A K)
+    apply FaithfulSMul.algebraMap_injective K L
+    simpa only [IsScalarTower.algebraMap_apply A K L,
+      ← IsScalarTower.algebraMap_apply A (integralClosure A L) L] using
+      congrArg (algebraMap (integralClosure A L) L) hab
+  · intro p
+    constructor
+    · by_cases hp : p.asIdeal = ⊥
+      · let q₀ : PrimeSpectrum (integralClosure A L) := ⟨⊥, inferInstance⟩
+        apply Set.Finite.subset (Set.finite_singleton q₀)
+        intro q hq
+        apply Set.mem_singleton_iff.mpr
+        apply PrimeSpectrum.ext
+        apply Ideal.IsIntegral.eq_bot_of_comap_eq_bot A
+        simpa [hp, q₀] using congrArg PrimeSpectrum.asIdeal hq
+      · let Ap := Localization.AtPrime p.asIdeal
+        let M :=
+          Algebra.algebraMapSubmonoid (integralClosure A L) p.asIdeal.primeCompl
+        let Bp := Localization M
+        have ⟨hpheight, hdimlocal⟩ := heightData p hp
+        let hAlgABp : Algebra A Bp := inferInstance
+        letI : Algebra A Bp := hAlgABp
+        haveI : IsScalarTower A (integralClosure A L) Bp :=
+          IsScalarTower.of_algebraMap_eq (by
+            intro a
+            rfl)
+        have hunitK : ∀ y : p.asIdeal.primeCompl,
+            IsUnit (algebraMap A K (y : A)) := by
+          intro y
+          rw [isUnit_iff_ne_zero]
+          intro hy
+          have hy' : (y : A) = 0 :=
+            (IsFractionRing.injective A K) (by simpa using hy)
+          exact y.2 (hy' ▸ (Ideal.zero_mem p.asIdeal))
+        letI : Algebra Ap K :=
+          (IsLocalization.liftAlgHom
+            (f := (Algebra.ofId A K)) hunitK).toAlgebra
+        have hunitL : ∀ y : M,
+            IsUnit (algebraMap (integralClosure A L) L (y : integralClosure A L)) := by
+          intro y
+          rcases y.2 with ⟨a, ha, hya⟩
+          rw [isUnit_iff_ne_zero]
+          intro hy
+          have hyK : algebraMap A K a = 0 := by
+            have hy' : algebraMap A L a = 0 := by
+              rw [IsScalarTower.algebraMap_apply A (integralClosure A L) L, hya]
+              exact hy
+            apply FaithfulSMul.algebraMap_injective K L
+            simpa only [IsScalarTower.algebraMap_apply A K L, map_zero] using hy'
+          have ha0 : a = 0 :=
+            (IsFractionRing.injective A K) (by simpa using hyK)
+          exact ha (ha0 ▸ (Ideal.zero_mem p.asIdeal))
+        have hM : M ≤ nonZeroDivisors (integralClosure A L) := by
+          intro y hy
+          rw [mem_nonZeroDivisors_iff_ne_zero]
+          intro hy0
+          have hunit := hunitL ⟨y, hy⟩
+          have hne := isUnit_iff_ne_zero.mp hunit
+          apply hne
+          have : algebraMap (integralClosure A L) L (y : integralClosure A L) = 0 := by
+            rw [hy0, map_zero]
+          exact this
+        have hM' : M ≤ Submonoid.comap (RingHom.id (integralClosure A L))
+            (nonZeroDivisors (integralClosure A L)) := by
+          intro y hy
+          change y ∈ nonZeroDivisors (integralClosure A L)
+          exact hM hy
+        letI : Algebra Bp L :=
+          (IsLocalization.map L (M := M)
+            (T := nonZeroDivisors (integralClosure A L))
+            (RingHom.id (integralClosure A L)) hM').toAlgebra
+        haveI : IsDomain Bp :=
+          IsLocalization.isDomain_of_le_nonZeroDivisors Bp hM
+        haveI : IsScalarTower A Ap K :=
+          IsScalarTower.of_algebraMap_eq' (R := A) (S := Ap) (A := K) (by
+            ext a
+            exact (IsLocalization.liftAlgHom (R := A) (M := p.asIdeal.primeCompl)
+              (S := Ap) (P := K) (f := Algebra.ofId A K) hunitK).commutes a |>.symm)
+        haveI : IsFractionRing Ap K :=
+          IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
+            p.asIdeal.primeCompl Ap K
+        haveI : IsScalarTower (integralClosure A L) Bp L :=
+          scalarTower_of_localization_map
+            (R := integralClosure A L) (S := Bp) (T := L) M hM'
+        haveI : IsFractionRing Bp L :=
+          fractionRing_of_localization M Localization.isLocalization
+        haveI : IsScalarTower A Bp L :=
+          scalarTower_of_tower (R := A) (S := integralClosure A L)
+            (U := Bp) (T := L)
+        have hcompat :
+            (algebraMap K L).comp (algebraMap Ap K) =
+              (algebraMap Bp L).comp (algebraMap Ap Bp) := by
+          letI : IsScalarTower A Ap Bp :=
+            localization_scalar_tower (A := A) (B := integralClosure A L) p.asIdeal
+          exact localization_comp_compat p.asIdeal.primeCompl
+        have hlocal :=
+          Formalization.Books.Algebra.Unit119.finite_residue_field_fibres
+            (R := Ap) (S := Bp) (K := K) (L := L)
+            (algebraMap Ap Bp) hcompat
+            (FaithfulSMul.algebraMap_injective K L) hdimlocal
+        let e : { n : Ideal Bp // n.IsPrime } ≃o
+            { q : Ideal (integralClosure A L) //
+              q.IsPrime ∧ Disjoint (M : Set (integralClosure A L)) q } :=
+          IsLocalization.orderIsoOfPrime M Bp
+        let g : PrimeSpectrum (integralClosure A L) → Ideal Bp := fun q =>
+          if hq : Disjoint (M : Set (integralClosure A L)) q.asIdeal then
+            (e.symm ⟨q.asIdeal, q.isPrime, hq⟩ : Ideal Bp)
+          else ⊥
+        have hmaps : Set.MapsTo g
+            {q : PrimeSpectrum (integralClosure A L) |
+              PrimeSpectrum.comap (algebraMap A (integralClosure A L)) q = p}
+            {n : Ideal Bp |
+              n.IsPrime ∧ n.comap (algebraMap Ap Bp) =
+                IsLocalRing.maximalIdeal Ap} := by
+          intro q hq
+          have hqcomap :
+              q.asIdeal.comap (algebraMap A (integralClosure A L)) = p.asIdeal := by
+            simpa only [← PrimeSpectrum.comap_asIdeal] using
+              congrArg PrimeSpectrum.asIdeal hq
+          have hdisj : Disjoint (M : Set (integralClosure A L)) q.asIdeal := by
+            exact disjoint_algebraMapSubmonoid_primeCompl
+              p.asIdeal q.asIdeal hqcomap
+          let n : Ideal Bp := (e.symm ⟨q.asIdeal, q.isPrime, hdisj⟩ : Ideal Bp)
+          have hnprime : n.IsPrime := (e.symm ⟨q.asIdeal, q.isPrime, hdisj⟩).2
+          haveI : n.IsPrime := hnprime
+          have hnunder : n.under (integralClosure A L) = q.asIdeal := by
+            have heq := congrArg Subtype.val
+              (e.apply_symm_apply ⟨q.asIdeal, q.isPrime, hdisj⟩)
+            change (e.symm ⟨q.asIdeal, q.isPrime, hdisj⟩ : Ideal Bp).under
+              (integralClosure A L) = q.asIdeal
+            exact heq
+          have hnmax : n.comap (algebraMap Ap Bp) =
+              IsLocalRing.maximalIdeal Ap := by
+            apply (Localization.AtPrime.eq_maximalIdeal_iff_under_eq).mp
+            change (n.comap (algebraMap Ap Bp)).comap (algebraMap A Ap) = p.asIdeal
+            rw [Ideal.comap_comap, ← IsScalarTower.algebraMap_eq A Ap Bp,
+              IsScalarTower.algebraMap_eq A (integralClosure A L) Bp,
+              ← Ideal.comap_comap]
+            change Ideal.comap (algebraMap A (integralClosure A L))
+              (n.under (integralClosure A L)) = p.asIdeal
+            rw [hnunder, hqcomap]
+          simpa [g, hdisj, n] using (show n.IsPrime ∧
+            n.comap (algebraMap Ap Bp) = IsLocalRing.maximalIdeal Ap from
+            ⟨hnprime, hnmax⟩)
+        have hinj : Set.InjOn g
+            {q : PrimeSpectrum (integralClosure A L) |
+              PrimeSpectrum.comap (algebraMap A (integralClosure A L)) q = p} := by
+          intro q hq q' hq' heq
+          have hqcomap :
+              q.asIdeal.comap (algebraMap A (integralClosure A L)) = p.asIdeal := by
+            simpa only [← PrimeSpectrum.comap_asIdeal] using
+              congrArg PrimeSpectrum.asIdeal hq
+          have hq'comap :
+              q'.asIdeal.comap (algebraMap A (integralClosure A L)) = p.asIdeal := by
+            simpa only [← PrimeSpectrum.comap_asIdeal] using
+              congrArg PrimeSpectrum.asIdeal hq'
+          have hdisj : Disjoint (M : Set (integralClosure A L)) q.asIdeal := by
+            exact disjoint_algebraMapSubmonoid_primeCompl
+              p.asIdeal q.asIdeal hqcomap
+          have hdisj' : Disjoint (M : Set (integralClosure A L)) q'.asIdeal := by
+            rw [Set.disjoint_left]
+            intro b hbM hbq
+            rcases hbM with ⟨a, ha, rfl⟩
+            apply ha
+            have haq : a ∈ q'.asIdeal.comap (algebraMap A (integralClosure A L)) :=
+              Ideal.mem_comap.mpr hbq
+            rw [hq'comap] at haq
+            exact haq
+          let n : Ideal Bp := (e.symm ⟨q.asIdeal, q.isPrime, hdisj⟩ : Ideal Bp)
+          let n' : Ideal Bp := (e.symm ⟨q'.asIdeal, q'.isPrime, hdisj'⟩ : Ideal Bp)
+          have hnunder : n.under (integralClosure A L) = q.asIdeal := by
+            have heq' := congrArg Subtype.val
+              (e.apply_symm_apply ⟨q.asIdeal, q.isPrime, hdisj⟩)
+            change (e.symm ⟨q.asIdeal, q.isPrime, hdisj⟩ : Ideal Bp).under
+              (integralClosure A L) = q.asIdeal
+            exact heq'
+          have hn'under : n'.under (integralClosure A L) = q'.asIdeal := by
+            have heq' := congrArg Subtype.val
+              (e.apply_symm_apply ⟨q'.asIdeal, q'.isPrime, hdisj'⟩)
+            change (e.symm ⟨q'.asIdeal, q'.isPrime, hdisj'⟩ : Ideal Bp).under
+              (integralClosure A L) = q'.asIdeal
+            exact heq'
+          have hnn' : n = n' := by
+            simpa [g, hdisj, hdisj', n, n'] using heq
+          apply PrimeSpectrum.ext
+          rw [← hnunder, hnn', hn'under]
+        exact Set.Finite.of_injOn hmaps hinj hlocal.2.1
+    · intro q hq
+      have hqcomap :
+          q.asIdeal.comap (algebraMap A (integralClosure A L)) = p.asIdeal := by
+        simpa only [← PrimeSpectrum.comap_asIdeal] using
+          congrArg PrimeSpectrum.asIdeal hq
+      by_cases hp : p.asIdeal = ⊥
+      · have hqbot : q.asIdeal = ⊥ := by
+          apply Ideal.IsIntegral.eq_bot_of_comap_eq_bot A
+          simpa [hp] using congrArg PrimeSpectrum.asIdeal hq
+        have hpbij : Function.Bijective (Ideal.Quotient.mk p.asIdeal) :=
+          (Ideal.Quotient.mk_bijective_iff_eq_bot p.asIdeal).mpr hp
+        have hqbij : Function.Bijective
+            (Ideal.Quotient.mk q.asIdeal) :=
+          (Ideal.Quotient.mk_bijective_iff_eq_bot q.asIdeal).mpr hqbot
+        let eA : A ≃ₐ[A] A ⧸ p.asIdeal :=
+          { RingEquiv.ofBijective (Ideal.Quotient.mk p.asIdeal) hpbij with
+            commutes' := by intro a; rfl }
+        let eB : integralClosure A L ≃ₐ[integralClosure A L]
+            (integralClosure A L) ⧸ q.asIdeal :=
+          { RingEquiv.ofBijective (Ideal.Quotient.mk q.asIdeal) hqbij with
+            commutes' := by intro b; rfl }
+        haveI : IsScalarTower (integralClosure A L) (integralClosure A L) L :=
+          IsScalarTower.of_algebraMap_eq (by
+            intro b
+            rfl)
+        let eK : p.asIdeal.ResidueField ≃ₐ[A] K :=
+          (IsFractionRing.algEquivOfAlgEquiv (R := A) (A := A) (K := K)
+            (B := A ⧸ p.asIdeal) (L := p.asIdeal.ResidueField) eA).symm
+        let eL : q.asIdeal.ResidueField ≃ₐ[integralClosure A L] L :=
+          (IsFractionRing.algEquivOfAlgEquiv
+            (R := integralClosure A L) (A := integralClosure A L) (K := L)
+            (B := (integralClosure A L) ⧸ q.asIdeal)
+            (L := q.asIdeal.ResidueField) eB).symm
+        let φ : p.asIdeal.ResidueField →+* q.asIdeal.ResidueField :=
+          (eL.symm.toRingHom.comp (algebraMap K L)).comp eK.toRingHom
+        have hcomp :
+            eL.toRingHom.comp φ =
+              (algebraMap K L).comp eK.toRingHom := by
+          ext x
+          simp [φ, RingHom.comp_assoc]
+        letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField := φ.toAlgebra
+        letI : Algebra p.asIdeal.ResidueField K := eK.toRingHom.toAlgebra
+        letI : Algebra p.asIdeal.ResidueField L :=
+          ((algebraMap K L).comp eK.toRingHom).toAlgebra
+        haveI : IsScalarTower p.asIdeal.ResidueField K L :=
+          IsScalarTower.of_algebraMap_eq' rfl
+        have hfinK : Module.Finite p.asIdeal.ResidueField K := by
+          let eK' : p.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField] K :=
+            { eK.toRingEquiv with commutes' := by intro x; rfl }
+          exact Module.Finite.equiv eK'.toLinearEquiv
+        haveI : Module.Finite p.asIdeal.ResidueField K := hfinK
+        haveI : Module.Finite p.asIdeal.ResidueField L :=
+          Module.Finite.trans K L
+        let en : q.asIdeal.ResidueField ≃ₗ[p.asIdeal.ResidueField] L :=
+          { eL.toRingEquiv with
+            map_smul' := by
+              intro c x
+              rw [Algebra.smul_def, Algebra.smul_def]
+              change eL (φ c * x) =
+                algebraMap p.asIdeal.ResidueField L c * eL x
+              calc
+                eL (φ c * x) = eL (φ c) * eL x := eL.map_mul _ _
+                _ = algebraMap p.asIdeal.ResidueField L c * eL x := by
+                  change ((eL.toRingHom.comp φ) c) * eL x =
+                    ((algebraMap K L).comp eK.toRingHom) c * eL x
+                  rw [hcomp] }
+        refine ⟨φ, ?_, ?_⟩
+        · intro a
+          change φ (algebraMap A p.asIdeal.ResidueField a) =
+            algebraMap (integralClosure A L) q.asIdeal.ResidueField
+              (algebraMap A (integralClosure A L) a)
+          apply eL.injective
+          simp [φ, IsScalarTower.algebraMap_apply,
+            ← IsScalarTower.algebraMap_apply A K L]
+        · exact Module.Finite.equiv en.symm
+      · let Ap := Localization.AtPrime p.asIdeal
+        let M :=
+          Algebra.algebraMapSubmonoid (integralClosure A L) p.asIdeal.primeCompl
+        let Bp := Localization M
+        have ⟨hpheight, hdimlocal⟩ := heightData p hp
+        haveI : IsScalarTower A (integralClosure A L) Bp :=
+          IsScalarTower.of_algebraMap_eq (by
+            intro a
+            rfl)
+        have hunitK : ∀ y : p.asIdeal.primeCompl,
+            IsUnit (algebraMap A K (y : A)) := by
+          intro y
+          rw [isUnit_iff_ne_zero]
+          intro hy
+          have hy' : (y : A) = 0 :=
+            (IsFractionRing.injective A K) (by simpa using hy)
+          exact y.2 (hy' ▸ (Ideal.zero_mem p.asIdeal))
+        letI : Algebra Ap K :=
+          (IsLocalization.liftAlgHom
+            (f := (Algebra.ofId A K)) hunitK).toAlgebra
+        have hunitL : ∀ y : M,
+            IsUnit (algebraMap (integralClosure A L) L (y : integralClosure A L)) := by
+          intro y
+          rcases y.2 with ⟨a, ha, hya⟩
+          rw [isUnit_iff_ne_zero]
+          intro hy
+          have hyK : algebraMap A K a = 0 := by
+            have hy' : algebraMap A L a = 0 := by
+              rw [IsScalarTower.algebraMap_apply A (integralClosure A L) L, hya]
+              exact hy
+            apply FaithfulSMul.algebraMap_injective K L
+            simpa only [IsScalarTower.algebraMap_apply A K L, map_zero] using hy'
+          have ha0 : a = 0 :=
+            (IsFractionRing.injective A K) (by simpa using hyK)
+          exact ha (ha0 ▸ (Ideal.zero_mem p.asIdeal))
+        have hM : M ≤ nonZeroDivisors (integralClosure A L) := by
+          intro y hy
+          rw [mem_nonZeroDivisors_iff_ne_zero]
+          intro hy0
+          have hunit := hunitL ⟨y, hy⟩
+          have hne := isUnit_iff_ne_zero.mp hunit
+          apply hne
+          have : algebraMap (integralClosure A L) L (y : integralClosure A L) = 0 := by
+            rw [hy0, map_zero]
+          exact this
+        have hM' : M ≤ Submonoid.comap (RingHom.id (integralClosure A L))
+            (nonZeroDivisors (integralClosure A L)) := by
+          intro y hy
+          change y ∈ nonZeroDivisors (integralClosure A L)
+          exact hM hy
+        letI : Algebra Bp L :=
+          (IsLocalization.map L (M := M)
+            (T := nonZeroDivisors (integralClosure A L))
+            (RingHom.id (integralClosure A L)) hM').toAlgebra
+        haveI : IsDomain Bp :=
+          IsLocalization.isDomain_of_le_nonZeroDivisors Bp hM
+        haveI : IsScalarTower A Ap K :=
+          IsScalarTower.of_algebraMap_eq' (R := A) (S := Ap) (A := K) (by
+            ext a
+            exact (IsLocalization.liftAlgHom (R := A) (M := p.asIdeal.primeCompl)
+              (S := Ap) (P := K) (f := Algebra.ofId A K) hunitK).commutes a |>.symm)
+        haveI : IsFractionRing Ap K :=
+          IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
+            p.asIdeal.primeCompl Ap K
+        haveI : IsScalarTower (integralClosure A L) Bp L :=
+          scalarTower_of_localization_map
+            (R := integralClosure A L) (S := Bp) (T := L) M hM'
+        haveI : IsFractionRing Bp L :=
+          fractionRing_of_localization M Localization.isLocalization
+        haveI : IsScalarTower A Bp L :=
+          scalarTower_of_tower (R := A) (S := integralClosure A L)
+            (U := Bp) (T := L)
+        have hcompat :
+            (algebraMap K L).comp (algebraMap Ap K) =
+              (algebraMap Bp L).comp (algebraMap Ap Bp) := by
+          letI : IsScalarTower A Ap Bp :=
+            localization_scalar_tower (A := A) (B := integralClosure A L) p.asIdeal
+          exact localization_comp_compat p.asIdeal.primeCompl
+        have hlocal :=
+          Formalization.Books.Algebra.Unit119.finite_residue_field_fibres
+            (R := Ap) (S := Bp) (K := K) (L := L)
+            (algebraMap Ap Bp) hcompat
+            (FaithfulSMul.algebraMap_injective K L) hdimlocal
+        have hdisj : Disjoint (M : Set (integralClosure A L)) q.asIdeal := by
+          exact disjoint_algebraMapSubmonoid_primeCompl
+            p.asIdeal q.asIdeal hqcomap
+        let _ : q.asIdeal.LiesOver p.asIdeal := by
+          rw [Ideal.liesOver_iff, Ideal.under_def]
+          exact hqcomap.symm
+        have hdata := localized_prime_data
+            (R := integralClosure A L)
+            (S := Bp) M (show IsLocalization M Bp from Localization.isLocalization)
+            q.asIdeal q.isPrime hdisj
+        obtain ⟨n, hnprime, hnunder⟩ := hdata
+        have hcomapA_map :
+            n.comap (algebraMap A Bp) = p.asIdeal :=
+          by
+            rw [IsScalarTower.algebraMap_eq A (integralClosure A L) Bp,
+              ← Ideal.comap_comap]
+            change Ideal.comap (algebraMap A (integralClosure A L))
+              (n.under (integralClosure A L)) = p.asIdeal
+            rw [hnunder, hqcomap]
+        let _ : n.LiesOver p.asIdeal := ⟨hcomapA_map.symm⟩
+        have hnmax :
+            n.comap (algebraMap Ap Bp) =
+              IsLocalRing.maximalIdeal Ap := by
+          letI : p.asIdeal.IsPrime := p.isPrime
+          apply (Localization.AtPrime.eq_maximalIdeal_iff_under_eq).mp
+          change (n.comap (algebraMap Ap Bp)).comap
+            (algebraMap A Ap) = p.asIdeal
+          letI : IsScalarTower A Ap Bp :=
+            localization_scalar_tower (A := A) (B := integralClosure A L)
+              p.asIdeal
+          rw [Ideal.comap_comap, ← IsScalarTower.algebraMap_eq A Ap Bp,
+            IsScalarTower.algebraMap_eq A (integralClosure A L) Bp,
+            ← Ideal.comap_comap]
+          change Ideal.comap (algebraMap A (integralClosure A L))
+            (n.under (integralClosure A L)) = p.asIdeal
+          rw [hnunder, hqcomap]
+        letI : Algebra (Localization.AtPrime p.asIdeal)
+            (Localization.AtPrime q.asIdeal) :=
+          Localization.AtPrime.algebraOfLiesOver p.asIdeal q.asIdeal
+            (algebraMap A (integralClosure A L))
+        letI : Algebra (Localization.AtPrime p.asIdeal)
+            (Localization.AtPrime n) :=
+          letI : n.IsPrime := hnprime
+          Localization.AtPrime.algebraOfLiesOver p.asIdeal n
+            (algebraMap A Bp)
+        let e0 := IsLocalization.algEquiv q.asIdeal.primeCompl
+          (Localization.AtPrime q.asIdeal) (Localization.AtPrime n)
+        let en : Localization.AtPrime q.asIdeal ≃ₐ[Ap] Localization.AtPrime n :=
+          { e0.toRingEquiv with
+            commutes' := by
+              apply IsLocalization.ringHom_ext p.asIdeal.primeCompl
+              ext a
+              simp [Ap, e0, IsScalarTower.algebraMap_apply] }
+        have hres := IsLocalRing.ResidueField.mapAlgEquiv' en
+        have hfinite := hlocal.2.2 n hnprime hnmax
+        refine ⟨hres.toRingHom, ?_, ?_⟩
+        · intro a
+          change hres (algebraMap Ap (IsLocalRing.ResidueField Ap)
+            (algebraMap A Ap a)) =
+            algebraMap (integralClosure A L)
+              (IsLocalRing.ResidueField (Localization.AtPrime q.asIdeal))
+              (algebraMap A (integralClosure A L) a)
+          simp [hres, IsScalarTower.algebraMap_apply]
+        · exact Module.Finite.equiv hres.symm
 
 end
 

@@ -438,6 +438,9 @@ theorem equivalence_to_fibredInSets_gives_setoidFibres
             ((fibreFunctor p p' G over U).obj x =
               (fibreFunctor p p' G over U).obj y) ↔
               Nonempty (x ≅ y) := by
+  /- Proof plan: restrict the over-base equivalence to each fibre; transfer
+  groupoidness and hom subsingletonness from the discrete target fibre, then
+  read essential surjectivity and full faithfulness as the two class claims. -/
   sorry
 
 /- The objectwise part of the source's quotient construction is exposed
@@ -453,6 +456,9 @@ theorem fibredSetoid_object_presheaf_exists
         ∀ U : C,
           Nonempty (F.obj (Opposite.op U) ≃
             SetoidObjectClasses (Functor.Fiber p U)) := by
+  /- Proof plan: choose pullbacks for `p`, let reindexing act on thin-skeleton
+  object classes, and form the resulting set presheaf; the quotient functor on
+  each fibre assembles into the required fibred equivalence. -/
   sorry
 
 noncomputable def fibredSetoidObjectPresheaf
@@ -481,44 +487,15 @@ theorem fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf
   exact (Classical.choose_spec
     (fibredSetoid_object_presheaf_exists p hp)).1
 
-/- The objectwise equivalences above do not by themselves preserve pullback
-   along arrows of `C`.  The following two implications isolate the coherent
-   work needed by Unit 40.
-
-   Forward roadmap:
-
-   1. Unpack a representation of `fibredSetoidObjectPresheaf p hp` by `X` as
-      a natural isomorphism from `representablePresheaf X`.
-   2. Turn that natural isomorphism into an equivalence over `C` between the
-      two Grothendieck constructions.  This is the missing reusable
-      `setPresheafProjection`-respects-natural-isomorphisms lemma.
-   3. Compose its inverse with
-      `representable_presheaf_slice_equivalence X` and with
-      `fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf p hp`.
-
-   Reverse roadmap:
-
-   1. Compose the supplied equivalence to `Over.forget X` with
-      `representable_presheaf_slice_equivalence X`.
-   2. Compare that composite with the chosen equivalence from `p` to the
-      object-class Grothendieck construction.
-   3. Use full faithfulness and essential surjectivity on fibres to construct
-      a natural isomorphism
-      `representablePresheaf X ≅ fibredSetoidObjectPresheaf p hp`; package
-      it with `Functor.IsRepresentable.mk'`.
-
-   The two reusable categorical lemmas exposed by these proofs should be:
-   (a) natural-isomorphic set-valued presheaves have fibred-equivalent
-   Grothendieck constructions, and (b) `IsFibredEquivalenceOver` is symmetric.
-   They belong next to the corresponding constructions in Units 38 and 36;
-   keeping the implications separate prevents Unit 40 from depending on the
-   implementation details. -/
 theorem fibredSetoidObjectPresheaf_isRepresentable_of_exists_slice
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p)
     (h : ∃ X : C, IsFibredEquivalenceOver p (Over.forget X)) :
     Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp) := by
+  /- Proof plan: convert the slice equivalence and the chosen setoidification
+  equivalence into an isomorphism of set presheaves, identify the slice with
+  the representable presheaf, and apply `Functor.IsRepresentable.mk'`. -/
   sorry
 
 theorem fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable
@@ -527,6 +504,9 @@ theorem fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p)
     (h : Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp)) :
     ∃ X : C, IsFibredEquivalenceOver p (Over.forget X) := by
+  /- Proof plan: unpack `h` as a representable-presheaf isomorphism, lift it
+  to an equivalence of Grothendieck constructions, and compose it with the
+  chosen equivalence from `p` and the representable slice comparison. -/
   sorry
 
 theorem fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
@@ -565,6 +545,9 @@ theorem fibredSetoids_equivalent_to_fibredInSets
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
     ∃ F : Cᵒᵖ ⥤ Type uS,
       IsFibredEquivalenceOver p (setPresheafProjection F) := by
+  /- Proof plan: take `fibredSetoidObjectPresheaf p hp` and return the
+  equivalence recorded by
+  `fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf`. -/
   sorry
 
 /- The source packages the preceding construction as a functor from the
@@ -592,6 +575,9 @@ theorem setoidificationFunctor_exists (C : Cat.{v, u}) :
     ∃ F : CategoriesFibredInSetoidsOver C ⥤
       CategoriesFibredInSetsOverCategory (Cat.of (C : Type u)),
       SetoidificationFunctorProperties F := by
+  /- Proof plan: use fibrewise thin-skeleton quotients on objects and induced
+  maps on object classes on morphisms; quotient functoriality proves the laws,
+  while thin target fibres give lifting and uniqueness up to a unique 2-iso. -/
   sorry
 
 noncomputable def setoidificationFunctor (C : Cat.{v, u}) :
@@ -632,12 +618,18 @@ theorem setoidFibred_iff_inertia_isEquivalentOverBase
       IsEquivalentOverBase
         (relativeInertiaBase (toBaseFibredHom X).underlying)
         (structureFunctor X.underlying) := by
+  /- Proof plan: identify each inertia fibre with pairs `(x, automorphism x)`;
+  the projection is an equivalence exactly when every automorphism is unique,
+  which is the hom-subsingleton condition for setoid fibres. -/
   sorry
 
 theorem setoidFibred_iff_inertia_structureMap_isEquivalence
     {C : Cat.{v, u}} (X : FibredCategoryOver C) :
     IsSetoidFibredCategoryOver X ↔
       Nonempty (inertiaStructureMap X).IsEquivalence := by
+  /- Proof plan: rewrite the inertia map as a functor over the base using
+  `inertiaStructureMap_over_base`, then apply the preceding over-base
+  equivalence criterion and forget the base structure. -/
   sorry
 
 /-! ## Morphisms modulo 2-isomorphism -/
@@ -657,6 +649,9 @@ theorem twoIsomorphismRelation_isEquivalence
     {C : Cat.{v, u}}
     (X Y : CategoriesFibredInSetoidsOver C) :
     Equivalence (TwoIsomorphismRelation (X := X) (Y := Y)) := by
+  /- Proof plan: use identity 2-morphisms for reflexivity, inverses of
+  componentwise isomorphisms for symmetry, and vertical composition for
+  transitivity. -/
   sorry
 
 theorem setoidification_morphism_classes_equiv_presheaf_morphisms
@@ -671,6 +666,9 @@ theorem setoidification_morphism_classes_equiv_presheaf_morphisms
             (F.obj X) ⟶
           (categoriesFibredInSetsOverEquivalence (C := (C : Type u))).inverse.obj
             (F.obj Y))) := by
+  /- Proof plan: descend `F.map` to the 2-isomorphism quotient; the uniqueness
+  and lifting fields of `hF` make this map bijective, then transport the hom
+  type through `categoriesFibredInSetsOverEquivalence`. -/
   sorry
 
 /-! ## Compatibility with two-fibre products -/
@@ -703,6 +701,9 @@ theorem fibredSetoid_twoFibreProduct_object_classes_equiv
               (structureFunctor S.underlying)
               (overFunctor G.underlying)
               (overFunctor_comm G.underlying) U))) := by
+  /- Proof plan: use the canonical fibre equivalence with the iso-comma of
+  the two fibre functors; because the target fibre is a setoid, taking
+  thin-skeleton classes identifies its objects with the displayed type fibre product. -/
   sorry
 
 /-! ## The fibred 2-Yoneda comparison

@@ -164,66 +164,10 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
     (hY : IsDiscreteFibredCategoryOver Y)
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) :
     ∃ h : F = G, η = eqToHom h := by
+  /- Proof plan: use discreteness in each target fibre to identify every
+  component of `η` with an `eqToHom`; extend the object equalities to
+  `F = G`, then conclude by extensionality of fibred natural transformations. -/
   sorry
-/-
-  have hη : IsIso η.toNatTrans := by
-    rw [NatTrans.isIso_iff_isIso_app]
-    intro Z
-    let U := (structureFunctor X.underlying).obj Z
-    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
-    let _ : IsDiscrete (Functor.Fiber (structureFunctor Y.underlying) U) := hY U
-    change IsIso (Functor.Fiber.fiberInclusion.map
-      ((overMorphismFiberNatTrans η U).app z))
-    infer_instance
-  let _ : IsIso η.toNatTrans := hη
-  let e : overFunctor F.underlying ≅ overFunctor G.underlying :=
-    { hom := η.toNatTrans
-      inv := inv η.toNatTrans
-      hom_inv_id := by simp
-      inv_hom_id := by simp }
-  have hobj : ∀ Z, (overFunctor F.underlying).obj Z =
-      (overFunctor G.underlying).obj Z := by
-    intro Z
-    let U := (structureFunctor X.underlying).obj Z
-    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
-    let α := (overMorphismFiberNatTrans η U).app z
-    have hα := (hY U).eq_of_hom α
-    exact congrArg (fun q : Functor.Fiber (structureFunctor Y.underlying) U => q.1) hα
-  have happ : ∀ Z, η.toNatTrans.app Z = eqToHom (hobj Z) := by
-    intro Z
-    let U := (structureFunctor X.underlying).obj Z
-    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
-    let α := (overMorphismFiberNatTrans η U).app z
-    have hα := (hY U).eq_of_hom α
-    have hαhom : α = eqToHom hα := by
-      exact @Subsingleton.elim _ ((hY U).subsingleton _ _) _ _
-    have hαmap := congrArg (Functor.Fiber.fiberInclusion.map) hαhom
-    have hm := CategoryTheory.eqToHom_map
-      (Functor.Fiber.fiberInclusion
-        (p := structureFunctor Y.underlying) (S := U)) hα
-    calc
-      η.toNatTrans.app Z = Functor.Fiber.fiberInclusion.map α := by rfl
-      _ = Functor.Fiber.fiberInclusion.map (eqToHom hα) := hαmap
-      _ = eqToHom
-          (congrArg
-            (fun q : Functor.Fiber (structureFunctor Y.underlying) U => q.1) hα) := hm
-      _ = eqToHom (hobj Z) := by congr 1
-  have heq : overFunctor F.underlying = overFunctor G.underlying :=
-    Functor.ext_of_iso e hobj (happ := happ)
-  have hleft : F.underlying.leftHom = G.underlying.leftHom := by
-    apply Cat.Hom.ext
-    exact heq
-  have hunder : F.underlying = G.underlying := by
-    apply CategoryOver.Hom.ext
-    apply Over.OverMorphism.ext
-    exact hleft
-  have h : F = G := FibredCategoryOverHom.ext hunder
-  refine ⟨h, ?_⟩
-  cases h
-  apply OverNatTrans.ext
-  apply NatTrans.ext
-  funext Z
-  simpa using happ Z -/
 
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
@@ -240,17 +184,11 @@ local discreteness of all its hom-categories. -/
 theorem categoriesFibredInSetsOver_is_locallyDiscrete
     (C : Cat.{v, u}) :
     Bicategory.IsLocallyDiscrete (CategoriesFibredInSetsOver C) := by
+  /- Proof plan: apply `isDiscrete_iff_every_morphism_is_eqToHom` in each hom
+  category and lift the equality supplied by
+  `discreteFibredCategoryOver_two_morphism_is_eqToHom` through the induced
+  bicategory extensionality lemmas. -/
   sorry
-/-
-  intro X Y
-  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
-  intro F G η
-  rcases discreteFibredCategoryOver_two_morphism_is_eqToHom
-      (X := X.obj) (Y := Y.obj) Y.property η.hom with ⟨h, hη⟩
-  have h' : F = G := Bicategory.InducedBicategory.hom_ext h
-  refine ⟨h', ?_⟩
-  apply Bicategory.InducedBicategory.hom₂_ext
-  exact hη -/
 
 theorem categoriesFibredInSetsOver_is_two_one_category
     (C : Cat.{v, u}) :
@@ -1496,24 +1434,10 @@ theorem setPresheaf_fibre_is_discrete
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) (U : C) :
     IsDiscrete (Functor.Fiber (setPresheafProjection F) U) := by
+  /- Proof plan: reduce a fibre morphism to base `𝟙 U`, use discreteness of
+  the value category to identify its fibre component, and finish with the
+  CoGrothendieck and fibre extensionality lemmas. -/
   sorry
-/- Prior attempt (does not compile):
-  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
-  intro X Y f
-  rcases X with ⟨⟨X, x⟩, hX⟩
-  rcases Y with ⟨⟨Y, y⟩, hY⟩
-  cases hX
-  cases hY
-  let : (setPresheafProjection F).IsHomLift (𝟙 _) f.val := f.2
-  have hbase := CategoryTheory.IsHomLift.eq_of_isHomLift
-    (setPresheafProjection F) (𝟙 _) f.val
-  change (𝟙 _) = f.val.base at hbase
-  cases hbase
-  have hfiber := Discrete.eq_of_hom f.val.fiber
-  have hxy : x = y := by
-    exact congrArg Discrete.as hfiber
-  cases hxy
-  rfl -/
 
 /- The construction is already fibred in groupoids by the generic
    CoGrothendieck lifting theorem from Unit 37.  The extra assertion here
@@ -1719,6 +1643,9 @@ theorem categoriesFibredInSetsOver_equivalent_to_presheaves
         IsFibredEquivalenceOver
           (structureFunctor X.obj.underlying)
           (setPresheafProjection F) := by
+  /- Proof plan: choose a cleavage for `X`, take its fibre-object presheaf,
+  and define the comparison using chosen pullbacks; discreteness makes the
+  comparison fully faithful and cartesian-lift uniqueness supplies its inverse. -/
   sorry
 
 /-- A chosen presheaf presentation for an object of the fixed-base
@@ -1748,6 +1675,9 @@ theorem categoriesFibredInSetsOver_strictified_equivalent_to_presheaves
     Nonempty
       (Presheaf C ≌
         CategoriesFibredInSetsOverCategory (Cat.of C)) := by
+  /- Proof plan: strictify the objectwise fibred equivalences above into the
+  two object functors; use local discreteness for the hom bijections and the
+  chosen presentations for essential surjectivity. -/
   sorry
 
 noncomputable def categoriesFibredInSetsOverEquivalence
@@ -1766,6 +1696,9 @@ theorem fibredInSets_equivalent_to_presheaf_construction
     (p : S ⥤ C) (hp : IsCategoryFibredInSets p) :
     ∃ F : Cᵒᵖ ⥤ Type uS,
       IsFibredEquivalenceOver p (setPresheafProjection F) := by
+  /- Proof plan: package `(p, hp)` as an object fibred in sets over `C` and
+  specialize `categoriesFibredInSetsOver_equivalent_to_presheaves`, then
+  unfold the structure functor. -/
   sorry
 
 /-- The object-valued presheaf attached to a fibred category in sets exists;
@@ -1824,11 +1757,17 @@ theorem sliceProjection_fibre_object_description
 theorem sliceProjection_fibre_is_discrete
     {C : Type uC} [Category.{vC} C] (X U : C) :
     IsDiscrete (Functor.Fiber (Over.forget X) U) := by
+  /- Proof plan: identify fibre objects with arrows `U ⟶ X`; a morphism over
+  `𝟙 U` has left map equal to the identity, so `Over.hom_ext` and fibre
+  extensionality identify it with the appropriate `eqToHom`. -/
   sorry
 
 theorem sliceProjection_isFibredInSets
     {C : Type uC} [Category.{vC} C] (X : C) :
     IsCategoryFibredInSets (Over.forget X) := by
+  /- Proof plan: combine the standard fibred-in-groupoids structure of the
+  slice projection with `sliceProjection_fibre_is_discrete` via
+  `isCategoryFibredInSets_iff_isFibered_and_discreteFibres`. -/
   sorry
 
 /-- The direct Grothendieck-construction form of the Yoneda comparison from

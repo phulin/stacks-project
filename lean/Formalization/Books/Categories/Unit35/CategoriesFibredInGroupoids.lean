@@ -870,11 +870,6 @@ theorem fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids
     P.product.diagram.base).mpr
     ⟨P.fibres_are_groupoids, P.product.apex_fibred⟩
 
-/- Proof roadmap: take the `FibredTwoFibreProduct` supplied by Unit 33, identify
-its fibre over `U` with the iso-comma of the fibre functors of `F` and `G`,
-install the groupoid instance on that iso-comma from `hX U`, `hY U`, and
-`hS U`, and package those instances as `fibres_are_groupoids`.  The missing
-API is the strict over-base equivalence between these two fibre models. -/
 theorem categoriesFibredInGroupoids_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
     (hX : IsGroupoidFibredCategoryOver X)
@@ -928,17 +923,8 @@ theorem categoriesFibredInGroupoids_have_twoFibreProducts
         (overMorphismFiberFunctor G.underlying U))).all_isIso _
   exact e.fullyFaithfulFunctor.isIso_of_isIso_map f
 
-/-- The two descriptions of the category-valued 2-fibre product in the
-source are canonically equivalent for categories fibred in groupoids: the
-fixed-base presentation remembers a base object, while `IsoComma` remembers
-only the isomorphism.
-
-Proof roadmap: forget the common base object to define the forward functor;
-for the inverse, transport one leg along the displayed isomorphism using a
-chosen cartesian lift in `S`; prove the two composites naturally isomorphic
-using uniqueness of cartesian lifts.  Finally show the construction is
-independent of the chosen lifts.  This awaits a reusable strict over-base
-equivalence/transport API. -/
+/-- The fixed-base and iso-comma descriptions of the category-valued
+2-fibre product are canonically equivalent. -/
 theorem twoFibreProductOverCategory_canonically_equivalent
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
     (hY : IsGroupoidFibredCategoryOver Y)
@@ -1495,11 +1481,9 @@ def IsEquivalenceOverHom {C : Cat.{v, u}}
       Nonempty (FibredCategoryOverHom.comp G F ≅
         FibredCategoryOverHom.id Y)
 
-/- Proof roadmap: choose a quasi-inverse to the underlying equivalence, lift
-it to a functor strictly over `C` by cartesian transport, prove that it
-preserves cartesian arrows, and lift the unit and counit to vertical natural
-isomorphisms.  Package the result as `IsEquivalenceOverHom`.  The blocked step
-is strictifying the quasi-inverse and both isomorphisms over the base. -/
+/- Proof plan: choose an ordinary quasi-inverse, strictify it over `C` by
+cartesian transport, and package the transported unit and counit as vertical
+isomorphisms. -/
 theorem equivalence_fibredInGroupoids_is_equivalence_over
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
     (hX : IsGroupoidFibredCategoryOver X)
@@ -1509,13 +1493,6 @@ theorem equivalence_fibredInGroupoids_is_equivalence_over
     IsEquivalenceOverHom F := by
   sorry
 
-/- Proof roadmap: use the iso-comma description of the 2-fibre product.  In
-one direction, full faithfulness gives the unique source isomorphism lifting
-the comparison isomorphism, hence essential surjectivity and full
-faithfulness of the diagonal.  Conversely, apply a quasi-inverse of the
-diagonal to comparison isomorphisms to recover bijectivity on homs.  Transfer
-the result back through `twoFibreProductOverCategory_canonically_equivalent`.
--/
 theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
     (hX : IsGroupoidFibredCategoryOver X)
@@ -1765,12 +1742,9 @@ def prePostcompositionFunctor
           η θ ψ)]
     rfl
 
-/- Proof roadmap: strictify the two supplied equivalences over `C` with
-`equivalence_fibredInGroupoids_is_equivalence_over`; define the quasi-inverse
-of `prePostcompositionFunctor` by pre- and postcomposing with the chosen
-inverse fibred homs; then build its unit and counit by whiskering the four
-vertical isomorphisms and discharge coherence using bicategory associators.
--/
+/- Proof plan: obtain strict inverse fibred homs from
+`equivalence_fibredInGroupoids_is_equivalence_over`, pre/postcompose with
+them, and build the unit and counit by whiskering their vertical isomorphisms. -/
 theorem morphisms_equivalent_fibred_groupoids
     {C : Cat.{v, u}} {X₁ X₂ X₃ X₄ : FibredCategoryOver C}
     (hX₁ : IsGroupoidFibredCategoryOver X₁)
@@ -1782,152 +1756,6 @@ theorem morphisms_equivalent_fibred_groupoids
     (hφ : Nonempty (overFunctor φ.underlying).IsEquivalence)
     (hψ : Nonempty (overFunctor ψ.underlying).IsEquivalence) :
     (prePostcompositionFunctor φ ψ).IsEquivalence := by sorry
-  /-
-  obtain ⟨φi, ⟨eφL⟩, ⟨eφR⟩⟩ :=
-    equivalence_fibredInGroupoids_is_equivalence_over hX₁ hX₂ φ hφ
-  obtain ⟨ψi, ⟨eψL⟩, ⟨eψR⟩⟩ :=
-    equivalence_fibredInGroupoids_is_equivalence_over hX₃ hX₄ ψ hψ
-  let Q : FibredCategoryOverHom X₁ X₄ ⥤
-      FibredCategoryOverHom X₂ X₃ := {
-    obj := fun α => FibredCategoryOverHom.comp φi
-      (FibredCategoryOverHom.comp α ψi)
-    map := fun η => fibredWhiskerLeft φi (fibredWhiskerRight η ψi)
-    map_id := by
-      intro α
-      rw [show fibredWhiskerRight (𝟙 α) ψi =
-          𝟙 (FibredCategoryOverHom.comp α ψi) by
-        exact @Bicategory.id_whiskerRight (FibredCategoryOver C) _
-          X₁ X₄ X₃ α ψi]
-      exact @Bicategory.whiskerLeft_id (FibredCategoryOver C) _
-        X₂ X₁ X₃ φi (FibredCategoryOverHom.comp α ψi)
-    map_comp := by
-      intro α β γ η θ
-      apply OverNatTrans.ext
-      change
-        (fibredWhiskerLeft φi (fibredWhiskerRight (η ≫ θ) ψi)).toNatTrans =
-          (fibredWhiskerLeft φi (fibredWhiskerRight η ψi)).toNatTrans ≫
-            (fibredWhiskerLeft φi (fibredWhiskerRight θ ψi)).toNatTrans
-      rw [show fibredWhiskerRight (η ≫ θ) ψi =
-          fibredOverNatTransComp (fibredWhiskerRight η ψi)
-            (fibredWhiskerRight θ ψi) by
-        apply OverNatTrans.ext
-        exact congrArg (fun q => q.toNatTrans)
-          (Bicategory.comp_whiskerRight (B := FibredCategoryOver C)
-            η θ ψi)]
-      rfl }
-  let toHomIso {U V : FibredCategoryOver C}
-      {F G : FibredCategoryOverHom U V}
-      (e : @Iso _ (Bicategory.homCategory (B := FibredCategoryOver C) U V)
-        F G) : F ≅ G := {
-    hom := e.hom
-    inv := e.inv
-    hom_inv_id := by
-      apply OverNatTrans.ext
-      exact congrArg (fun q => q.toNatTrans) e.hom_inv_id
-    inv_hom_id := by
-      apply OverNatTrans.ext
-      exact congrArg (fun q => q.toNatTrans) e.inv_hom_id }
-  let P := prePostcompositionFunctor φ ψ
-  let unitComponent (α : FibredCategoryOverHom X₂ X₃) :
-      α ≅ (P ⋙ Q).obj α := by
-    change α ≅ FibredCategoryOverHom.comp φi
-      (FibredCategoryOverHom.comp
-        (FibredCategoryOverHom.comp φ
-          (FibredCategoryOverHom.comp α ψ)) ψi)
-    let lastB := Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
-      ((Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
-          (Bicategory.associator (B := FibredCategoryOver C)
-            α ψ ψi).symm) ≪≫
-        (Bicategory.associator (B := FibredCategoryOver C)
-          φ (FibredCategoryOverHom.comp α ψ) ψi).symm)
-    let last := toHomIso lastB
-    let preB :=
-        ((Bicategory.leftUnitor (B := FibredCategoryOver C) α).symm ≪≫
-          Bicategory.whiskerLeftIso (B := FibredCategoryOver C)
-            (FibredCategoryOverHom.id X₂)
-            (Bicategory.rightUnitor (B := FibredCategoryOver C) α).symm) ≪≫
-        Bicategory.whiskerRightIso (B := FibredCategoryOver C) eφR.symm
-          (FibredCategoryOverHom.comp α (FibredCategoryOverHom.id X₃)) ≪≫
-        Bicategory.associator (B := FibredCategoryOver C) φi φ
-          (FibredCategoryOverHom.comp α (FibredCategoryOverHom.id X₃)) ≪≫
-        Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
-          (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
-            (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) α
-              eψL.symm))
-    let pre :
-        α ≅ FibredCategoryOverHom.comp φi
-          (FibredCategoryOverHom.comp φ
-            (FibredCategoryOverHom.comp α
-              (FibredCategoryOverHom.comp ψ ψi))) := by
-      convert toHomIso preB using 1 <;>
-        apply FibredCategoryOverHom.ext <;> rfl
-    convert pre ≪≫ last using 1 <;>
-      apply FibredCategoryOverHom.ext <;> rfl
-  let unit : 𝟭 (FibredCategoryOverHom X₂ X₃) ≅ P ⋙ Q :=
-    NatIso.ofComponents unitComponent (by
-      intro α β η
-      dsimp [unitComponent, P, Q, prePostcompositionFunctor, toHomIso]
-      sorry
-      /- simp [fibredWhiskerLeft, fibredWhiskerRight,
-        fibredOverNatTransComp, fibredCategoryOverHomCategory,
-        overWhiskerLeft, overWhiskerRight,
-        overHomCategory, fibredHomIsoOfUnderlying,
-        overNatIsoOfUnderlying, Functor.whiskerLeft,
-        Functor.whiskerRight, Functor.comp, Category.assoc,
-        NatTrans.comp_app, Bicategory.Strict.assoc,
-        Bicategory.Strict.id_comp, Bicategory.Strict.comp_id]) -/)
-  let counitComponent (β : FibredCategoryOverHom X₁ X₄) :
-      β ≅ (Q ⋙ P).obj β := by
-    change β ≅ FibredCategoryOverHom.comp φ
-      (FibredCategoryOverHom.comp
-        (FibredCategoryOverHom.comp φi
-          (FibredCategoryOverHom.comp β ψi)) ψ)
-    let preB :=
-        ((Bicategory.leftUnitor (B := FibredCategoryOver C) β).symm ≪≫
-          Bicategory.whiskerLeftIso (B := FibredCategoryOver C)
-            (FibredCategoryOverHom.id X₁)
-            (Bicategory.rightUnitor (B := FibredCategoryOver C) β).symm) ≪≫
-        Bicategory.whiskerRightIso (B := FibredCategoryOver C) eφL.symm
-          (FibredCategoryOverHom.comp β (FibredCategoryOverHom.id X₄)) ≪≫
-        Bicategory.associator (B := FibredCategoryOver C) φ φi
-          (FibredCategoryOverHom.comp β (FibredCategoryOverHom.id X₄)) ≪≫
-        Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
-          (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
-            (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) β
-              eψR.symm))
-    let lastB := Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
-      ((Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
-          (Bicategory.associator (B := FibredCategoryOver C)
-            β ψi ψ).symm) ≪≫
-        (Bicategory.associator (B := FibredCategoryOver C)
-          φi (FibredCategoryOverHom.comp β ψi) ψ).symm)
-    let pre := toHomIso preB
-    let last := toHomIso lastB
-    convert pre ≪≫ last using 1 <;>
-      apply FibredCategoryOverHom.ext <;> rfl
-  let counit : Q ⋙ P ≅ 𝟭 (FibredCategoryOverHom X₁ X₄) :=
-    NatIso.ofComponents (fun β => (counitComponent β).symm) (by
-      intro α β η
-      have hforward : η ≫ (counitComponent β).hom =
-          (counitComponent α).hom ≫ (Q ⋙ P).map η := by
-        apply OverNatTrans.ext
-        dsimp [counitComponent, P, Q, prePostcompositionFunctor, toHomIso]
-        sorry
-        /- simp [fibredWhiskerLeft, fibredWhiskerRight,
-          fibredOverNatTransComp, fibredCategoryOverHomCategory,
-          overWhiskerLeft, overWhiskerRight,
-          overHomCategory, fibredHomIsoOfUnderlying,
-          overNatIsoOfUnderlying, Functor.whiskerLeft,
-          Functor.whiskerRight, Functor.comp, Category.assoc,
-          NatTrans.comp_app, Bicategory.Strict.assoc,
-        Bicategory.Strict.id_comp, Bicategory.Strict.comp_id] -/)
-      apply (cancel_mono (counitComponent β).hom).1
-      simp only [Iso.symm_hom, Category.assoc, Iso.inv_hom_id_assoc,
-        Iso.inv_hom_id, Functor.id_map, Category.comp_id]
-      rw [hforward]
-      simp)
-  exact Functor.IsEquivalence.mk' Q unit counit
-  -/
 
 /-! ## Inertia, slices, composites, and fibre products -/
 
@@ -2452,13 +2280,9 @@ theorem groupoidAmelioration_object_isIso
   change IsIso (Functor.Fiber.fiberInclusion.map k)
   exact (Functor.Fiber.fiberInclusion.mapIso (asIso k)).isIso_hom
 
-/- Proof roadmap: start with Unit 33's `ameliorationFactorization`.  Use
-`groupoidAmelioration_object_isIso` and the comma morphism equation to show
-the middle projection has groupoid fibres; construct a quasi-inverse to
-`data.u` from the canonical comma object and prove it is an equivalence over
-`C`; finally prove `data.v` is fibred in groupoids by lifting arrows in `Y`
-componentwise.  The remaining work is the over-base unit/counit bookkeeping.
--/
+/- Proof plan: refine Unit33's `ameliorationFactorization`; use
+`groupoidAmelioration_object_isIso` for the middle fibres, construct the
+inverse to `u` over `C`, and prove `v` fibred by componentwise lifts. -/
 theorem ameliorate_morphism_categories_fibred_in_groupoids
     {C : Cat.{v, u}} (X Y : FibredCategoryOver C)
     (hX : IsGroupoidFibredCategoryOver X)
@@ -2512,12 +2336,6 @@ def underlyingIsoOfFibredHomIso
       (fun η : OverNatTrans G.underlying G.underlying => η.toNatTrans)
       e.inv_hom_id
 
-/- Proof roadmap: choose inverse fibred homs for `D.a` and `D.b`; compose them
-to obtain the comparison `h`; use the two triangle 2-isomorphisms to identify
-the composites over `Y`; prove `h` is an equivalence over `D.f` by composing
-the chosen units and counits; and whisker those same isomorphisms to obtain
-`D.b ≫ h ≅ D.a`.  A general composition/transport lemma for strict
-equivalences over a base will make these steps routine. -/
 theorem amelioration_unique
     {C : Cat.{v, u}} {X X' X'' Y : FibredCategoryOver C}
     {F : FibredCategoryOverHom X Y}
@@ -3062,12 +2880,9 @@ theorem amelioration_unique
   exact ⟨Ls, hKp, hLsq, ⟨unit, overUnit, hunitOver⟩,
     ⟨counit, overCounit, hcounitOver⟩⟩
 
-/- Proof roadmap: apply `amelioration_unique`, retain its comparison functor
-and fibred-hom isomorphism, then map that isomorphism to underlying functors.
-Rewrite both sides with `left_strict` and `right_strict`; the triangle
-2-isomorphisms then show every component maps to the required `eqToHom`, which
-is exactly `IsNatIsoOver`.  This is waiting on the same strict over-base
-whiskering lemmas as `amelioration_unique`. -/
+/- Proof plan: apply `amelioration_unique`, map its comparison isomorphism to
+underlying functors, and use `left_strict` and `right_strict` to prove its
+components are vertical over `D.f`. -/
 theorem amelioration_unique_when_strictly_commutative
     {C : Cat.{v, u}} {X X' X'' Y : FibredCategoryOver C}
     {F : FibredCategoryOverHom X Y}
@@ -3260,6 +3075,10 @@ theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     (p : S ⥤ C) [p.IsFibered] :
     IsSplitFibredCategory.{v, u, v', u', u, v} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
+  /- Proof plan: transport the canonical strict choice from a split
+  presentation for the forward direction; for the reverse direction, build
+  the fibre presheaf from the strict pullback functors and its Grothendieck
+  equivalence over `C`. -/
   sorry
 
 /- The explicit strictification category in the proof of the source's last
@@ -4121,6 +3940,9 @@ theorem categoryPresheafStrictification_exists_presheaf_equivalence
         IsEquivalenceOverFunctor
           (categoryPresheafStrictificationProjection P)
           (categoryPresheafProjection F) e := by
+  /- Proof plan: take as `F(V)` the strictification objects with first base
+  `V`, reindex by precomposition, and identify its Grothendieck construction
+  with the explicit strictification category over `C`. -/
   sorry
 
 theorem fibredCategory_isEquivalentTo_split
@@ -4130,6 +3952,9 @@ theorem fibredCategory_isEquivalentTo_split
     ∃ F : CategoryPresheaf.{v, max (max u' v') u} C,
       ∃ h : S ⥤ categoryPresheafCategory F,
         IsEquivalenceOverFunctor p (categoryPresheafProjection F) h := by
+  /- Proof plan: choose a pullback cleavage, compose the established
+  equivalence with the strictification category with its presheaf
+  presentation, and compose the over-base unit and counit. -/
   sorry
 
 /-! ## Presheaves of groupoids -/
@@ -4166,6 +3991,9 @@ theorem categoryPresheafStrictification_exists_groupoidPresheaf_equivalence
         IsEquivalenceOverFunctor
           (categoryPresheafStrictificationProjection P)
           (groupoidPresheafProjection F) e := by
+  /- Proof plan: use the Cat-valued strictification presentation and show
+  each value is a groupoid by transporting `hp` across its fibre equivalence;
+  then package the same over-base equivalence as a `GroupoidPresheaf`. -/
   sorry
 
 abbrev groupoidPresheafRestriction
@@ -4260,6 +4088,9 @@ theorem fibredInGroupoids_isEquivalentTo_split
     ∃ F : GroupoidPresheaf.{v, max (max u' v') u} C,
       ∃ h : S ⥤ groupoidPresheafCategory F,
         IsEquivalenceOverFunctor p (groupoidPresheafProjection F) h := by
+  /- Proof plan: choose a cleavage, compose the equivalence to the explicit
+  strictification with its groupoid-presheaf presentation, and reuse the
+  composed over-base unit and counit. -/
   sorry
 
 end

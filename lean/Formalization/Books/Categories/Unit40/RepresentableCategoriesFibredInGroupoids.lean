@@ -186,18 +186,7 @@ theorem objectClassPresheaf_obj_equiv
   exact fibredSetoidObjectPresheaf_obj_equiv p hp U
 
 /- A fibred equivalence to a slice transports the discreteness of the slice
-   fibres back to setoidness of the source fibres.
-
-   Proof roadmap:
-
-   1. Unpack `h` and use its forward functor to the slice.  Its strict
-      equation over `C` supplies the `over` witness expected by
-      `equivalence_to_fibredInSets_gives_setoidFibres`.
-   2. Package the inverse functor and the vertical unit/counit isomorphisms as
-      `IsEquivalenceOverFunctor`; the cartesian-preservation fields are not
-      needed for the fibrewise equivalence itself.
-   3. Apply `equivalence_to_fibredInSets_gives_setoidFibres` with
-      `sliceProjection_isFibredInSets X` and retain its first component. -/
+fibres back to setoidness of the source fibres. -/
 theorem isCategoryFibredInSetoids_of_fibredEquivalence_slice
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]

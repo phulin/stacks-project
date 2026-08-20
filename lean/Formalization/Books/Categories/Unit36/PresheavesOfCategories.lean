@@ -266,17 +266,6 @@ theorem IsomorphicOverBase.transportPullbackChoice
     (h : IsomorphicOverBase p q)
     (Q : StrictPullbackChoice (p := q)) :
     Nonempty (StrictPullbackChoice (p := p)) := by
-  /-
-  The construction is the strict transport of `Q` through the inverse
-  functor in `h`.  On a fibre object `x` over `U`, first send `x` through the
-  forward functor, apply `Q.choice.pullback`, and send the result back through
-  the inverse functor.  The inverse functor's preservation of strongly
-  cartesian arrows is proved from the strict inverse equations.  The two
-  computation fields follow by `Functor.ext` and the uniqueness of a
-  strongly cartesian factorization; the strict equations in `h` remove all
-  `eqToHom` transports.  This is the reusable bridge needed by both the
-  splitting criterion and the explicit strictification presentation.
-  -/
   rcases h with ⟨F, G, hFq, hGp, hFG, hGF⟩
   cases hGp
   have strong_map : ∀ {R S : C} {a b : T} (f : R ⟶ S) (φ : a ⟶ b),
@@ -939,278 +928,6 @@ theorem IsomorphicOverBase.transportPullbackChoice
       hright]
   · intro W V U g f
     exact hcomp g f
-  /-
-    intro W V U g f
-    have hobj : ∀ x : Functor.Fiber p U,
-        (P.pullbackFunctor (g ≫ f)).obj x =
-          (P.pullbackFunctor f ⋙ P.pullbackFunctor g).obj x := by
-      intro x
-      apply Subtype.ext
-      change G.obj (Q.choice.pullback (g ≫ f) (forwardFiber x)).1 =
-        G.obj (Q.choice.pullback g
-          (forwardFiber (transportedFiber
-            (Q.choice.pullback f (forwardFiber x))))).1
-      have hq := congrArg (fun H => H.obj (forwardFiber x))
-        (Q.comp_eq g f)
-      have hq' : Q.choice.pullback (g ≫ f) (forwardFiber x) =
-          Q.choice.pullback g (Q.choice.pullback f (forwardFiber x)) := by
-        simpa only [PullbackChoice.pullbackFunctor, Functor.comp_obj] using hq
-      have hback : Q.choice.pullback g
-          (forwardFiber (transportedFiber
-            (Q.choice.pullback f (forwardFiber x)))) =
-          Q.choice.pullback g (Q.choice.pullback f (forwardFiber x)) :=
-        congrArg (fun z => Q.choice.pullback g z)
-          (backward_forward (Q.choice.pullback f (forwardFiber x)))
-      exact congrArg G.obj (congrArg (fun z => z.1) (hq'.trans hback.symm))
-    refine CategoryTheory.Functor.ext (fun x => hobj x) (fun x y φ => ?_)
-    apply Functor.Fiber.hom_ext
-    dsimp [Functor.Fiber.fiberInclusion]
-    let aX := Q.choice.pullback f (forwardFiber x)
-    let aY := Q.choice.pullback f (forwardFiber y)
-    let eX := congrArg (fun H : T ⥤ T => H.obj aX.1) hGF
-    let eY := congrArg (fun H : T ⥤ T => H.obj aY.1) hGF
-    let kX : forwardFiber ((P.pullbackFunctor f).obj x) = aX := by
-      apply Subtype.ext
-      exact eX
-    let kY : forwardFiber ((P.pullbackFunctor f).obj y) = aY := by
-      apply Subtype.ext
-      exact eY
-    have hforward : forwardMap ((P.pullbackFunctor f).map φ) =
-        eqToHom kX ≫ (Q.choice.pullbackFunctor f).map (forwardMap φ) ≫
-          eqToHom kY.symm := by
-      apply Functor.Fiber.hom_ext
-      change F.map ((P.pullbackFunctor f).map φ).1 =
-        Functor.Fiber.fiberInclusion.map (eqToHom kX) ≫
-          ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1 ≫
-            Functor.Fiber.fiberInclusion.map (eqToHom kY.symm)
-      have heX :
-          congrArg (fun z : Functor.Fiber (G ⋙ p) V => z.1) kX = eX := by
-        apply Subsingleton.elim
-      have heY :
-          congrArg (fun z : Functor.Fiber (G ⋙ p) V => z.1) kY = eY := by
-        apply Subsingleton.elim
-      have hmapX :
-          Functor.Fiber.fiberInclusion.map (eqToHom kX) = eqToHom eX := by
-        have h := eqToHom_map
-          (Functor.Fiber.fiberInclusion : Functor.Fiber (G ⋙ p) V ⥤ T) kX
-        exact h.trans (congrArg (fun e => eqToHom e) heX)
-      have hmapY :
-          Functor.Fiber.fiberInclusion.map (eqToHom kY.symm) =
-            eqToHom eY.symm := by
-        have h := eqToHom_map
-          (Functor.Fiber.fiberInclusion : Functor.Fiber (G ⋙ p) V ⥤ T) kY.symm
-        have heY' :
-            congrArg (fun z : Functor.Fiber (G ⋙ p) V => z.1) kY.symm =
-              eY.symm := congrArg (fun e => e.symm) heY
-        exact h.trans (congrArg (fun e => eqToHom e) heY')
-      rw [pullbackFunctor_map_eq f φ]
-      have hGFstep : F.map
-          (G.map ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1) =
-          eqToHom eX ≫ ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1 ≫
-            eqToHom eY.symm := by
-        have hGFstep0 := Functor.congr_hom hGF
-          ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1
-        have heXobj : Functor.congr_obj hGF
-            ((Q.choice.pullbackFunctor f).obj (forwardFiber x)).1 = eX :=
-          Subsingleton.elim _ _
-        have heYobj : Functor.congr_obj hGF
-            ((Q.choice.pullbackFunctor f).obj (forwardFiber y)).1 = eY :=
-          Subsingleton.elim _ _
-        rw [heXobj, heYobj] at hGFstep0
-        convert hGFstep0 using 1 ;
-          simp only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
-            Functor.id_map] ; rfl
-      have hYcomp := congrArg
-        (fun m => eqToHom eX ≫
-          ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1 ≫ m) hmapY
-      have hXcomp := congrArg
-        (fun m => m ≫ ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1 ≫
-          Functor.Fiber.fiberInclusion.map (eqToHom kY.symm)) hmapX
-      exact hGFstep.trans (hYcomp.symm.trans hXcomp.symm)
-    change ((P.pullbackFunctor (g ≫ f)).map φ).1 =
-      (eqToHom (hobj x) ≫
-        (P.pullbackFunctor f ⋙ P.pullbackFunctor g).map φ ≫
-          eqToHom (hobj y).symm).1
-    simp only [Functor.comp_map]
-    rw [pullbackFunctor_map_eq (g ≫ f) φ]
-    dsimp [Functor.Fiber.fiberInclusion, Functor.Fiber.fiberCategory]
-    change G.map ((Q.choice.pullbackFunctor (g ≫ f)).map
-        (forwardMap φ)).1 =
-      (eqToHom (hobj x)).1 ≫
-        ((P.pullbackFunctor g).map ((P.pullbackFunctor f).map φ)).1 ≫
-          (eqToHom (hobj y).symm).1
-    have hQcomp := Functor.congr_hom (Q.comp_eq g f) (forwardMap φ)
-    rw [hQcomp]
-    rw [pullbackFunctor_map_eq g ((P.pullbackFunctor f).map φ)]
-    /-
-    Remaining proof roadmap (the pointwise transport calculation above is the
-    known dead end):
-
-    * Bundle `forwardFiber`/`forwardMap` into a functor
-      `E U : Functor.Fiber p U ⥤ Functor.Fiber (G ⋙ p) U`, and bundle
-      `transportedFiber` with morphism map `fun φ => ⟨G.map φ.1, ...⟩`
-      into `D U` in the other direction.  Their functor laws reduce, after
-      `Functor.Fiber.hom_ext`, to `F.map_id`, `F.map_comp`, `G.map_id`, and
-      `G.map_comp`.
-    * Strengthen `backward_forward` to the bundled equality
-      `D U ⋙ E U = 𝟙 (Functor.Fiber (G ⋙ p) U)`.  Use
-      `CategoryTheory.Functor.ext`; its object equations are the existing
-      `backward_forward`, and its morphism equation is exactly
-      `Functor.congr_hom hGF φ.1`, followed by
-      `Functor.Fiber.hom_ext`.  Equality proofs occurring in the induced
-      `eqToHom`s can be identified with `Subsingleton.elim`.
-    * Package `pullbackFunctor_map_eq` as a functor equality, for every
-      `f : R ⟶ S`,
-      `P.pullbackFunctor f = E S ⋙ Q.choice.pullbackFunctor f ⋙ D R`.
-      The object part is `rfl`; the morphism part is
-      `pullbackFunctor_map_eq f φ` after `Functor.Fiber.hom_ext`.
-    * Replace this entire pointwise `hcomp` branch by rewriting both sides
-      with that factorization.  Rewrite the middle term using `Q.comp_eq g f`,
-      cancel `D V ⋙ E V` with the bundled inverse equality, and finish
-      using `Functor.assoc`.  This avoids comparing the composite equality
-      used by `hobj` with the separate `kX`/`kY` transports.
-
-    The reusable declarations used here are `CategoryTheory.Functor.ext` and
-    `Functor.Fiber.hom_ext`, together with `eqToHom_map`; the cartesian
-    factorization facts used earlier are in
-    `Mathlib/CategoryTheory/FiberedCategory/Cartesian.lean`.  Do not resume the
-    direct `rw [hforward]` approach: after expanding `Functor.map_comp` it
-    leaves precisely the incompatible-looking `hobj` versus `kX`/`kY`
-    transport paths seen in the timed-out attempt.
-    -/
-  refine ⟨{
-    choice := P
-    unital := ?_
-    strict := ?_
-    pullbackFunctor_id := ?_
-    pullbackFunctor_comp := ?_ }⟩
-  · intro U x
-    apply Subtype.ext
-    change G.obj (Q.choice.pullback (𝟙 U) (forwardFiber x)).1 = x.1
-    rw [Q.unital U (forwardFiber x)]
-    exact correction x
-  · intro W V U g f
-    exact hcomp g f
-  · intro U
-    have hobj : ∀ x : Functor.Fiber p U,
-        (P.pullbackFunctor (𝟙 U)).obj x = (𝟭 (Functor.Fiber p U)).obj x := by
-      intro x
-      apply Subtype.ext
-      change G.obj (Q.choice.pullback (𝟙 U) (forwardFiber x)).1 = x.1
-      rw [Q.unital U (forwardFiber x)]
-      exact correction x
-    refine CategoryTheory.Functor.ext (fun x => hobj x) (fun x y φ => ?_)
-    apply Functor.Fiber.hom_ext
-    dsimp [Functor.Fiber.fiberInclusion]
-    change ((P.pullbackFunctor (𝟙 U)).map φ).1 =
-      (eqToHom (hobj x) ≫
-        (𝟭 (Functor.Fiber p U)).map φ ≫ eqToHom (hobj y).symm).1
-    rw [pullbackFunctor_map_eq (𝟙 U) φ]
-    have hQid := Functor.congr_hom (Q.id_eq U) (forwardMap φ)
-    have hQid' := congrArg (fun m => m.1) hQid
-    change ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
-      Functor.Fiber.fiberInclusion.map
-          (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber x))) ≫
-        (forwardMap φ).1 ≫
-          Functor.Fiber.fiberInclusion.map
-            (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber y)).symm) at hQid'
-    let dX := congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
-      (Functor.congr_obj (Q.id_eq U) (forwardFiber x))
-    let dY := congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
-      (Functor.congr_obj (Q.id_eq U) (forwardFiber y))
-    have hmapXq :
-        Functor.Fiber.fiberInclusion.map
-            (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber x))) =
-          eqToHom dX := by
-      dsimp [dX]
-      exact eqToHom_map
-        (Functor.Fiber.fiberInclusion : Functor.Fiber (G ⋙ p) U ⥤ T)
-        (Functor.congr_obj (Q.id_eq U) (forwardFiber x))
-    have hmapYq :
-        Functor.Fiber.fiberInclusion.map
-            (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber y)).symm) =
-          eqToHom dY.symm := by
-      dsimp [dY]
-      exact eqToHom_map
-        (Functor.Fiber.fiberInclusion : Functor.Fiber (G ⋙ p) U ⥤ T)
-        (Functor.congr_obj (Q.id_eq U) (forwardFiber y)).symm
-    rw [hmapXq, hmapYq] at hQid'
-    have hGQid := congrArg G.map hQid'
-    have hGQid' :
-        G.map ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
-          G.map (eqToHom dX) ≫ G.map (forwardMap φ).1 ≫
-            G.map (eqToHom dY.symm) := by
-      calc
-        _ = G.map (eqToHom dX ≫ (forwardMap φ).1 ≫ eqToHom dY.symm) := hGQid
-        _ = _ := by simp only [Functor.map_comp]
-    have hGQid'' :
-        G.map ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
-          eqToHom (congrArg G.obj dX) ≫ G.map (forwardMap φ).1 ≫
-            eqToHom (congrArg G.obj dY).symm := by
-      calc
-        _ = G.map (eqToHom dX) ≫ G.map (forwardMap φ).1 ≫
-            G.map (eqToHom dY.symm) := hGQid'
-        _ = _ := by rw [eqToHom_map, eqToHom_map]
-    have hnat : G.map (F.map φ.1) =
-        eqToHom (correction x) ≫ φ.1 ≫
-          eqToHom (correction y).symm := by
-      simpa only [Functor.comp_map, Functor.id_map] using
-        (Functor.congr_hom hFG φ.1)
-    have hobjX :
-        congrArg (fun z : Functor.Fiber p U => z.1) (hobj x) =
-          (congrArg G.obj dX).trans (correction x) := by
-      apply Subsingleton.elim
-    have hobjY :
-        congrArg (fun z : Functor.Fiber p U => z.1) (hobj y) =
-          (congrArg G.obj dY).trans (correction y) := by
-      apply Subsingleton.elim
-    have hmapHX :
-        Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) =
-          eqToHom (congrArg (fun z : Functor.Fiber p U => z.1) (hobj x)) := by
-      exact eqToHom_map
-        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S) (hobj x)
-    have hmapHY :
-        Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm) =
-          eqToHom (congrArg (fun z : Functor.Fiber p U => z.1) (hobj y)).symm := by
-      have h := eqToHom_map
-        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S) (hobj y).symm
-      have he :
-          congrArg (fun z : Functor.Fiber p U => z.1) (hobj y).symm =
-            (congrArg (fun z : Functor.Fiber p U => z.1) (hobj y)).symm :=
-        Subsingleton.elim _ _
-      exact h.trans (congrArg (fun e => eqToHom e) he)
-    have hright :
-        (eqToHom (hobj x) ≫
-            (𝟭 (Functor.Fiber p U)).map φ ≫ eqToHom (hobj y).symm).1 =
-          eqToHom ((congrArg G.obj dX).trans (correction x)) ≫ φ.1 ≫
-            eqToHom ((congrArg G.obj dY).trans (correction y)).symm := by
-      change Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) ≫ φ.1 ≫
-          Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm) = _
-      rw [hmapHX, hmapHY, hobjX, hobjY]
-      congr 1
-    have hfinal :
-        (eqToHom (congrArg G.obj dX) ≫
-            (eqToHom (correction x) ≫ φ.1 ≫ eqToHom (correction y).symm) ≫
-              eqToHom (congrArg G.obj dY).symm) =
-          eqToHom ((congrArg G.obj dX).trans (correction x)) ≫ φ.1 ≫
-            eqToHom ((congrArg G.obj dY).trans (correction y)).symm := by
-      calc
-        _ = (eqToHom (congrArg G.obj dX) ≫ eqToHom (correction x)) ≫ φ.1 ≫
-            (eqToHom (correction y).symm ≫ eqToHom (congrArg G.obj dY).symm) := by
-          simp only [Category.assoc]
-        _ = eqToHom ((congrArg G.obj dX).trans (correction x)) ≫ φ.1 ≫
-            eqToHom ((correction y).symm.trans (congrArg G.obj dY).symm) := by
-          rw [eqToHom_trans, eqToHom_trans]
-        _ = _ := by
-          have he :
-              (correction y).symm.trans (congrArg G.obj dY).symm =
-                ((congrArg G.obj dY).trans (correction y)).symm :=
-            Subsingleton.elim _ _
-          rw [he]
-    rw [hGQid'', show (forwardMap φ).1 = F.map φ.1 by rfl, hnat, hfinal, hright]
-  · intro W V U g f
-    exact hcomp g f
-  -/
 
 theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     {S : Type uS} [Category.{vS} S]
@@ -1218,83 +935,9 @@ theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     (p : S ⥤ C) [p.IsFibered] :
       IsSplitFibredCategory.{vC, uC, vS, uS, vS, uS} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
-  /-
-  Proof roadmap.  All `Cat` values in this theorem must be
-  `Cat.{vS, uS}`; this is what the six explicit universe arguments on
-  `IsSplitFibredCategory` fix.
-
-  Forward direction:
-
-  1. Unpack splitness as `⟨_, F, hF⟩`, with
-     `F : Cᵒᵖ ⥤ Cat.{vS, uS}` and
-     `hF : IsomorphicOverBase p (splitFibredProjection F)`.
-  2. Build a `StrictPullbackChoice` for `splitFibredProjection F`.  For
-     `x : Functor.Fiber (splitFibredProjection F) U`, eliminate the proof
-     `x.2` so that `x.1` is literally `⟨U, a⟩`, then take
-     `splitFibredCartesianDomain F f a` and
-     `splitFibredCartesianLift F f a`.  Strong cartesianness is exactly
-     `splitFibredCartesianLift_isStronglyCartesian` (this file), whose
-     underlying Mathlib result is
-     `Pseudofunctor.CoGrothendieck.isStronglyCartesian_homCartesianLift` in
-     `Mathlib/CategoryTheory/FiberedCategory/Grothendieck.lean`.
-  3. Prove the bundled identity equation from `F.map_id`, and the bundled
-     composition equation from `splitRestriction_comp F g f`.  Use
-     `CategoryTheory.Functor.ext`, `Functor.Fiber.hom_ext`, and
-     `Pseudofunctor.CoGrothendieck.Hom.ext`; normalize the dependent object
-     transports with `eqToHom_map` and `Subsingleton.elim`.  The same object
-     equations give `PullbackChoice.IsUnital`.
-  4. Apply `IsomorphicOverBase.transportPullbackChoice hF` to this choice,
-     extract the transported `StrictPullbackChoice`, and return its `choice`,
-     `unital`, and `strict` fields.  The transport theorem immediately above
-     is therefore the only remaining prerequisite for this direction.
-
-  Reverse direction:
-
-  1. From `⟨P, hunit, hcomp⟩`, first derive
-     `hid U : P.pullbackFunctor (𝟙 U) =
-       𝟙 (Functor.Fiber p U)`.  `hunit` alone only fixes objects and
-     does not fix the morphism action.  Use both hypotheses: let
-     `T := P.pullbackFunctor (𝟙 U)`, obtain
-     `α : 𝟙 _ ≅ T` from `pullback_identity_iso p P U`, and give `T`
-     a faithful instance with `Functor.Faithful.of_iso α`.  Apply
-     `Functor.congr_hom` to
-     `show T = T ⋙ T by simpa using hcomp (𝟙 U) (𝟙 U)`
-     and cancel `T.map`; use `hunit U` for the object equations in
-     `CategoryTheory.Functor.ext`.  `pullback_identity_iso` and the definition
-     of `PullbackChoice.IsUnital` are in
-     `Formalization/Books/Categories/Unit33/FibredCategories.lean`.
-  2. Define `F : Cᵒᵖ ⥤ Cat.{vS, uS}` by
-     `F.obj U := Cat.of (Functor.Fiber p U.unop)` and
-     `F.map f := (P.pullbackFunctor f.unop).toCatHom`.  Its `map_id` is
-     `congrArg Functor.toCatHom (hid U.unop)`.  For `map_comp`, first rewrite
-     with `unop_comp`, then use
-     `congrArg Functor.toCatHom (hcomp g.unop f.unop)` (with the arguments in
-     this order).
-  3. Define `toGroth : S ⥤ splitFibredCategory F` by
-     `x ↦ ⟨p.obj x, ⟨x, rfl⟩⟩`.  For `φ : x ⟶ y`, its base is
-     `p.map φ`; its fibre arrow is the map to
-     `P.pullback (p.map φ) ⟨y, rfl⟩` supplied by
-     `Functor.IsStronglyCartesian.map` for
-     `P.pullbackMap (p.map φ) ⟨y, rfl⟩`.  Prove the functor laws with
-     `Pseudofunctor.CoGrothendieck.Hom.ext` and
-     `Functor.IsStronglyCartesian.ext` after postcomposing with that
-     pullback map.
-  4. Define `fromGroth` on an object `X` by `X.fiber.1`; send a
-     CoGrothendieck morphism `k` to
-     `k.fiber.1 ≫ P.pullbackMap k.base _`.  Its functor laws follow from
-     `Pseudofunctor.CoGrothendieck.comp_fiber`, the `hid`/`hcomp` equations
-     used to build `F`, and `Functor.IsStronglyCartesian.fac`.
-  5. Prove the strict triangle equations required by `IsomorphicOverBase`.
-     `toGroth ⋙ fromGroth = 𝟙 S` is objectwise `rfl`, and its map
-     equation is `Functor.IsStronglyCartesian.fac`.  For
-     `fromGroth ⋙ toGroth = 𝟙 (splitFibredCategory F)`, use
-     `CategoryTheory.Functor.ext`; the object equality comes from
-     `X.fiber.2`, and the morphism equality uses
-     `Pseudofunctor.CoGrothendieck.Hom.ext` plus cartesian uniqueness.  The
-     two over-base equations are proved by `CategoryTheory.Functor.hext` and
-     `CategoryTheory.IsHomLift.fac`.  Assemble the `IsomorphicOverBase`
-     witness `hIso` and return `⟨inferInstance, F, hIso⟩`.
-  -/
+  /- Proof plan: transport the canonical strict choice from a split
+  presentation in one direction; in the other, form the fibre presheaf from
+  the strict pullback functors and construct its Grothendieck equivalence. -/
   sorry
 
 /-! ## The explicit strictification category -/
@@ -1630,53 +1273,9 @@ theorem strictificationProjection_coGrothendieck_presentation
     ∃ F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS},
       IsomorphicOverBase (strictificationProjection P)
         (splitFibredProjection F) := by
-  /-
-  Proof roadmap: reuse the reverse implication of
-  `isSplitFibredCategory_iff_exists_strictPullbackChoice` instead of building
-  the CoGrothendieck comparison a second time.
-
-  1. Put `q := strictificationProjection P`.  Construct a
-     `PullbackChoice q` whose chosen object over `W`, for
-     `g : W ⟶ V` and `A : Functor.Fiber q V`, is
-     `strictificationReindexObject A.1 g` (first eliminate `A.2`, or compose
-     with its `eqToHom`, so that the displayed arrow has codomain `A.1.V`).
-  2. Use the cartesian arrow already constructed inside
-     `strictificationProjection_isFibered`: its underlying
-     `StrictificationHom.hom` is
-     `Functor.IsStronglyCartesian.map p A.1.f
-       (P.pullbackMap A.1.f A.1.x) rfl
-       (P.pullbackMap (g ≫ A.1.f) A.1.x)`.
-     `Functor.IsStronglyCartesian.fac` shows its base is `g`; the
-     `hκstrong` argument in `strictificationProjection_isFibered` proves it
-     strongly cartesian for `q`.  The declarations `map`, `fac`, and `ext`
-     are in `Mathlib/CategoryTheory/FiberedCategory/Cartesian.lean`.
-  3. Prove a local computation lemma for the resulting pullback functor:
-     after postcomposing its map with the chosen cartesian arrow, it equals
-     the original fibre morphism followed by that arrow.  This is the same
-     `Functor.IsStronglyCartesian.fac` calculation as `pullbackMap_fac` in
-     `IsomorphicOverBase.transportPullbackChoice` above.
-  4. The unital object equation follows by cases on `A.1` from reindexing by
-     `𝟙 A.1.V`.  For composition, use
-     `strictificationReindexObject_comp`.  Upgrade these object equations to
-     the bundled equations
-     `Q.pullbackFunctor (𝟙 V) = 𝟙 _` and
-     `Q.pullbackFunctor (g ≫ f) =
-       Q.pullbackFunctor f ⋙ Q.pullbackFunctor g` with
-     `CategoryTheory.Functor.ext`, then
-     `Functor.Fiber.hom_ext` and `StrictificationHom.ext`; close the morphism
-     equations by the local computation lemma and
-     `Functor.IsStronglyCartesian.ext`.
-  5. Apply the reverse implication of
-     `isSplitFibredCategory_iff_exists_strictPullbackChoice q` to this
-     unital strict choice and return the second component of the resulting
-     `IsSplitFibredCategory q`.
-
-  Universe check: `StrictificationObject p P` lives in
-  `Type (max (max uC vC) uS)` and its homs live in `Type vS`; therefore the
-  criterion produces exactly
-  `F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS}` required here.  No
-  resizing or change to the theorem statement is needed.
-  -/
+  /- Proof plan: give `strictificationProjection P` the strict pullback
+  choice defined by `strictificationReindexObject`, prove its identity and
+  composition laws, and apply the reverse splitting criterion above. -/
   sorry
 
 theorem strictificationProjection_isSplit
@@ -1751,25 +1350,7 @@ theorem isFibredEquivalenceOver_symm
   exact ⟨G, F, hG, hF, hGcart, hFcart, hGF, hFG⟩
 
 /-- A strict isomorphism over the base is, in particular, an equivalence in
-the 2-category of fibred categories over that base. This is the bridge from
-the source's definition of a split fibred category to the stronger
-cartesian-preserving interface used by the strictification theorem.
-
-Proof roadmap:
-
-1. Reuse the strict inverse functors in `h` as the two comparison functors.
-2. Show each functor preserves strongly cartesian arrows. Given a competing
-   lift after applying the functor, send it through the strict inverse, use
-   the original universal property, and transport the unique factorization
-   back. The strict triangle equations remove all unit/counit transports.
-3. Turn `F ⋙ G = 𝟭 _` and `G ⋙ F = 𝟭 _` into identity natural
-   isomorphisms after equality induction.
-4. The strict equations over the base make every component vertical, so the
-   two `IsOverNaturalIso` obligations reduce to identity morphisms.
-
-The important point is to prove cartesian preservation from the inverse
-functor, rather than attempting to infer it merely from `F ⋙ q = p`.
--/
+the 2-category of fibred categories over that base. -/
 theorem isomorphicOverBase_isFibredEquivalenceOver
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}
@@ -2068,22 +1649,6 @@ theorem isFibredEquivalenceOver_trans
     (hpq : IsFibredEquivalenceOver p q)
     (hqr : IsFibredEquivalenceOver q r) :
     IsFibredEquivalenceOver p r := by
-  /-
-  Proof roadmap:
-
-  * Compose the forward functors and compose the inverse functors in the
-    opposite order. Derive their strict base triangles by associativity and
-    the triangles stored in `hpq` and `hqr`.
-  * Cartesian preservation is closed under composition directly from the
-    two `MapsStronglyCartesian` fields.
-  * Form the new unit and counit by whiskering and composing the supplied
-    vertical natural isomorphisms. Prove their base components are identities
-    with `IsOverNaturalIso`, functor associativity, and the stored strict base
-    equalities.
-
-  The only lengthy part is bookkeeping for reassociation of the whiskered
-  natural isomorphisms; no new categorical construction is required.
-  -/
   rcases hpq with ⟨F, G, hF, hG, hpresF, hpresG, ⟨eFG, overFG, overFGv⟩,
     ⟨eGF, overGF, overGFv⟩⟩
   rcases hqr with ⟨H, K, hH, hK, hpresH, hpresK, ⟨eHK, overHK, overHKv⟩,
@@ -3090,21 +2655,6 @@ theorem fibred_category_equivalent_to_split
     (p : S ⥤ C) [p.IsFibered] :
     ∃ F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS},
       IsFibredEquivalenceOver p (splitFibredProjection F) := by
-  /-
-  Final assembly roadmap:
-
-  1. Choose `P := PullbackChoice.default p`.
-  2. Use `strictification_comparison_exists p P` and
-     `strictificationComparison_isFibredEquivalence` to compare `p` with
-     `strictificationProjection P`.
-  3. Use `strictificationProjection_fibredEquivalence_to_split P` for the
-     split presentation of the strictification.
-  4. Compose the two fibred equivalences with
-     `isFibredEquivalenceOver_trans`.
-
-  Thus the final theorem has no independent proof gap: its remaining axioms
-  are isolated in the strict split-presentation and generic bridge lemmas.
-  -/
   let P : PullbackChoice p := PullbackChoice.default p
   obtain ⟨D⟩ := strictification_comparison_exists p P
   obtain ⟨F, hF⟩ :=

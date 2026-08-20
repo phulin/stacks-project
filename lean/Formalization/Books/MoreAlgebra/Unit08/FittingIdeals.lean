@@ -1207,17 +1207,17 @@ private theorem fittingIdealOfSurjection_prod
         rw [Finset.sum_eq_single j]
         · simp
         · intro b hb hbj
-          simp [Pi.single_apply, hbj]
+          simp [hbj]
         · simp
       change (w j).1 i = ∑ x : Fin (r + r), D i x * C x j
       induction i using Fin.addCases with
       | left i =>
-          simp [D, C, U, V, u, v, pp, prodSurjection, relationMatrix,
-            Matrix.mul_apply, Fin.sum_univ_add, Function.comp_def,
+          simp [D, C, U, V, u, v, prodSurjection,
+            Fin.sum_univ_add, Function.comp_def,
             Fin.addCases, finSumFinEquiv, hsingle, Matrix.fromBlocks]
       | right i =>
-          simp [D, C, U, V, u, v, pp, prodSurjection, relationMatrix,
-            Matrix.mul_apply, Fin.sum_univ_add, Function.comp_def,
+          simp [D, C, U, V, u, v, prodSurjection,
+            Fin.sum_univ_add, Function.comp_def,
             Fin.addCases, finSumFinEquiv, hsingle, Matrix.fromBlocks]
     rw [hmat]
     refine (minorIdeal_right_mul D C).trans ?_
@@ -1336,11 +1336,13 @@ private theorem fittingIdealOfSurjection_prod
             apply LinearMap.mem_ker.mpr
             change pp (fun i => D₁ i j) = 0
             dsimp [D₁]
-            cases finSumFinEquiv.symm j <;>
+            cases finSumFinEquiv.symm j
+            all_goals
               simp [U₁, V₁, pp, prodSurjection, Function.comp_def,
-                finSumFinEquiv, Fin.addCases, Matrix.fromBlocks,
-                (z₁ _).property, (z₂ _).property, map_zero] <;>
-              try { change p 0 = 0; exact p.map_zero } <;>
+                finSumFinEquiv, Fin.addCases, Matrix.fromBlocks]
+            all_goals
+              try { change p 0 = 0; exact p.map_zero }
+            all_goals
               try { change q 0 = 0; exact q.map_zero }⟩
         have hts : n + m - l ≤ r₁ + r₂ := by
           dsimp [r₁, r₂]
@@ -1859,13 +1861,12 @@ theorem fittingIdeal_fg
       let C : Matrix (Fin m) (Fin r) R := fun i j => c j i
       have hmat : relationMatrix p z = B * C := by
         ext i j
-        simp only [Matrix.mul_apply, B, C, relationMatrix]
+        simp only [B, C, relationMatrix]
         rw [← hc j]
         have hsum : c j = ∑ x : Fin m, c j x • (Pi.single x 1) := by
           exact pi_eq_sum_univ' (c j)
         rw [hsum, map_sum]
-        simp only [map_smul, Finset.sum_apply, Pi.smul_apply, smul_eq_mul,
-          B, b, C, Matrix.mul_apply]
+        simp only [map_smul, Finset.sum_apply, Pi.smul_apply, smul_eq_mul, b]
         change (∑ x : Fin m, c j x * g (Pi.single x 1) i) =
           ∑ x : Fin m, g (Pi.single x 1) i * c j x
         simp [mul_comm]

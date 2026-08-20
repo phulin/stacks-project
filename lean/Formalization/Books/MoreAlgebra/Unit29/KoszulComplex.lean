@@ -309,7 +309,58 @@ theorem koszulAlgebraDifferential_unique (R E : Type u) [CommRing R]
     (d : ExteriorAlgebra R E →ₗ[R] ExteriorAlgebra R E)
     (hd : IsKoszulDerivation R E φ d) :
     d = koszulAlgebraDifferential R E φ := by
-  sorry
+  apply ExteriorAlgebra.lhom_ext
+  intro n
+  ext v
+  induction n with
+  | zero =>
+      change d (ExteriorAlgebra.ιMulti R 0 v) =
+        koszulAlgebraDifferential R E φ (ExteriorAlgebra.ιMulti R 0 v)
+      simp only [ExteriorAlgebra.ιMulti_zero_apply]
+      have h := hd.1 0 0 (exteriorPower.ιMulti R 0 (0 : Fin 0 → E))
+        (exteriorPower.ιMulti R 0 (0 : Fin 0 → E))
+      simp only [exteriorPower.ιMulti_apply_coe, pow_zero, one_smul] at h
+      have hd0 : d 1 = 0 := by
+        apply_fun (fun z => z - d 1) at h
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using h.symm
+      rw [hd0]
+      simp [koszulAlgebraDifferential]
+  | succ n ih =>
+      change d (ExteriorAlgebra.ιMulti R (n + 1) v) =
+        koszulAlgebraDifferential R E φ (ExteriorAlgebra.ιMulti R (n + 1) v)
+      rw [ExteriorAlgebra.ιMulti_succ_apply]
+      have hd' := hd.1 1 n (exteriorPower.ιMulti R 1 (fun _ => v 0))
+        (exteriorPower.ιMulti R n (Matrix.vecTail v))
+      have hι1 :
+          (exteriorPower.ιMulti R 1 (fun _ => v 0) :
+            ExteriorAlgebra R E) = ExteriorAlgebra.ι R (v 0) := by
+        simp [exteriorPower.ιMulti_apply_coe, ExteriorAlgebra.ιMulti_succ_apply]
+      rw [hι1] at hd'
+      have hD := koszulAlgebraDifferential_mul_generator_aux R E φ (v 0)
+        (ExteriorAlgebra.ιMulti R n (Matrix.vecTail v))
+      have ih' := ih (Matrix.vecTail v)
+      change d (ExteriorAlgebra.ιMulti R n (Matrix.vecTail v)) =
+        koszulAlgebraDifferential R E φ (ExteriorAlgebra.ιMulti R n
+          (Matrix.vecTail v)) at ih'
+      calc
+        d (ExteriorAlgebra.ι R (v 0) * ExteriorAlgebra.ιMulti R n
+            (Matrix.vecTail v)) =
+            d (ExteriorAlgebra.ι R (v 0)) *
+                ExteriorAlgebra.ιMulti R n (Matrix.vecTail v) +
+              (-1 : R) • (ExteriorAlgebra.ι R (v 0) *
+                d (ExteriorAlgebra.ιMulti R n (Matrix.vecTail v))) := by
+                  simpa using hd'
+        _ = koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R (v 0)) *
+              ExteriorAlgebra.ιMulti R n (Matrix.vecTail v) +
+            (-1 : R) • (ExteriorAlgebra.ι R (v 0) *
+              koszulAlgebraDifferential R E φ
+                (ExteriorAlgebra.ιMulti R n (Matrix.vecTail v))) := by
+                  rw [hd.2 (v 0), koszulAlgebraDifferential_on_generator_aux, ih']
+        _ = koszulAlgebraDifferential R E φ
+              (ExteriorAlgebra.ι R (v 0) *
+                ExteriorAlgebra.ιMulti R n (Matrix.vecTail v)) := by
+                  symm
+                  exact hD
 
 /-! ## The complex and sequences -/
 
@@ -336,16 +387,75 @@ noncomputable def koszulDifferentialZ (R E : Type u) [CommRing R] [AddCommGroup 
     · simp only [koszulTermZ, if_neg hn1, if_neg hn]
       exact 0
 
+private theorem koszulDifferential_comp_aux (R E : Type u) [CommRing R]
+    [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (n : ℕ) :
+    ModuleCat.ofHom (koszulDifferential R E φ (n + 1)) ≫
+        ModuleCat.ofHom (koszulDifferential R E φ n) = 0 := by
+  have h_restrict (m : ℕ) :
+      (Submodule.subtype (⋀[R]^m E)).comp
+          (koszulDifferential R E φ m) =
+        (koszulAlgebraDifferential R E φ).comp
+          (Submodule.subtype (⋀[R]^(m + 1) E)) := by
+    apply exteriorPower.linearMap_ext
+    ext w
+    simp only [LinearMap.compAlternatingMap_apply, LinearMap.comp_apply]
+    rw [koszulDifferential_apply_ιMulti]
+    change _ = koszulAlgebraDifferential R E φ
+      (ExteriorAlgebra.ιMulti R (m + 1) w)
+    rw [koszulAlgebraDifferential_apply_ιMulti]
+    simp only [map_sum, map_smul]
+    rfl
+  rw [← ModuleCat.ofHom_comp]
+  apply ModuleCat.hom_ext
+  ext v
+  change ((Submodule.subtype (⋀[R]^n E)).comp
+      (koszulDifferential R E φ n))
+        (koszulDifferential R E φ (n + 1)
+          (exteriorPower.ιMulti R (n + 1 + 1) v)) = 0
+  rw [h_restrict n]
+  change (koszulAlgebraDifferential R E φ)
+      ((Submodule.subtype (⋀[R]^(n + 1) E)).comp
+        (koszulDifferential R E φ (n + 1))
+          (exteriorPower.ιMulti R (n + 1 + 1) v)) = 0
+  rw [h_restrict (n + 1)]
+  change ((koszulAlgebraDifferential R E φ).comp
+      (koszulAlgebraDifferential R E φ))
+        ((Submodule.subtype (⋀[R]^(n + 1 + 1) E))
+          (exteriorPower.ιMulti R (n + 1 + 1) v)) = 0
+  rw [koszulAlgebraDifferential_comp_self_aux]
+  simp
+
 theorem koszulDifferentialZ_comp (R E : Type u) [CommRing R] [AddCommGroup E]
     [Module R E] (φ : E →ₗ[R] R) (n : ℤ) :
     koszulDifferentialZ R E φ (n + 1) ≫ koszulDifferentialZ R E φ n = 0 := by
-  sorry
+  cases n with
+  | ofNat k =>
+      have hk0 : 0 ≤ Int.ofNat k := by simp
+      have hk1 : 0 ≤ Int.ofNat k + 1 := by omega
+      simp only [koszulDifferentialZ, koszulTermZ, hk0, hk1]
+      exact koszulDifferential_comp_aux R E φ k
+  | negSucc k =>
+      cases k with
+      | zero =>
+          have hzero : koszulDifferentialZ R E φ (Int.negSucc 0) = 0 := by
+            simp only [koszulDifferentialZ, koszulTermZ]
+            apply ModuleCat.hom_ext
+            ext x
+            rfl
+          rw [hzero]
+          simp
+      | succ k =>
+          have hk1 : ¬ 0 ≤ Int.negSucc (k + 1) + 1 := by omega
+          simp only [koszulDifferentialZ, koszulTermZ, hk1]
+          apply ModuleCat.hom_ext
+          ext x
+          rfl
 
 theorem koszulDifferential_comp (R E : Type u) [CommRing R] [AddCommGroup E]
     [Module R E] (φ : E →ₗ[R] R) (n : ℕ) :
     ModuleCat.ofHom (koszulDifferential R E φ (n + 1)) ≫
         ModuleCat.ofHom (koszulDifferential R E φ n) = 0 := by
-  sorry
+  exact koszulDifferential_comp_aux R E φ n
 
 /-- The homological Koszul complex, indexed over `ℤ` and zero in negative degrees. -/
 noncomputable def koszulComplex (R E : Type u) [CommRing R] [AddCommGroup E]
@@ -364,18 +474,22 @@ noncomputable def koszulComplexNat (R E : Type u) [CommRing R] [AddCommGroup E]
 theorem koszulComplex_X_nonnegative (R E : Type u) [CommRing R] [AddCommGroup E]
     [Module R E] (φ : E →ₗ[R] R) (n : ℕ) :
     (koszulComplex R E φ).X (n : ℤ) = ModuleCat.of R (⋀[R]^n E) := by
-  sorry
+  simp [koszulComplex, koszulTermZ]
 
 theorem koszulComplex_X_negative (R E : Type u) [CommRing R] [AddCommGroup E]
     [Module R E] (φ : E →ₗ[R] R) (n : ℤ) (hn : n < 0) :
     IsZero ((koszulComplex R E φ).X n) := by
-  sorry
+  simp [koszulComplex, koszulTermZ, not_le_of_gt hn]
+  infer_instance
 
 theorem koszulComplex_d_nonnegative (R E : Type u) [CommRing R] [AddCommGroup E]
     [Module R E] (φ : E →ₗ[R] R) (n : ℕ) :
     (koszulComplex R E φ).d (n + 1 : ℤ) n =
       ModuleCat.ofHom (koszulDifferential R E φ n) := by
-  sorry
+  simp [koszulComplex, ChainComplex.of_d, koszulDifferentialZ]
+  apply ModuleCat.hom_ext
+  ext x
+  rfl
 
 /-- The map associated with a finite sequence, using the standard free module. -/
 def sequenceLinearMap (R : Type u) [CommRing R] (r : ℕ) (f : Fin r → R) :

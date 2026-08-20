@@ -239,6 +239,11 @@ theorem separablyClosed_tensorProduct_irreducible
      `irreducibleSpectrum_of_openMap_of_dense_irreducibleFiber` above), and
      use the nonempty fiber over a generic point to finish.
   -/
+  /-
+  Prior attempt (failed): this body was copied from the later
+  `geometricallyIrreducible_baseChange_components` theorem.  Its `change`
+  therefore tried to replace the irreducible-spectrum target with the
+  unrelated `InducesBijectionOnIrreducibleComponents` predicate.
   let f : PrimeSpectrum (R ⊗[k] S) → PrimeSpectrum R :=
     PrimeSpectrum.comap (algebraMap R (R ⊗[k] S))
   change InducesBijectionOnIrreducibleComponents f
@@ -288,6 +293,8 @@ theorem separablyClosed_tensorProduct_irreducible
   refine ⟨e.symm.toEquiv, ?_⟩
   intro C
   rfl
+  -/
+  sorry
 
 /-! ## Testing after field extensions -/
 

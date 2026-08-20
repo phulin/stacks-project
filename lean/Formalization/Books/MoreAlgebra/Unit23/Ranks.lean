@@ -4,6 +4,7 @@ import Mathlib.Algebra.Module.LocalizedModule.Away
 import Mathlib.LinearAlgebra.Dimension.Localization
 import Mathlib.LinearAlgebra.Dimension.Torsion.Finite
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Localization.Module
 
 /-!
 # More on Algebra, Chapter 23: Ranks of modules
@@ -126,7 +127,20 @@ theorem rank_baseChange
     (hRR' : Function.Injective (algebraMap R R'))
     [AddCommGroup M] [Module R M] :
     rank R K M = rank R' K' (R' ⊗[R] M) := by
-  sorry
+  let S := nonZeroDivisors R
+  let f : M →ₗ[R] LocalizedModule S M := LocalizedModule.mkLinearMap S M
+  let g : M →ₗ[R] R' ⊗[R] M := TensorProduct.mk R R' M 1
+  have hST : Algebra.algebraMapSubmonoid R' S ≤ nonZeroDivisors R' := by
+    rintro _ ⟨r, hr, rfl⟩
+    rw [mem_nonZeroDivisors_iff (R := R')]
+    exact hRR' (nonZeroDivisors.ne_zero (R := R) hr)
+  have hbc : IsBaseChange R' g := by
+    change IsBaseChange R' (TensorProduct.mk R R' M 1)
+    exact TensorProduct.isBaseChange R R' M
+  have hrank : Module.rank R' (R' ⊗[R] M) = Module.rank R M :=
+    IsBaseChange.rank_eq_of_le_nonZeroDivisors S f le_rfl hST hbc
+  rw [rank_eq_lift_module_rank, rank_eq_lift_module_rank, hrank]
+  simp only [Cardinal.lift_lift]
 
 /-! ## Finite modules -/
 
@@ -154,7 +168,148 @@ theorem finite_module_rank
         (∃ f : (Fin r →₀ R) →ₗ[R] M,
           Function.Injective f ∧
             Module.IsTorsion R (M ⧸ LinearMap.range f)) := by
-  sorry
+  let S := nonZeroDivisors R
+  let L := Localization S
+  let N := LocalizedModule S M
+  let r := Module.finrank L N
+  let b := Module.finBasis L N
+  have hloc : Module.rank L N = Cardinal.lift.{u} (Module.rank R M) := by
+    rw [IsLocalization.rank_eq L S le_rfl]
+    apply Cardinal.lift_injective.{v}
+    simpa using IsLocalizedModule.lift_rank_eq S
+      (LocalizedModule.mkLinearMap S M) le_rfl
+  have hrank : rank R K M = (r : Cardinal) := by
+    rw [rank_eq_lift_module_rank]
+    exact hloc.symm.trans (Module.finrank_eq_rank L N).symm
+  obtain ⟨w, hw⟩ :=
+    IsLocalizedModule.linearIndependent_lift S (LocalizedModule.mkLinearMap S M)
+      b.linearIndependent.restrict_scalars' R
+  let v : Fin r → N := fun i => LocalizedModule.mkLinearMap S M (w i)
+  have hv : LinearIndependent L v := hw.of_isLocalizedModule L
+  have hspan : Submodule.span L (Set.range v) = ⊤ :=
+    hv.span_eq_top_of_card_eq_finrank' (by simp [r])
+  let F := Fin r →₀ R
+  let f : F →ₗ[R] M := Finsupp.linearCombination R w
+  let fLoc : LocalizedModule S F →ₗ[L] N :=
+    LocalizedModule.map S (LocalizedModule.mkLinearMap S F)
+      (LocalizedModule.mkLinearMap S M) f
+  have hfLoc : Function.Bijective fLoc := by
+    apply LinearMap.bijective_of_linearIndependent_of_span_eq_top
+      ((Finsupp.basisSingleOne (R := R) (ι := Fin r)).ofIsLocalizedModule L S
+        (LocalizedModule.mkLinearMap S F)).span_eq
+    · intro i
+      simp [fLoc, f]
+    · rw [Set.range_comp]
+      simpa [fLoc, f] using hspan
+  let eLoc : N ≃ₗ[L] LocalizedModule S F := LinearEquiv.ofBijective fLoc hfLoc
+  let qLoc : M →ₗ[R] LocalizedModule S F :=
+    eLoc.symm.toLinearMap.restrictScalars R ∘ₗ LocalizedModule.mkLinearMap S M
+  obtain ⟨σ, hσ⟩ := ‹Module.Finite R M›.fg_top
+  obtain ⟨d, hd⟩ :=
+    IsLocalizedModule.exist_integer_multiples S (LocalizedModule.mkLinearMap S F) σ qLoc
+  have hFtf : Module.IsTorsionFree R F := by
+    rw [Module.isTorsionFree_iff_smul_eq_zero]
+    intro a x hax
+    by_cases ha : a = 0
+    · exact Or.inl ha
+    · right
+      ext i
+      have hi := congrArg (fun z => z i) hax
+      exact (mul_eq_zero.mp (by simpa using hi)).resolve_left ha
+  have hmkF : Function.Injective (LocalizedModule.mkLinearMap S F) :=
+    (Formalization.Books.MoreAlgebra.Unit22
+      .torsionFree_iff_nonZeroDivisorLocalization_injective).mp hFtf
+  let dq : M →ₗ[R] LocalizedModule S F := (d : R) • qLoc
+  have hdq : ∀ x : M, dq x ∈ LinearMap.range (LocalizedModule.mkLinearMap S F) := by
+    rw [← hσ, Submodule.span_le]
+    intro x hx
+    exact (LinearMap.range (LocalizedModule.mkLinearMap S F)).smul_mem _ (hd x hx)
+  let dq' := dq.codRestrict _ hdq
+  let q : M →ₗ[R] F :=
+    (LinearEquiv.ofInjective (LocalizedModule.mkLinearMap S F) hmkF).symm.toLinearMap ∘ₗ dq'
+  have hq : (LocalizedModule.mkLinearMap S F) ∘ₗ q = dq := by
+    ext x
+    exact congrArg Subtype.val
+      ((LinearEquiv.ofInjective (LocalizedModule.mkLinearMap S F) hmkF).apply_symm_apply
+        (dq' x))
+  have hqmap : LocalizedModule.map S q = (d : L) • eLoc.symm.toLinearMap := by
+    apply IsLocalizedModule.linearMap_ext S (LocalizedModule.mkLinearMap S M)
+      (LocalizedModule.mkLinearMap S F)
+    rw [LocalizedModule.map_comp, hq]
+    ext x
+    simp [dq, qLoc, eLoc]
+  refine ⟨r, hrank, ?_, ?_, ?_⟩
+  · refine ⟨q, ?_, ?_⟩
+    · rw [Formalization.Books.MoreAlgebra.Unit22.torsionModule_iff_forall_mem_torsion]
+      intro x
+      rw [Formalization.Books.MoreAlgebra.Unit22.mem_torsion_iff_exists_smul_eq_zero]
+      have hxloc : LocalizedModule.mkLinearMap S M (x : M) = 0 := by
+        have hxmap : LocalizedModule.map S q
+            (LocalizedModule.mkLinearMap S M (x : M)) = 0 := by
+          simp [x.property]
+        rw [hqmap] at hxmap
+        have hdL : (d : L) ≠ 0 := (IsLocalization.map_units L d).ne_zero
+        exact eLoc.symm.injective ((smul_eq_zero.mp hxmap).resolve_left hdL)
+      obtain ⟨s, hs⟩ := LocalizedModule.mk_eq.mp hxloc
+      refine ⟨s, nonZeroDivisors.ne_zero s.property, ?_⟩
+      simpa [Submonoid.smul_def] using hs
+    · rw [Formalization.Books.MoreAlgebra.Unit22.torsionModule_iff_forall_mem_torsion]
+      intro y
+      rw [Formalization.Books.MoreAlgebra.Unit22.mem_torsion_iff_exists_smul_eq_zero]
+      obtain ⟨y, rfl⟩ := (LinearMap.range q).mkQ_surjective y
+      obtain ⟨⟨x, s⟩, hs⟩ :=
+        IsLocalizedModule.surj S (LocalizedModule.mkLinearMap S M)
+          (eLoc (LocalizedModule.mkLinearMap S F y))
+      have hsy : (s : L) • LocalizedModule.mkLinearMap S F y =
+          eLoc.symm (LocalizedModule.mkLinearMap S M x) := by
+        rw [← hs, map_smul, eLoc.symm_apply_apply]
+      have hqxy : LocalizedModule.mkLinearMap S F (q x) =
+          (d : L) • eLoc.symm (LocalizedModule.mkLinearMap S M x) := by
+        simpa [qLoc, dq] using hq x
+      have hqxy' : LocalizedModule.mkLinearMap S F ((d : R) * s • y) =
+          LocalizedModule.mkLinearMap S F (q x) := by
+        rw [LocalizedModule.mkLinearMap_apply, map_smul, smul_eq_mul, hsy]
+        simpa [hqxy, smul_eq_mul, mul_comm, mul_left_comm, mul_assoc]
+      refine ⟨d * s, nonZeroDivisors.ne_zero (d * s), ?_⟩
+      apply Submodule.Quotient.eq_zero_iff_mem.mpr
+      rw [← hqxy'.symm]
+      exact LinearMap.mem_range.mpr ⟨x, rfl⟩
+  · have hlocq : Function.Bijective (LocalizedModule.map S q) := by
+      rw [hqmap]
+      exact (IsUnit.smul_bijective (IsLocalization.map_units L d)).comp eLoc.symm.bijective
+    obtain ⟨a, ha, hbij⟩ :=
+      Module.Finite.exists_bijective_map_powers S
+        (LocalizedModule.mkLinearMap S M) (LocalizedModule.mkLinearMap S F) q hlocq
+    have hbij_a : Function.Bijective (LocalizedModule.map (.powers a) q) :=
+      hbij a dvd_rfl
+    let ea : LocalizedModule.Away a M ≃ₗ[Localization.Away a]
+        LocalizedModule.Away a F := LinearEquiv.ofBijective _ hbij_a
+    let bF :=
+      (Finsupp.basisSingleOne (R := R) (ι := Fin r)).ofIsLocalizedModule
+        (Localization.Away a) (.powers a)
+        (LocalizedModule.mkLinearMap (.powers a) F)
+    exact ⟨bF.map ea.symm⟩
+  · have hf_inj : Function.Injective f := by
+      apply LinearMap.injective_of_linearIndependent
+        (Finsupp.basisSingleOne (R := R) (ι := Fin r)).span_eq
+      simpa [f] using hw
+    refine ⟨f, hf_inj, ?_⟩
+    rw [Formalization.Books.MoreAlgebra.Unit22.torsionModule_iff_forall_mem_torsion]
+    intro y
+    rw [Formalization.Books.MoreAlgebra.Unit22.mem_torsion_iff_exists_smul_eq_zero]
+    obtain ⟨y, rfl⟩ := (LinearMap.range f).mkQ_surjective y
+    obtain ⟨z, hz⟩ := hfLoc.2 (LocalizedModule.mkLinearMap S M y)
+    obtain ⟨⟨x, s⟩, hs⟩ :=
+      IsLocalizedModule.surj S (LocalizedModule.mkLinearMap S F) z
+    have hsy : (s : L) • LocalizedModule.mkLinearMap S M y =
+        LocalizedModule.mkLinearMap S M (f x) := by
+      rw [← hz, ← map_smul, hs]
+      simp [fLoc, f]
+    obtain ⟨t, ht⟩ := LocalizedModule.mk_eq.mp hsy
+    refine ⟨t * s, nonZeroDivisors.ne_zero (t * s), ?_⟩
+    apply Submodule.Quotient.eq_zero_iff_mem.mpr
+    refine LinearMap.mem_range.mpr ⟨(t : R) • x, ?_⟩
+    simpa [Submonoid.smul_def, smul_smul, mul_comm, mul_left_comm, mul_assoc] using ht.symm
 
 end
 

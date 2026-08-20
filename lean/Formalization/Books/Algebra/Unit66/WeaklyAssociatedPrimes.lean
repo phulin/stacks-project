@@ -2534,7 +2534,7 @@ private theorem weaklyAssociatedPrimes_finsupp
               (ha j (by simpa [Finset.mem_insert, hji] using hj))
   have hsome : ∃ i ∈ z.support, I i ≤ p.asIdeal := by
     by_contra hnone
-    push_neg at hnone
+    push Not at hnone
     obtain ⟨a, hap, ha⟩ := hprod z.support hnone
     have hacol :
         a ∈ (⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X)) := by

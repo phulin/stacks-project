@@ -1202,20 +1202,19 @@ theorem doldKan_identity_degenerate_decomposition
       simp only [hom, inv, idInclusion]
       rw [← Category.assoc, Sigma.ι_desc, dif_pos rfl, Category.assoc,
         biprod.inl_desc]
-      simp [hdeg]
+      simp
     · simp only [hom, inv, idInclusion]
       rw [← Category.assoc, Sigma.ι_desc, dif_neg h, Category.assoc,
         biprod.inr_desc, Sigma.ι_desc]
-      simp [degIndex, h]
+      simp [degIndex]
   · apply biprod.hom_ext
     · rw [Category.id_comp]
       apply biprod.hom_ext'
       · simp only [Category.assoc]
         rw [← Category.assoc biprod.inl inv (hom ≫ biprod.fst), hinl]
         dsimp [idInclusion]
-        simp only [hom, dif_pos, Category.assoc, Sigma.ι_desc,
-          biprod.inl_fst, Category.comp_id, Category.id_comp]
-        simp [hdeg]
+        simp only [hom, Category.assoc, biprod.inl_fst]
+        simp
       · simp only [Category.assoc]
         rw [← Category.assoc biprod.inr inv (hom ≫ biprod.fst), hinr]
         apply Sigma.hom_ext
@@ -1344,7 +1343,7 @@ theorem doldKanIdentitySummand_last_face
       (SimplexCategory.δ (Fin.last (n + 1)))
       (doldKanIdentityIndex (n + 1)) (doldKanIdentityIndex n) rfl hcomp]
     rw [Preadditive.zsmul_comp]
-    simp [doldKanIdentityIndex, doldKanIdentityDifferential] <;> rfl
+    simp [doldKanIdentityIndex, doldKanIdentityDifferential] ; rfl
   · intro b hb
     have hbdeg_lt := b.1.isLt
     simp only [SimplexCategory.len_mk] at hbdeg_lt

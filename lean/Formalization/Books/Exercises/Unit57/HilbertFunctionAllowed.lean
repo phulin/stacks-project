@@ -1,16 +1,15 @@
 import Formalization.Books.Exercises.Unit57.Definitions
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Dimension.Finite
-import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 
 /-!
 # Exercises, Chapter 57: Hilbert functions
 
-The source's successive quotients are represented by the canonical submodule
-quotient.  Writing the denominator as the maximal ideal acting on the
-`n`th-power submodule gives the quotient its canonical residue-field module
-structure.
+The source's successive quotients are represented by a canonical submodule
+quotient.  The denominator is written as the maximal ideal acting on the
+`n`th-power submodule so Mathlib supplies the required residue-field module
+structure; this is the source-facing quotient needed by `Module.finrank`.
 -/
 
 namespace Formalization.Books.Exercises.Unit57

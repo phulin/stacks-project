@@ -73,7 +73,7 @@ graded and local Hilbert functions agree.
 theorem dimension_graded
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Nontrivial S]
     [Algebra k S] (𝒜 : ℕ → Submodule k S) [GradedAlgebra 𝒜]
-    (hzero : (Set.range (algebraMap k S) : Set S) = (𝒜 0 : Set S))
+    (hzero : LinearMap.range (Algebra.linearMap k S) = 𝒜 0)
     (hgen : IsGeneratedInDegreeOne 𝒜)
     (P : Polynomial ℚ) (_hP : IsGradedHilbertPolynomial 𝒜 P) :
     let m : Ideal S := gradedIrrelevantIdeal 𝒜

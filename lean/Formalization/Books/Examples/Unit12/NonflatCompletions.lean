@@ -2301,7 +2301,10 @@ theorem powerSeriesMulKernel_exact (R : Type u) [CommRing R] (r : R) :
     Function.Exact (powerSeriesMulKernel R r).subtype
       (powerSeriesMultiplication R r) :=
   by
-  sorry
+  change Function.Exact
+    (Submodule.subtype (LinearMap.ker (powerSeriesMultiplication R r)))
+    (powerSeriesMultiplication R r)
+  rw [LinearMap.exact_iff, Submodule.range_subtype]
 
 def nonflatLocalizationKernel (k : Type u) [CommRing k] :
     Ideal (nonflatLocalizationPowerSeries k) :=
@@ -2356,13 +2359,18 @@ theorem nonflatLocalizationSource_exact (k : Type u) [CommRing k] :
     Function.Exact (nonflatLocalizationSourceKernel k).subtype
       (nonflatLocalizationSourceMultiplication k) :=
   by
-  sorry
+  exact powerSeriesMulKernel_exact (nonflatLocalizationRing k)
+    (nonflatLocalizationY k)
 
 theorem nonflatLocalizationTarget_exact (k : Type u) [CommRing k] :
     Function.Exact (nonflatLocalizationKernel k).subtype
       (nonflatLocalizationTargetMultiplication k) :=
   by
-  sorry
+  exact powerSeriesMulKernel_exact
+    (Localization.Away (nonflatLocalizationF k))
+    (algebraMap (nonflatLocalizationRing k)
+      (Localization.Away (nonflatLocalizationF k))
+      (nonflatLocalizationY k))
 
 def nonflatLocalizationWitness (k : Type u) [CommRing k] :
     nonflatLocalizationPowerSeries k :=
@@ -2385,7 +2393,29 @@ theorem nonflatLocalizationWitness_coeff
 theorem nonflatLocalizationWitness_mem_kernel
     (k : Type u) [Field k] :
     nonflatLocalizationWitness k ∈ nonflatLocalizationKernel k := by
-  sorry
+  unfold nonflatLocalizationKernel powerSeriesMulKernel
+  change (PowerSeries.C
+    (algebraMap (nonflatLocalizationRing k)
+      (Localization.Away (nonflatLocalizationF k))
+      (nonflatLocalizationY k)) * nonflatLocalizationWitness k) = 0
+  ext n
+  rw [PowerSeries.coeff_C_mul, nonflatLocalizationWitness_coeff, map_zero]
+  have hYA : nonflatLocalizationY k * nonflatLocalizationA k n = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    change MvPolynomial.X nonflatLocalizationYVar *
+      MvPolynomial.X (nonflatLocalizationAVar n) ∈
+      nonflatLocalizationRelationsIdeal k
+    exact Ideal.subset_span (Or.inl ⟨n, rfl⟩)
+  calc
+    _ = ((algebraMap (nonflatLocalizationRing k)
+        (Localization.Away (nonflatLocalizationF k))
+        (nonflatLocalizationY k)) *
+      algebraMap (nonflatLocalizationRing k)
+        (Localization.Away (nonflatLocalizationF k))
+        (nonflatLocalizationA k n)) *
+        (Localization.Away.invSelf (nonflatLocalizationF k)) ^ n := by
+      ac_rfl
+    _ = 0 := by rw [← map_mul, hYA, map_zero, zero_mul]
 
 theorem nonflatLocalizationWitness_not_mem_mapped_kernel
     (k : Type u) [Field k] :

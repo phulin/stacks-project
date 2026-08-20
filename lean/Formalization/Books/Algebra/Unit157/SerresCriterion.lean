@@ -565,21 +565,11 @@ noncomputable def heightOneLocalizationIntersection
     (Localization.subalgebra.ofField K p.1.asIdeal.primeCompl
       p.1.asIdeal.primeCompl_le_nonZeroDivisors : Set K)
 
-/-- The displayed intersection identity for a Noetherian normal domain,
-written as equality of the image of `R` in its fraction field with the
-intersection of the height-one localization subalgebras. -/
-theorem normalDomain_eq_heightOneLocalizationIntersection
-    (R : Type u) (K : Type u) [CommRing R] [IsNoetherianRing R]
-    [Field K] [Algebra R K] [IsFractionRing R K]
-    (hR : IsNormalDomain R) :
-    Set.range (algebraMap R K) =
-      heightOneLocalizationIntersection R K hR.1 := by
-  sorry
-
 /- The source's proof of the intersection identity uses the following
 membership form: `b ∈ aR` exactly when `b` belongs to `aR_p` at every
-height-one prime.  It is recorded separately because it is often the most
-convenient form for applications and avoids choosing fraction representatives. -/
+height-one prime.  It is placed before the intersection identity because
+that theorem is its first consumer; the membership formulation is also the
+more convenient reusable interface for later applications. -/
 theorem principal_mem_iff_mem_all_heightOne_localizations
     {R : Type u} [CommRing R] [IsNoetherianRing R]
     [IsDomain R] [IsIntegrallyClosed R]
@@ -589,6 +579,17 @@ theorem principal_mem_iff_mem_all_heightOne_localizations
         ∃ z : Localization.AtPrime p.asIdeal,
           algebraMap R (Localization.AtPrime p.asIdeal) b =
             algebraMap R (Localization.AtPrime p.asIdeal) a * z := by
+  sorry
+
+/-- The displayed intersection identity for a Noetherian normal domain,
+written as equality of the image of `R` in its fraction field with the
+intersection of the height-one localization subalgebras. -/
+theorem normalDomain_eq_heightOneLocalizationIntersection
+    (R : Type u) (K : Type u) [CommRing R] [IsNoetherianRing R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    (hR : IsNormalDomain R) :
+    Set.range (algebraMap R K) =
+      heightOneLocalizationIntersection R K hR.1 := by
   sorry
 
 /-- The fractional ideal `R ∩ xR`, represented as the comap of the

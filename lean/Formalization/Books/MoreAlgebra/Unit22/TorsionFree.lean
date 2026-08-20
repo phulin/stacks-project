@@ -389,7 +389,7 @@ theorem finite_torsionFree_iff_embeds_finiteFree
       rw [hmap]
       exact congrArg (TensorProduct.comm R K M) hxy
     obtain ⟨ι, b₀⟩ := Module.Free.exists_basis (R := K) (M := V)
-    letI : Finite ι := Module.Finite.finite_basis b₀
+    let : Finite ι := Module.Finite.finite_basis b₀
     obtain ⟨n, e₀⟩ := Finite.exists_equiv_fin ι
     obtain ⟨e⟩ := e₀
     let b : Module.Basis (Fin n) K V := b₀.reindex e

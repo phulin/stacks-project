@@ -949,6 +949,20 @@ def BasisAlgebraicSheaf {C : Type u} [Category.{v} C]
   CategoryTheory.Presheaf.IsSheaf (basisTopology B)
     (basisUnderlyingPresheaf B U P)
 
+/-- The structure-valued sheaf predicate is exactly the sheaf predicate on
+the underlying presheaf of sets. -/
+theorem basisAlgebraicSheaf_iff_underlying_condition {C : Type u}
+    [Category.{v} C] {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (U : C ⥤ Type v)
+    (P : BasisAlgebraicPresheaf B (C := C)) :
+    BasisAlgebraicSheaf B U P ↔
+      BasisSheafCondition B (basisUnderlyingPresheaf B U P) := by
+  change Presheaf.IsSheaf (basisTopology B)
+      (basisUnderlyingPresheaf B U P) ↔
+    Presieve.IsSheaf (basisTopology B) (basisUnderlyingPresheaf B U P)
+  exact CategoryTheory.isSheaf_iff_isSheaf_of_type
+    (J := basisTopology B) (basisUnderlyingPresheaf B U P)
+
 /-- The stalk colimit of a category-valued basis presheaf. -/
 noncomputable abbrev basisAlgebraicStalk {C : Type u} [Category.{v} C]
     [HasColimits C] {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
@@ -1147,6 +1161,22 @@ abbrev BasisModulePresheafHom {X : TopCat.{v}} {ι : Type v} {B : ι → Opens X
 def BasisModuleSheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) : Prop :=
   CategoryTheory.Presheaf.IsSheaf (basisTopology B)
+    (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat))
+
+/-- The module-valued sheaf predicate is exactly the sheaf predicate on the
+underlying additive presheaf. -/
+theorem basisModuleSheaf_iff_underlying_condition
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) :
+    BasisModuleSheaf B F ↔
+      BasisSheafCondition B
+        (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat)) := by
+  change Presheaf.IsSheaf (basisTopology B)
+      (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat)) ↔
+    Presieve.IsSheaf (basisTopology B)
+      (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat))
+  exact CategoryTheory.isSheaf_iff_isSheaf_of_type
+    (J := basisTopology B)
     (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat))
 
 /-- The sectionwise action carried by a presheaf of modules on a basis. -/
@@ -2043,6 +2073,35 @@ theorem basisFMap_below_unique_of_data {X Y : TopCat.{v}} {κ : Type v}
     ext U
     change ψ'.hom.app (op (Bᵧ U.unop)) = φ.app U
     simpa [φ] using hψ' (U.unop)
+
+/-!
+The first `f`-map lemma in the source is most naturally stated using the
+values of the target sheaf on the basis.  The preceding theorem uses the
+restriction presheaf directly; this bridge keeps the source-facing
+interface available while reusing the dense-basis API.
+-/
+theorem basisFMap_below_unique_of_basis_data {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) {C : Type u} [Category.{v} C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisFMapData f Bᵧ
+      ((inducedFunctor Bᵧ).op ⋙ G.presheaf) F) :
+    ∃! ψ : AlgebraicFMap f G F,
+      ∀ j, ψ.hom.app (op (Bᵧ j)) = d.map j := by
+  let d' : BasisFMapBelowData f Bᵧ G F :=
+    { map := fun j => d.map j
+      compatible := by
+        intro j j' h
+        exact d.compatible h }
+  obtain ⟨ψ, hψ, hψuniq⟩ :=
+    basisFMap_below_unique_of_data f F G Bᵧ hBᵧ d'
+  refine ⟨ψ, ?_, ?_⟩
+  · intro j
+    exact hψ j
+  · intro ψ' hψ'
+    apply hψuniq ψ'
+    intro j
+    exact hψ' j
 
 /-- The scalar map on sections induced by a ringed-space morphism. -/
 def ringedSpaceBasisScalarMap {X Y : RingedSpace.{v}}

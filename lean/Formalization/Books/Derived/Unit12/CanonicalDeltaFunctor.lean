@@ -471,32 +471,93 @@ theorem cochainPlus_isClosedUnderCokernels
 theorem cochainPlus_isClosedUnderFiniteProducts
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderFiniteProducts (CochainComplex.plus C) := by
-  sorry
+  exact ObjectProperty.IsClosedUnderFiniteProducts.mk'
 
 theorem boundedAbove_containsZero
     (C : Type u) [Category.{v} C] [Abelian C] :
     (boundedAboveProperty C).ContainsZero := by
-  sorry
+  refine ⟨⟨(0 : CochainComplex C ℤ), isZero_zero (CochainComplex C ℤ), ?_⟩⟩
+  refine ⟨0, ?_⟩
+  rw [CochainComplex.isStrictlyLE_iff]
+  intro i hi
+  exact (HomologicalComplex.eval C (.up ℤ) i).map_isZero
+    (isZero_zero (CochainComplex C ℤ))
 
 theorem boundedAbove_isClosedUnderKernels
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderKernels (boundedAboveProperty C) := by
-  sorry
+  constructor
+  rintro _ @⟨X₁, X₂, f, k, hk, ⟨⟨n₁, hn₁⟩, ⟨n₂, hn₂⟩⟩⟩
+  refine ⟨max n₁ n₂, ?_⟩
+  rw [CochainComplex.isStrictlyLE_iff]
+  intro i hi
+  rw [IsZero.iff_id_eq_zero]
+  exact (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
+    (fun j ↦ by
+      rcases j with (_ | _)
+      · apply (CochainComplex.isZero_of_isStrictlyLE X₁ n₁ i (by omega)).eq_of_tgt
+      · apply (CochainComplex.isZero_of_isStrictlyLE X₂ n₂ i (by omega)).eq_of_tgt)
 
 theorem boundedAbove_isClosedUnderCokernels
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderCokernels (boundedAboveProperty C) := by
-  sorry
+  constructor
+  rintro _ @⟨X₁, X₂, f, k, hk, ⟨⟨n₁, hn₁⟩, ⟨n₂, hn₂⟩⟩⟩
+  refine ⟨max n₁ n₂, ?_⟩
+  rw [CochainComplex.isStrictlyLE_iff]
+  intro i hi
+  rw [IsZero.iff_id_eq_zero]
+  exact (isColimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
+    (fun j ↦ by
+      rcases j with (_ | _)
+      · apply (CochainComplex.isZero_of_isStrictlyLE X₁ n₁ i (by omega)).eq_of_src
+      · apply (CochainComplex.isZero_of_isStrictlyLE X₂ n₂ i (by omega)).eq_of_src)
 
 theorem boundedAbove_isClosedUnderFiniteProducts
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderFiniteProducts (boundedAboveProperty C) := by
-  sorry
+  refine ⟨fun J _ ↦ ?_⟩
+  constructor
+  intro _ ⟨p⟩
+  let _ := Fintype.ofFinite (Discrete J)
+  choose n hn using p.prop_diag_obj
+  let s := Finset.image n (Finset.univ : Finset (Discrete J)) ∪ {0}
+  have hs : s.Nonempty := by
+    dsimp [s]
+    exact ⟨0, by simp⟩
+  have hn' : ∀ j, (p.diag.obj j).IsStrictlyLE (s.max' hs) := by
+    intro j
+    exact (p.diag.obj j).isStrictlyLE_of_le (n j) (s.max' hs)
+      (Finset.le_max' s (n j) (by
+        apply Finset.mem_union_left
+        exact Finset.mem_image.2 ⟨j, Finset.mem_univ _, rfl⟩))
+  refine ⟨s.max' hs, ?_⟩
+  rw [CochainComplex.isStrictlyLE_iff]
+  intro i hi
+  rw [IsZero.iff_id_eq_zero]
+  apply (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) p.isLimit).hom_ext
+  intro j
+  have hzero : IsZero ((p.diag.obj j).X i) :=
+    @CochainComplex.isZero_of_isStrictlyLE C _ _ (p.diag.obj j) (s.max' hs) i hi (hn' j)
+  have hπ : (p.π.app j).f i = 0 := by
+    apply hzero.eq_of_tgt
+  change 𝟙 _ ≫ (p.π.app j).f i = 0 ≫ (p.π.app j).f i
+  rw [hπ]
+  simp only [comp_zero]
 
 theorem bounded_containsZero
     (C : Type u) [Category.{v} C] [Abelian C] :
     (boundedProperty C).ContainsZero := by
-  sorry
+  refine ⟨⟨(0 : CochainComplex C ℤ), isZero_zero (CochainComplex C ℤ), ?_⟩⟩
+  refine ⟨0, 0, ?_, ?_⟩
+  · rw [CochainComplex.isStrictlyGE_iff]
+    intro i hi
+    exact (HomologicalComplex.eval C (.up ℤ) i).map_isZero
+      (isZero_zero (CochainComplex C ℤ))
+  · rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    exact (HomologicalComplex.eval C (.up ℤ) i).map_isZero
+      (isZero_zero (CochainComplex C ℤ))
 
 theorem bounded_isClosedUnderKernels
     (C : Type u) [Category.{v} C] [Abelian C] :

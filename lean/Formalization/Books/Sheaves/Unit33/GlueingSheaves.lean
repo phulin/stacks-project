@@ -651,7 +651,7 @@ abbrev SheafMapGlueingCondition (C : Type u) [Category.{v} C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
-    {X : TopCat.{v}} {ι : Type v} (U : ι → Opens X)
+    {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X)
     {F G : TopCat.Sheaf C X}
     (φ : ∀ i, (sheafRestriction C (U i)).obj F ⟶
       (sheafRestriction C (U i)).obj G) : Prop :=
@@ -667,7 +667,7 @@ theorem glue_maps_of_concrete_category (C : Type u) [Category.{v} C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
-    {X : TopCat.{v}} {ι : Type v} (U : ι → Opens X)
+    {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X)
     (hU : TopologicalSpace.IsOpenCover U)
     {F G : TopCat.Sheaf C X}
     (φ : ∀ i, (sheafRestriction C (U i)).obj F ⟶
@@ -786,14 +786,14 @@ theorem glue_maps_of_concrete_category (C : Type u) [Category.{v} C]
 used as the reusable interface for the later algebraic variants. -/
 
 /-- Compatibility of maps between restrictions of set-valued sheaves. -/
-abbrev SetSheafMapGlueingCondition {X : TopCat.{v}} {ι : Type v}
+abbrev SetSheafMapGlueingCondition {X : TopCat.{v}} {ι : Type w}
     (U : ι → Opens X) {F G : Sh.{v, v} X}
     (φ : ∀ i, (sheafRestriction (Type v) (U i)).obj F ⟶
       (sheafRestriction (Type v) (U i)).obj G) : Prop :=
   SheafMapGlueingCondition (Type v) U φ
 
 /-- Compatible maps of sheaves of sets glue uniquely over an open cover. -/
-theorem glue_maps {X : TopCat.{v}} {ι : Type v} (U : ι → Opens X)
+theorem glue_maps {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X)
     (hU : TopologicalSpace.IsOpenCover U) {F G : Sh.{v, v} X}
     (φ : ∀ i, (sheafRestriction (Type v) (U i)).obj F ⟶
       (sheafRestriction (Type v) (U i)).obj G)
@@ -867,7 +867,7 @@ noncomputable def glueingTransitionAt (C : Type u) [Category.{v} C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
-    {X : TopCat.{v}} {ι : Type v} (U : ι → Opens X)
+    {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X)
     (sheaf : ∀ i, TopCat.Sheaf C (openSubspace (U i)))
     (transition : ∀ i j,
       (sheafMapRestriction C (show U i ⊓ U j ≤ U i from inf_le_left)).obj (sheaf i) ≅
@@ -890,7 +890,7 @@ structure SheafGlueingData (C : Type u) [Category.{v} C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
-    {X : TopCat.{v}} {ι : Type v} (U : ι → Opens X) where
+    {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X) where
   sheaf : ∀ i, TopCat.Sheaf C (openSubspace (U i))
   transition : ∀ i j,
     (sheafMapRestriction C (show U i ⊓ U j ≤ U i from inf_le_left)).obj (sheaf i) ≅
@@ -914,7 +914,7 @@ variable {C : Type u} [Category.{v} C]
   [PreservesLimits (CategoryTheory.forget C)]
   [PreservesFilteredColimits (CategoryTheory.forget C)]
   [(CategoryTheory.forget C).ReflectsIsomorphisms]
-  {X : TopCat.{v}} {ι : Type v} {U : ι → Opens X}
+  {X : TopCat.{v}} {ι : Type w} {U : ι → Opens X}
 
 /- A morphism of glueing data is a compatible family of local morphisms. -/
 @[ext]
@@ -960,7 +960,7 @@ variable {C : Type u} [Category.{v} C]
   [PreservesLimits (CategoryTheory.forget C)]
   [PreservesFilteredColimits (CategoryTheory.forget C)]
   [(CategoryTheory.forget C).ReflectsIsomorphisms]
-  {X : TopCat.{v}} {ι : Type v} {U : ι → Opens X}
+  {X : TopCat.{v}} {ι : Type w} {U : ι → Opens X}
 
 /-- The transition isomorphism induced by a sheaf on the ambient space. -/
 noncomputable def canonicalSheafGlueingTransition
@@ -1086,7 +1086,7 @@ section StructureVariants
 variable {X : TopCat.{v}} {ι : Type v} {U : ι → Opens X}
 
 /-- Glueing data for sheaves of sets. -/
-abbrev SetSheafGlueingData (U : ι → Opens X) :=
+abbrev SetSheafGlueingData {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X) :=
   SheafGlueingData (Type v) U
 
 /-- The sections of the `i`-th local sheaf over `W ∩ U i`. -/
@@ -1234,7 +1234,7 @@ noncomputable def glueingSectionPresheaf (D : SetSheafGlueingData U) :
     exact (glueingSectionRestrict_comp D f.unop.le g.unop.le s).symm
 
 /-- Glueing data for sheaves of abelian groups. -/
-abbrev AbelianSheafGlueingData (U : ι → Opens X) :=
+abbrev AbelianSheafGlueingData {X : TopCat.{v}} {ι : Type w} (U : ι → Opens X) :=
   SheafGlueingData (AddCommGrpCat.{v}) U
 
 /-!
@@ -1265,6 +1265,7 @@ sheaves.  The two local restrictions are presented by module sheaves over
 the scalar sheaf on the intersection, and the underlying additive transition
 is induced by a module isomorphism. -/
 structure OModuleGlueingTransition {O : RingSheaf.{v, v} X}
+    {ι : Type w}
     {U : ι → Opens X} {i j : ι}
     (Mi : Mod (restrictedRingSheaf (X := X) O (U i)))
     (Mj : Mod (restrictedRingSheaf (X := X) O (U j)))
@@ -1294,7 +1295,8 @@ structure OModuleGlueingTransition {O : RingSheaf.{v, v} X}
         eqToHom rightUnderlying
 
 /-- Glueing data for sheaves of modules over a fixed sheaf of rings. -/
-structure OModuleGlueingData (O : RingSheaf.{v, v} X) (U : ι → Opens X) where
+structure OModuleGlueingData (O : RingSheaf.{v, v} X)
+    {ι : Type w} (U : ι → Opens X) where
   module : ∀ i, Mod (restrictedRingSheaf O (U i))
   transition : ∀ i j,
     (sheafMapRestriction (AddCommGrpCat.{v})
@@ -1323,7 +1325,7 @@ structure OModuleGlueingData (O : RingSheaf.{v, v} X) (U : ι → Opens X) where
 
 /-- The additive sheaf glueing datum underlying module glueing data. -/
 def OModuleGlueingData.underlying
-    {O : RingSheaf.{v, v} X} {U : ι → Opens X}
+    {O : RingSheaf.{v, v} X} {ι : Type w} {U : ι → Opens X}
     (D : OModuleGlueingData O U) : SheafGlueingData (AddCommGrpCat.{v}) U where
   sheaf i := moduleUnderlyingSheaf (D.module i)
   transition := D.transition
@@ -1331,6 +1333,7 @@ def OModuleGlueingData.underlying
 
 /-- A sheaf of `O`-modules realizing module glueing data. -/
 structure OModuleGlueingSolution {O : RingSheaf.{v, v} X}
+    {ι : Type w}
     {U : ι → Opens X} (D : OModuleGlueingData O U) where
   sheaf : Mod O
   restriction : ∀ i, Mod (restrictedRingSheaf O (U i))
@@ -1363,7 +1366,7 @@ structure OModuleGlueingSolution {O : RingSheaf.{v, v} X}
 
 /-- Sheaf glueing preserves sheaves of modules over a fixed sheaf of rings. -/
 theorem exists_omoduleGlueingSolution
-    {O : RingSheaf.{v, v} X} {U : ι → Opens X}
+    {O : RingSheaf.{v, v} X} {ι : Type w} {U : ι → Opens X}
     (hU : TopologicalSpace.IsOpenCover U) (D : OModuleGlueingData O U) :
     Nonempty (OModuleGlueingSolution D) := by
   sorry
@@ -1371,7 +1374,7 @@ theorem exists_omoduleGlueingSolution
 /-- The source-facing existence statement for gluing sheaves of modules over
    a fixed sheaf of rings. -/
 theorem glue_omodule_sheaves
-    {O : RingSheaf.{v, v} X} {U : ι → Opens X}
+    {O : RingSheaf.{v, v} X} {ι : Type w} {U : ι → Opens X}
     (hU : TopologicalSpace.IsOpenCover U) (D : OModuleGlueingData O U) :
     Nonempty (OModuleGlueingSolution D) :=
   exists_omoduleGlueingSolution hU D
@@ -1385,7 +1388,7 @@ abbrev AlgebraicSheafGlueingData (C : Type u) [Category.{v} C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
-    (U : ι → Opens X) :=
+    {ι : Type w} (U : ι → Opens X) :=
   SheafGlueingData C U
 
 /-- The source's existence lemma for sheaves of sets. -/
@@ -1983,6 +1986,7 @@ theorem glueingSectionSheaf_sections
 
 /-- The source-facing existence statement for the sheaf-glueing lemma. -/
 theorem glue_sheaves
+    {X : TopCat.{v}} {ι : Type w} {U : ι → Opens X}
     (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
     Nonempty (SheafGlueingSolution D) :=
   exists_sheafGlueingSolution hU D
@@ -1996,6 +2000,7 @@ theorem glue_sheaves_structures
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {ι : Type w} {U : ι → Opens X}
     (hU : TopologicalSpace.IsOpenCover U)
     (D : SheafGlueingData C U) :
     Nonempty (SheafGlueingSolution D) :=
@@ -2003,6 +2008,7 @@ theorem glue_sheaves_structures
 
 /-- In particular, glueing data of abelian sheaves glue in `AddCommGrpCat`. -/
 theorem glue_abelian_sheaves
+    {ι : Type w} {U : ι → Opens X}
     (hU : TopologicalSpace.IsOpenCover U) (D : AbelianSheafGlueingData U) :
     Nonempty (SheafGlueingSolution (C := AddCommGrpCat.{v}) D) :=
   exists_sheafGlueingSolution (C := AddCommGrpCat.{v}) hU D
@@ -2020,7 +2026,7 @@ variable {C : Type u} [Category.{v} C]
   [PreservesLimits (CategoryTheory.forget C)]
   [PreservesFilteredColimits (CategoryTheory.forget C)]
   [(CategoryTheory.forget C).ReflectsIsomorphisms]
-  {X : TopCat.{v}} {ι : Type v} {U : ι → Opens X}
+  {X : TopCat.{v}} {ι : Type w} {U : ι → Opens X}
 
 /-- A morphism of ambient sheaves induces a morphism of their canonical local
 glueing data. -/
@@ -2241,20 +2247,20 @@ noncomputable def sheafGlueingEquivalence
 /-! The source's categorical statement for sheaves of sets. -/
 
 /-- The functor sending a sheaf of sets to its local glueing datum. -/
-noncomputable def setSheafToGlueingData {X : TopCat.{v}} {ι : Type v}
+noncomputable def setSheafToGlueingData {X : TopCat.{v}} {ι : Type w}
     (U : ι → Opens X) :
     Sh.{v, v} X ⥤ SetSheafGlueingData U :=
   sheafToGlueingData (C := Type v) (U := U)
 
 /-- Restriction to an open cover is an equivalence with set-valued glueing
 data. -/
-theorem setSheafToGlueingData_isEquivalence {X : TopCat.{v}} {ι : Type v}
+theorem setSheafToGlueingData_isEquivalence {X : TopCat.{v}} {ι : Type w}
     (U : ι → Opens X) (hU : TopologicalSpace.IsOpenCover U) :
     (setSheafToGlueingData U).IsEquivalence := by
   exact sheafToGlueingData_isEquivalence (C := Type v) (U := U) hU
 
 /-- A categorical equivalence between sheaves of sets and glueing data. -/
-noncomputable def setSheafGlueingEquivalence {X : TopCat.{v}} {ι : Type v}
+noncomputable def setSheafGlueingEquivalence {X : TopCat.{v}} {ι : Type w}
     (U : ι → Opens X) (hU : TopologicalSpace.IsOpenCover U) :
     Sh.{v, v} X ≌ SetSheafGlueingData U := by
   letI : (setSheafToGlueingData U).IsEquivalence :=

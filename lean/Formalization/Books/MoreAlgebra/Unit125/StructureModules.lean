@@ -500,12 +500,127 @@ theorem elementaryDivisorDomain_iff_finiteCyclicDecomposition
       EveryFinitelyPresentedModuleIsFiniteCyclicSum R := by
   sorry
 
+private def matrixEntrySet {R : Type u} [CommRing R] {m n : ℕ}
+    (A : Matrix (Fin m) (Fin n) R) : Set R :=
+  Set.range (fun p : Fin m × Fin n => A p.1 p.2)
+
+private lemma matrixEntrySpan_mul_le_left {R : Type u} [CommRing R]
+    {m n l : ℕ} (A : Matrix (Fin m) (Fin n) R)
+    (B : Matrix (Fin n) (Fin l) R) :
+    Ideal.span (matrixEntrySet (A * B)) ≤ Ideal.span (matrixEntrySet A) := by
+  refine Ideal.span_le.2 ?_
+  rintro z ⟨⟨i, j⟩, rfl⟩
+  change (A * B) i j ∈ Ideal.span (matrixEntrySet A)
+  rw [Matrix.mul_apply]
+  apply Ideal.sum_mem
+  intro k hk
+  apply Ideal.mul_mem_right
+  exact Ideal.subset_span ⟨⟨i, k⟩, rfl⟩
+
+private lemma matrixEntrySpan_mul_le_right {R : Type u} [CommRing R]
+    {m n l : ℕ} (A : Matrix (Fin m) (Fin n) R)
+    (B : Matrix (Fin n) (Fin l) R) :
+    Ideal.span (matrixEntrySet (A * B)) ≤ Ideal.span (matrixEntrySet B) := by
+  refine Ideal.span_le.2 ?_
+  rintro z ⟨⟨i, j⟩, rfl⟩
+  change (A * B) i j ∈ Ideal.span (matrixEntrySet B)
+  rw [Matrix.mul_apply]
+  apply Ideal.sum_mem
+  intro k hk
+  apply Ideal.mul_mem_left
+  exact Ideal.subset_span ⟨⟨k, j⟩, rfl⟩
+
+private lemma matrixEntrySpan_mul_left_gl {R : Type u} [CommRing R]
+    {m n : ℕ} (U : Matrix.GeneralLinearGroup (Fin m) R)
+    (A : Matrix (Fin m) (Fin n) R) :
+    Ideal.span (matrixEntrySet ((U : Matrix (Fin m) (Fin m) R) * A)) =
+      Ideal.span (matrixEntrySet A) := by
+  apply le_antisymm
+  · exact matrixEntrySpan_mul_le_right _ _
+  · have hi := matrixEntrySpan_mul_le_right
+      ((U⁻¹ : Matrix.GeneralLinearGroup (Fin m) R) :
+        Matrix (Fin m) (Fin m) R)
+      ((U : Matrix (Fin m) (Fin m) R) * A)
+    simpa [← Matrix.mul_assoc] using hi
+
+private lemma matrixEntrySpan_mul_right_gl {R : Type u} [CommRing R]
+    {m n : ℕ} (A : Matrix (Fin m) (Fin n) R)
+    (V : Matrix.GeneralLinearGroup (Fin n) R) :
+    Ideal.span (matrixEntrySet (A * (V : Matrix (Fin n) (Fin n) R))) =
+      Ideal.span (matrixEntrySet A) := by
+  apply le_antisymm
+  · exact matrixEntrySpan_mul_le_left _ _
+  · have hi := matrixEntrySpan_mul_le_left
+      (A * (V : Matrix (Fin n) (Fin n) R))
+      ((V⁻¹ : Matrix.GeneralLinearGroup (Fin n) R) :
+        Matrix (Fin n) (Fin n) R)
+    simpa [Matrix.mul_assoc] using hi
+
 /-- An elementary divisor domain is a Bézout domain. -/
 theorem elementaryDivisorDomain_isBezoutDomain
     {R : Type u} [CommRing R]
     (hR : IsElementaryDivisorDomain R) :
     IsBezoutDomain R := by
-  sorry
+  rcases hR with ⟨hdom, hmat⟩
+  refine ⟨hdom, ?_⟩
+  rw [IsBezout.iff_span_pair_isPrincipal]
+  intro a b
+  let A : Matrix (Fin 1) (Fin 2) R :=
+    fun i j => if j.1 = 0 then a else b
+  have hA : Ideal.span (matrixEntrySet A) = Ideal.span ({a, b} : Set R) := by
+    apply le_antisymm
+    · refine Ideal.span_le.2 ?_
+      rintro z ⟨⟨i, j⟩, rfl⟩
+      have hi : i = 0 := Fin.eq_zero i
+      subst i
+      fin_cases j
+      · exact Ideal.subset_span (by simp [A])
+      · exact Ideal.subset_span (by simp [A])
+    · refine Ideal.span_le.2 ?_
+      rintro z hz
+      rcases (Set.mem_insert_iff.mp hz) with (rfl | hz)
+      · exact Ideal.subset_span ⟨⟨0, ⟨0, by decide⟩⟩, by simp [A]⟩
+      · rcases Set.mem_singleton_iff.mp hz with rfl
+        exact Ideal.subset_span ⟨⟨0, ⟨1, by decide⟩⟩, by simp [A]⟩
+  obtain ⟨U, V, f, hf, hUV⟩ :=
+    hmat (n := 1) (m := 2) (by decide) (by decide) A
+  let i0 : Fin (min 1 2) := ⟨0, by decide⟩
+  have hD : Ideal.span (matrixEntrySet (rectangularDiagonal f)) =
+      Ideal.span ({f i0} : Set R) := by
+    apply le_antisymm
+    · refine Ideal.span_le.2 ?_
+      rintro z ⟨⟨i, j⟩, rfl⟩
+      have hi : i = 0 := Fin.eq_zero i
+      subst i
+      fin_cases j
+      · exact Ideal.subset_span (by simp [rectangularDiagonal, i0])
+      · simpa [rectangularDiagonal, i0] using
+          (Ideal.zero_mem (Ideal.span ({f i0} : Set R)))
+    · refine Ideal.span_le.2 ?_
+      intro z hz
+      rcases Set.mem_singleton_iff.mp hz with rfl
+      exact Ideal.subset_span
+        ⟨⟨0, ⟨0, by decide⟩⟩, by simp [rectangularDiagonal, i0]⟩
+  have hspan : Ideal.span (matrixEntrySet A) =
+      Ideal.span (matrixEntrySet (rectangularDiagonal f)) := by
+    calc
+      Ideal.span (matrixEntrySet A) =
+          Ideal.span (matrixEntrySet
+            ((U : Matrix (Fin 1) (Fin 1) R) * A)) :=
+        (matrixEntrySpan_mul_left_gl U A).symm
+      _ = Ideal.span (matrixEntrySet
+          (((U : Matrix (Fin 1) (Fin 1) R) * A) *
+            (V : Matrix (Fin 2) (Fin 2) R))) :=
+        (matrixEntrySpan_mul_right_gl
+          ((U : Matrix (Fin 1) (Fin 1) R) * A) V).symm
+      _ = Ideal.span (matrixEntrySet (rectangularDiagonal f)) := by
+        rw [hUV]
+  have hp : Ideal.span ({a, b} : Set R) = Ideal.span ({f i0} : Set R) := by
+    calc
+      Ideal.span ({a, b} : Set R) = Ideal.span (matrixEntrySet A) := hA.symm
+      _ = Ideal.span (matrixEntrySet (rectangularDiagonal f)) := hspan
+      _ = Ideal.span ({f i0} : Set R) := hD
+  exact ⟨⟨f i0, by simpa using hp⟩⟩
 
 /-- A PID is an elementary divisor domain. -/
 theorem principalIdealDomain_isElementaryDivisorDomain

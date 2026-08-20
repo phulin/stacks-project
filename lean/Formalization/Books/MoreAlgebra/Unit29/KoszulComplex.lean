@@ -84,9 +84,13 @@ theorem koszulDifferential_apply_ιMulti (R E : Type u) [CommRing R]
     [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (n : ℕ)
     (v : Fin (n + 1) → E) :
     koszulDifferential R E φ n (exteriorPower.ιMulti R (n + 1) v) =
-      ∑ i : Fin (n + 1), (-1 : R) ^ (i : ℕ) •
+    ∑ i : Fin (n + 1), (-1 : R) ^ (i : ℕ) •
         ((φ (v i)) • exteriorPower.ιMulti R n (i.removeNth v)) := by
-  sorry
+  rw [koszulDifferential, exteriorPower.alternatingMapLinearEquiv_apply_ιMulti]
+  simp only [koszulContraction, AlternatingMap.alternatizeUncurryFin_apply,
+    koszulContractionPre, LinearMap.coe_mk, AddHom.coe_mk]
+  simp_rw [← Int.cast_smul_eq_zsmul R]
+  simp
 
 /-- The differential on the full exterior algebra, obtained from the alternating
 maps on each homogeneous component. -/
@@ -103,9 +107,13 @@ theorem koszulAlgebraDifferential_apply_ιMulti (R E : Type u) [CommRing R]
     [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (n : ℕ)
     (v : Fin (n + 1) → E) :
     koszulAlgebraDifferential R E φ (ExteriorAlgebra.ιMulti R (n + 1) v) =
-      ∑ i : Fin (n + 1), (-1 : R) ^ (i : ℕ) •
+    ∑ i : Fin (n + 1), (-1 : R) ^ (i : ℕ) •
         ((φ (v i)) • ExteriorAlgebra.ιMulti R n (i.removeNth v)) := by
-  sorry
+  rw [koszulAlgebraDifferential, ExteriorAlgebra.liftAlternating_apply_ιMulti]
+  simp only [koszulContractionAlgebra, AlternatingMap.alternatizeUncurryFin_apply,
+    koszulContractionPreAlgebra, LinearMap.coe_mk, AddHom.coe_mk]
+  simp_rw [← Int.cast_smul_eq_zsmul R]
+  simp
 
 /-- The graded Leibniz identity required of a differential on the exterior algebra. -/
 def IsKoszulDerivation (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
@@ -129,11 +137,161 @@ structure KoszulDGA (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
   differential : ExteriorAlgebra R E →ₗ[R] ExteriorAlgebra R E
   isDGA : IsKoszulDGA R E φ differential
 
+private theorem koszulAlgebraDifferential_on_generator_aux (R E : Type u) [CommRing R]
+    [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (e : E) :
+    koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R e) =
+      algebraMap R (ExteriorAlgebra R E) (φ e) := by
+  rw [show ExteriorAlgebra.ι R e = ExteriorAlgebra.ιMulti R 1 (fun _ => e) by
+    simp only [ExteriorAlgebra.ιMulti_succ_apply, Matrix.vecTail,
+      ExteriorAlgebra.ιMulti_zero_apply, mul_one],
+    koszulAlgebraDifferential_apply_ιMulti]
+  simp [Algebra.algebraMap_eq_smul_one]
+
+private theorem koszulAlgebraDifferential_mul_generator_aux (R E : Type u) [CommRing R]
+    [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (e : E)
+    (x : ExteriorAlgebra R E) :
+    koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R e * x) =
+      koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R e) * x +
+        (-1 : R) • (ExteriorAlgebra.ι R e * koszulAlgebraDifferential R E φ x) := by
+  have hmap :
+      (koszulAlgebraDifferential R E φ).comp
+          (LinearMap.mulLeft R (ExteriorAlgebra.ι R e)) =
+        LinearMap.mulLeft R (koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R e)) +
+          (-1 : R) •
+            (LinearMap.mulLeft R (ExteriorAlgebra.ι R e)).comp
+              (koszulAlgebraDifferential R E φ) := by
+    apply ExteriorAlgebra.lhom_ext
+    intro n
+    ext v
+    simp only [LinearMap.compAlternatingMap_apply, LinearMap.add_apply, LinearMap.smul_apply,
+      LinearMap.comp_apply, LinearMap.mulLeft_apply]
+    rw [koszulAlgebraDifferential, ExteriorAlgebra.liftAlternating_ι_mul,
+      ExteriorAlgebra.liftAlternating_apply_ιMulti]
+    simp only [koszulContractionAlgebra]
+    change AlternatingMap.alternatizeUncurryFin
+        (koszulContractionPreAlgebra R E φ n) (Matrix.vecCons e v) = _
+    rw [AlternatingMap.alternatizeUncurryFin_apply, Fin.sum_univ_succ]
+    cases n with
+    | zero =>
+        simp [koszulAlgebraDifferential_on_generator_aux,
+          koszulContractionPreAlgebra, Int.cast_smul_eq_zsmul,
+          AlternatingMap.alternatizeUncurryFin_apply]
+    | succ n =>
+        have hremove (i : Fin (n + 1)) :
+            i.succ.removeNth (Matrix.vecCons e v) =
+              Matrix.vecCons e (i.removeNth v) := by
+          ext j
+          simpa [Matrix.vecCons, Fin.removeNth, Function.comp_apply] using
+            congrFun (Fin.cons_comp_succ_succAbove e v i) j
+        rw [ExteriorAlgebra.liftAlternating_apply_ιMulti]
+        simp [koszulAlgebraDifferential_on_generator_aux,
+          koszulAlgebraDifferential_apply_ιMulti, koszulContractionPreAlgebra,
+          Int.cast_smul_eq_zsmul, AlternatingMap.alternatizeUncurryFin_apply,
+          hremove, Finset.mul_sum, pow_succ, smul_eq_mul, mul_assoc, mul_comm,
+          mul_left_comm]
+        apply Finset.sum_congr rfl
+        intro i hi
+        congr 1
+        have hsign :
+            ((-1 : ExteriorAlgebra R E) ^ (i : ℕ)) =
+              algebraMap R (ExteriorAlgebra R E) ((-1 : R) ^ (i : ℕ)) := by
+          rw [map_pow, map_neg, map_one]
+        rw [hsign, ← Algebra.left_comm (R := R)]
+  exact LinearMap.congr_fun hmap x
+
+private theorem koszulAlgebraDifferential_mul_homogeneous_aux (R E : Type u)
+    [CommRing R] [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (n : ℕ)
+    (x : ⋀[R]^n E) (y : ExteriorAlgebra R E) :
+    koszulAlgebraDifferential R E φ ((x : ExteriorAlgebra R E) * y) =
+      koszulAlgebraDifferential R E φ (x : ExteriorAlgebra R E) * y +
+        (-1 : R) ^ n •
+          ((x : ExteriorAlgebra R E) * koszulAlgebraDifferential R E φ y) := by
+  have hι : ∀ (n : ℕ) (v : Fin n → E) (y : ExteriorAlgebra R E),
+      koszulAlgebraDifferential R E φ
+          (ExteriorAlgebra.ιMulti R n v * y) =
+        koszulAlgebraDifferential R E φ (ExteriorAlgebra.ιMulti R n v) * y +
+          (-1 : R) ^ n •
+            (ExteriorAlgebra.ιMulti R n v * koszulAlgebraDifferential R E φ y) := by
+    intro n
+    induction n with
+    | zero =>
+        intro v y
+        simp [koszulAlgebraDifferential]
+    | succ n ih =>
+        intro v y
+        rw [ExteriorAlgebra.ιMulti_succ_apply, mul_assoc,
+          koszulAlgebraDifferential_mul_generator_aux,
+          koszulAlgebraDifferential_mul_generator_aux, ih]
+        rw [pow_succ]
+        simp only [smul_add, smul_smul, mul_add, add_mul, neg_add, neg_mul,
+          mul_neg, neg_smul, one_smul, Algebra.mul_smul_comm, mul_one, one_mul]
+        simp only [mul_assoc]
+        abel
+  have hx : x ∈ Submodule.span R (Set.range (exteriorPower.ιMulti R n)) := by
+    rw [exteriorPower.ιMulti_span R n E]
+    trivial
+  induction hx using Submodule.span_induction with
+  | mem z hz =>
+      obtain ⟨v, rfl⟩ := hz
+      exact hι n v y
+  | zero =>
+      simp
+  | add z₁ z₂ hz₁ hz₂ ih₁ ih₂ =>
+      change koszulAlgebraDifferential R E φ
+          (((z₁ : ExteriorAlgebra R E) + (z₂ : ExteriorAlgebra R E)) * y) =
+        koszulAlgebraDifferential R E φ ((z₁ : ExteriorAlgebra R E) +
+            (z₂ : ExteriorAlgebra R E)) * y +
+          (-1 : R) ^ n •
+            (((z₁ : ExteriorAlgebra R E) + (z₂ : ExteriorAlgebra R E)) *
+              koszulAlgebraDifferential R E φ y)
+      simp only [map_add, add_mul, mul_add, add_smul, smul_add]
+      rw [ih₁, ih₂]
+      abel
+  | smul r z hz ih =>
+      change koszulAlgebraDifferential R E φ
+          (((r : R) • (z : ExteriorAlgebra R E)) * y) =
+        koszulAlgebraDifferential R E φ ((r : R) • (z : ExteriorAlgebra R E)) * y +
+          (-1 : R) ^ n •
+            (((r : R) • (z : ExteriorAlgebra R E)) * koszulAlgebraDifferential R E φ y)
+      rw [smul_mul_assoc, map_smul, smul_mul_assoc, map_smul]
+      rw [ih]
+      simp only [smul_mul_assoc, smul_smul, mul_assoc, smul_add]
+      rw [mul_comm]
+
+private theorem koszulAlgebraDifferential_comp_self_aux (R E : Type u) [CommRing R]
+    [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) :
+    (koszulAlgebraDifferential R E φ).comp (koszulAlgebraDifferential R E φ) = 0 := by
+  apply LinearMap.ext
+  intro x
+  induction x using CliffordAlgebra.left_induction with
+  | algebraMap =>
+      simp [koszulAlgebraDifferential, Algebra.algebraMap_eq_smul_one]
+  | add x y hx hy =>
+      simp only [LinearMap.comp_apply] at hx hy ⊢
+      simpa using congrArg₂ (· + ·) hx hy
+  | ι_mul e x hx =>
+      simp only [LinearMap.comp_apply]
+      simp only [LinearMap.comp_apply] at hx
+      rw [koszulAlgebraDifferential_mul_generator_aux,
+        map_add, map_smul, koszulAlgebraDifferential_mul_generator_aux,
+        koszulAlgebraDifferential_on_generator_aux]
+      rw [← Algebra.smul_def, map_smul, hx]
+      simp [smul_mul_assoc, smul_smul, mul_assoc, Algebra.mul_smul_comm]
+      rw [Algebra.smul_def]
+      exact add_neg_cancel _
+
 /-! The canonical Koszul DGA structure. -/
 def koszulDGA (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
     (φ : E →ₗ[R] R) : KoszulDGA R E φ :=
   { differential := koszulAlgebraDifferential R E φ
-    isDGA := by sorry }
+    isDGA := by
+      refine ⟨?_, ?_⟩
+      · constructor
+        · intro n m x y
+          exact koszulAlgebraDifferential_mul_homogeneous_aux R E φ n x y
+        · intro e
+          exact koszulAlgebraDifferential_on_generator_aux R E φ e
+      · exact koszulAlgebraDifferential_comp_self_aux R E φ }
 
 theorem koszulDGA_isDGA (R E : Type u) [CommRing R] [AddCommGroup E]
     [Module R E] (φ : E →ₗ[R] R) :
@@ -144,7 +302,7 @@ theorem koszulAlgebraDifferential_on_generator (R E : Type u) [CommRing R]
     [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (e : E) :
     koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R e) =
       algebraMap R (ExteriorAlgebra R E) (φ e) := by
-  sorry
+  exact koszulAlgebraDifferential_on_generator_aux R E φ e
 
 theorem koszulAlgebraDifferential_unique (R E : Type u) [CommRing R]
     [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R)

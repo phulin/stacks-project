@@ -461,9 +461,53 @@ noncomputable def moduleStalkFunctor {X : TopCat.{v}}
       (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
   map φ := ModuleCat.homMk (moduleStalkAddMap φ x) (moduleStalkAddMap_smul φ x)
   map_id := by
-    sorry
+    intro F
+    apply ModuleCat.hom_ext
+    ext m
+    let φAdd :
+        (PresheafOfModules.toPresheaf O.obj).obj F.val ⟶
+          (PresheafOfModules.toPresheaf O.obj).obj F.val :=
+      (PresheafOfModules.toPresheaf O.obj).map (𝟙 F : F ⟶ F).val
+    have hφ : φAdd = 𝟙 ((PresheafOfModules.toPresheaf O.obj).obj F.val) := by
+      dsimp [φAdd]
+      simpa only [SheafOfModules.id_val] using
+        (PresheafOfModules.toPresheaf O.obj).map_id F.val
+    change
+      (ConcreteCategory.hom
+        ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map φAdd)) m = m
+    rw [hφ]
+    have hstalk :=
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map_id
+        ((PresheafOfModules.toPresheaf O.obj).obj F.val)
+    exact congrArg (fun q => (ConcreteCategory.hom q) m) hstalk
   map_comp := by
-    sorry
+    intro F G H f g
+    apply ModuleCat.hom_ext
+    ext m
+    let φAdd :
+        (PresheafOfModules.toPresheaf O.obj).obj F.val ⟶
+          (PresheafOfModules.toPresheaf O.obj).obj G.val :=
+      (PresheafOfModules.toPresheaf O.obj).map f.val
+    let ψAdd :
+        (PresheafOfModules.toPresheaf O.obj).obj G.val ⟶
+          (PresheafOfModules.toPresheaf O.obj).obj H.val :=
+      (PresheafOfModules.toPresheaf O.obj).map g.val
+    let θAdd :
+        (PresheafOfModules.toPresheaf O.obj).obj F.val ⟶
+          (PresheafOfModules.toPresheaf O.obj).obj H.val :=
+      (PresheafOfModules.toPresheaf O.obj).map (f ≫ g).val
+    have hcomp : θAdd = φAdd ≫ ψAdd := by
+      dsimp [θAdd, φAdd, ψAdd]
+      exact (PresheafOfModules.toPresheaf O.obj).map_comp f.val g.val
+    change
+      (ConcreteCategory.hom
+        ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map θAdd)) m =
+        (ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map ψAdd))
+          ((ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map φAdd)) m)
+    rw [hcomp, (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map_comp]
+    rfl
 
 end
 

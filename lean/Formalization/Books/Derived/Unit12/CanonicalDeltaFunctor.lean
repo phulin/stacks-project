@@ -78,14 +78,15 @@ noncomputable def coneToShortExact
     CochainComplex.mappingCone S.f ⟶ S.X₃ :=
   CochainComplex.mappingCone.descShortComplex S
 
-/-- The mapping-cone component is the standard biproduct of the shifted source
-and the target. -/
+/-- The mapping-cone component is the standard biproduct of the target and the
+shifted source, in the order used in the textbook. -/
 noncomputable def mappingConeComponentIso
     {C : Type u} [Category.{v} C] [Abelian C]
     {S : ShortComplex (CochainComplex C ℤ)} (n : ℤ) :
     (CochainComplex.mappingCone S.f).X n ≅
-      S.X₁.X (n + 1) ⊞ S.X₂.X n :=
-  HomologicalComplex.homotopyCofiber.XIsoBiprod S.f n (n + 1) rfl
+      S.X₂.X n ⊞ S.X₁.X (n + 1) :=
+  HomologicalComplex.homotopyCofiber.XIsoBiprod S.f n (n + 1) rfl ≪≫
+    biprod.braiding _ _
 
 @[reassoc (attr := simp)]
 theorem coneToShortExact_comp_inclusion

@@ -279,7 +279,7 @@ noncomputable def derivedTermwiseCoproductCofan_isColimit
 /-- The canonical map from the coproduct of a sequential system to its
 ordinary colimit. -/
 noncomputable def coproductToSequentialColimit
-    {A : Type u} [Category.{v} A] [Preadditive A]
+    {A : Type u} [Category.{v} A]
     (F : SequentialSystem A) [HasCoproduct (fun n => F.obj n)]
     [HasColimit F] :
     (∐ fun n => F.obj n) ⟶ colimit F :=
@@ -346,10 +346,12 @@ theorem termwiseColimit_isDerivedColimit
     {A : Type u} [Category.{v} A] [Abelian A]
     [HasDerivedCategory.{w} A]
     [HasColimitsOfShape ℕ A] [HasExactColimitsOfShape ℕ A]
-    [HasCountableCoproducts A] [CountableAB4 A]
     (L : SequentialSystem (CochainComplex A ℤ)) :
-    IsDerivedColimit (derivedComplexSystem L)
-      (DerivedCategory.Q.obj (termwiseColimitComplex L)) := by
+    ∃ (hA : HasCountableCoproducts A) (hAB4 : @CountableAB4 A _ hA),
+      letI : HasCountableCoproducts A := hA
+      letI : CountableAB4 A := hAB4
+      IsDerivedColimit (derivedComplexSystem L)
+        (DerivedCategory.Q.obj (termwiseColimitComplex L)) := by
   sorry
 
 /-! ## Homological functors and compact objects -/

@@ -1399,13 +1399,180 @@ theorem doldKanChainMap_id
   simp [doldKanChainMap]
   simp only [doldKanDegree, Category.id_comp, Category.comp_id]
 
+private theorem doldKanChainMap_component_projection_self
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : ChainComplex C ℕ} (f : A ⟶ B) (X : SimplexCategory)
+    (a : DoldKanIndex X) :
+    ((Sigma.ι (fun a : DoldKanIndex X => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A X) ≫ doldKanChainMap f X) ≫
+        (Sigma.π (fun a : DoldKanIndex X => B.X a.1.1) a :
+          doldKanDegree B X ⟶ B.X a.1.1) = f.f a.1.1 := by
+  simp only [doldKanDegree, doldKanChainMap]
+  rw [Sigma.ι_desc, Category.assoc,
+    Sigma.ι_π_eq_id, Category.comp_id]
+
+private theorem doldKanChainMap_component_projection_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : ChainComplex C ℕ} (f : A ⟶ B) (X : SimplexCategory)
+    (a d : DoldKanIndex X) (h : a ≠ d) :
+    ((Sigma.ι (fun a : DoldKanIndex X => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A X) ≫ doldKanChainMap f X) ≫
+        (Sigma.π (fun a : DoldKanIndex X => B.X a.1.1) d :
+          doldKanDegree B X ⟶ B.X d.1.1) = 0 := by
+  simp only [doldKanDegree, doldKanChainMap]
+  rw [Sigma.ι_desc, Category.assoc,
+    Sigma.ι_π_of_ne _ h, comp_zero]
+
 theorem doldKanChainMap_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     {A B D : ChainComplex C ℕ} (f : A ⟶ B) (g : B ⟶ D)
-    (X : SimplexCategory) :
+  (X : SimplexCategory) :
     doldKanChainMap (f ≫ g) X =
       doldKanChainMap f X ≫ doldKanChainMap g X := by
-  sorry
+  classical
+  apply Sigma.hom_ext
+  intro a
+  simp only [doldKanChainMap, doldKanDegree, HomologicalComplex.comp_f]
+  calc
+    Sigma.ι (fun a : DoldKanIndex X => A.X a.1.1) a ≫
+          Sigma.desc (fun a => (f.f a.1.1 ≫ g.f a.1.1) ≫
+            Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) =
+        (f.f a.1.1 ≫ g.f a.1.1) ≫
+          Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a := Sigma.ι_desc _ _
+    _ = f.f a.1.1 ≫
+          (g.f a.1.1 ≫
+            Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) :=
+      Category.assoc _ _ _
+    _ = f.f a.1.1 ≫
+          (Sigma.ι (fun b : DoldKanIndex X => B.X b.1.1) a ≫
+            Sigma.desc (fun a => g.f a.1.1 ≫
+              Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a)) := by
+      rw [Sigma.ι_desc]
+    _ = (f.f a.1.1 ≫
+          Sigma.ι (fun b : DoldKanIndex X => B.X b.1.1) a) ≫
+          Sigma.desc (fun a => g.f a.1.1 ≫
+            Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) :=
+      (Category.assoc _ _ _).symm
+    _ = Sigma.ι (fun a : DoldKanIndex X => A.X a.1.1) a ≫
+          Sigma.desc (fun a => f.f a.1.1 ≫
+            Sigma.ι (fun b : DoldKanIndex X => B.X b.1.1) a) ≫
+          Sigma.desc (fun a => g.f a.1.1 ≫
+            Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) := by
+      calc
+        (f.f a.1.1 ≫
+            Sigma.ι (fun b : DoldKanIndex X => B.X b.1.1) a) ≫
+            Sigma.desc (fun a => g.f a.1.1 ≫
+              Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) =
+          (Sigma.ι (fun a : DoldKanIndex X => A.X a.1.1) a ≫
+            Sigma.desc (fun a => f.f a.1.1 ≫
+              Sigma.ι (fun b : DoldKanIndex X => B.X b.1.1) a)) ≫
+            Sigma.desc (fun a => g.f a.1.1 ≫
+              Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) := by
+            rw [Sigma.ι_desc]
+        _ = Sigma.ι (fun a : DoldKanIndex X => A.X a.1.1) a ≫
+            Sigma.desc (fun a => f.f a.1.1 ≫
+              Sigma.ι (fun b : DoldKanIndex X => B.X b.1.1) a) ≫
+            Sigma.desc (fun a => g.f a.1.1 ≫
+              Sigma.ι (fun b : DoldKanIndex X => D.X b.1.1) a) :=
+          Category.assoc _ _ _
+      
+
+private theorem doldKanMap_chainMap_component_projection
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : ChainComplex C ℕ} (f : A ⟶ B)
+    {X Y : SimplexCategory} (g : X ⟶ Y)
+    (a : DoldKanIndex Y) (d : DoldKanIndex X) :
+    (((Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A g) ≫
+        doldKanChainMap f X) ≫
+      (Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d :
+        doldKanDegree B X ⟶ B.X d.1.1) =
+      doldKanComponentMap A g a d ≫ f.f d.1.1 := by
+  classical
+  calc
+    (((Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a :
+        A.X a.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A g) ≫
+          doldKanChainMap f X) ≫
+        (Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d :
+          doldKanDegree B X ⟶ B.X d.1.1) =
+        ((Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a :
+            A.X a.1.1 ⟶ doldKanDegree A Y) ≫
+          doldKanMap A g) ≫
+          (doldKanChainMap f X ≫
+            Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d) := by
+      exact Category.assoc _ _ _
+    _ = (∑ b : DoldKanIndex X,
+          doldKanComponentMap A g a b ≫
+            (Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) b :
+              A.X b.1.1 ⟶ doldKanDegree A X)) ≫
+          (doldKanChainMap f X ≫
+            Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d) := by
+      exact congrArg
+        (fun h => h ≫
+          (doldKanChainMap f X ≫
+            Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d))
+        (doldKanMap_summand A g a)
+    _ = ∑ b : DoldKanIndex X,
+          doldKanComponentMap A g a b ≫
+            (((Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) b :
+                A.X b.1.1 ⟶ doldKanDegree A X) ≫
+              doldKanChainMap f X) ≫
+                (Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d)) := by
+      rw [Preadditive.sum_comp]
+      apply Finset.sum_congr rfl
+      intro b hb
+      simpa only [Category.assoc] using
+        ((Category.assoc _ _ _).trans
+          (congrArg (fun k => doldKanComponentMap A g a b ≫ k)
+            (Category.assoc
+              (Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) b :
+                A.X b.1.1 ⟶ doldKanDegree A X)
+              (doldKanChainMap f X)
+              (Sigma.π (fun b : DoldKanIndex X => B.X b.1.1) d :
+                doldKanDegree B X ⟶ B.X d.1.1)).symm))
+    _ = doldKanComponentMap A g a d ≫ f.f d.1.1 := by
+      rw [Fintype.sum_eq_single d]
+      · rw [doldKanChainMap_component_projection_self]
+      · intro b hb
+        rw [doldKanChainMap_component_projection_zero f X b d hb]
+        simp
+
+private theorem chainMap_eqToHom
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : ChainComplex C ℕ} (f : A ⟶ B)
+    {i j : ℕ} (h : i = j) :
+    eqToHom (congrArg A.X h) ≫ f.f j =
+      f.f i ≫ eqToHom (congrArg B.X h) := by
+  subst j
+  simp
+
+private theorem doldKanComponentMap_chain_naturality
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : ChainComplex C ℕ} (f : A ⟶ B)
+    {X Y : SimplexCategory} (g : X ⟶ Y)
+    (a : DoldKanIndex Y) (d : DoldKanIndex X) :
+    doldKanComponentMap A g a d ≫ f.f d.1.1 =
+      f.f a.1.1 ≫ doldKanComponentMap B g a d := by
+  classical
+  by_cases hdegree : a.1.1 = d.1.1
+  · by_cases hcomp : HEq d.2.1 (g ≫ a.2.1)
+    · rw [doldKanComponentMap_same_degree A g a d hdegree hcomp,
+        doldKanComponentMap_same_degree B g a d hdegree hcomp]
+      exact chainMap_eqToHom f hdegree
+    · simp [doldKanComponentMap, hdegree, hcomp]
+  · by_cases hdrop : a.1.1 = d.1.1 + 1
+    · by_cases hcomp : HEq (g ≫ a.2.1)
+          (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1)))
+      · rw [doldKanComponentMap_drop_degree A g a d hdrop hcomp,
+          doldKanComponentMap_drop_degree B g a d hdrop hcomp]
+        simp only [Preadditive.zsmul_comp, Preadditive.comp_zsmul]
+        rw [f.comm]
+      · rw [doldKanComponentMap_drop_zero A g a d hdrop hcomp,
+          doldKanComponentMap_drop_zero B g a d hdrop hcomp,
+          zero_comp, comp_zero]
+    · rw [doldKanComponentMap_zero_of_other_case A g a d hdegree hdrop,
+        doldKanComponentMap_zero_of_other_case B g a d hdegree hdrop,
+        zero_comp, comp_zero]
 
 theorem doldKanChainMap_naturality
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -1413,7 +1580,49 @@ theorem doldKanChainMap_naturality
     {X Y : SimplexCategory} (g : X ⟶ Y) :
     doldKanMap A g ≫ doldKanChainMap f X =
       doldKanChainMap f Y ≫ doldKanMap B g := by
-  sorry
+  classical
+  apply Sigma.hom_ext
+  intro a
+  apply sigma_hom_ext_of_π (fun d : DoldKanIndex X => B.X d.1.1)
+  intro d
+  let iA : A.X a.1.1 ⟶ doldKanDegree A Y :=
+    Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a
+  let iB : B.X a.1.1 ⟶ doldKanDegree B Y :=
+    Sigma.ι (fun a : DoldKanIndex Y => B.X a.1.1) a
+  let pB : doldKanDegree B X ⟶ B.X d.1.1 :=
+    Sigma.π (fun d : DoldKanIndex X => B.X d.1.1) d
+  change
+    (iA ≫ (doldKanMap A g ≫ doldKanChainMap f X)) ≫ pB =
+    (iA ≫ (doldKanChainMap f Y ≫ doldKanMap B g)) ≫ pB
+  have hchain :
+      iA ≫ doldKanChainMap f Y =
+      f.f a.1.1 ≫
+        iB := by
+    dsimp [iA, iB]
+    simp only [doldKanDegree, doldKanChainMap, Sigma.ι_desc]
+  calc
+    _ = ((iA ≫ doldKanMap A g) ≫ doldKanChainMap f X) ≫ pB := by
+      simp only [Category.assoc]
+    _ = doldKanComponentMap A g a d ≫ f.f d.1.1 :=
+      by
+        dsimp [iA, pB]
+        exact doldKanMap_chainMap_component_projection f g a d
+    _ = f.f a.1.1 ≫ doldKanComponentMap B g a d :=
+      doldKanComponentMap_chain_naturality f g a d
+    _ = (iA ≫ (doldKanChainMap f Y ≫ doldKanMap B g)) ≫ pB := by
+      rw [← Category.assoc iA (doldKanChainMap f Y) (doldKanMap B g)]
+      rw [hchain]
+      have hproj : (iB ≫ doldKanMap B g) ≫ pB =
+          doldKanComponentMap B g a d := by
+        dsimp [iB, pB]
+        exact doldKanMap_component_projection B g a d
+      calc
+        f.f a.1.1 ≫ doldKanComponentMap B g a d =
+            f.f a.1.1 ≫ ((iB ≫ doldKanMap B g) ≫ pB) :=
+          congrArg (fun k => f.f a.1.1 ≫ k)
+            hproj.symm
+        _ = ((f.f a.1.1 ≫ iB) ≫ doldKanMap B g) ≫ pB := by
+          simp only [Category.assoc]
 
 /-! ## The comparison `S(N(U)) ⟶ U` -/
 

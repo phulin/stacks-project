@@ -289,6 +289,27 @@ theorem filteredComplexD1_boundary_description
   by
     sorry
 
+theorem filteredComplexD1_target_homology_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (p q : ℤ) :
+    Nonempty (filteredComplexE₁ K p q ≅
+      (filteredComplexD1ShortExact K p).X₃.homology (p + q)) := by
+  exact ⟨Iso.refl _⟩
+
+theorem filteredComplexD1_source_homology_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (p q : ℤ) :
+    Nonempty (filteredComplexE₁ K (p + 1) q ≅
+      (filteredComplexD1ShortExact K p).X₁.homology (p + q + 1)) := by
+  change Nonempty ((HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ)
+    ((p + 1) + q)).obj (filteredComplexGradedPiece K (p + 1)) ≅
+      (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ)
+        (p + q + 1)).obj (filteredComplexGradedPiece K (p + 1)))
+  let h : (p + 1) + q = p + q + 1 := by omega
+  exact ⟨eqToIso (congrArg (fun n : ℤ =>
+    (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) n).obj
+      (filteredComplexGradedPiece K (p + 1))) h)⟩
+
 def FilteredComplexRaisesFiltration {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) : Prop :=
   ∀ (n p : ℤ),

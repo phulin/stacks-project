@@ -89,11 +89,6 @@ def IsLocalCompleteIntersection
           (PrimeSpectrum.basicOpen (g i) : Set (PrimeSpectrum S))) = Set.univ ∧
         ∀ i, IsGlobalCompleteIntersection k (Localization.Away (g i))
 
-def IsEquidimensionalSpectrum
-    (S : Type u) [CommRing S] : Prop :=
-  Formalization.Books.Topology.Unit10.Equidimensional
-    (X := PrimeSpectrum S)
-
 /- The paragraph following the definition is recorded with a chosen
    presentation: every maximal localization has the displayed dimension and
    the spectrum is equidimensional.  The polynomial-local dimension input is
@@ -108,7 +103,8 @@ theorem global_complete_intersection_maximal_localizations
     (m : MaximalSpectrum S) :
     ringKrullDim (Localization.AtPrime m.asIdeal) =
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) ∧
-      IsEquidimensionalSpectrum S := by
+      Formalization.Books.Topology.Unit10.Equidimensional
+        (X := PrimeSpectrum S) := by
   sorry
 
 theorem presentation_codimension_eq_local_dimension

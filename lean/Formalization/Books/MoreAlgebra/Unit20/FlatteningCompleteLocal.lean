@@ -1,3 +1,4 @@
+import Formalization.Books.MoreAlgebra.Unit17.FlatteningArtinian
 import Formalization.Books.MoreAlgebra.Unit18.FlatteningLocalBase
 import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
@@ -47,10 +48,11 @@ def IsCompleteLocalFlatteningIdeal
     {R S M : Type u} [CommRing R] [CommRing S]
     [IsLocalRing R] [AddCommGroup M] [Module S M]
     (f : R →+* S) (I : Ideal R) : Prop :=
-  I ≤ IsLocalRing.maximalIdeal R ∧
+    I ≤ IsLocalRing.maximalIdeal R ∧
     flatAtPrimesOverQuotient (M := M) f I (IsLocalRing.maximalIdeal R) ∧
       ∀ J : Ideal R,
-        flatAtPrimesOverQuotient (M := M) f J (IsLocalRing.maximalIdeal R) → I ≤ J
+        J ≤ IsLocalRing.maximalIdeal R →
+          flatAtPrimesOverQuotient (M := M) f J (IsLocalRing.maximalIdeal R) → I ≤ J
 
 /-! ## Flattening over a complete local Noetherian ring -/
 

@@ -815,79 +815,92 @@ theorem planeEquationQuotient_normal_relations (k : Type u) [Field k] :
     simpa only [hy100zero, add_zero] using hf
   exact ⟨hx4, hy3, hxrel⟩
 
-set_option maxHeartbeats 2000000 in
+noncomputable def planeNormalYToQuotient (k : Type u) [Field k] :
+    planeNormalYAlgebra k →ₐ[k] planeEquationQuotient k :=
+  AdjoinRoot.liftAlgHom (planeNormalYPolynomial k)
+    (Algebra.ofId k (planeEquationQuotient k)) (planeEquationQuotientY k) (by
+      rw [planeNormalYPolynomial, Polynomial.eval₂_X_pow]
+      exact (planeEquationQuotient_normal_relations k).2.1)
+
+@[simp] theorem planeNormalYToQuotient_root (k : Type u) [Field k] :
+    planeNormalYToQuotient k (planeNormalY k) = planeEquationQuotientY k := by
+  apply AdjoinRoot.liftAlgHom_root
+
+noncomputable def planeNormalToQuotient (k : Type u) [Field k] :
+    planeNormalAlgebra k →ₐ[k] planeEquationQuotient k :=
+  AdjoinRoot.liftAlgHom (planeNormalXPolynomial k) (planeNormalYToQuotient k)
+    (planeEquationQuotientX k) (by
+      rw [planeNormalXPolynomial, Polynomial.eval₂_add, Polynomial.eval₂_X_pow,
+        Polynomial.eval₂_mul, Polynomial.eval₂_C, Polynomial.eval₂_X_pow, map_pow]
+      change planeEquationQuotientX k ^ 3 +
+        planeNormalYToQuotient k (planeNormalY k) ^ 2 *
+          planeEquationQuotientX k ^ 2 = 0
+      rw [planeNormalYToQuotient_root]
+      calc
+        _ = planeEquationQuotientX k ^ 3 + planeEquationQuotientX k ^ 2 *
+            planeEquationQuotientY k ^ 2 := congrArg _ (mul_comm _ _)
+        _ = 0 := (planeEquationQuotient_normal_relations k).2.2)
+
+@[simp] theorem planeNormalToQuotient_X (k : Type u) [Field k] :
+    planeNormalToQuotient k (planeNormalX k) = planeEquationQuotientX k := by
+  apply AdjoinRoot.liftAlgHom_root
+
+@[simp] theorem planeNormalToQuotient_Y (k : Type u) [Field k] :
+    planeNormalToQuotient k (planeNormalYInAlgebra k) = planeEquationQuotientY k := by
+  change planeNormalToQuotient k
+    (algebraMap (planeNormalYAlgebra k) (planeNormalAlgebra k) (planeNormalY k)) = _
+  change AdjoinRoot.liftAlgHom (planeNormalXPolynomial k) (planeNormalYToQuotient k)
+    (planeEquationQuotientX k) _
+      (AdjoinRoot.of (planeNormalXPolynomial k) (planeNormalY k)) = _
+  rw [AdjoinRoot.liftAlgHom_of, planeNormalYToQuotient_root]
+
+@[simp] theorem planeNormalFromQuotient_X (k : Type u) [Field k] :
+    planeNormalFromQuotientAlgHom k (planeEquationQuotientX k) = planeNormalX k := by
+  change planeNormalFromLocal k (planeX k) = planeNormalX k
+  exact planeNormalFromLocal_X k
+
+@[simp] theorem planeNormalFromQuotient_Y (k : Type u) [Field k] :
+    planeNormalFromQuotientAlgHom k (planeEquationQuotientY k) =
+      planeNormalYInAlgebra k := by
+  change planeNormalFromLocal k (planeY k) = planeNormalYInAlgebra k
+  exact planeNormalFromLocal_Y k
+
+private theorem planeNormalQuotient_leftInverse (k : Type u) [Field k] :
+    (planeNormalToQuotient k).comp (planeNormalFromQuotientAlgHom k) =
+      AlgHom.id k (planeEquationQuotient k) := by
+  apply Ideal.Quotient.algHom_ext k
+  apply IsLocalization.algHom_ext (planeOriginIdeal k).primeCompl
+  apply MvPolynomial.algHom_ext
+  intro i
+  fin_cases i
+  · change planeNormalToQuotient k
+      (planeNormalFromQuotientAlgHom k (planeEquationQuotientX k)) =
+        planeEquationQuotientX k
+    rw [planeNormalFromQuotient_X, planeNormalToQuotient_X]
+  · change planeNormalToQuotient k
+      (planeNormalFromQuotientAlgHom k (planeEquationQuotientY k)) =
+        planeEquationQuotientY k
+    rw [planeNormalFromQuotient_Y, planeNormalToQuotient_Y]
+
+private theorem planeNormalQuotient_rightInverse (k : Type u) [Field k] :
+    (planeNormalFromQuotientAlgHom k).comp (planeNormalToQuotient k) =
+      AlgHom.id k (planeNormalAlgebra k) := by
+  apply Ideal.Quotient.algHom_ext k
+  apply Polynomial.algHom_ext'
+  · apply AdjoinRoot.algHom_ext
+    change planeNormalFromQuotientAlgHom k
+      (planeNormalToQuotient k (planeNormalYInAlgebra k)) = planeNormalYInAlgebra k
+    rw [planeNormalToQuotient_Y, planeNormalFromQuotient_Y]
+  · change planeNormalFromQuotientAlgHom k
+      (planeNormalToQuotient k (planeNormalX k)) = planeNormalX k
+    rw [planeNormalToQuotient_X, planeNormalFromQuotient_X]
+
 /-- The checked localization calculation identifies the quotient with its
 nine-dimensional normal algebra. -/
 noncomputable def planeEquationQuotientEquivNormal (k : Type u) [Field k] :
-    planeEquationQuotient k ≃ₐ[k] planeNormalAlgebra k := by
-  classical
-  let R := planeLocalRing k
-  let I := planeEquationIdeal k
-  let Q := planeEquationQuotient k
-  let q : R →+* Q := planeEquationQuotientMap k
-  let x : Q := planeEquationQuotientX k
-  let y : Q := planeEquationQuotientY k
-  obtain ⟨hx4, hy3, hxrel⟩ := planeEquationQuotient_normal_relations k
-
-  let A := planeNormalYAlgebra k
-  let B := planeNormalAlgebra k
-  let yA : A := planeNormalY k
-  let xB : B := planeNormalX k
-  let yB : B := planeNormalYInAlgebra k
-  let pY : Polynomial k := planeNormalYPolynomial k
-  let pX : Polynomial A := planeNormalXPolynomial k
-  let toB : Q →ₐ[k] B := planeNormalFromQuotientAlgHom k
-  have hpYQ : pY.eval₂ (Algebra.ofId k Q) y = 0 := by
-    simp [pY, planeNormalYPolynomial, hy3]
-  let fromA : A →ₐ[k] Q :=
-    AdjoinRoot.liftAlgHom pY (Algebra.ofId k Q) y hpYQ
-  have hfromA_y : fromA yA = y :=
-    AdjoinRoot.liftAlgHom_root pY (Algebra.ofId k Q) y hpYQ
-  have hpXQ : pX.eval₂ fromA x = 0 := by
-    dsimp [pX]
-    simp only [Polynomial.eval₂_add, Polynomial.eval₂_pow, Polynomial.eval₂_X,
-      Polynomial.eval₂_mul, Polynomial.eval₂_C]
-    have hy2map : fromA (yA ^ 2) = y ^ 2 := by
-      exact (map_pow fromA yA 2).trans (congrArg (fun z : Q => z ^ 2) hfromA_y)
-    calc
-      x ^ 3 + fromA (yA ^ 2) * x ^ 2 = x ^ 3 + y ^ 2 * x ^ 2 :=
-        congrArg (fun z : Q => x ^ 3 + z * x ^ 2) hy2map
-      _ = x ^ 3 + x ^ 2 * y ^ 2 := by ring
-      _ = 0 := hxrel
-  let fromB : B →ₐ[k] Q :=
-    AdjoinRoot.liftAlgHom pX fromA x hpXQ
-  have hfromB_x : fromB xB = x :=
-    AdjoinRoot.liftAlgHom_root pX fromA x hpXQ
-  have hfromB_y : fromB yB = y := by
-    change fromB (algebraMap A B yA) = y
-    rw [fromB.commutes, hfromA_y]
-  have htoB_x : toB x = xB := by
-    change planeNormalFromQuotient k (q (planeX k)) = planeNormalX k
-    change planeNormalFromLocal k (planeX k) = planeNormalX k
-    exact planeNormalFromLocal_X k
-  have htoB_y : toB y = yB := by
-    change planeNormalFromQuotient k (q (planeY k)) = planeNormalYInAlgebra k
-    change planeNormalFromLocal k (planeY k) = planeNormalYInAlgebra k
-    exact planeNormalFromLocal_Y k
-  have hleft : fromB.comp toB = AlgHom.id k Q := by
-    apply Ideal.Quotient.algHom_ext k
-    apply IsLocalization.algHom_ext (planeOriginIdeal k).primeCompl
-    apply MvPolynomial.algHom_ext
-    intro i
-    fin_cases i
-    · change fromB (toB x) = x
-      rw [htoB_x, hfromB_x]
-    · change fromB (toB y) = y
-      rw [htoB_y, hfromB_y]
-  have hright : toB.comp fromB = AlgHom.id k B := by
-    apply Ideal.Quotient.algHom_ext k
-    apply Polynomial.algHom_ext'
-    · apply AdjoinRoot.algHom_ext
-      change toB (fromB yB) = yB
-      rw [hfromB_y, htoB_y]
-    · change toB (fromB xB) = xB
-      rw [hfromB_x, htoB_x]
-  exact AlgEquiv.ofAlgHom toB fromB hleft hright
+    planeEquationQuotient k ≃ₐ[k] planeNormalAlgebra k :=
+  AlgEquiv.ofAlgHom (planeNormalFromQuotientAlgHom k) (planeNormalToQuotient k)
+    (planeNormalQuotient_rightInverse k) (planeNormalQuotient_leftInverse k)
 
 /-- The nine independent normal forms give a strict composition series of the
 localized quotient. -/

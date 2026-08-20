@@ -176,7 +176,7 @@ def filteredGradedPieceQuasiIso
 def filteredQuasiIso
     (A : Type u) [Category.{v} A] [Abelian A] :
     MorphismProperty (FilteredHomotopyCategory A) :=
-  fun {K L} f => ∀ p : ℤ, filteredGradedPieceQuasiIso A p f
+  fun {_K _L} f => ∀ p : ℤ, filteredGradedPieceQuasiIso A p f
 
 theorem filteredQuasiIso_iff_gradedPiece
     (A : Type u) [Category.{v} A] [Abelian A]
@@ -192,7 +192,7 @@ theorem filteredQuasiIso_iff_gradedPiece
 def restrictMorphismProperty
     {C : Type u} [Category.{v} C] (W : MorphismProperty C)
     (P : ObjectProperty C) : MorphismProperty P.FullSubcategory :=
-  fun {X Y} f => W ((P.ι).map f)
+  fun {_X _Y} f => W ((P.ι).map f)
 
 /- The restrictions of the filtered quasi-isomorphism property to bounded
    homotopy subcategories are the source's `DF⁺` and `DF⁻` inputs. -/

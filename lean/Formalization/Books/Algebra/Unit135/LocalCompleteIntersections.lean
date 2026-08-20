@@ -396,8 +396,7 @@ theorem lci_permanence_initial
     (hrA : Function.Surjective rA) (hsB : Function.Surjective sB)
     (hkerI : RingHom.ker rA = I) (hkerJ : RingHom.ker sB = J)
     (hSbar : IsRegularLocalRing (SpecialFiber rS))
-    (hJ : IsIdealGeneratedByRegularSequence J ∧
-      IsIdealGeneratedByRegularSequence (SpecialFiberIdeal rS J))
+    (hJ : IsIdealGeneratedByRegularSequence (SpecialFiberIdeal rS J))
     (hflatA : RingHom.Flat aB) (hflatS : RingHom.Flat rS) :
     IsIdealGeneratedByRegularSequence I := by
   sorry

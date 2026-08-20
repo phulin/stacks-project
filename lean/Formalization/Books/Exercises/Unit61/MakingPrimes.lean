@@ -33,18 +33,127 @@ def makingPrimeIdeal (n : ℕ) : Ideal (twoVariablePolynomialRing ℂ) :=
 /-- Each member of the explicit family is prime. -/
 theorem makingPrimeIdeal_isPrime (n : ℕ) :
     (makingPrimeIdeal n).IsPrime := by
-  sorry
+  let σ : Fin 2 ≃ Fin 2 := Equiv.swap 0 1
+  let e : MvPolynomial (Fin 2) ℂ ≃ₐ[ℂ]
+      Polynomial (MvPolynomial (Fin 1) ℂ) :=
+    (MvPolynomial.renameEquiv ℂ σ).trans (MvPolynomial.finSuccEquiv ℂ 1)
+  let q : Polynomial (MvPolynomial (Fin 1) ℂ) :=
+    Polynomial.X - Polynomial.C
+      ((MvPolynomial.X (0 : Fin 1) : MvPolynomial (Fin 1) ℂ) ^ (n + 1))
+  let I : Ideal (Polynomial (MvPolynomial (Fin 1) ℂ)) := Ideal.span {q}
+  have hx1 :
+      MvPolynomial.finSuccEquiv ℂ 1
+          (MvPolynomial.X (Fin.succ (0 : Fin 1))) =
+        Polynomial.C (MvPolynomial.X (0 : Fin 1)) :=
+    MvPolynomial.finSuccEquiv_X_succ
+  have heX0 :
+      e (MvPolynomial.X (0 : Fin 2)) =
+        Polynomial.C (MvPolynomial.X (0 : Fin 1)) := by
+    simpa [e, σ] using hx1
+  have heX1 :
+      e (MvPolynomial.X (1 : Fin 2)) = Polynomial.X := by
+    simp [e, σ, MvPolynomial.finSuccEquiv_X_zero]
+  have hq : e (makingPrimeEquation n) = q := by
+    simp only [makingPrimeEquation, q, map_sub, heX1, map_pow, heX0,
+      map_pow]
+  have hI : I.IsPrime := by
+    dsimp [I, q]
+    exact Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C _)
+  have hmap : (Ideal.map e.symm.toRingHom I).IsPrime := by
+    exact @Ideal.map_isPrime_of_equiv _ _ _ _ _ _ _ e.symm I hI
+  have hback : e.symm q = makingPrimeEquation n := by
+    apply e.injective
+    rw [e.apply_symm_apply]
+    exact hq.symm
+  have hspan :
+      Ideal.map e.symm.toRingHom I = Ideal.span {e.symm q} := by
+    change Ideal.map e.symm.toRingHom (Ideal.span ({q} : Set _)) =
+      Ideal.span {e.symm q}
+    rw [Ideal.map_span]
+    simp only [Set.image_singleton]
+    rfl
+  rw [makingPrimeIdeal, ← hback, ← hspan]
+  exact hmap
 
 /-- Each explicit prime is contained in the origin point ideal, equivalently
 the origin lies in its vanishing set. -/
 theorem makingPrimeIdeal_le_origin :
     ∀ n, makingPrimeIdeal n ≤ twoVariablePointIdeal ℂ 0 0 := by
-  sorry
+  intro n
+  rw [makingPrimeIdeal]
+  apply Ideal.span_le.2
+  rintro f ⟨rfl⟩
+  change makingPrimeEquation n ∈
+    Ideal.span ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C (0 : ℂ),
+      MvPolynomial.X (1 : Fin 2) - MvPolynomial.C (0 : ℂ)} :
+      Set (twoVariablePolynomialRing ℂ))
+  let J : Ideal (twoVariablePolynomialRing ℂ) :=
+    Ideal.span ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C (0 : ℂ),
+      MvPolynomial.X (1 : Fin 2) - MvPolynomial.C (0 : ℂ)} :
+      Set (twoVariablePolynomialRing ℂ))
+  have hx0 : MvPolynomial.X (0 : Fin 2) ∈ J := by
+    have h := Ideal.subset_span (show MvPolynomial.X (0 : Fin 2) - MvPolynomial.C (0 : ℂ) ∈
+      ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C (0 : ℂ),
+        MvPolynomial.X (1 : Fin 2) - MvPolynomial.C (0 : ℂ)} :
+        Set (twoVariablePolynomialRing ℂ)) by simp)
+    simpa [J] using h
+  have hx1 : MvPolynomial.X (1 : Fin 2) ∈ J := by
+    have h := Ideal.subset_span (show MvPolynomial.X (1 : Fin 2) - MvPolynomial.C (0 : ℂ) ∈
+      ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C (0 : ℂ),
+        MvPolynomial.X (1 : Fin 2) - MvPolynomial.C (0 : ℂ)} :
+        Set (twoVariablePolynomialRing ℂ)) by simp)
+    simpa [J] using h
+  have hpow : ∀ m : ℕ, MvPolynomial.X (0 : Fin 2) ^ (m + 1) ∈ J := by
+    intro m
+    induction m with
+    | zero => simpa using hx0
+    | succ m ih =>
+      rw [pow_succ]
+      exact J.mul_mem_right _ ih
+  change makingPrimeEquation n ∈ J
+  rw [makingPrimeEquation]
+  exact J.sub_mem hx1 (hpow n)
 
 /-- Each explicit prime is contained in the point ideal at `(1,1)`. -/
 theorem makingPrimeIdeal_le_one_one :
     ∀ n, makingPrimeIdeal n ≤ twoVariablePointIdeal ℂ 1 1 := by
-  sorry
+  intro n
+  rw [makingPrimeIdeal]
+  apply Ideal.span_le.2
+  rintro f ⟨rfl⟩
+  let x0 : twoVariablePolynomialRing ℂ := MvPolynomial.X (0 : Fin 2)
+  let x1 : twoVariablePolynomialRing ℂ := MvPolynomial.X (1 : Fin 2)
+  change makingPrimeEquation n ∈ Ideal.span ({x0 - 1, x1 - 1} : Set (twoVariablePolynomialRing ℂ))
+  let J : Ideal (twoVariablePolynomialRing ℂ) :=
+    Ideal.span ({x0 - 1, x1 - 1} : Set (twoVariablePolynomialRing ℂ))
+  have hx0 : x0 - 1 ∈ J := by
+    exact Ideal.subset_span (by simp)
+  have hx1 : x1 - 1 ∈ J := by
+    exact Ideal.subset_span (by simp)
+  have hpow : ∀ m : ℕ, x0 ^ (m + 1) - 1 ∈ J := by
+    intro m
+    induction m with
+    | zero => simpa using hx0
+    | succ m ih =>
+      have hm : x0 * (x0 ^ (m + 1) - 1) ∈ J :=
+        J.mul_mem_left x0 ih
+      have hs := J.add_mem hm hx0
+      have hident : x0 ^ (m + 1 + 1) - 1 =
+          x0 * (x0 ^ (m + 1) - 1) + (x0 - 1) := by
+        calc
+          _ = x0 ^ (m + 1) * x0 - 1 := by
+            rw [pow_succ x0 (m + 1)]
+          _ = _ := by ring
+      rw [hident]
+      exact hs
+  change makingPrimeEquation n ∈ J
+  rw [makingPrimeEquation]
+  have hdiff := J.sub_mem hx1 (hpow n)
+  have hident : x1 - x0 ^ (n + 1) =
+      (x1 - 1) - (x0 ^ (n + 1) - 1) := by ring
+  change x1 - x0 ^ (n + 1) ∈ J
+  rw [hident]
+  exact hdiff
 
 /-- Different exponents give different principal prime ideals. -/
 theorem makingPrimeIdeal_injective :

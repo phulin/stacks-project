@@ -1,9 +1,7 @@
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Products
-import Mathlib.CategoryTheory.Limits.Shapes.Countable
-import Mathlib.CategoryTheory.Triangulated.Generators
 import Mathlib.CategoryTheory.Triangulated.Yoneda
 import Formalization.Books.Derived.Unit07.AdjointsForExactFunctors
-import Formalization.Books.Derived.Unit36.GeneratorsOfTriangulatedCategories
+import Formalization.Books.Derived.Unit38.BrownRepresentability
 
 /-!
 # Derived Categories, Chapter 39: Brown representability, bis
@@ -11,8 +9,9 @@ import Formalization.Books.Derived.Unit36.GeneratorsOfTriangulatedCategories
 The source's set of generators is recorded by `BrownGeneratorConditions`.
 The functor in the representability statement is written as a functor out of
 the opposite category, so that its contravariance is explicit.  Countable
-coproducts in the source category become countable products in the opposite
-category, which is expressed by Mathlib's preservation predicate.
+coproducts used in the construction are available from the source's direct
+sums, while the functor hypothesis preserves all discrete limits in the
+opposite category, expressing that direct sums become products.
 
 The source calls the result a weak version of Krause's theorem.  The proof
 constructs a representing object by a countable sequence of cones and a
@@ -29,7 +28,6 @@ open CategoryTheory.Preadditive
 open CategoryTheory.Pretriangulated
 open CategoryTheory.Triangulated
 open Formalization.Books.Derived.Unit07
-open Formalization.Books.Derived.Unit36
 open Formalization.Books.Homology.Unit03
 open scoped CategoryTheory.Pretriangulated.Opposite ZeroObject
 
@@ -42,7 +40,9 @@ section BrownRepresentability
 variable {D : Type u} [Category.{v, u} D] [AdditiveCategory D]
   [HasShift D ℤ] [∀ n : ℤ, (shiftFunctor D n).Additive]
   [Pretriangulated D] [CategoryTheory.IsTriangulated D]
-  [HasCountableCoproducts D]
+  [HasCoproducts.{v} D]
+
+local instance : HasCoproducts.{0} D := hasCoproducts_shrink
 
 /-!
 The two hypotheses on the set `𝓔` are the exact conditions in the source.
@@ -77,43 +77,29 @@ stated hypotheses and conclusion.
 `H : Dᵒᵖ ⥤ Ab` is the source's contravariant functor.  Its cohomological
 condition is Mathlib's `IsHomological` condition on the opposite category.
 The preservation hypothesis is the source's direct-sums-to-products
-condition, expressed in the opposite category.
+condition for every small discrete diagram, expressed in the opposite
+category.
 -/
 theorem brown_representability
     (𝓔 : Set D) (h𝓔 : BrownGeneratorConditions 𝓔)
     (H : Dᵒᵖ ⥤ AddCommGrpCat)
     [H.IsHomological]
-    [PreservesLimitsOfShape (Discrete ℕ) H] :
+    (hH : ∀ I : Type v, PreservesLimitsOfShape (Discrete I) H) :
     ∃ X : D, Nonempty (preadditiveYoneda.obj X ≅ H) := by
   sorry
 
 /-!
-An exact right adjoint packages the adjunction together with the canonical
-shift-commutation data and the resulting triangulated-functor property.  This
-is the source's phrase “exact right adjoint”, stated without choosing a
-particular representative of an adjunction externally.
--/
-def HasExactRightAdjoint
-    {D' : Type u'} [Category.{v', u'} D'] [AdditiveCategory D']
-    [HasShift D' ℤ] [∀ n : ℤ, (shiftFunctor D' n).Additive]
-    [Pretriangulated D'] [CategoryTheory.IsTriangulated D']
-    (F : D ⥤ D') : Prop :=
-  ∃ (G : D' ⥤ D) (_adj : F ⊣ G) (hG : G.CommShift ℤ),
-    letI : G.CommShift ℤ := hG
-    G.IsTriangulated
-
-/-!
 The Brown representability consequence: an exact functor preserving the
-countable direct sums of the source has an exact right adjoint.
+direct sums of the source has an exact right adjoint.
 -/
 theorem exact_right_adjoint_of_brown_representability
     {D' : Type u'} [Category.{v', u'} D'] [AdditiveCategory D']
     [HasShift D' ℤ] [∀ n : ℤ, (shiftFunctor D' n).Additive]
     [Pretriangulated D'] [CategoryTheory.IsTriangulated D']
     (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
-    [PreservesColimitsOfShape (Discrete ℕ) F]
+    (hF : ∀ I : Type v, PreservesColimitsOfShape (Discrete I) F)
     (𝓔 : Set D) (h𝓔 : BrownGeneratorConditions 𝓔) :
-    HasExactRightAdjoint F := by
+    Formalization.Books.Derived.Unit38.HasExactRightAdjoint F := by
   sorry
 
 end BrownRepresentability

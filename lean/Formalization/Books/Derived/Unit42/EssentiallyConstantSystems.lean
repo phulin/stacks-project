@@ -250,6 +250,7 @@ theorem essentiallyConstant_derived_of_bounded_cohomology
         (derivedCohomologySystem F i)) :
     ∃ A : DerivedCategory C,
       Formalization.Books.Homology.Unit31.IsEssentiallyConstant F ∧
+        IsProValue F A ∧
         ∀ i : ℤ,
           IsProValue (derivedCohomologySystem F i)
             ((derivedCohomologyFunctor C i).obj A) := by

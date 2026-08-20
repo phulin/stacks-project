@@ -1189,7 +1189,7 @@ private theorem quotSMulTop_map_injective_of_exact
     [Module R M₁] [Module R M₂] [Module R M₃]
     (f : M₁ →ₗ[R] M₂) (g : M₂ →ₗ[R] M₃)
     (hf : Function.Injective f) (hfg : Function.Exact f g)
-    (hg : Function.Surjective g) (r : R) (hr : IsSMulRegular M₃ r) :
+    (_hg : Function.Surjective g) (r : R) (hr : IsSMulRegular M₃ r) :
     Function.Injective (QuotSMulTop.map r f) := by
   intro x
   induction x using Submodule.Quotient.induction_on with
@@ -1524,13 +1524,13 @@ private theorem supportDim_pi_le
   classical
   cases isEmpty_or_nonempty ι with
   | inl hι =>
-      letI : IsEmpty ι := hι
-      letI : Subsingleton (ι → N) :=
+      let : IsEmpty ι := hι
+      let : Subsingleton (ι → N) :=
         ⟨fun f g => funext fun i => isEmptyElim i⟩
       rw [Module.supportDim_eq_bot_of_subsingleton]
       exact bot_le
   | inr hι =>
-      letI : Nonempty ι := hι
+      let : Nonempty ι := hι
       have hAnn : Module.annihilator R (ι → N) = Module.annihilator R N := by
         rw [Module.annihilator_pi]
         simp
@@ -1578,7 +1578,7 @@ private theorem one_le_of_ne_bot_of_ne_zero
   | bot => exact (hbot rfl).elim
   | coe d =>
       apply WithBot.coe_le_coe.mpr
-      exact ENat.one_le_iff_ne_zero.mpr (by
+      exact Order.one_le_iff_ne_zero.mpr (by
         intro hd
         apply hzero
         simp [hd])
@@ -1593,7 +1593,7 @@ private theorem le_one_of_not_two_le
       have hdlt : d < (2 : ℕ∞) :=
         WithBot.coe_lt_coe.mp (lt_of_not_ge h)
       exact (ENat.lt_add_one_iff (ENat.natCast_ne_top 1)).mp
-        (by convert hdlt using 1 <;> norm_num)
+        (by convert hdlt using 1; norm_num)
 
 private theorem hom_local_hasPropertySk_one
     {R M N : Type*} [CommRing R] [IsLocalRing R]
@@ -1913,7 +1913,7 @@ theorem reflexive_local_depth_ge_two
       Reflexive (Localization.AtPrime q.asIdeal)
         (LocalizedModule.AtPrime q.asIdeal M) :=
     ((reflexive_localization_iff (R := R) (M := M)).out 0 1).mp hM
-  letI : Module.IsReflexive A L :=
+  let : Module.IsReflexive A L :=
     hloc p
   have hdouble := hom_depth_ge_two
     (R := A) (M := Module.Dual A L) (N := A) hR
@@ -1940,7 +1940,7 @@ theorem reflexive_hasPropertySkModule_two
         (LocalizedModule.AtPrime q.asIdeal M) :=
     ((reflexive_localization_iff (R := R) (M := M)).out 0 1).mp hM
   have hloc : Reflexive A L := hlocAll p
-  letI : Module.IsReflexive A L := hloc
+  let : Module.IsReflexive A L := hloc
   have hdim : Module.supportDim A L ≤ ringKrullDim A :=
     Module.supportDim_le_ringKrullDim A L
   have hR' := hR p

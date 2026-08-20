@@ -302,9 +302,9 @@ noncomputable def canonicalFieldPoint (X : Scheme.{u}) (x : X) : FieldPoint X wh
   K := residueFieldAt X x
   morphism := X.fromSpecResidueField x
 
-/-- The field-point classification of scheme points. -/
-theorem exists_fieldPointClassEquiv (X : Scheme.{u}) :
-    Nonempty (X ≃ fieldPointClasses X) := by
+/-- The canonical field-point classification of scheme points. -/
+noncomputable def fieldPointClassEquiv (X : Scheme.{u}) :
+    X ≃ fieldPointClasses X := by
   let F : X → fieldPointClasses X := fun x =>
     Quotient.mk (FieldPoint.setoid X) (canonicalFieldPoint X x)
   have hsurj : Function.Surjective F := by
@@ -332,12 +332,12 @@ theorem exists_fieldPointClassEquiv (X : Scheme.{u}) :
         (IsLocalRing.closedPoint (residueFieldAt X z)) = z
       exact Scheme.fromSpecResidueField_apply z _
     exact (hcanon x).symm.trans (himage.trans (hcanon y))
-  exact ⟨Equiv.ofBijective F ⟨hinj, hsurj⟩⟩
+  exact Equiv.ofBijective F ⟨hinj, hsurj⟩
 
-/-- A chosen bijection between scheme points and field-point equivalence classes. -/
-noncomputable def fieldPointClassEquiv (X : Scheme.{u}) :
-    X ≃ fieldPointClasses X :=
-  Classical.choice (exists_fieldPointClassEquiv X)
+/-- The field-point classification is nonempty. -/
+theorem exists_fieldPointClassEquiv (X : Scheme.{u}) :
+    Nonempty (X ≃ fieldPointClasses X) :=
+  ⟨fieldPointClassEquiv X⟩
 
 /-- Every field-valued morphism factors through the canonical morphism from
 the residue field of its image point. -/
@@ -399,7 +399,7 @@ class corresponding to `x`; the equivalence above identifies all classes. -/
 theorem fieldPointClassEquiv_canonical (X : Scheme.{u}) (x : X) :
     fieldPointClassEquiv X x =
       Quotient.mk (FieldPoint.setoid X) (canonicalFieldPoint X x) := by
-  sorry
+  rfl
 
 /-! ## Relative and specialization diagrams for field-valued points -/
 

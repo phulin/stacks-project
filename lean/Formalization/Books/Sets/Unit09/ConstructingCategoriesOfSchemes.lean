@@ -1,4 +1,4 @@
-import Formalization.Books.Sets.Unit08
+import Formalization.Books.Sets.Unit05.Hierarchy
 import Mathlib.AlgebraicGeometry.AffineScheme
 import Mathlib.AlgebraicGeometry.Limits
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
@@ -135,9 +135,10 @@ def StageAdmissible (c : SchemeCoding.{u}) (α β : Ordinal.{u})
       schemeSize T ≤ Bound (schemeSize S.obj) → IsRepresentedAt c β T) ∧
     (∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c fα),
-      (HasLimitCone (F ⋙ schInclusion c fα) ∨
-        HasColimitCocone (F ⋙ schInclusion c fα)) →
-      ∃ T : Scheme.{u}, IsRepresentedAt c β T)
+      (∀ t : LimitCone (F ⋙ schInclusion c fα),
+        IsRepresentedAt c β t.cone.pt) ∧
+      (∀ t : ColimitCocone (F ⋙ schInclusion c fα),
+        IsRepresentedAt c β t.cocone.pt))
 
 /-- The transfinite-recursion interface for the function `f` in the source proof. -/
 def IsSchemeClosureFunction (c : SchemeCoding.{u}) (f : Ordinal.{u} → Ordinal.{u}) : Prop :=
@@ -242,8 +243,11 @@ theorem scheme_category_has_pullbacks {c : SchemeCoding.{u}} {α : Ordinal.{u}}
       (F : I ⥤ Sch c α), HasLimitCone (F ⋙ schInclusion c α) ↔ HasLimitCone F)
     (hαIso : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c α), LimitConeAgreesWithAmbient F)
-    {X Y S : Sch c α} (f : X.obj ⟶ S.obj) (g : Y.obj ⟶ S.obj) :
-    ∃ P : Sch c α, Nonempty (P.obj ≅ pullback f g) := by
+    {X Y S : Sch c α} (f : X ⟶ S) (g : Y ⟶ S) :
+    ∃ t : LimitCone (cospan f g),
+      ∀ s : LimitCone
+          (cospan ((schInclusion c α).map f) ((schInclusion c α).map g)),
+        Nonempty ((schInclusion c α).obj t.cone.pt ≅ s.cone.pt) := by
   sorry
 
 /-- Countable coproducts of objects of `Sch α` remain in `Sch α`. -/
@@ -253,8 +257,9 @@ theorem scheme_category_has_countable_coproducts {c : SchemeCoding.{u}} {α : Or
     (hαIso : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c α), ColimitCoconeAgreesWithAmbient F)
     {I : Type u} [Countable I] (S : I → Sch c α) :
-    ∃ P : Sch c α, ∃ t : ColimitCocone (Discrete.functor S),
-      Nonempty (P.obj ≅ t.cocone.pt.obj) := by
+    ∃ t : ColimitCocone (Discrete.functor S),
+      ∀ s : ColimitCocone (Discrete.functor S ⋙ schInclusion c α),
+        Nonempty ((schInclusion c α).obj t.cocone.pt ≅ s.cocone.pt) := by
   sorry
 
 /-- Open subschemes of objects of `Sch α` have representatives in `Sch α`. -/

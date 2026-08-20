@@ -4,8 +4,12 @@ import Mathlib.AlgebraicGeometry.Limits
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.ResidueField
 import Mathlib.AlgebraicGeometry.Sites.Fpqc
+import Mathlib.CategoryTheory.Limits.Shapes.Countable
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
+import Mathlib.Data.Complex.Basic
+import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.RingTheory.FiniteType
+import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.Localization.Basic
 import Mathlib.SetTheory.Cardinal.Arithmetic
 
@@ -67,6 +71,7 @@ the Lean type `Scheme` with `ZFSet`.
 -/
 structure SchemeCoding where
   code : Scheme.{u} → ZFSet.{u}
+  injective : Function.Injective code
 
 /-- The predicate that a coded scheme belongs to the von Neumann level `V_α`. -/
 def SchemeInLevel (c : SchemeCoding.{u}) (α : Ordinal.{u}) (X : Scheme.{u}) : Prop :=
@@ -87,10 +92,9 @@ def IsRepresentedAt (c : SchemeCoding.{u}) (α : Ordinal.{u}) (X : Scheme.{u}) :
 
 /-! ### Countable diagrams and the closure predicates -/
 
-/-- A category whose object and hom types are countable. -/
-class CountableCategory (I : Type u) [Category.{u} I] : Prop where
-  objects : Countable I
-  homs : ∀ X Y : I, Countable (X ⟶ Y)
+/- The source's countability hypothesis is Mathlib's canonical
+`CategoryTheory.CountableCategory`, whose fields record countable objects and
+countable hom types. -/
 
 /-- Existence of a limit cone, without choosing a global `HasLimit` instance. -/
 def HasLimitCone {C : Type u} [Category C] {I : Type v} [Category I]
@@ -164,6 +168,27 @@ theorem lemma_construct_category (c : SchemeCoding.{u}) (S₀ : Set Scheme.{u}) 
         (F : I ⥤ Sch c α), ColimitCoconeAgreesWithAmbient F) := by
   sorry
 
+/-!
+The reflection remark is recorded at the level of a witness relation.  The
+two clauses correspond to reflecting the binary relation and its existential
+projection together; this is exactly the combination needed to keep a chosen
+witness inside the reflected level.
+-/
+
+/-- External and relativized witness predicates agree on a level. -/
+def ReflectsWitnessRelation (M : ZFSet.{u})
+    (P PRel : ZFSet.{u} → ZFSet.{u} → Prop) : Prop :=
+  (∀ X Y, X ∈ M → Y ∈ M → (P X Y ↔ PRel X Y)) ∧
+    (∀ X, X ∈ M → ((∃ Y, P X Y) ↔ ∃ Y ∈ M, PRel X Y))
+
+/-- Reflecting both a witness relation and its existential projection keeps witnesses in the level. -/
+theorem reflected_witness_mem {M X : ZFSet.{u}}
+    {P PRel : ZFSet.{u} → ZFSet.{u} → Prop}
+    (hM : ReflectsWitnessRelation M P PRel) (hX : X ∈ M)
+    (hP : ∃ Y, P X Y) :
+    ∃ Y ∈ M, P X Y := by
+  sorry
+
 /-! ### Basic size bounds -/
 
 /-- For an affine scheme, the size is the maximum of `ℵ₀` and its coordinate ring. -/
@@ -215,6 +240,8 @@ def HasAffineOpenCoverOfCardinalAtMost (X : Scheme.{u}) (κ : Cardinal.{u}) : Pr
 theorem scheme_category_has_pullbacks {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     (hα : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c α), HasLimitCone (F ⋙ schInclusion c α) ↔ HasLimitCone F)
+    (hαIso : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
+      (F : I ⥤ Sch c α), LimitConeAgreesWithAmbient F)
     {X Y S : Sch c α} (f : X.obj ⟶ S.obj) (g : Y.obj ⟶ S.obj) :
     ∃ P : Sch c α, Nonempty (P.obj ≅ pullback f g) := by
   sorry
@@ -223,6 +250,8 @@ theorem scheme_category_has_pullbacks {c : SchemeCoding.{u}} {α : Ordinal.{u}}
 theorem scheme_category_has_countable_coproducts {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     (hα : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ Sch c α), HasColimitCocone (F ⋙ schInclusion c α) ↔ HasColimitCocone F)
+    (hαIso : ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
+      (F : I ⥤ Sch c α), ColimitCoconeAgreesWithAmbient F)
     {I : Type u} [Countable I] (S : I → Sch c α) :
     ∃ P : Sch c α, ∃ t : ColimitCocone (Discrete.functor S),
       Nonempty (P.obj ≅ t.cocone.pt.obj) := by
@@ -283,24 +312,22 @@ theorem monomorphism_represented {c : SchemeCoding.{u}} {α : Ordinal.{u}}
 
 /-! ### Explicit affine constructions -/
 
-/-- A ring supplied as the inverse limit of the powers of an ideal. -/
-structure AdicCompletion (R : CommRingCat.{u}) (I : Ideal R) where
-  ring : CommRingCat.{u}
-  isInverseLimit : Prop
+/- Mathlib's `AdicCompletion I R` is the canonical compatible-family model of
+the inverse limit of the quotients by the powers of `I`. -/
 
-/-- A chosen algebraic closure of a residue field. -/
-structure ResidueFieldAlgebraicClosure (R : CommRingCat.{u})
-    (p : PrimeSpectrum R) where
-  ring : CommRingCat.{u}
-  isAlgebraicClosure : Prop
+/- The canonical algebraic closure is Mathlib's `AlgebraicClosure`; the base
+field here is the residue field of the corresponding point of `Spec R`. -/
+abbrev residueFieldAlgebraicClosure (R : CommRingCat.{u})
+    (p : PrimeSpectrum R) : Type u :=
+  AlgebraicClosure p.asIdeal.ResidueField
 
 /-- A scheme is represented in `Sch α` whenever its affine coordinate ring has a bounded
 cardinality construction of one of the kinds listed in the source. -/
 theorem affine_construction_adic_completion
     {c : SchemeCoding.{u}} {α : Ordinal.{u}} {T : Scheme.{u}}
     (hT : SchemeInLevel c α T) [IsAffine T] (I : Ideal (schemeRing T))
-    (C : AdicCompletion (schemeRing T) I) :
-    IsRepresentedAt c α (Spec C.ring) := by
+    : IsRepresentedAt c α
+      (Spec (CommRingCat.of (AdicCompletion I (schemeRing T)))) := by
   sorry
 
 theorem affine_construction_finite_type_algebra
@@ -321,8 +348,8 @@ theorem affine_construction_algebraic_closure_residue_field
     {c : SchemeCoding.{u}} {α : Ordinal.{u}} {T : Scheme.{u}}
     (hT : SchemeInLevel c α T) [IsAffine T]
     (p : PrimeSpectrum (schemeRing T))
-    (K : ResidueFieldAlgebraicClosure (schemeRing T) p) :
-    IsRepresentedAt c α (Spec K.ring) := by
+    : IsRepresentedAt c α
+      (Spec (CommRingCat.of (residueFieldAlgebraicClosure (schemeRing T) p))) := by
   sorry
 
 theorem affine_construction_subring
@@ -343,27 +370,6 @@ theorem affine_construction_finite_type_over_bounded_ring
 
 /-! ### The warnings and bounds in the two remarks -/
 
-/-!
-The reflection remark is recorded at the level of a witness relation.  The
-two clauses correspond to reflecting the binary relation and its existential
-projection together; this is exactly the combination needed to keep a chosen
-witness inside the reflected level.
--/
-
-/-- External and relativized witness predicates agree on a level. -/
-def ReflectsWitnessRelation (M : ZFSet.{u})
-    (P PRel : ZFSet.{u} → ZFSet.{u} → Prop) : Prop :=
-  (∀ X Y, X ∈ M → Y ∈ M → (P X Y ↔ PRel X Y)) ∧
-    (∀ X, X ∈ M → ((∃ Y, P X Y) ↔ ∃ Y ∈ M, PRel X Y))
-
-/-- Reflecting both a witness relation and its existential projection keeps witnesses in the level. -/
-theorem reflected_witness_mem {M X : ZFSet.{u}}
-    {P PRel : ZFSet.{u} → ZFSet.{u} → Prop}
-    (hM : ReflectsWitnessRelation M P PRel) (hX : X ∈ M)
-    (hP : ∃ Y, P X Y) :
-    ∃ Y ∈ M, P X Y := by
-  sorry
-
 /-- A faster bound such as `κ ↦ κ ^ κ` has the same closure role as `Bound`. -/
 theorem alternativeBound_is_admissible (κ : Cardinal.{u})
     (hκ : Cardinal.aleph0 ≤ κ) :
@@ -378,6 +384,26 @@ def residueFieldProduct (R : CommRingCat.{u}) : Type u :=
 theorem residueFieldProduct_cardinal_bound (R : CommRingCat.{u}) :
     Cardinal.mk (residueFieldProduct R) ≤
       (Cardinal.mk R) ^ ((2 : Cardinal.{u}) ^ Cardinal.mk R) := by
+  sorry
+
+/- The two concrete rings used in the source warning.  The first is `ℂ[x]`;
+the second is the countable product of copies of `𝔽₂`. -/
+abbrev complexPolynomialRing : CommRingCat :=
+  CommRingCat.of (Polynomial ℂ)
+
+abbrev binarySequenceRing : CommRingCat :=
+  CommRingCat.of (∀ _ : ℕ, ZMod 2)
+
+/-- For `R = ℂ[x]`, the residue-field product is not bounded by `|R|^ℵ₀`. -/
+theorem residueFieldProduct_complexPolynomial_not_countable_power :
+    ¬ Cardinal.mk (residueFieldProduct complexPolynomialRing) ≤
+      (Cardinal.mk complexPolynomialRing) ^ Cardinal.aleph0 := by
+  sorry
+
+/-- For `R = ∏ₙ 𝔽₂`, the residue-field product is not bounded by `|R|^|R|`. -/
+theorem residueFieldProduct_binarySequence_not_self_power :
+    ¬ Cardinal.mk (residueFieldProduct binarySequenceRing) ≤
+      (Cardinal.mk binarySequenceRing) ^ Cardinal.mk binarySequenceRing := by
   sorry
 
 /-! ### fpqc and fppf bounds -/

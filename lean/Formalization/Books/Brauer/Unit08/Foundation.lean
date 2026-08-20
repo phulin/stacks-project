@@ -1679,7 +1679,8 @@ structure FiniteSeparableSplittingField (k : Type u_k) (A : Type u_A) [Field k] 
 
 theorem brauer_class_has_finite_separable_splitting_field (k : Type*)
     [Field k] :
-    ∀ A : CSA k, Nonempty (FiniteSeparableSplittingField k A.carrier) := by sorry
+    ∀ A : CSA k, Nonempty (FiniteSeparableSplittingField k A.carrier) := by
+  sorry
 /-
   intro A
   obtain ⟨rep⟩ := wedderburn_artin_finite_central_division_representative k A

@@ -1533,6 +1533,27 @@ theorem quotient_isAnnihilatedByIdealPower
   exact (Submodule.Quotient.mk_eq_zero _).mpr
     (Submodule.smul_mem_smul ha Submodule.mem_top)
 
+theorem isAnnihilatedByIdealPower_of_pow_eq_bot
+    {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]
+    {I : Ideal R} {m : ℕ} (hm : I ^ m = ⊥) :
+    IsAnnihilatedByIdealPower (N := N) I m := by
+  simp [IsAnnihilatedByIdealPower, hm]
+
+theorem isAnnihilatedByIdealPower_zero_iff
+    {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]
+    (I : Ideal R) :
+    IsAnnihilatedByIdealPower (N := N) I 0 ↔ Subsingleton N := by
+  simp only [IsAnnihilatedByIdealPower, pow_zero, one_smul]
+  exact Submodule.top_eq_bot_iff
+
+theorem exists_positive_annihilating_power
+    {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]
+    {I : Ideal R}
+    (h : ∃ m : ℕ, IsAnnihilatedByIdealPower (N := N) I m) :
+    ∃ n : ℕ, 0 < n ∧ IsAnnihilatedByIdealPower (N := N) I n := by
+  obtain ⟨m, hm⟩ := h
+  exact ⟨m + 1, by omega, hm.pow_mono (Nat.le_succ m)⟩
+
 theorem what_does_it_mean
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R)

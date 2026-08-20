@@ -2037,6 +2037,12 @@ structure HomogenizationWitness (R : Type u) (R' : Type a) (M : Type w)
       ((degree_zero_equiv r :
           gradedAlgebra.grading.component 0) : gradedAlgebra.carrier) =
         algebraMap R gradedAlgebra.carrier r
+  ring_equiv_compatible :
+    ∀ r : R,
+      ring_equiv (algebraMap R R' r) =
+        algebraMap (gradedAlgebra.grading.component 0)
+          (homogeneousLocalizationAway gradedAlgebra.grading f)
+          (degree_zero_equiv r)
   generated_in_degree_one :
     ∃ n : ℕ, ∃ x : Fin n → gradedAlgebra.carrier,
       (∀ i, x i ∈ gradedAlgebra.grading.component 1) ∧

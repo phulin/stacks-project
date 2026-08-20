@@ -223,8 +223,24 @@ theorem stalk_moduleOfDifferentials {X : TopCat.{v}}
           ((TopCat.Presheaf.stalkFunctor CommRingCat x).map φ.hom)) := by
   sorry
 
+/-! The source characterizes the functorial map by its action on universal
+    differentials.  This helper names the corresponding sectionwise element
+    after extension of scalars. -/
+
+noncomputable def baseChangedUniversalDifferential
+    {X : TopCat.{v}} {O₁ O₂ O₃ : CommRingSheaf X}
+    (base : O₁ ⟶ O₂) (quotient : O₂ ⟶ O₃)
+    (U : Opens X) (a : O₂.obj.obj (op U)) :
+    ((sheafChangeOfRings (commRingSheafMorphismToRingSheaf quotient)).obj
+      (moduleOfDifferentials base)).val.obj (op U) := by
+  exact ((sheafChangeOfRingsAdjunction
+    (commRingSheafMorphismToRingSheaf quotient)).unit.app
+      (moduleOfDifferentials base)).val.app (op U)
+    ((moduleOfDifferentialsUnit base).app (op U)
+      (CommRingCat.KaehlerDifferential.d a))
+
 /-- A commutative square of sheaves of rings induces a map of modules of
-differentials. -/
+    differentials. -/
 theorem map_moduleOfDifferentials {X : TopCat.{v}}
     {O₁ O₂ O₁' O₂' : CommRingSheaf X}
     (φ : O₁ ⟶ O₂) (φ' : O₁' ⟶ O₂')
@@ -234,9 +250,30 @@ theorem map_moduleOfDifferentials {X : TopCat.{v}}
       (moduleOfDifferentials φ) ⟶ moduleOfDifferentials φ') := by
   sorry
 
+/-- The source-facing functoriality interface, including the rule that the
+    induced map sends `d a` to `d (b a)` after extension of scalars. -/
+structure ModuleOfDifferentialsFunctorialityData {X : TopCat.{v}}
+    {O₁ O₂ O₁' O₂' : CommRingSheaf X}
+    (φ : O₁ ⟶ O₂) (φ' : O₁' ⟶ O₂')
+    (b : O₂ ⟶ O₂') where
+  map : (sheafChangeOfRings (commRingSheafMorphismToRingSheaf b)).obj
+      (moduleOfDifferentials φ) ⟶ moduleOfDifferentials φ'
+  map_d : ∀ (U : Opens X) (a : O₂.obj.obj (op U)),
+    map.val.app (op U) (baseChangedUniversalDifferential φ b U a) =
+      (moduleOfDifferentialsUnit φ').app (op U)
+        (CommRingCat.KaehlerDifferential.d (b.hom.app (op U) a))
+
+theorem map_moduleOfDifferentials_with_rule {X : TopCat.{v}}
+    {O₁ O₂ O₁' O₂' : CommRingSheaf X}
+    (φ : O₁ ⟶ O₂) (φ' : O₁' ⟶ O₂')
+    (a : O₁ ⟶ O₁') (b : O₂ ⟶ O₂')
+    (comm : a ≫ φ' = φ ≫ b) :
+    Nonempty (ModuleOfDifferentialsFunctorialityData φ φ' b) := by
+  sorry
+
 /-! ## Exact conormal sequence -/
 
-/-- Exactness of a morphism of sheaves of modules, checked on every open. -/
+/-- Exactness of a morphism of sheaves of modules, checked on every stalk. -/
 def SheafModuleExact {X : TopCat.{v}} {O : RingSheaf X}
     {F G H : SheafOfModules O} (α : F ⟶ G) (β : G ⟶ H) : Prop :=
   ∀ x : X,
@@ -256,20 +293,6 @@ def SheafModuleEpi {X : TopCat.{v}} {O : RingSheaf X}
       (ConcreteCategory.hom
         ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
           ((PresheafOfModules.toPresheaf O.obj).map β.val)))
-
-/-- The sectionwise image of a universal differential after extension of
-scalars; this is the source's `d f ⊗ 1`. -/
-noncomputable def baseChangedUniversalDifferential
-    {X : TopCat.{v}} {O₁ O₂ O₃ : CommRingSheaf X}
-    (base : O₁ ⟶ O₂) (quotient : O₂ ⟶ O₃)
-    (U : Opens X) (a : O₂.obj.obj (op U)) :
-    ((sheafChangeOfRings (commRingSheafMorphismToRingSheaf quotient)).obj
-      (moduleOfDifferentials base)).val.obj (op U) := by
-  exact ((sheafChangeOfRingsAdjunction
-    (commRingSheafMorphismToRingSheaf quotient)).unit.app
-      (moduleOfDifferentials base)).val.app (op U)
-    ((moduleOfDifferentialsUnit base).app (op U)
-      (CommRingCat.KaehlerDifferential.d a))
 
 /-- The sheaf-level data in the conormal--differential sequence. -/
 structure ConormalDifferentialSequence {X : TopCat.{v}}
@@ -313,6 +336,16 @@ structure CommutativeRingedSpaceHom (X Y : CommutativeRingedSpace) where
   sharp : (TopCat.Sheaf.pullback CommRingCat continuous).obj Y.structureSheaf ⟶
     X.structureSheaf
 
+/- The existing sheaf infrastructure converts the inverse-image map to the
+   algebraic `f`-map used to express commutative diagrams. -/
+noncomputable def commutativeRingedSpaceHomFMap
+    {X Y : CommutativeRingedSpace}
+    (f : CommutativeRingedSpaceHom X Y) :
+    Formalization.Books.Sheaves.Unit22.AlgebraicFMap (C := CommRingCat)
+      f.continuous Y.structureSheaf X.structureSheaf :=
+  (TopCat.Sheaf.pullbackPushforwardAdjunction CommRingCat f.continuous).homEquiv
+    Y.structureSheaf X.structureSheaf f.sharp
+
 /-! The source's `S`-derivations and relative sheaf of differentials. -/
 
 /-- An `S`-derivation into a sheaf of `O_X`-modules. -/
@@ -326,6 +359,11 @@ noncomputable abbrev ringedSpaceModuleOfDifferentials {X S : CommutativeRingedSp
     (f : CommutativeRingedSpaceHom X S) :
     CommRingSheafModule X.structureSheaf :=
   moduleOfDifferentials f.sharp
+
+noncomputable def ringedSpaceUniversalDerivation {X S : CommutativeRingedSpace}
+    (f : CommutativeRingedSpaceHom X S) :
+    RingedSpaceDerivation f (ringedSpaceModuleOfDifferentials f) :=
+  universalRelativeSheafDerivation f.sharp
 
 /- The extension data below records the algebra, quotient, ideal inclusion,
    kernel condition, and square-zero condition from the source.  The ideal is
@@ -398,6 +436,16 @@ structure RingedSpaceDifferentialSquare
   g : CommutativeRingedSpaceHom S' S
   topological_commutes :
     f.continuous ≫ h.continuous = f'.continuous ≫ g.continuous
+  ringed_commutes :
+    HEq
+      (Formalization.Books.Sheaves.Unit22.algebraicFMapComp
+        f.continuous h.continuous
+        (commutativeRingedSpaceHomFMap f)
+        (commutativeRingedSpaceHomFMap h))
+      (Formalization.Books.Sheaves.Unit22.algebraicFMapComp
+        f'.continuous g.continuous
+        (commutativeRingedSpaceHomFMap f')
+        (commutativeRingedSpaceHomFMap g))
 
 /-- The module and map supplied by the ringed-space functoriality statement.
 The `pullback` field is the module denoted `f^* Ω` in the source. -/
@@ -406,6 +454,17 @@ structure RingedSpaceDifferentialComparison
     (square : RingedSpaceDifferentialSquare X' X S' S) where
   pullback : CommRingSheafModule X'.structureSheaf
   map : pullback ⟶ ringedSpaceModuleOfDifferentials square.f'
+  pullbackUniversal : RingedSpaceDerivation square.f' pullback
+  map_universal : ∀ (U : Opens X'.carrier)
+    (a : X'.structureSheaf.obj.obj (op U)),
+    map.val.app (op U) (pullbackUniversal.d a) =
+      (ringedSpaceUniversalDerivation square.f').d a
+  map_unique : ∀ (α : pullback ⟶ ringedSpaceModuleOfDifferentials square.f'),
+    (∀ (U : Opens X'.carrier)
+      (a : X'.structureSheaf.obj.obj (op U)),
+      α.val.app (op U) (pullbackUniversal.d a) =
+        (ringedSpaceUniversalDerivation square.f').d a) →
+      α = map
 
 theorem ringedSpace_differentials_map
     {X' X S' S : CommutativeRingedSpace}
@@ -454,6 +513,12 @@ structure RingedSpaceDifferentialTriangle
     (g : CommutativeRingedSpaceHom Y S)
     (h : CommutativeRingedSpaceHom X S)
     (topological_composite : h.continuous = f.continuous ≫ g.continuous) where
+  ringed_composite :
+    HEq (commutativeRingedSpaceHomFMap h)
+      (Formalization.Books.Sheaves.Unit22.algebraicFMapComp
+        f.continuous g.continuous
+        (commutativeRingedSpaceHomFMap f)
+        (commutativeRingedSpaceHomFMap g))
   pullback : CommRingSheafModule X.structureSheaf
   firstMap : pullback ⟶ ringedSpaceModuleOfDifferentials h
   secondMap : ringedSpaceModuleOfDifferentials h ⟶

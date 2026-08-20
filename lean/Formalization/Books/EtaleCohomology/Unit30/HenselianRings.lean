@@ -1,4 +1,3 @@
-import Formalization.Books.Algebra.Unit154.FilteredColimitsEtale
 import Formalization.Books.Algebra.Unit155.Henselization
 import Mathlib.Data.Complex.Basic
 import Mathlib.NumberTheory.Padics.RingHoms
@@ -137,6 +136,24 @@ theorem complete_local_rings_henselian
     HenselianLocalRing R := by
   exact complete_local_henselian R
 
+/- The imported `FiniteProductOfLocalAlgebras` records the product and
+locality, while the source also exposes finiteness of every factor. -/
+structure FiniteProductOfFiniteLocalAlgebrasData
+    (R S : Type u) [CommRing R] [CommRing S] [Algebra R S] where
+  n : ℕ
+  factor : Fin n → Type u
+  [commRingFactor : ∀ i, CommRing (factor i)]
+  [algebraFactor : ∀ i, Algebra R (factor i)]
+  [localFactor : ∀ i, IsLocalRing (factor i)]
+  finiteFactor : ∀ i, RingHom.Finite (algebraMap R (factor i))
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, factor i))
+
+def FiniteProductOfFiniteLocalAlgebrasProperty
+    (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {S : Type u} [CommRing S] [Algebra R S],
+    RingHom.Finite (algebraMap R S) →
+      Nonempty (FiniteProductOfFiniteLocalAlgebrasData R S)
+
 /-- The finite-type decomposition occurring in characterization (4) of the
 source theorem. -/
 structure FiniteTypeHenselianDecompositionData
@@ -182,7 +199,7 @@ theorem henselian_characterizations
     List.TFAE
       [ IsHenselian R,
         FactorizationLift R,
-        FiniteProductOfLocalAlgebrasProperty R,
+        FiniteProductOfFiniteLocalAlgebrasProperty R,
         FiniteTypeHenselianDecompositionProperty R,
         EtaleResidueSplittingProperty R ] := by
   sorry
@@ -226,11 +243,36 @@ structure ComplexPowerSeriesEtaleProductData
   trivialCount : ℕ
   rootCount : ℕ
   rootDegree : Fin rootCount → ℕ
+  rootDegree_pos : ∀ i, 0 < rootDegree i
   decomposition : Nonempty
-    (S ≃+*
+    (S ≃ₐ[PowerSeries ℂ]
       (∀ _ : Fin trivialCount, PowerSeries ℂ) ×
         (∀ i : Fin rootCount,
           ComplexPowerSeriesLaurentRootExtension (rootDegree i)))
+
+theorem complex_power_series_trivial_etale :
+    Algebra.Etale (PowerSeries ℂ) (PowerSeries ℂ) := by
+  infer_instance
+
+theorem complex_power_series_root_extension_etale (n : ℕ) (hn : 0 < n) :
+    Algebra.Etale (PowerSeries ℂ)
+      (ComplexPowerSeriesLaurentRootExtension n) := by
+  sorry
+
+/-- An affine algebra map factors through `D(t)` when it extends across the
+localization obtained by inverting `t`. -/
+def FactorsThroughPrincipalOpen
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (t : R) : Prop :=
+  Nonempty (Localization.Away t →ₐ[R] S)
+
+theorem complex_power_series_root_extension_factors_through_D (n : ℕ)
+    (hn : 0 < n) :
+    FactorsThroughPrincipalOpen
+      (R := PowerSeries ℂ)
+      (S := ComplexPowerSeriesLaurentRootExtension n)
+      (PowerSeries.X : PowerSeries ℂ) := by
+  sorry
 
 theorem complex_power_series_etale_classification
     (S : Type u) [CommRing S]
@@ -280,44 +322,15 @@ abbrev SeparableAlgebraicClosure (k K : Type u) [Field k] [Field K]
     [Algebra k K] : Prop :=
   IsSeparableAlgebraicClosure k K
 
-/-- Chapter 30's diagram `R → Rʰ → Rˢʰ`, with flat local maps, filtered étale
-colimit presentations, the henselianity assertions, and the residue-field
-identifications stated in the source. -/
-structure HenselizationDiagram
+/- The canonical construction from Algebra, Chapter 155 already packages the
+diagram and all its maps, flatness, colimit, henselianity, and residue-field
+properties. -/
+abbrev HenselizationDiagram
     (R K : Type u) [CommRing R] [IsLocalRing R]
     [Field K] [Algebra (IsLocalRing.ResidueField R) K]
-    (hK : SeparableAlgebraicClosure
-      (IsLocalRing.ResidueField R) K) where
-  henselization : Type u
-  [commRingHenselization : CommRing henselization]
-  [localRingHenselization : IsLocalRing henselization]
-  strictHenselization : Type u
-  [commRingStrictHenselization : CommRing strictHenselization]
-  [localRingStrictHenselization : IsLocalRing strictHenselization]
-  henselizationMap : R →+* henselization
-  henselizationLocal : IsLocalHom henselizationMap
-  henselizationFlat : RingHom.Flat henselizationMap
-  henselian : HenselianLocalRing henselization
-  henselizationEtaleColimit :
-    IsFilteredColimitOfEtale henselizationMap
-  strictMap : R →+* strictHenselization
-  strictLocal : IsLocalHom strictMap
-  strictFlat : RingHom.Flat strictMap
-  strictHenselian : StrictlyHenselianLocalRing strictHenselization
-  strictEtaleColimit : IsFilteredColimitOfEtale strictMap
-  mapFromHenselization : henselization →+* strictHenselization
-  mapFromHenselizationLocal : IsLocalHom mapFromHenselization
-  mapFromHenselizationFlat : RingHom.Flat mapFromHenselization
-  commutes : mapFromHenselization.comp henselizationMap = strictMap
-  henselizationMaximalIdeal_eq :
-    Ideal.map henselizationMap (IsLocalRing.maximalIdeal R) =
-      IsLocalRing.maximalIdeal henselization
-  strictMaximalIdeal_eq :
-    Ideal.map strictMap (IsLocalRing.maximalIdeal R) =
-      IsLocalRing.maximalIdeal strictHenselization
-  henselizationResidueEquiv :
-    IsLocalRing.ResidueField R ≃+* IsLocalRing.ResidueField henselization
-  strictResidueEquiv : K ≃+* IsLocalRing.ResidueField strictHenselization
+    (_hK : SeparableAlgebraicClosure
+      (IsLocalRing.ResidueField R) K) : Type _ :=
+  StrictHenselizationData R K
 
 theorem exists_henselization_and_strict_henselization
     (R K : Type u) [CommRing R] [IsLocalRing R]
@@ -325,7 +338,7 @@ theorem exists_henselization_and_strict_henselization
     (hK : SeparableAlgebraicClosure
       (IsLocalRing.ResidueField R) K) :
     Nonempty (HenselizationDiagram R K hK) := by
-  sorry
+  exact exists_strict_henselization R K hK
 
 end
 

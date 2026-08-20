@@ -24,6 +24,12 @@ namespace Formalization.Books.MoreAlgebra.Unit123
 
 abbrev Mod (R : Type u) [CommRing R] := ModuleCat.{u} R
 
+/- The opening general determinant functor for arbitrary perfect complexes,
+  and the filtered-derived-category comparison isomorphism, are explicitly
+  deferred by the source (“We will add this material later”).  The declarations
+  below therefore formalize the ad hoc two-term construction that the source
+  develops in this section, including its final functorial interface. -/
+
 /-! ## Two-term perfect complexes and their determinant lines -/
 
 /-- A two-term complex whose two displayed terms are finite projective. -/
@@ -82,6 +88,16 @@ theorem exists_determinantTensorLineEquiv (T : FiniteProjectiveTwoTermComplex R)
 noncomputable def determinantTensorLineEquiv (T : FiniteProjectiveTwoTermComplex R) :
     determinantTensorLine T ≃ₗ[R] determinantLine T :=
   Classical.choice (exists_determinantTensorLineEquiv T)
+
+instance determinantLine_invertible (T : FiniteProjectiveTwoTermComplex R) :
+    Module.Invertible R T.determinantLine := by
+  letI : Module.Invertible R
+      (determinantModule R (T.zero : Type u)) :=
+    determinantModule_invertible (R := R) (M := (T.zero : Type u))
+  letI : Module.Invertible R
+      (determinantModule R (T.neg : Type u)) :=
+    determinantModule_invertible (R := R) (M := (T.neg : Type u))
+  exact Module.Invertible.congr (determinantTensorLineEquiv T)
 
 /-- A determinant-line element is a trivialization when it is the image of `1`
 under a linear equivalence from the base ring. -/
@@ -177,26 +193,77 @@ theorem exists_kernelData
     (a : SurjectiveQuasiIso K L) : Nonempty (KernelData a) := by
   sorry
 
-/-- The determinant isomorphism attached to a surjective quasi-isomorphism.
-Its existence is the exact-sequence construction in the source; the chosen
-map is exposed separately so later statements can use it without repeating
-the choice of a comparison diagram. -/
-theorem exists_determinantMap
-    {K L : FiniteProjectiveTwoTermComplex R} (a : SurjectiveQuasiIso K L) :
-    Nonempty (K.determinantLine ≃ₗ[R] L.determinantLine) := by
+/- The source defines `det(a)` by the commutative diagram involving the two
+  short-exact determinant maps and the canonical element of the acyclic
+  kernel.  In the `Hom` presentation of determinant lines, that diagram is
+  exactly the following equality of maps from
+  `det(Ker a⁻¹) ⊗ det(L⁻¹)` to `det(K⁰)`. -/
+def determinantMapCompatible
+    {K L : FiniteProjectiveTwoTermComplex R}
+    {a : SurjectiveQuasiIso K L} (W : KernelData a)
+    (e : K.determinantLine ≃ₗ[R] L.determinantLine) : Prop :=
+  ∀ x : K.determinantLine,
+    (gammaZero W).toLinearMap.comp
+        (TensorProduct.map
+          (Formalization.Books.MoreAlgebra.Unit119.determinantMap
+            W.kernel.differentialLinearMap W.rank_zero)
+          (e x)) =
+      x.comp (gammaNeg W).toLinearMap
+
+theorem determinantMapCompatible_unique
+    {K L : FiniteProjectiveTwoTermComplex R}
+    {a : SurjectiveQuasiIso K L} (W : KernelData a)
+    (e₁ e₂ : K.determinantLine ≃ₗ[R] L.determinantLine)
+    (h₁ : determinantMapCompatible W e₁)
+    (h₂ : determinantMapCompatible W e₂) :
+    e₁ = e₂ := by
   sorry
 
+/-- The data selected by the exact-sequence construction of `det(a)`. -/
+structure DeterminantMapData
+    {K L : FiniteProjectiveTwoTermComplex R}
+    (a : SurjectiveQuasiIso K L) where
+  kernelData : KernelData a
+  map : K.determinantLine ≃ₗ[R] L.determinantLine
+  compatibility : determinantMapCompatible kernelData map
+
+theorem exists_determinantMapData
+    {K L : FiniteProjectiveTwoTermComplex R} (a : SurjectiveQuasiIso K L) :
+    Nonempty (DeterminantMapData a) := by
+  sorry
+
+/-- The exact-sequence determinant data attached to a surjective
+quasi-isomorphism. -/
+noncomputable def determinantMapData
+    {K L : FiniteProjectiveTwoTermComplex R} (a : SurjectiveQuasiIso K L) :
+    DeterminantMapData a :=
+  Classical.choice (exists_determinantMapData a)
+
+/-- The determinant isomorphism attached to a surjective quasi-isomorphism. -/
 noncomputable def determinantMap
     {K L : FiniteProjectiveTwoTermComplex R} (a : SurjectiveQuasiIso K L) :
     K.determinantLine ≃ₗ[R] L.determinantLine :=
-  Classical.choice (exists_determinantMap a)
+  (determinantMapData a).map
+
+theorem determinantMap_compatibility
+    {K L : FiniteProjectiveTwoTermComplex R}
+    (a : SurjectiveQuasiIso K L) :
+    determinantMapCompatible (determinantMapData a).kernelData
+      (determinantMap a) :=
+  (determinantMapData a).compatibility
+
+theorem rankZero_of_surjectiveQuasiIso
+    {K L : FiniteProjectiveTwoTermComplex R}
+    (a : SurjectiveQuasiIso K L) (hL : L.RankZero) : K.RankZero := by
+  sorry
 
 /-- The canonical determinant map preserves canonical elements whenever the
 target has rank zero. -/
 theorem determinantMap_canonicalElement
     {K L : FiniteProjectiveTwoTermComplex R}
     (a : SurjectiveQuasiIso K L) (hL : L.RankZero) :
-    determinantMap a (K.canonicalElement (by sorry)) =
+    determinantMap a
+        (K.canonicalElement (rankZero_of_surjectiveQuasiIso a hL)) =
       L.canonicalElement hL := by
   sorry
 
@@ -248,6 +315,22 @@ structure GoodDiagram
   toTarget : SurjectiveQuasiIso middle L
   commutes : Nonempty (Homotopy (toSource.hom ≫ a.hom) toTarget.hom)
 
+def derivedIsomorphismComp
+    {K L M : FiniteProjectiveTwoTermComplex R}
+    (a : DerivedIsomorphism K L) (b : DerivedIsomorphism L M) :
+    DerivedIsomorphism K M :=
+  { hom := a.hom ≫ b.hom
+    quasiIso := by
+      letI : QuasiIso a.hom := a.quasiIso
+      letI : QuasiIso b.hom := b.quasiIso
+      infer_instance }
+
+theorem derivedIsomorphism_comp_quasiIso
+    {K L M : FiniteProjectiveTwoTermComplex R}
+    (a : DerivedIsomorphism K L) (b : DerivedIsomorphism L M) :
+    QuasiIso (a.hom ≫ b.hom) :=
+  (derivedIsomorphismComp a b).quasiIso
+
 /-- The determinant map associated to one good diagram. -/
 noncomputable def determinantOfGoodDiagram
     {K L : FiniteProjectiveTwoTermComplex R}
@@ -285,7 +368,7 @@ theorem determinantOfDerivedIsomorphism_eq_goodDiagram
 theorem determinantOfDerivedIsomorphism_id
     (K : FiniteProjectiveTwoTermComplex R) :
     determinantOfDerivedIsomorphism
-        { hom := 𝟙 K.complex.complex, quasiIso := by sorry } =
+        { hom := 𝟙 K.complex.complex, quasiIso := by infer_instance } =
       LinearEquiv.refl R K.determinantLine := by
   sorry
 
@@ -293,22 +376,28 @@ theorem determinantOfDerivedIsomorphism_id
 theorem determinantOfDerivedIsomorphism_comp
     {K L M : FiniteProjectiveTwoTermComplex R}
     (a : DerivedIsomorphism K L) (b : DerivedIsomorphism L M)
-    (hcomp : QuasiIso (a.hom ≫ b.hom)) :
+    :
     determinantOfDerivedIsomorphism a ≪≫ₗ
         determinantOfDerivedIsomorphism b =
-      determinantOfDerivedIsomorphism
-        { hom := a.hom ≫ b.hom, quasiIso := hcomp } := by
+      determinantOfDerivedIsomorphism (derivedIsomorphismComp a b) := by
   sorry
 
 /-- A rank-zero derived representative. -/
 def DerivedRankZero (K : FiniteProjectiveTwoTermComplex R) : Prop := K.RankZero
+
+theorem derivedRankZero_of_isomorphism
+    {K L : FiniteProjectiveTwoTermComplex R}
+    (a : DerivedIsomorphism K L) (hL : L.DerivedRankZero) :
+    K.DerivedRankZero := by
+  sorry
 
 /-- Canonical elements are invariant under derived isomorphisms. -/
 theorem determinantOfDerivedIsomorphism_canonicalElement
     {K L : FiniteProjectiveTwoTermComplex R}
     (a : DerivedIsomorphism K L) (hL : L.DerivedRankZero) :
     determinantOfDerivedIsomorphism a
-        (K.canonicalElement (by sorry)) = L.canonicalElement hL := by
+        (K.canonicalElement (derivedRankZero_of_isomorphism a hL)) =
+      L.canonicalElement hL := by
   sorry
 
 /-- The functorial interface asserted by the source's final lemma. -/
@@ -316,13 +405,13 @@ structure DeterminantFunctorData (R : Type u) [CommRing R] where
   map : ∀ {K L : FiniteProjectiveTwoTermComplex R},
     DerivedIsomorphism K L → K.determinantLine ≃ₗ[R] L.determinantLine
   map_id : ∀ (K : FiniteProjectiveTwoTermComplex R),
-    map { hom := 𝟙 K.complex.complex, quasiIso := by sorry } =
+    map { hom := 𝟙 K.complex.complex, quasiIso := by infer_instance } =
       LinearEquiv.refl R K.determinantLine
   map_comp : ∀ {K L M : FiniteProjectiveTwoTermComplex R}
     (a : DerivedIsomorphism K L)
-    (b : DerivedIsomorphism L M) (hcomp : QuasiIso (a.hom ≫ b.hom)),
+    (b : DerivedIsomorphism L M),
     map a ≪≫ₗ map b =
-      map { hom := a.hom ≫ b.hom, quasiIso := hcomp }
+      map (derivedIsomorphismComp a b)
 
 theorem exists_determinantFunctorData (R : Type u) [CommRing R] :
     Nonempty (DeterminantFunctorData R) := by

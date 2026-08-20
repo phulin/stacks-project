@@ -242,7 +242,7 @@ structure FiniteDgFiltration (P : DGModule.{u,v,w} D) where
   zero_stage : Nonempty
     (stage ⟨0, by omega⟩ ≅ Formalization.Books.Dga.Unit20.dgZeroModule D)
   top_stage : Nonempty (stage ⟨length + 1, by omega⟩ ≅ P)
-  quotient : ∀ i : Fin (length + 1), DGModule.{u,v,w} D
+  quotient : ∀ _i : Fin (length + 1), DGModule.{u,v,w} D
   quotient_map : ∀ i : Fin (length + 1),
     DGMap (stage i.succ) (quotient i)
   quotient_exact : ∀ i : Fin (length + 1),
@@ -333,7 +333,6 @@ def DgCohomologyVanishingOnInterval (M : DGModule.{u,v,w} D) (a b : ℤ) : Prop 
 theorem compact_object_implies_bounded_interval
     [AdditiveCategory (DgDerivedCategory H)]
     [HasCoproducts (DgDerivedCategory H)]
-    [Preadditive (DgDerivedCategory H)]
     (E : DgDerivedCategory H) (hE : DgCompactObject H E) :
     ∃ a b : ℤ, a ≤ b ∧
       ∀ M : DGModule.{u,v,w} D,
@@ -359,7 +358,6 @@ original shifted-free summands. -/
 theorem compact_map_factors_through_finite_filtered_submodule
     [AdditiveCategory (DgDerivedCategory H)]
     [HasCoproducts (DgDerivedCategory H)]
-    [Preadditive (DgDerivedCategory H)]
     (E : DgDerivedCategory H) (hE : DgCompactObject H E)
     (P : DGModule.{u,v,w} D) (F : FiniteDgFiltration P)
     (f : E ⟶ dgDerivedObject H P) :

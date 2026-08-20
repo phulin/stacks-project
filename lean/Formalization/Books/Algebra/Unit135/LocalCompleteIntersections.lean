@@ -245,7 +245,7 @@ theorem presentation_codimension_eq_local_dimension
     (hc : q'.asIdeal.height = q.asIdeal.height + (c : ℕ∞)) :
     krullDimensionAt q = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
   let _ : Algebra.FiniteType k S := P.finiteType
-  letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  let : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
   have hglobal : topologicalKrullDim (PrimeSpectrum P.Ring) =
       (((n : ℕ∞) : WithBot ℕ∞)) := by
     rw [PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim,
@@ -1151,7 +1151,7 @@ theorem regular_sequence_of_minimal_conormal_generators
       PrimeSpectrum.comap (algebraMap P.Ring S) q = q')
     (c : ℕ)
     (hc : q'.asIdeal.height = q.asIdeal.height + (c : ℕ∞))
-    (hlocal : ∃ g : S, g ∉ q.asIdeal ∧
+    (_hlocal : ∃ g : S, g ∉ q.asIdeal ∧
       IsGlobalCompleteIntersection k (Localization.Away g))
     (x : Fin c → LocalizedPresentationRing P q')
     (hx : GeneratesModuloMaximalIdeal
@@ -1161,7 +1161,7 @@ theorem regular_sequence_of_minimal_conormal_generators
   classical
   let R := LocalizedPresentationRing P q'
   let I := LocalizedPresentationIdeal P q'
-  letI : IsRegularLocalRing R := by
+  let : IsRegularLocalRing R := by
     dsimp [R]
     infer_instance
   have hx' : (∀ i, x i ∈ I) ∧

@@ -1480,6 +1480,59 @@ def IsAnnihilatedByIdealPower
     (I : Ideal R) (m : ℕ) : Prop :=
   I ^ m • (⊤ : Submodule R N) = ⊥
 
+theorem isAnnihilatedByIdealPower_iff
+    {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]
+    (I : Ideal R) (m : ℕ) :
+    IsAnnihilatedByIdealPower (N := N) I m ↔
+      ∀ (a : R), a ∈ I ^ m → ∀ x : N, a • x = 0 := by
+  constructor
+  · intro h a ha x
+    have hx : a • x ∈ I ^ m • (⊤ : Submodule R N) :=
+      Submodule.smul_mem_smul ha Submodule.mem_top
+    rw [h] at hx
+    simpa using hx
+  · intro h
+    apply le_antisymm
+    · refine Submodule.smul_le.mpr ?_
+      intro a ha x _
+      change a • x = 0
+      exact h a ha x
+    · exact bot_le
+
+theorem IsAnnihilatedByIdealPower.of_le
+    {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]
+    {I J : Ideal R} {m : ℕ} (hIJ : I ≤ J)
+    (hJ : IsAnnihilatedByIdealPower (N := N) J m) :
+    IsAnnihilatedByIdealPower (N := N) I m := by
+  apply (isAnnihilatedByIdealPower_iff I m).mpr
+  intro a ha x
+  exact (isAnnihilatedByIdealPower_iff J m).mp hJ a
+    (Ideal.pow_right_mono hIJ m ha) x
+
+theorem IsAnnihilatedByIdealPower.pow_mono
+    {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]
+    {I : Ideal R} {m n : ℕ} (hmn : m ≤ n)
+    (hm : IsAnnihilatedByIdealPower (N := N) I m) :
+    IsAnnihilatedByIdealPower (N := N) I n := by
+  apply (isAnnihilatedByIdealPower_iff I n).mpr
+  intro a ha x
+  exact (isAnnihilatedByIdealPower_iff I m).mp hm a
+    (Ideal.pow_le_pow_right hmn ha) x
+
+theorem quotient_isAnnihilatedByIdealPower
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (m : ℕ) :
+    IsAnnihilatedByIdealPower
+      (N := M ⧸ (I ^ m • (⊤ : Submodule R M))) I m := by
+  apply (isAnnihilatedByIdealPower_iff I m).mpr
+  intro a ha x
+  refine Submodule.Quotient.induction_on
+    (p := I ^ m • (⊤ : Submodule R M)) x ?_
+  intro y
+  rw [← Submodule.Quotient.mk_smul]
+  exact (Submodule.Quotient.mk_eq_zero _).mpr
+    (Submodule.smul_mem_smul ha Submodule.mem_top)
+
 theorem what_does_it_mean
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R)

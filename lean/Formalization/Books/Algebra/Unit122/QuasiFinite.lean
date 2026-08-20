@@ -870,7 +870,25 @@ theorem isQuasiFinite_iff_finite_fibres
     IsQuasiFinite f ↔
       ∀ p : PrimeSpectrum R,
         Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := by
-  sorry
+  classical
+  letI : Algebra R S := f.toAlgebra
+  constructor
+  · rintro ⟨hft, hq⟩ p
+    have hall : ∀ q : PrimeSpectrum S,
+        PrimeSpectrum.comap f q = p → IsQuasiFiniteAt f q := by
+      intro q hqp
+      exact ⟨hft, hq q⟩
+    exact (quasiFiniteAt_above_prime_criteria f p hft).out 0 1 |>.mp hall
+  · intro hmodule
+    refine ⟨hfinite, ?_⟩
+    intro q
+    let p : PrimeSpectrum R := PrimeSpectrum.comap f q
+    have hp : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+      hmodule p
+    have hall : ∀ q' : PrimeSpectrum S,
+        PrimeSpectrum.comap f q' = p → IsQuasiFiniteAt f q' :=
+      (quasiFiniteAt_above_prime_criteria f p hfinite).out 1 0 |>.mp hp
+    exact (hall q rfl).2
 
 theorem quasiFiniteAt_localization_iff
     {R S : Type u} [CommRing R] [CommRing S]

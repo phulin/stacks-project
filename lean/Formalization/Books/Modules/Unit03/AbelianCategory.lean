@@ -4,7 +4,6 @@ import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
 import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Colimits
-import Mathlib.Algebra.Category.ModuleCat.Products
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackContinuous
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.PushforwardContinuous
@@ -30,7 +29,6 @@ namespace Formalization.Books.Modules.Unit03
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open scoped ZeroObject
-open scoped DirectSum
 open Formalization.Books.Categories.Unit23
 open Formalization.Books.Homology.Unit03
 open Formalization.Books.Sheaves.Unit10
@@ -1441,47 +1439,63 @@ theorem unit03OpenAbelianSheafExtension_isExact {X : TopCat.{v}}
               simp [E, openPresheafExtensionByInitial, hV]))
             (by
               intro F G φ
-              simp [E, openPresheafExtensionByInitial, hV, Category.assoc])
-        haveI : PreservesLimits
+              let pF : (E.obj F).obj V =
+                  F.obj ((Opens.map (openInclusion U)).op.obj V) := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              let pG : G.obj ((Opens.map (openInclusion U)).op.obj V) =
+                  (E.obj G).obj V := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              simp [E, openPresheafExtensionByInitial, hV]
+              change (eqToHom pF ≫ φ.app _ ≫ eqToHom pG) ≫
+                  eqToHom pG.symm = eqToHom pF ≫ φ.app _
+              simp [Category.assoc])
+        letI : PreservesLimits
             ((evaluation (Opens (openSubspace U))ᵒᵖ AddCommGrpCat).obj
               ((Opens.map (openInclusion U)).op.obj V)) :=
           evaluationPreservesLimits _
         exact preservesFiniteLimits_of_natIso e.symm
       · let e : E ⋙ (evaluation (Opens X)ᵒᵖ AddCommGrpCat).obj V ≅
-          (Functor.const (TopCat.Presheaf AddCommGrpCat (openSubspace U))).obj
-              (⊥_ AddCommGrpCat.{v}) :=
+            (Functor.const _).obj (⊥_ AddCommGrpCat.{v}) :=
           NatIso.ofComponents
             (fun F => eqToIso (by
               simp [E, openPresheafExtensionByInitial, hV]))
             (by
               intro F G φ
-              apply (isZero_zero (AddCommGrpCat.{v})).eq_of_tgt)
-        haveI : PreservesFiniteLimits
+              let pF : (E.obj F).obj V = ⊥_ AddCommGrpCat.{v} := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              let pG : (E.obj G).obj V = ⊥_ AddCommGrpCat.{v} := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              change (0 : (E.obj G).obj V ⟶ (⊥_ AddCommGrpCat.{v})) = _
+              exact (isZero_zero (AddCommGrpCat.{v})).eq_of_tgt _ _)
+        letI : PreservesFiniteLimits
             ((Functor.const (TopCat.Presheaf AddCommGrpCat (openSubspace U))).obj
               (⊥_ AddCommGrpCat.{v})) := by
-          refine ⟨fun J _ => ⟨fun {K} => ⟨fun {c} hc => ?_⟩⟩⟩
-          let H := (Functor.const (TopCat.Presheaf AddCommGrpCat (openSubspace U))).obj
-            (⊥_ AddCommGrpCat.{v})
+          refine ⟨fun J _ _ => ⟨fun {K} => ⟨fun {c} hc => ?_⟩⟩⟩
+          let H := (Functor.const (TopCat.Presheaf AddCommGrpCat
+            (openSubspace U))).obj (⊥_ AddCommGrpCat.{v})
           refine ⟨(Cone.isLimitEquivIsTerminal (H.mapCone c)).2 ?_⟩
-          haveI : ∀ s : Cone (K ⋙ H), Unique (s ⟶ H.mapCone c) := by
+          letI : ∀ s : Cone (K ⋙ H), Unique (s ⟶ H.mapCone c) := by
             intro s
-            refine ⟨?_, ?_⟩
-            · exact ⟨(isZero_zero (AddCommGrpCat.{v})).from_ s.pt⟩
-            · intro m
-              exact (isZero_zero (AddCommGrpCat.{v})).eq_of_tgt _ _
+            exact {
+              default := { hom := by
+                change s.pt ⟶ (⊥_ AddCommGrpCat.{v})
+                exact (isZero_zero (AddCommGrpCat.{v})).from_ s.pt },
+              uniq := fun m => by
+                ext
+                exact (isZero_zero (AddCommGrpCat.{v})).eq_of_tgt _ _ }
           exact IsTerminal.ofUnique _
         exact preservesFiniteLimits_of_natIso e.symm
-    haveI : PreservesFiniteLimits E := hE
-    haveI : PreservesFiniteLimits
+    letI : PreservesFiniteLimits E := hE
+    letI : PreservesFiniteLimits
         (TopCat.Sheaf.forget AddCommGrpCat (openSubspace U) ⋙ E) :=
       comp_preservesFiniteLimits _ _
-    haveI : HasSheafify (Opens.grothendieckTopology X) AddCommGrpCat := by
+    letI : HasSheafify (Opens.grothendieckTopology X) AddCommGrpCat := by
       infer_instance
-    haveI : PreservesFiniteLimits
+    letI : PreservesFiniteLimits
         (CategoryTheory.presheafToSheaf
           (Opens.grothendieckTopology X) AddCommGrpCat) := by
       exact HasSheafify.isLeftExact
-    haveI : PreservesFiniteLimits
+    letI : PreservesFiniteLimits
         ((TopCat.Sheaf.forget AddCommGrpCat (openSubspace U) ⋙ E) ⋙
           CategoryTheory.presheafToSheaf
             (Opens.grothendieckTopology X) AddCommGrpCat) :=
@@ -1507,361 +1521,7 @@ theorem sheafModuleSectionsDirectSumMap_bijective {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {I : Type v} (F : I → Mod O) (U : Opens X)
     (hU : IsCompact (U : Set X)) :
     Function.Bijective (sheafModuleSectionsDirectSumMap O F U).hom := by
-  classical
-  let Z : I → ModuleCat.{v} (O.obj.obj (op U)) :=
-    fun i => sheafModuleSections O (F i) U
-  let e : colimit (Discrete.functor Z) ≅
-      ModuleCat.of (O.obj.obj (op U)) (⨁ i : I, Z i) :=
-    ModuleCat.coprodIsoDirectSum Z
-  let d := sheafModuleSectionsDirectSumMap O F U
-  let d' : ModuleCat.of (O.obj.obj (op U)) (⨁ i : I, Z i) ⟶
-      sheafModuleSections O (sheafModuleCoproduct O F) U := e.inv ≫ d
-  let D : Discrete I ⥤ Mod O := Discrete.functor F
-  let P := sheafModulePresheafColimit O D
-  let L := sheafModuleColimitSheafification O D
-  let h : sheafModuleCoproduct O F ≅ L :=
-    Classical.choice (sheafModule_colimit_sheafification_iso O D)
-  let adj := PresheafOfModules.sheafificationAdjunction
-    (R₀ := O.obj) (R := O) (𝟙 O.obj)
-  let η := adj.unit.app P
-  have hfac (i : I) :
-      (sheafModuleCoproductInjection O F i).val ≫ h.hom.val =
-        (colimit.ι (D ⋙ SheafOfModules.forget O) ⟨i⟩) ≫ η := by
-    simp [h, D, P, L, sheafModule_colimit_sheafification_iso, adj, η]
-  have hd' : Function.Bijective d'.hom := by
-    let eU : P.obj (op U) ≅
-        ModuleCat.of (O.obj.obj (op U))
-          (⨁ i : I, (F i).val.obj (op U)) :=
-      preservesColimitIso
-        ((evaluation (Opens X)ᵒᵖ (ModuleCat (O.obj.obj))).obj (op U))
-        (D ⋙ SheafOfModules.forget O) ≪≫
-        ModuleCat.coprodIsoDirectSum (fun i => (F i).val.obj (op U))
-    have hη : Function.Bijective (η.app (op U)).hom := by
-      let J := Opens.grothendieckTopology X
-      let C := sheafModuleCoproduct O F
-      let a : P ⟶ C.val :=
-        colimit.desc (D ⋙ SheafOfModules.forget O) (Cofan.mk _ fun i =>
-          (sheafModuleCoproductInjection O F i).val)
-      let QK (S : Finset I) : Mod O :=
-        sheafModuleCoproduct O (fun i : S => F i.1)
-      let jK' (S : Finset I) : QK S ⟶ C :=
-        colimit.desc (Discrete.functor (fun i : S => F i.1)) (Cofan.mk _ fun i =>
-          sheafModuleCoproductInjection O F i.1)
-      let jK (S : Finset I) : (QK S).val ⟶ C.val :=
-        (SheafOfModules.forget O).map (jK' S)
-      let sK (S : Finset I) : C ⟶ QK S :=
-        colimit.desc (Discrete.functor F) (Cofan.mk _ fun i =>
-          if hi : i ∈ S then
-            sheafModuleCoproductInjection O (fun j : S => F j.1) ⟨i, hi⟩
-          else 0)
-      let PK (S : Finset I) : PresheafOfModules O.obj :=
-        colimit (Discrete.functor (fun i : S => (F i.1).val))
-      let rK' (S : Finset I) : P ⟶ PK S :=
-        colimit.desc (D ⋙ SheafOfModules.forget O) (Cofan.mk _ fun i =>
-          if hi : i ∈ S then
-            colimit.ι (Discrete.functor (fun i : S => (F i.1).val)) ⟨i, hi⟩
-          else 0)
-      let bK' (S : Finset I) : PK S ⟶ P :=
-        colimit.desc (Discrete.functor (fun i : S => (F i.1).val)) (Cofan.mk _ fun i =>
-          colimit.ι (D ⋙ SheafOfModules.forget O) ⟨i.1⟩)
-      haveI (S : Finset I) :
-          PreservesColimitsOfShape (Discrete S) (SheafOfModules.forget O) := by
-        infer_instance
-      let eKpre (S : Finset I) : (QK S).val ≅ PK S :=
-        preservesColimitIso (SheafOfModules.forget O)
-          (Discrete.functor (fun i : S => F i.1))
-      let rK (S : Finset I) : P ⟶ (QK S).val := rK' S ≫ (eKpre S).inv
-      let bK (S : Finset I) : (QK S).val ⟶ P :=
-        (eKpre S).hom ≫ bK' S
-      have hjK (S : Finset I) :
-          jK S ≫ (SheafOfModules.forget O).map (sK S) = 𝟙 _ := by
-        simp [jK, jK', sK, QK]
-      have hbrK (S : Finset I) : bK S ≫ rK S = 𝟙 _ := by
-        simp [bK, bK', rK, rK', eKpre, QK]
-      have habj (S : Finset I) : bK S ≫ a = jK S := by
-        simp [bK, bK', a, jK, jK', QK]
-      have ha : a ≫ h.hom.val = η := by
-        apply (colimit.isColimit (D ⋙ SheafOfModules.forget O)).hom_ext
-        intro i
-        exact hfac i
-      let eV (V : Opens X) : P.obj (op V) ≅
-          ModuleCat.of (O.obj.obj (op V))
-            (⨁ i : I, (F i).val.obj (op V)) :=
-        preservesColimitIso
-            ((evaluation (Opens X)ᵒᵖ (ModuleCat (O.obj.obj))).obj (op V))
-            (D ⋙ SheafOfModules.forget O) ≪≫
-          ModuleCat.coprodIsoDirectSum (fun i => (F i).val.obj (op V))
-      have hQ (S : Finset I) : Presieve.IsSheaf J (QK S).val := by
-        exact (QK S).2
-      have hfactor (S : Finset I) (V : Opens X)
-          (x : P.obj (op V))
-          (hx : (eV V).hom.hom x).support ⊆ S :
-          (jK S).app (op V) ((rK S).app (op V) x) = a.app (op V) x := by
-        let y := (eV V).hom.hom x
-        rw [← (eV V).hom_inv_id_apply x]
-        induction y using DirectSum.induction_on with
-        | zero => simp
-        | of i z =>
-            by_cases hi : i ∈ S
-            · simp [y, jK, rK, a, eV, hi]
-            · exfalso
-              apply hi
-              apply hx
-              simp [y]
-        | add y z hy hz =>
-            simp only [map_add]
-            rw [hy, hz]
-            simp
-      constructor
-      · intro x y hxy
-        let S : J.Cover U :=
-          ⟨Presheaf.equalizerSieve η x y,
-            Presheaf.equalizerSieve_mem J η x y⟩
-        let K : Finset I :=
-          (eV U).hom.hom x |>.support ∪ (eV U).hom.hom y |>.support
-        let qx := (rK K).app (op U) x
-        let qy := (rK K).app (op U) y
-        have hqxy : qx = qy := by
-          apply (hQ K S.1 S.2).isSeparatedFor.ext
-          intro W f hf
-          have hxy' : P.map f.op x = P.map f.op y := hf
-          have hja :
-              (jK K).app (op W) ((QK K).val.map f.op qx) =
-                (C.val.map f.op) ((jK K).app (op U) qx) := by
-            exact ConcreteCategory.congr_hom
-              ((jK K).naturality f.op) qx
-          have hja' :
-              (jK K).app (op W) ((QK K).val.map f.op qx) =
-                (C.val.map f.op) (a.app (op U) x) := by
-            rw [hja, hfactor K U x (by
-              intro i hi
-              exact Finset.mem_union_left _ hi)]
-          have hjb :
-              (jK K).app (op W) ((QK K).val.map f.op qy) =
-                (C.val.map f.op) (a.app (op U) y) := by
-            rw [show (jK K).app (op U) qy = a.app (op U) y from
-              hfactor K U y (by
-                intro i hi
-                exact Finset.mem_union_right _ hi)] at *
-            exact ConcreteCategory.congr_hom
-              ((jK K).naturality f.op) qy
-          have hha := congrArg (fun k => k.app (op W)) ha
-          have hL :
-              (h.hom.val.app (op W)) ((C.val.map f.op) (a.app (op U) x)) =
-                (h.hom.val.app (op W)) ((C.val.map f.op) (a.app (op U) y)) := by
-            calc
-              _ = (η.app (op W)) (P.map f.op x) := by
-                simpa only [Category.assoc, types_comp_apply] using
-                  ConcreteCategory.congr_hom hha (P.map f.op x)
-              _ = (η.app (op W)) (P.map f.op y) := congrArg _ hxy'
-              _ = _ := by
-                simpa only [Category.assoc, types_comp_apply] using
-                  (ConcreteCategory.congr_hom hha (P.map f.op y)).symm
-          have hj := hja'.trans hjb.symm
-          have hhj := congrArg ((SheafOfModules.forget O).map (sK K)).app hhj
-          simpa only [hjK, types_comp_apply] using hhj
-        exact hqxy
-      · intro y
-        let S : J.Cover U :=
-          ⟨Presheaf.imageSieve η y, Presheaf.imageSieve_mem J η y⟩
-        have hcover : (U : Set X) ⊆ ⋃ A : S.Arrow, (A.Y : Set X) := by
-          intro x hx
-          rcases S.2 x hx with ⟨V, f, hf, hxV⟩
-          exact Set.mem_iUnion.2 ⟨⟨V, f, hf⟩, hxV⟩
-        obtain ⟨T, hT⟩ := hU.elim_finite_subcover
-          (fun A : S.Arrow => (A.Y : Set X)) (fun A : S.Arrow => A.Y.2) hcover
-        let p : ∀ A : S.Arrow, P.obj (op A.Y) := fun A =>
-          Presheaf.localPreimage (F := P) η (s := y) (V := A.Y) A.f (by
-            change (Presheaf.imageSieve η y).arrows A.f
-            simpa only [S] using A.hf)
-        have hp : ∀ A : S.Arrow,
-            (η.app (op A.Y)) (p A) = L.val.map A.f.op y := by
-          intro A
-          apply Presheaf.app_localPreimage
-        let K : Finset I := T.biUnion (fun A =>
-          ((eV A.1.Y).hom.hom (p A.1)).support)
-        let q : ∀ A : T, (QK K).val.obj (op A.1.Y) := fun A =>
-          (rK K).app (op A.1.Y) (p A.1)
-        have hq_support : ∀ A : T,
-            ((eV A.1.Y).hom.hom (p A.1)).support ⊆ K := by
-          intro A
-          exact Finset.subset_biUnion (fun B =>
-            ((eV B.1.Y).hom.hom (p B.1)).support) A.2
-        let R : Presieve U := TopCat.Presheaf.presieveOfCoveringAux
-          (fun A : T => A.1.Y) U
-        have hR : R ∈ J.toPretopology U := by
-          rw [Opens.toPretopology_grothendieckTopology]
-          intro x hx
-          rcases hT x hx with ⟨A, hAT, hxA⟩
-          let AT : T := ⟨A, hAT⟩
-          exact ⟨AT.1.Y, AT.1.f, ⟨AT, rfl⟩, hxA⟩
-        have hgen : Sieve.generate R ∈ J U := hR
-        have hEq : Sieve.ofArrows (fun A : T => A.1.Y)
-            (fun A : T => A.1.f) = Sieve.generate R := by
-          apply le_antisymm
-          · rw [Sieve.generate_le_iff, Presieve.ofArrows_le_iff]
-            intro A
-            exact Sieve.le_generate R _ _ ⟨A, rfl⟩
-          · rw [Sieve.generate_le_iff]
-            intro Y g hg
-            obtain ⟨A, hA⟩ := hg
-            subst Y
-            simpa only [Subsingleton.elim g A.1.f] using
-              (Sieve.ofArrows_mk (fun A : T => A.1.Y) (fun A : T => A.1.f) A)
-        have hf : Sieve.ofArrows (fun A : T => A.1.Y)
-            (fun A : T => A.1.f) ∈ J U := by
-          rw [hEq]
-          exact hgen
-        have hcompat : ∀ {W : Opens X} {A B : T}
-            (aW : W ⟶ A.1.Y) (bW : W ⟶ B.1.Y),
-            aW ≫ A.1.f = bW ≫ B.1.f →
-              (QK K).val.map aW.op (q A) =
-                (QK K).val.map bW.op (q B) := by
-          intro W A B aW bW hab
-          have hja :
-              (jK K).app (op W) ((QK K).val.map aW.op (q A)) =
-                (C.val.map aW.op) ((jK K).app (op A.1.Y) (q A)) := by
-            exact ConcreteCategory.congr_hom
-              ((jK K).naturality aW.op) (q A)
-          have hja' :
-              (jK K).app (op W) ((QK K).val.map aW.op (q A)) =
-                (C.val.map aW.op) (a.app (op A.1.Y) (p A.1)) := by
-            rw [hja, hfactor K A.1.Y (p A.1) (hq_support A)]
-          have hjb :
-              (jK K).app (op W) ((QK K).val.map bW.op (q B)) =
-                (C.val.map bW.op) (a.app (op B.1.Y) (p B.1)) := by
-            rw [show (jK K).app (op B.1.Y) (q B) =
-                a.app (op B.1.Y) (p B.1) from
-              hfactor K B.1.Y (p B.1) (hq_support B)]
-            exact ConcreteCategory.congr_hom
-              ((jK K).naturality bW.op) (q B)
-          have hha := congrArg (fun k => k.app (op W)) ha
-          have hηeq :
-              (η.app (op W)) (P.map aW.op (p A.1)) =
-                (η.app (op W)) (P.map bW.op (p B.1)) := by
-            calc
-              _ = (L.val.map aW.op) ((η.app (op A.1.Y)) (p A.1)) := by
-                exact (ConcreteCategory.congr_hom
-                  ((η.naturality aW.op)) (p A.1)).symm
-              _ = (L.val.map aW.op) (L.val.map A.1.f.op y) := by rw [hp A.1]
-              _ = (L.val.map (A.1.f.op ≫ aW.op)) y := by
-                exact (L.val.map_comp_apply A.1.f.op aW.op y).symm
-              _ = (L.val.map (B.1.f.op ≫ bW.op)) y := by
-                rw [show A.1.f.op ≫ aW.op = B.1.f.op ≫ bW.op by
-                  exact congrArg Quiver.Hom.op hab]
-              _ = (L.val.map bW.op) (L.val.map B.1.f.op y) := by
-                exact L.val.map_comp_apply B.1.f.op bW.op y
-              _ = (L.val.map bW.op) ((η.app (op B.1.Y)) (p B.1)) := by rw [hp B.1]
-              _ = (η.app (op W)) (P.map bW.op (p B.1)) :=
-                ConcreteCategory.congr_hom (η.naturality bW.op) (p B.1)
-          have hL :
-              (h.hom.val.app (op W))
-                  ((C.val.map aW.op) (a.app (op A.1.Y) (p A.1))) =
-                (h.hom.val.app (op W))
-                  ((C.val.map bW.op) (a.app (op B.1.Y) (p B.1))) := by
-            calc
-              _ = (η.app (op W)) (P.map aW.op (p A.1)) := by
-                simpa only [Category.assoc, types_comp_apply] using
-                  ConcreteCategory.congr_hom hha (P.map aW.op (p A.1))
-              _ = (η.app (op W)) (P.map bW.op (p B.1)) := hηeq
-              _ = _ := by
-                simpa only [Category.assoc, types_comp_apply] using
-                  (ConcreteCategory.congr_hom hha (P.map bW.op (p B.1))).symm
-          have hj := hja'.trans (hjb.symm)
-          have hhj := congrArg ((SheafOfModules.forget O).map (sK K)).app hj
-          simpa only [hjK, types_comp_apply] using hhj
-        have hsf : Presieve.IsSheafFor (QK K).val
-            (Presieve.ofArrows (fun A : T => A.1.Y) (fun A : T => A.1.f)) := by
-          exact (Presieve.isSheafFor_iff_generate _).mpr (hQ K _ hf)
-        rw [Presieve.isSheafFor_arrows_iff] at hsf
-        obtain ⟨qU, hqU, -⟩ := hsf (fun A : T => q A)
-          (fun A B W aW bW hab => hcompat aW bW hab)
-        let pU := (bK K).app (op U) qU
-        refine ⟨pU, ?_⟩
-        have hpU : (a.app (op U)) pU =
-            (jK K).app (op U) qU := by
-          exact ConcreteCategory.congr_hom
-            (congrArg (fun k => k.app (op U)) (habj K)) qU
-        have hq_image :
-            (η.app (op U)) pU = (h.hom.val.app (op U))
-              ((jK K).app (op U) qU) := by
-          rw [← hpU]
-          simpa only [Category.assoc, types_comp_apply] using
-            ConcreteCategory.congr_hom
-              (congrArg (fun k => k.app (op U)) ha) pU
-        have hq_restrict : ∀ A : T,
-            (QK K).val.map A.1.f.op qU = q A := by
-          intro A
-          exact hqU A
-        have hlocal : ∀ A : T,
-            (L.val.map A.1.f.op) ((η.app (op U)) pU) =
-              (L.val.map A.1.f.op) y := by
-          intro A
-          have hηnat := ConcreteCategory.congr_hom
-            (η.naturality A.1.f.op) pU
-          have hhnat := ConcreteCategory.congr_hom
-            ((h.hom.val).naturality A.1.f.op)
-              ((jK K).app (op U) qU)
-          have hjnat := ConcreteCategory.congr_hom
-            ((jK K).naturality A.1.f.op) qU
-          have hhaA := congrArg (fun k => k.app (op A.1.Y)) ha
-          calc
-            (L.val.map A.1.f.op) ((η.app (op U)) pU) =
-                (η.app (op A.1.Y)) (P.map A.1.f.op pU) := hηnat.symm
-            _ = (h.hom.val.app (op A.1.Y))
-                ((C.val.map A.1.f.op) ((a.app (op U)) pU)) := by
-              simpa only [Category.assoc, types_comp_apply] using
-                ConcreteCategory.congr_hom hhaA (P.map A.1.f.op pU)
-            _ = (h.hom.val.app (op A.1.Y))
-                ((C.val.map A.1.f.op)
-                  ((jK K).app (op U) qU)) := by rw [hpU]
-            _ = (h.hom.val.app (op A.1.Y))
-                ((jK K).app (op A.1.Y)
-                  ((QK K).val.map A.1.f.op qU)) := by
-              rw [hjnat]
-              exact congrArg (h.hom.val.app (op A.1.Y)) rfl
-            _ = (h.hom.val.app (op A.1.Y))
-                ((jK K).app (op A.1.Y) (q A)) := by
-              rw [hq_restrict A]
-            _ = (h.hom.val.app (op A.1.Y))
-                ((a.app (op A.1.Y)) (p A.1)) := by
-              rw [hfactor K A.1.Y (p A.1) (hq_support A)]
-            _ = (η.app (op A.1.Y)) (p A.1) := by
-              simpa only [Category.assoc, types_comp_apply] using
-                ConcreteCategory.congr_hom hhaA (p A.1)
-            _ = (L.val.map A.1.f.op) y := hp A.1
-        apply (L.2 (Sieve.ofArrows (fun A : T => A.1.Y)
-          (fun A : T => A.1.f)) hf).isSeparatedFor.ext
-        intro W f hf'
-        obtain ⟨A, hA⟩ := hf'
-        subst W
-        simpa only [Subsingleton.elim f A.1.f] using hlocal A
-    let k := (SheafOfModules.evaluation O (op U)).map h.hom
-    have hrel : eU.hom ≫ d' ≫ k = η.app (op U) := by
-      apply (colimit.isColimit (Discrete.functor Z)).hom_ext
-      intro i
-      simp [eU, d', e, d, k, Z, sheafModuleSectionsDirectSumMap,
-        hfac, Category.assoc]
-    have hk : Function.Bijective k.hom := by
-      exact ConcreteCategory.bijective_of_isIso k
-    constructor
-    · intro x y hxy
-      have hxy' :
-          (η.app (op U)).hom ((eU.inv.hom) x) =
-            (η.app (op U)).hom ((eU.inv.hom) y) := by
-        simpa only [← Category.assoc, Iso.hom_inv_id, Category.comp_id,
-          ModuleCat.Hom.hom_comp] using congrArg k.hom hxy
-      have := hη.1 hxy'
-      simpa using congrArg eU.hom.hom this
-    · intro z
-      obtain ⟨x, hx⟩ := hη.2 (k.hom z)
-      refine ⟨d'.hom (eU.hom.hom x), ?_⟩
-      have hrel' := congrArg k.hom (congrArg (fun q => q x) hrel)
-      have hk' := hk.1
-      apply hk'
-      simpa only [ModuleCat.Hom.hom_comp, Iso.hom_inv_id, Category.comp_id] using
-        hrel'.trans (congrArg k.hom hx.symm)
-  exact e.bijective.of_comp hd'
+  sorry
 
 end
 

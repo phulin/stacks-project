@@ -396,28 +396,54 @@ private theorem simplicialGroup_kanComplex_succ
     {i : Fin (m + 3)}
     (f : ∀ (j : Fin (m + 3)) (_ : j ≠ i),
       Δ[m + 1] ⟶ underlyingSimplicialGroup X)
-    (hf : SSet.horn.IsCompatible f) :
+  (hf : SSet.horn.IsCompatible f) :
     ∃ φ : Δ[m + 2] ⟶ underlyingSimplicialGroup X,
       ∀ (j : Fin (m + 3)) (hj : j ≠ i),
-        SSet.stdSimplex.δ j ≫ φ = f j hj := /- old proof
+        SSet.stdSimplex.δ j ≫ φ = f j hj := by
   let n := m + 1
+  simp [n] at *
   let xj : ∀ (j : Fin (n + 2)) (hj : j ≠ i),
       X.obj (op (SimplexCategory.mk n)) := fun j hj =>
     SSet.yonedaEquiv (f j hj)
+  have hcomp : ∀ {r : ℕ} (j : Fin (r + 2))
+      (p : Δ[r + 1] ⟶ underlyingSimplicialGroup X),
+      SSet.yonedaEquiv (SSet.stdSimplex.δ j ≫ p) =
+        X.δ j (SSet.yonedaEquiv p) := by
+    intro r j p
+    have hp : p = SSet.yonedaEquiv.symm (SSet.yonedaEquiv p) := by
+      exact (SSet.yonedaEquiv.symm_apply_eq.mpr rfl).symm
+    conv_lhs => rw [hp]
+    change SSet.yonedaEquiv
+        (SSet.stdSimplex.map (SimplexCategory.δ j) ≫
+          SSet.yonedaEquiv.symm (SSet.yonedaEquiv p)) = _
+    rw [SSet.yonedaEquiv_symm_naturality_left]
+    rw [SSet.yonedaEquiv.apply_symm_apply]
+    change (underlyingSimplicialGroup X).map
+        (SimplexCategory.δ j).op (SSet.yonedaEquiv p) = _
+    rfl
   have hface : ∀ (j k : Fin (n + 2)) (hj : j ≠ i) (hk : k ≠ i)
       (hjk : j < k),
       X.δ (k.pred (Fin.ne_zero_of_lt hjk)) (xj j hj) =
         X.δ (j.castPred (Fin.ne_last_of_lt hjk)) (xj k hk) := by
     intro j k hj hk hjk
-    have h := congrArg SSet.yonedaEquiv (hf.δ_pred_comp j k hj hk hjk)
-    simpa [xj, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using h
-  let xzero : X.obj (op (SimplexCategory.mk n)) := xj 0 (by
-    intro h
-    subst h
-    exact (i.isLt.false (by simp)))
+    have h := congrArg SSet.yonedaEquiv (hf j k hj hk hjk)
+    have hleft := hcomp (r := m) (k.pred (Fin.ne_zero_of_lt hjk)) (f j hj)
+    have hright := hcomp (r := m) (j.castPred (Fin.ne_last_of_lt hjk)) (f k hk)
+    exact hleft.symm.trans (h.trans hright)
+  let xstart : X.obj (op (SimplexCategory.mk n)) :=
+    xj (if i.val = 0 then 1 else 0) (by
+      by_cases hi : i.val = 0
+      · intro h
+        have hv := congrArg Fin.val h
+        simp [hi] at hv
+      · intro h
+        apply hi
+        simpa [hi] using (congrArg Fin.val h).symm)
+  let xzero : X.obj (op (SimplexCategory.mk n)) := xstart
   let u₀ : X.obj (op (SimplexCategory.mk (n + 1))) := X.σ 0 xzero
   have hu₀ : X.δ 0 u₀ = xzero := by
     dsimp [u₀]
+    change (X.σ 0 ≫ X.δ (Fin.castSucc 0)) xzero = xzero
     rw [X.δ_comp_σ_self]
     rfl
   let uStep : ℕ → X.obj (op (SimplexCategory.mk (n + 1))) →
@@ -427,61 +453,159 @@ private theorem simplicialGroup_kanComplex_succ
       z * X.σ ⟨r + 1, by omega⟩
         ((X.δ ⟨r + 1, by omega⟩ z)⁻¹ * xj j (by
           intro h
-          subst h
-          exact (by omega)))
+          have hv := congrArg Fin.val h
+          dsimp [j] at hv
+          omega))
     else z
   let uSeq : ℕ → X.obj (op (SimplexCategory.mk (n + 1))) :=
     Nat.rec (if hi : 0 < i.val then
-      X.σ 0 (xj 0 (by intro h; subst h; omega)) else 1) uStep
-  have huSeq : ∀ r : ℕ, r < i.val →
+      X.σ 0 xstart else 1) uStep
+  have huSeq : ∀ r : ℕ, (hr : r < i.val) →
       ∀ (q : Fin (n + 2)) (hq : q.val ≤ r),
         X.δ q (uSeq r) = xj q (by
           intro h
-          subst h
-          exact (by omega)) := by
+          have hv := congrArg Fin.val h
+          omega) := by
     intro r
     induction r with
     | zero =>
         intro hr q hq
-        have hq0 : q = 0 := by ext; omega
-        subst q
-        simpa [uSeq, xzero, u₀] using hu₀
+        have hq0 : q = 0 := Fin.ext (Nat.eq_zero_of_le_zero hq)
+        have hi : 0 < i.val := hr
+        have hi0 : i.val ≠ 0 := Nat.ne_of_gt hi
+        simpa [hq0, uSeq, xzero, xstart, u₀, hi, hi0] using hu₀
     | succ r ihr =>
         intro hr q hq
         by_cases hq' : q.val ≤ r
         · have hprev := ihr (by omega) q hq'
-          simpa [uSeq, uStep, hr] using hprev
+          by_cases hrstep : r + 1 < i.val
+          · let s : Fin (n + 1) := ⟨r + 1, by omega⟩
+            let j : Fin (n + 2) := ⟨r + 1, by omega⟩
+            let q' : Fin (n + 1) := ⟨q.val, by omega⟩
+            let s' : Fin n := ⟨s.val - 1, by omega⟩
+            let t : Fin (n + 1) := ⟨r, by omega⟩
+            have hj : j = Fin.castSucc s := by
+              exact Fin.ext rfl
+            have hqcast : q = Fin.castSucc q' := by
+              apply Fin.ext
+              rfl
+            have hs' : s = s'.succ := by
+              apply Fin.ext
+              dsimp [s, s']
+            have hcomp : X.σ s ≫ X.δ q = X.δ q' ≫ X.σ s' := by
+              rw [hqcast, hs']
+              exact X.δ_comp_σ_of_le (i := q') (j := s') (by
+                apply Fin.le_iff_val_le_val.mpr
+                simpa [q', s', s] using hq')
+            have ht : j.pred (by
+                intro hz
+                have hv := congrArg Fin.val hz
+                dsimp [j] at hv
+                omega) = t := by
+              apply Fin.ext
+              simp [j, t]
+            have hdd : X.δ j ≫ X.δ q' = X.δ q ≫ X.δ t := by
+              have h := X.δ_comp_δ' (i := q') (j := j) (by
+                apply Fin.mk_lt_mk.mpr
+                dsimp [j, q']
+                omega)
+              simpa [hqcast, ht] using h
+            have hδz : X.δ q' (X.δ j (uSeq r)) =
+                X.δ t (X.δ q (uSeq r)) := by
+              change (X.δ j ≫ X.δ q') (uSeq r) =
+                (X.δ q ≫ X.δ t) (uSeq r)
+              exact congrArg (fun g => g (uSeq r)) hdd
+            have hqi : q ≠ i := by
+              intro h
+              have hv := congrArg Fin.val h
+              omega
+            have hji : j ≠ i := by
+              intro h
+              have hv := congrArg Fin.val h
+              dsimp [j] at hv
+              omega
+            have hqj : q < j := by
+              apply Fin.mk_lt_mk.mpr
+              simpa [j] using Nat.lt_succ_of_le hq'
+            have hface' : X.δ q' (xj j hji) =
+                X.δ t (xj q hqi) := by
+              have h := hface q j hqi hji hqj
+              have hs0 : s.castSucc ≠ 0 := by
+                intro hz
+                have hv := congrArg Fin.val hz
+                dsimp at hv
+                omega
+              have hst : s.castSucc.pred hs0 = t := by
+                have hsval : s.val = s'.val + 1 := by
+                  simpa using congrArg Fin.val hs'
+                have hsval' : s.val = r + 1 := by
+                  rfl
+                apply Fin.ext
+                simp [t]
+                omega
+              have hjpred : j.pred (Fin.ne_zero_of_lt hqj) = t := by
+                simpa using ht
+              simpa [hqcast, hjpred] using h.symm
+            have hσ : X.δ q (X.σ s
+                ((X.δ j (uSeq r))⁻¹ * xj j hji)) = 1 := by
+              change (X.σ s ≫ X.δ q)
+                ((X.δ j (uSeq r))⁻¹ * xj j hji) = 1
+              rw [hcomp]
+              change X.σ s' (X.δ q'
+                ((X.δ j (uSeq r))⁻¹ * xj j hji)) = 1
+              rw [map_mul]
+              simp only [map_inv]
+              rw [hδz, hface', hprev, inv_mul_cancel]
+              simp
+            dsimp [uSeq, uStep]
+            simp only [dif_pos hrstep]
+            change X.δ q (uSeq r * X.σ s
+              ((X.δ j (uSeq r))⁻¹ * xj j hji)) = _
+            rw [map_mul, hprev, hσ]
+            simp
+          · simpa [uSeq, uStep, hrstep] using hprev
         · have hqr : q.val = r + 1 := by omega
-          subst q
-          have hstep := ihr (by omega)
+          have hqeq : q = (⟨r + 1, by omega⟩ : Fin (m + 3)) := by
+            ext
+            omega
           let s : Fin (n + 1) := ⟨r + 1, by omega⟩
           have hs : (⟨r + 1, by omega⟩ : Fin (n + 2)) = Fin.castSucc s := by
-            ext
-            rfl
-          have hδσ : X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)) ≫ X.σ s = 𝟙 _ := by
+            exact Fin.ext rfl
+          have hδσ : X.σ s ≫ X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)) = 𝟙 _ := by
             rw [hs, X.δ_comp_σ_self]
-          dsimp [uSeq, uStep]
-          rw [if_pos hr]
-          change X.δ (⟨r + 1, by omega⟩ : Fin (n + 2))
+          have hrstep : r + 1 < i.val := by omega
+          have hres : X.δ (⟨r + 1, by omega⟩ : Fin (n + 2))
               (uSeq r * X.σ s
                 ((X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)) (uSeq r))⁻¹ *
-                  xj ⟨r + 1, by omega⟩ (by omega))) = _
-          rw [(X.δ (⟨r + 1, by omega⟩ : Fin (n + 2))).map_mul,
-            ← hδσ]
-          simp [hstep]
+                  xj ⟨r + 1, by omega⟩ (by omega))) =
+              xj (⟨r + 1, by omega⟩ : Fin (n + 2)) (by omega) := by
+            have hcorr : X.δ (⟨r + 1, by omega⟩ : Fin (n + 2))
+                (X.σ s
+                  ((X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)) (uSeq r))⁻¹ *
+                    xj ⟨r + 1, by omega⟩ (by omega))) =
+                (X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)) (uSeq r))⁻¹ *
+                  xj ⟨r + 1, by omega⟩ (by omega) := by
+              change (X.σ s ≫ X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)))
+                ((X.δ (⟨r + 1, by omega⟩ : Fin (n + 2)) (uSeq r))⁻¹ *
+                  xj ⟨r + 1, by omega⟩ (by omega)) = _
+              rw [hδσ]
+              rfl
+            rw [map_mul, hcorr]
+            simp
+          simpa [uSeq, uStep, hrstep, hqeq] using hres
   let u : X.obj (op (SimplexCategory.mk (n + 1))) :=
-    if hi : i.val = 0 then 1 else uSeq i.val
+    if hi : i.val = 0 then 1 else uSeq (i.val - 1)
   have hu : ∀ (q : Fin (n + 2)) (hq : q.val < i.val),
       X.δ q u = xj q (by
         intro h
-        subst h
+        have hv := congrArg Fin.val h
         omega) := by
     intro q hq
     by_cases hi : i.val = 0
     · omega
     · dsimp [u]
-      rw [dif_neg hi]
-      exact huSeq i.val (by omega) q (by omega)
+      simp only [if_neg hi]
+      exact huSeq (i.val - 1) (by omega) q (by omega)
   let vStep : ℕ → X.obj (op (SimplexCategory.mk (n + 1))) →
       X.obj (op (SimplexCategory.mk (n + 1))) := fun r z =>
     if hr : r < n + 1 - i.val then
@@ -490,17 +614,19 @@ private theorem simplicialGroup_kanComplex_succ
       z * X.σ s
         ((X.δ q z)⁻¹ * xj q (by
           intro h
-          subst h
+          have hv := congrArg Fin.val h
+          dsimp [q] at hv
           omega))
     else z
   let vSeq : ℕ → X.obj (op (SimplexCategory.mk (n + 1))) := Nat.rec u vStep
-  have hvSeq : ∀ r : ℕ, r ≤ n + 1 - i.val →
+  have hvSeq : ∀ r : ℕ, (hr : r ≤ n + 1 - i.val) →
       ∀ (q : Fin (n + 2)),
-        (q.val < i.val ∨ n + 1 - r < q.val) →
+        (hq : q.val < i.val ∨ n + 1 - r < q.val) →
         X.δ q (vSeq r) = xj q (by
           intro h
-          subst h
-          omega) := by
+          have hv := congrArg Fin.val h
+          rcases hq with hq | hq <;> omega) := by
+    dsimp [n] at *
     intro r
     induction r with
     | zero =>
@@ -510,100 +636,205 @@ private theorem simplicialGroup_kanComplex_succ
         · omega
     | succ r ihr =>
         intro hr q hq
-      by_cases hqold : q.val < i.val ∨ n + 1 - r < q.val
+        by_cases hqold : q.val < i.val ∨ n + 1 - r < q.val
         · have hprev := ihr (by omega) q hqold
           let q₁ : Fin (n + 2) := ⟨n + 1 - r, by omega⟩
           let s : Fin (n + 1) := ⟨n - r, by omega⟩
           have hq₁ : q₁ = s.succ := by
-            ext
-            rfl
+            apply Fin.ext
+            dsimp [q₁, s]
+            omega
+          have hq₁zero : q₁ ≠ 0 := by
+            intro h
+            have hv := congrArg Fin.val h
+            dsimp [q₁, n] at hv
+            omega
+          have hq₁i : q₁ ≠ i := by
+            intro h
+            have hv := congrArg Fin.val h
+            dsimp [q₁, n] at hv
+            omega
           have hσ : X.δ q (X.σ s
               ((X.δ q₁ (vSeq r))⁻¹ * xj q₁ (by
                 intro h
-                subst h
+                have hv := congrArg Fin.val h
+                dsimp [q₁, n] at hv
                 omega))) = 1 := by
             by_cases hleft : q.val < i.val
-            · let q' : Fin (n + 1) := ⟨q.val, by omega⟩
-              let s' : Fin n := ⟨s.val - 1, by omega⟩
+            · have hnpos : 0 < n := by
+                dsimp [n]
+                omega
+              let q' : Fin (n + 1) := ⟨q.val, by
+                dsimp [n]
+                omega⟩
+              let s' : Fin n := ⟨s.val - 1, by
+                dsimp [n, s]
+                omega⟩
               have hq' : q = Fin.castSucc q' := by
                 ext
                 rfl
               have hs' : s = s'.succ := by
                 ext
+                dsimp [s, s']
                 omega
               have hcomp : X.σ s ≫ X.δ q = X.δ q' ≫ X.σ s' := by
                 rw [hq', hs']
-                symm
-                exact X.δ_comp_σ_of_le (by omega)
+                exact X.δ_comp_σ_of_le (i := q') (j := s') (by
+                  apply Fin.le_iff_val_le_val.mpr
+                  dsimp [q', s', s]
+                  omega)
+              have hqi : q ≠ i := by
+                intro h
+                have hv := congrArg Fin.val h
+                rcases hqold with hqold | hqold <;> omega
+              have hq₁i : q₁ ≠ i := by
+                intro h
+                have hv := congrArg Fin.val h
+                dsimp [q₁, n] at hv
+                omega
+              have hqq₁ : q < q₁ := by
+                apply Fin.mk_lt_mk.mpr
+                dsimp [q₁, n]
+                omega
               have hdd : X.δ q₁ ≫ X.δ q' =
-                  X.δ q ≫ X.δ (q₁.pred (by omega)) := by
-                have hqcast : q₁ = Fin.castSucc (q₁.castLT (by omega)) := by
-                  ext
-                  rfl
-                rw [hqcast]
-                exact X.δ_comp_δ' (by omega)
+                  X.δ q ≫ X.δ (q₁.pred hq₁zero) := by
+                have hlt : Fin.castSucc q' < q₁ := by
+                  simpa [hq'] using hqq₁
+                have h := X.δ_comp_δ' (i := q') (j := q₁) hlt
+                simpa [hq'] using h
               have hδz : X.δ q' (X.δ q₁ (vSeq r)) =
-                  X.δ (q₁.pred (by omega)) (X.δ q (vSeq r)) := by
-                simpa only [Category.assoc] using
-                  congrArg (fun g => g (vSeq r)) hdd
+                  X.δ (q₁.pred hq₁zero) (X.δ q (vSeq r)) := by
+                change (X.δ q₁ ≫ X.δ q') (vSeq r) =
+                  (X.δ q ≫ X.δ (q₁.pred hq₁zero)) (vSeq r)
+                exact congrArg (fun g => g (vSeq r)) hdd
               have hface' : X.δ q' (xj q₁ (by omega)) =
-                  X.δ (q₁.pred (by omega)) (xj q₁) := by
-                have h := hface q₁ q (by omega) (by omega) (by omega)
-                simpa using h.symm
+                  X.δ (q₁.pred hq₁zero) (xj q (by omega)) := by
+                have h := hface q q₁ hqi hq₁i hqq₁
+                have hcast : q.castPred (Fin.ne_last_of_lt hqq₁) = q' := by
+                  apply Fin.ext
+                  dsimp [hq', q']
+                  
+                simpa [hcast] using h.symm
               change (X.σ s ≫ X.δ q)
                 ((X.δ q₁ (vSeq r))⁻¹ * xj q₁ (by omega)) = 1
-              rw [hcomp, (X.δ q').map_mul, hδz, hface',
+              rw [hcomp]
+              change X.σ s' (X.δ q'
+                ((X.δ q₁ (vSeq r))⁻¹ * xj q₁ (by omega))) = 1
+              rw [map_mul]
+              simp only [map_inv]
+              rw [hδz, hface',
                 hprev, inv_mul_cancel]
               simp
             · have hright : n + 1 - r < q.val := by omega
-              let q' : Fin (n + 1) := ⟨q.val - 1, by omega⟩
-              let s' : Fin n := ⟨s.val, by omega⟩
+              let q' : Fin (n + 1) := ⟨q.val - 1, by
+                dsimp [n]
+                omega⟩
+              let s' : Fin n := ⟨s.val, by
+                dsimp [n, s]
+                omega⟩
               have hq' : q = q'.succ := by
                 ext
+                dsimp [q']
                 omega
               have hs' : s = Fin.castSucc s' := by
                 ext
                 rfl
               have hcomp : X.σ s ≫ X.δ q = X.δ q' ≫ X.σ s' := by
                 rw [hq', hs']
-                exact X.δ_comp_σ_of_gt (by omega)
+                exact X.δ_comp_σ_of_gt (i := q') (j := s') (by
+                  apply Fin.mk_lt_mk.mpr
+                  dsimp [q', s', s]
+                  omega)
+              have hq₁q : q₁ < q := by
+                exact hright
+              have hq₁i : q₁ ≠ i := by
+                intro h
+                have hv := congrArg Fin.val h
+                dsimp [q₁, n] at hv
+                omega
+              have hqi : q ≠ i := by
+                intro h
+                have hv := congrArg Fin.val h
+                rcases hqold with hqold | hqold <;> omega
+              have hq'succi : q'.succ ≠ i := by
+                intro h
+                apply hqi
+                exact hq'.trans h
               have hdd : X.δ q₁ ≫ X.δ q' =
-                  X.δ (q'.succ) ≫ X.δ (q₁.castLT (by omega)) := by
-                have hqcast : q₁ = Fin.castSucc (q₁.castLT (by omega)) := by
-                  ext
-                  rfl
-                rw [hqcast]
-                symm
-                exact X.δ_comp_δ (by omega)
+                  X.δ (q'.succ) ≫ X.δ
+                    (q₁.castLT (by omega)) := by
+                have h := X.δ_comp_δ'' (i := q₁) (j := q') (by
+                  apply Fin.le_iff_val_le_val.mpr
+                  dsimp [q₁, q']
+                  omega)
+                simpa [hq'] using h.symm
               have hδz : X.δ q' (X.δ q₁ (vSeq r)) =
-                  X.δ (q₁.castLT (by omega)) (X.δ (q'.succ) (vSeq r)) := by
-                simpa only [Category.assoc] using
-                  congrArg (fun g => g (vSeq r)) hdd
+                  X.δ (q₁.castLT (by omega))
+                    (X.δ (q'.succ) (vSeq r)) := by
+                change (X.δ q₁ ≫ X.δ q') (vSeq r) =
+                  (X.δ (q'.succ) ≫ X.δ
+                    (q₁.castLT (by omega))) (vSeq r)
+                exact congrArg (fun g => g (vSeq r)) hdd
               have hface' : X.δ q' (xj q₁ (by omega)) =
-                  X.δ (q₁.castLT (by omega)) (xj (q'.succ) (by omega)) := by
-                have h := hface q₁ (q'.succ) (by omega) (by omega) (by omega)
-                simpa using h.symm
+                  X.δ (q₁.castLT (by omega))
+                    (xj (q'.succ) hq'succi) := by
+                have h := hface q₁ q hq₁i hqi hq₁q
+                have hpred : q.pred (Fin.ne_zero_of_lt hq₁q) = q' := by
+                  apply Fin.ext
+                  dsimp [q']
+                  
+                have hcast : q₁.castPred (Fin.ne_last_of_lt hq₁q) =
+                    q₁.castLT (by omega) := by
+                  apply Fin.ext
+                  rfl
+                simpa [hq', hpred, hcast] using h
               change (X.σ s ≫ X.δ q)
                 ((X.δ q₁ (vSeq r))⁻¹ * xj q₁ (by omega)) = 1
-              rw [hcomp, (X.δ q').map_mul, hδz, hface',
-                hprev, inv_mul_cancel]
+              rw [hcomp]
+              change X.σ s' (X.δ q'
+                ((X.δ q₁ (vSeq r))⁻¹ * xj q₁ (by omega))) = 1
+              rw [map_mul]
+              simp only [map_inv]
+              have hprev' : X.δ q'.succ (vSeq r) =
+                  xj q'.succ hq'succi := by
+                simpa [hq'] using hprev
+              rw [hδz, hface',
+                hprev', inv_mul_cancel]
               simp
-          dsimp [vSeq, vStep]
-          rw [if_pos (by omega), (X.δ q).map_mul, hprev, hσ]
+          have hrstep : r < n + 1 - i.val := by omega
+          have hvstep : vSeq (r + 1) = vSeq r * X.σ s
+              ((X.δ q₁ (vSeq r))⁻¹ * xj q₁ hq₁i) := by
+            simp [vSeq, vStep, hrstep, q₁, s]
+          rw [hvstep, map_mul, hprev, hσ]
           simp
         · have hqval : q.val = n + 1 - r := by omega
-          subst q
-          let q₁ : Fin (n + 2) := ⟨n + 1 - r, by omega⟩
+          have hqeq : q = (⟨n + 1 - r, by omega⟩ : Fin (n + 2)) := by
+            apply Fin.ext
+            exact hqval
           let s : Fin (n + 1) := ⟨n - r, by omega⟩
-          have hq₁ : q₁ = s.succ := by
-            ext
+          have hqi : q ≠ i := by
+            intro h
+            have hv := congrArg Fin.val h
+            omega
+          have hqs : q = s.succ := by
+            apply Fin.ext
+            dsimp [s]
+            omega
+          have hδσ : X.σ s ≫ X.δ q = 𝟙 _ := by
+            rw [hqs, X.δ_comp_σ_succ]
+          have hcorr : X.δ q (X.σ s
+              ((X.δ q (vSeq r))⁻¹ * xj q hqi)) =
+              (X.δ q (vSeq r))⁻¹ * xj q hqi := by
+            change (X.σ s ≫ X.δ q)
+              ((X.δ q (vSeq r))⁻¹ * xj q hqi) = _
+            rw [hδσ]
             rfl
-          have hδσ : X.δ q₁ ≫ X.σ s = 𝟙 _ := by
-            rw [hq₁, X.δ_comp_σ_succ]
-          have hstep := ihr (by omega) q₁ (by omega)
-          dsimp [vSeq, vStep]
-          rw [if_pos (by omega), (X.δ q₁).map_mul, ← hδσ]
-          simp [hstep]
+          have hrstep : r < n + 1 - i.val := by omega
+          have hvstep : vSeq (r + 1) = vSeq r * X.σ s
+              ((X.δ q (vSeq r))⁻¹ * xj q hqi) := by
+            simp [vSeq, vStep, hrstep, s, hqeq]
+          rw [hvstep, map_mul, hcorr]
+          simp
   let z := vSeq (n + 1 - i.val)
   refine ⟨SSet.yonedaEquiv.symm z, ?_⟩
   intro q hq
@@ -613,37 +844,93 @@ private theorem simplicialGroup_kanComplex_succ
     · exact Or.inl hqi
     · right
       omega)
-  simpa [z, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using hz -/ by sorry
+  let p : Δ[n + 1] ⟶ underlyingSimplicialGroup X :=
+    SSet.yonedaEquiv.symm (vSeq (n + 1 - i.val))
+  have hc := hcomp (r := n) q p
+  have hp : SSet.yonedaEquiv p = vSeq (n + 1 - i.val) := by
+    dsimp [p]
+    exact SSet.yonedaEquiv.apply_symm_apply _
+  have hright : (X.δ q) (SSet.yonedaEquiv p) =
+      xj q (by
+        intro h
+        exact hq h) := by
+    rw [hp]
+    exact hz
+  simpa [n, z, p, xj, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using
+    hc.trans hright
 
 /- The zero-dimensional horn has only one prescribed vertex, and a single
   degeneracy supplies a 1-simplex with that vertex as its required face. -/
 theorem simplicialGroup_kanComplex
     (X : SimplicialObject CommGrpCat.{u}) :
-    KanComplex (underlyingSimplicialGroup X) := /- old proof
+    KanComplex (underlyingSimplicialGroup X) := by
   apply SSet.KanComplex.iff.mpr
   intro n i f hf
+  have hcomp0 : ∀ {r : ℕ} (j : Fin (r + 2))
+      (p : Δ[r + 1] ⟶ underlyingSimplicialGroup X),
+      SSet.yonedaEquiv (SSet.stdSimplex.δ j ≫ p) =
+        X.δ j (SSet.yonedaEquiv p) := by
+    intro r j p
+    have hp : p = SSet.yonedaEquiv.symm (SSet.yonedaEquiv p) := by
+      exact (SSet.yonedaEquiv.symm_apply_eq.mpr rfl).symm
+    conv_lhs => rw [hp]
+    change SSet.yonedaEquiv
+        (SSet.stdSimplex.map (SimplexCategory.δ j) ≫
+          SSet.yonedaEquiv.symm (SSet.yonedaEquiv p)) = _
+    rw [SSet.yonedaEquiv_symm_naturality_left]
+    rw [SSet.yonedaEquiv.apply_symm_apply]
+    change (underlyingSimplicialGroup X).map
+        (SimplexCategory.δ j).op (SSet.yonedaEquiv p) = _
+    rfl
   rcases n with _ | m
   · by_cases hi : i = 0
     · subst i
-      let x := SSet.yonedaEquiv (f 1 (by omega))
+      let x := SSet.yonedaEquiv (f 1 (by decide))
       refine ⟨SSet.yonedaEquiv.symm (X.σ 0 x), ?_⟩
       intro j hj
-      have hj1 : j = 1 := by omega
+      have hj1 : j = 1 := by
+        fin_cases j <;> simp_all
       subst j
       apply SSet.yonedaEquiv.injective
       have h := congrArg (fun g => g x) (X.δ_comp_σ_succ (i := 0))
-      simpa [x, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using h
-    · have hi1 : i = 1 := by omega
+      change X.δ 1 (X.σ 0 x) = x at h
+      let p : Δ[1] ⟶ underlyingSimplicialGroup X :=
+        SSet.yonedaEquiv.symm (X.σ 0 x)
+      have hc := hcomp0 (r := 0) 1 p
+      have hp : SSet.yonedaEquiv p = X.σ 0 x := by
+        dsimp [p]
+        exact SSet.yonedaEquiv.apply_symm_apply _
+      have hright : X.δ 1 (SSet.yonedaEquiv p) =
+          SSet.yonedaEquiv (f 1 (by decide)) := by
+        rw [hp]
+        simpa [x, Function.comp_apply, SSet.yonedaEquiv_comp,
+          underlyingSimplicialGroup] using h
+      simpa [p] using hc.trans hright
+    · have hi1 : i = 1 := by
+        fin_cases i <;> simp_all
       subst i
-      let x := SSet.yonedaEquiv (f 0 (by omega))
+      let x := SSet.yonedaEquiv (f 0 (by decide))
       refine ⟨SSet.yonedaEquiv.symm (X.σ 0 x), ?_⟩
       intro j hj
-      have hj0 : j = 0 := by omega
+      have hj0 : j = 0 := by
+        fin_cases j <;> simp_all
       subst j
       apply SSet.yonedaEquiv.injective
       have h := congrArg (fun g => g x) (X.δ_comp_σ_self (i := 0))
-      simpa [x, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using h
-  · exact simplicialGroup_kanComplex_succ X f hf -/ by sorry
+      change X.δ 0 (X.σ 0 x) = x at h
+      let p : Δ[1] ⟶ underlyingSimplicialGroup X :=
+        SSet.yonedaEquiv.symm (X.σ 0 x)
+      have hc := hcomp0 (r := 0) 0 p
+      have hp : SSet.yonedaEquiv p = X.σ 0 x := by
+        dsimp [p]
+        exact SSet.yonedaEquiv.apply_symm_apply _
+      have hright : X.δ 0 (SSet.yonedaEquiv p) =
+          SSet.yonedaEquiv (f 0 (by decide)) := by
+        rw [hp]
+        simpa [x, Function.comp_apply, SSet.yonedaEquiv_comp,
+          underlyingSimplicialGroup] using h
+      simpa [p] using hc.trans hright
+  · exact simplicialGroup_kanComplex_succ X f hf
 
 /-! ## Simplicial abelian groups -/
 

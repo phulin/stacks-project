@@ -1520,7 +1520,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
                   ((ConcreteCategory.hom (pf.app (op U)))
                     (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) := by
             convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf
-              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 <;> rfl
+              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 ; rfl
           have hstalk₀ :
               (ConcreteCategory.hom
                 ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
@@ -1529,7 +1529,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
                 (ConcreteCategory.hom (TopCat.Presheaf.germ
                   (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
                   ((ConcreteCategory.hom (pf.app (op U))) s') := by
-            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf s' using 1 <;> rfl
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf s' using 1 ; rfl
           apply hstalk.trans
           let t' : (AlgebraicGeometry.structureSheafInType R S.X₂).obj.obj (op U) :=
             (ConcreteCategory.hom (pf.app (op U))) s'
@@ -1539,7 +1539,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
                 ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • t' := by
             dsimp [t']
             convert ((AlgebraicGeometry.tilde.map S.f).val.app (op U)).hom.map_smul
-              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s' using 1 <;> rfl
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s' using 1 ; rfl
           rw [hmap]
           have hgm₂ :
               (ConcreteCategory.hom (TopCat.Presheaf.germ
@@ -1553,7 +1553,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
             convert (AlgebraicGeometry.moduleStructurePresheaf R
               (S.X₂ : ModuleCat (CommRingCat.of R))).germ_smul
               x₀ U hxU
-              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t' using 1 <;> rfl
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t' using 1 ; rfl
           apply hgm₂.trans
           have hsring :
               (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
@@ -1604,7 +1604,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
               ((ConcreteCategory.hom (pf.app (op ⊤)))
                 ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m)) := by
         convert TopCat.Presheaf.stalkFunctor_map_germ_apply ⊤ x₀ (by simp) pf
-          ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m) using 1 <;> rfl
+          ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m) using 1 ; rfl
       rw [hstalk]
       rw [LinearMap.comp_apply, IsLocalizedModule.map_apply]
       have htop :
@@ -1613,7 +1613,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
             (AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) ((ModuleCat.Hom.hom S.f) m) := by
         have htop' := AlgebraicGeometry.tilde.toOpen_map_app S.f
           (⊤ : Opens (PrimeSpectrum.Top R))
-        convert congrArg (fun q => q m) htop' using 1 <;> rfl
+        convert congrArg (fun q => q m) htop' using 1 ; rfl
       rw [htop]
       rfl
     let pg := ((Sheaf.forget AddCommGrpCat
@@ -1667,7 +1667,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
                   ((ConcreteCategory.hom (pg.app (op U)))
                     (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) := by
             convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pg
-              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 <;> rfl
+              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 ; rfl
           have hstalk₀ :
               (ConcreteCategory.hom
                 ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
@@ -1676,7 +1676,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
                 (ConcreteCategory.hom (TopCat.Presheaf.germ
                   (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU))
                   ((ConcreteCategory.hom (pg.app (op U))) s') := by
-            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pg s' using 1 <;> rfl
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pg s' using 1 ; rfl
           apply hstalk.trans
           let t' : (AlgebraicGeometry.structureSheafInType R S.X₃).obj.obj (op U) :=
             (ConcreteCategory.hom (pg.app (op U))) s'
@@ -1686,7 +1686,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
                 ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • t' := by
             dsimp [t']
             convert ((AlgebraicGeometry.tilde.map S.g).val.app (op U)).hom.map_smul
-              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s' using 1 <;> rfl
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s' using 1 ; rfl
           rw [hmap]
           have hgm₃ :
               (ConcreteCategory.hom (TopCat.Presheaf.germ
@@ -1700,7 +1700,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
             convert (AlgebraicGeometry.moduleStructurePresheaf R
               (S.X₃ : ModuleCat (CommRingCat.of R))).germ_smul
               x₀ U hxU
-              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t' using 1 <;> rfl
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t' using 1 ; rfl
           apply hgm₃.trans
           have hsring :
               (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
@@ -1751,7 +1751,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
               ((ConcreteCategory.hom (pg.app (op ⊤)))
                 ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m)) := by
         convert TopCat.Presheaf.stalkFunctor_map_germ_apply ⊤ x₀ (by simp) pg
-          ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m) using 1 <;> rfl
+          ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m) using 1 ; rfl
       rw [hstalk]
       rw [LinearMap.comp_apply, IsLocalizedModule.map_apply]
       have htop :
@@ -1760,7 +1760,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
             (AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₃ ⊤) ((ModuleCat.Hom.hom S.g) m) := by
         have htop' := AlgebraicGeometry.tilde.toOpen_map_app S.g
           (⊤ : Opens (PrimeSpectrum.Top R))
-        convert congrArg (fun q => q m) htop' using 1 <;> rfl
+        convert congrArg (fun q => q m) htop' using 1 ; rfl
       rw [htop]
       rfl
     have hloc := IsLocalizedModule.map_exact x₀.asIdeal.primeCompl

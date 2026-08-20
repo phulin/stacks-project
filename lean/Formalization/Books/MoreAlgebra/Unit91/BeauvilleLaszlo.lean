@@ -72,7 +72,7 @@ theorem mem_fPowerTorsionSubmoduleAt_iff
 theorem fPowerTorsionSubmoduleInfinity_eq_iUnion
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
     (f : R) :
-    (fPowerTorsionSubmodule f : Set M) =
+    ((fPowerTorsionSubmodule (M := M) f : Submodule R M) : Set M) =
       ⋃ n : ℕ, ((fPowerTorsionSubmoduleAt (M := M) f (n + 1)) : Set M) := by
   exact idealPowerTorsionSubmoduleInfinity_coe_eq_iUnion (Ideal.span ({f} : Set R))
 
@@ -155,10 +155,12 @@ theorem fAdicCompletion_is_self_glueing_pair
 def CechExactOnRight {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) : Prop :=
   Function.Surjective (fun x :
-      (((ModuleCat.restrictScalars (blRingSquare φ f).v).obj
-        (((blCanFunctor φ f).obj (ModuleCat.of R R)).obj.right)) : Type u) =>
-    (moduleFiberRightMap (blRingSquare φ f)
-      ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x)
+      (((blCanFunctor φ f).obj (ModuleCat.of R R)).obj.left : Type u) ×
+        (((blCanFunctor φ f).obj (ModuleCat.of R R)).obj.right : Type u) =>
+    (moduleFiberLeftMap (blRingSquare φ f)
+      ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x.1 -
+      (moduleFiberRightMap (blRingSquare φ f)
+        ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x.2)
 
 /-- The left-exactness assertion for the Cech sequence. -/
 def CechExactOnLeft {R S : Type u} [CommRing R] [CommRing S]
@@ -169,13 +171,17 @@ def CechExactOnLeft {R S : Type u} [CommRing R] [CommRing S]
 def CechExactInMiddle {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) : Prop :=
   Function.Exact
-    (fun x => (moduleFiberLeftMap (blRingSquare φ f)
-      ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x)
+    (fun x : ((blH0Functor φ f).obj
+        ((blCanFunctor φ f).obj (ModuleCat.of R R)) : Type u) =>
+      moduleFiberProductPair (blRingSquare φ f)
+        ((blCanFunctor φ f).obj (ModuleCat.of R R)) x)
     (fun x :
-        (((ModuleCat.restrictScalars (blRingSquare φ f).v).obj
-          (((blCanFunctor φ f).obj (ModuleCat.of R R)).obj.right)) : Type u) =>
-      (moduleFiberRightMap (blRingSquare φ f)
-        ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x)
+        (((blCanFunctor φ f).obj (ModuleCat.of R R)).obj.left : Type u) ×
+          (((blCanFunctor φ f).obj (ModuleCat.of R R)).obj.right : Type u) =>
+      (moduleFiberLeftMap (blRingSquare φ f)
+        ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x.1 -
+        (moduleFiberRightMap (blRingSquare φ f)
+          ((blCanFunctor φ f).obj (ModuleCat.of R R))).hom x.2)
 
 theorem cech_exact_on_right
     {R S : Type u} [CommRing R] [CommRing S]
@@ -274,17 +280,6 @@ theorem second_presented_ring_torsion_map_not_surjective
       (secondBlF k) := by
   sorry
 
-structure NonGlueableModuleWitness {R M : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M] (f : R) : Prop where
-  regular : IsRegular f
-  pair : IsSelfGlueingPair f
-  notGlueable : ¬ IsSelfGlueable (M := M) f
-
-theorem exists_nonGlueableModuleWitness :
-    ∃ (R M : Type u) (_ : CommRing R) (_ : AddCommGroup M) (_ : Module R M)
-      (f : R), NonGlueableModuleWitness f := by
-  sorry
-
 /-! ## Faithfulness, finite generation, and spectra -/
 
 def faithfulBaseChangePair {R S : Type u} [CommRing R] [CommRing S]
@@ -358,19 +353,32 @@ def ModuleCechSequenceExact {R S M : Type u} [CommRing R] [CommRing S]
 
 def IsGlueable {R S M : Type u} [CommRing R] [CommRing S]
     [AddCommGroup M] [Module R M] (φ : R →+* S) (f : R) : Prop :=
-  ModuleCechSequenceExact φ f
+  ModuleCechSequenceExact (M := M) φ f
 
 def IsSelfGlueable {R M : Type u} [CommRing R] [AddCommGroup M]
     [Module R M] (f : R) : Prop :=
-  IsGlueable (fAdicCompletionMap R f) f
+  IsGlueable (M := M) (fAdicCompletionMap R f) f
+
+structure NonGlueableModuleWitness {R M : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] (f : R) : Prop where
+  regular : IsRegular f
+  pair : IsSelfGlueingPair f
+  notGlueable : ¬ IsSelfGlueable (M := M) f
+
+theorem exists_nonGlueableModuleWitness :
+    ∃ (R M : Type u) (_ : CommRing R) (_ : AddCommGroup M) (_ : Module R M)
+      (f : R), NonGlueableModuleWitness (M := M) f := by
+  sorry
 
 def ModuleCechExactOnRight {R S M : Type u} [CommRing R] [CommRing S]
     [AddCommGroup M] [Module R M] (φ : R →+* S) (f : R) : Prop :=
   Function.Surjective (fun x :
-      (((ModuleCat.restrictScalars (blRingSquare φ f).v).obj
-        (((blCanFunctor φ f).obj (ModuleCat.of R M)).obj.right)) : Type u) =>
-    (moduleFiberRightMap (blRingSquare φ f)
-      ((blCanFunctor φ f).obj (ModuleCat.of R M))).hom x)
+      (((blCanFunctor φ f).obj (ModuleCat.of R M)).obj.left : Type u) ×
+        (((blCanFunctor φ f).obj (ModuleCat.of R M)).obj.right : Type u) =>
+    (moduleFiberLeftMap (blRingSquare φ f)
+      ((blCanFunctor φ f).obj (ModuleCat.of R M))).hom x.1 -
+      (moduleFiberRightMap (blRingSquare φ f)
+        ((blCanFunctor φ f).obj (ModuleCat.of R M))).hom x.2)
 
 def InjectiveOnModuleFPowerTorsion {R S M : Type u}
     [CommRing R] [CommRing S] [AddCommGroup M] [Module R M]
@@ -386,52 +394,57 @@ base change. -/
 def BeauvilleLaszloHypotheses {R S M : Type u}
     [CommRing R] [CommRing S] [AddCommGroup M] [Module R M]
     (φ : R →+* S) (f : R) : Prop :=
-  BijectiveOnFPowerTorsion φ f ∧ InjectiveOnModuleFPowerTorsion φ f
+  BijectiveOnFPowerTorsion φ f ∧
+    InjectiveOnModuleFPowerTorsion (M := M) φ f
 
 def SurjectiveOnModuleFPowerTorsion {R S M : Type u}
     [CommRing R] [CommRing S] [AddCommGroup M] [Module R M]
     (φ : R →+* S) (f : R) : Prop :=
+  letI : Algebra R S := φ.toAlgebra
   ∀ y : M ⊗[R] S,
-    y ∈ fPowerTorsionSubmodule (M := M ⊗[R] S) (φ f) →
+    y ∈ fPowerTorsionSubmodule (R := R) (M := M ⊗[R] S) f →
       ∃ x : M, x ∈ fPowerTorsionSubmodule f ∧
         tensorUnitMapOfRingHom (M := M) φ x = y
 
 theorem beauvilleLaszloHypotheses_of_nonzerodivisors
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
-    (f : R) (hR : IsRegular f) (hM : IsFRegularOnModule f) :
+    (f : R) (hR : IsRegular f) (hM : IsFRegularOnModule (M := M) f) :
     BeauvilleLaszloHypotheses (M := M) (fAdicCompletionMap R f) f := by
   sorry
 
 theorem module_cech_exact_on_right
     {R S M : Type u} [CommRing R] [CommRing S]
     [AddCommGroup M] [Module R M] (φ : R →+* S) (f : R) :
-    ModuleCechExactOnRight φ f := by
+    ModuleCechExactOnRight (M := M) φ f := by
   sorry
 
 theorem glueable_iff_module_fPowerTorsion_bijective
     {R S M : Type u} [CommRing R] [CommRing S]
     [AddCommGroup M] [Module R M] (φ : R →+* S) (f : R) :
-    IsGlueable φ f ↔
-      InjectiveOnModuleFPowerTorsion φ f ∧ SurjectiveOnModuleFPowerTorsion φ f := by
+    IsGlueable (M := M) φ f ↔
+      InjectiveOnModuleFPowerTorsion (M := M) φ f ∧
+        SurjectiveOnModuleFPowerTorsion (M := M) φ f := by
   sorry
 
 theorem glueable_iff_injective_when_pair_is_glueing
     {R S M : Type u} [CommRing R] [CommRing S]
     [AddCommGroup M] [Module R M] (φ : R →+* S) (f : R)
     (hpair : IsGlueingPair φ f) :
-    IsGlueable φ f ↔ InjectiveOnModuleFPowerTorsion φ f := by
+    IsGlueable (M := M) φ f ↔
+      InjectiveOnModuleFPowerTorsion (M := M) φ f := by
   sorry
 
 theorem selfGlueable_iff_completion_torsion_injective
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
     (f : R) (hpair : IsSelfGlueingPair f) :
-    IsSelfGlueable (M := M) f ↔
-      InjectiveOnModuleFPowerTorsion (fAdicCompletionMap R f) f := by
+    IsSelfGlueable (R := R) (M := M) f ↔
+      InjectiveOnModuleFPowerTorsion (R := R) (M := M)
+        (fAdicCompletionMap R f) f := by
   sorry
 
 def TorsionToCompletionInjective {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] (f : R) : Prop :=
-  InjectiveOnModuleFPowerTorsion (fAdicCompletionMap R f) f
+  InjectiveOnModuleFPowerTorsion (M := M) (fAdicCompletionMap R f) f
 
 def FirstTorsionToCompletionInjective {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] (f : R) : Prop :=
@@ -450,21 +463,22 @@ def FPowerTorsionIntersectionVanishing {R M : Type u} [CommRing R]
 theorem glueable_of_torsion_to_completion_injective
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
     (f : R) (hpair : IsSelfGlueingPair f)
-    (hinj : TorsionToCompletionInjective f) :
+    (hinj : TorsionToCompletionInjective (M := M) f) :
     IsSelfGlueable (M := M) f := by
   sorry
 
 theorem first_torsion_injective_implies_glueable
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
     (f : R) (hpair : IsSelfGlueingPair f)
-    (hinj : FirstTorsionToCompletionInjective f) :
+    (hinj : FirstTorsionToCompletionInjective (M := M) f) :
     IsSelfGlueable (M := M) f := by
   sorry
 
 def RestrictedLocalizationTarget
     {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) : ModuleCat.{u} R :=
-  (ModuleCat.restrictScalars (algebraMap R (Localization.Away (φ f)))).obj
+  (ModuleCat.restrictScalars
+    ((Localization.awayMap φ f).comp (algebraMap R (Localization.Away f)))).obj
     (ModuleCat.of (Localization.Away (φ f)) (Localization.Away (φ f)))
 
 def TorOneWithRestrictedTarget
@@ -484,8 +498,9 @@ theorem tor_one_localization_vanishing_iff_tor_one_power_torsion
     {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) (M : ModuleCat.{u} R) :
     IsZero (TorOneWithRestrictedTarget φ f M) ↔
-      IsFPowerTorsion f
-        (Formalization.Books.Algebra.Unit75.Tor M (restrictedTargetModule φ) 1 : Type u) := by
+      IsFPowerTorsion (R := R)
+        (M := (Formalization.Books.Algebra.Unit75.Tor M
+          (RestrictedLocalizationTarget φ f) 1 : Type u)) f := by
   sorry
 
 theorem flat_module_is_glueable_for_pair
@@ -543,7 +558,7 @@ theorem tor_one_vanishes_on_principal_ideal
 
 noncomputable abbrev torsionFreeQuotientModule
     {R : Type u} [CommRing R] (f : R) : ModuleCat.{u} R :=
-  ModuleCat.of R (R ⧸ fPowerTorsionSubmodule f)
+  ModuleCat.of R (R ⧸ fPowerTorsionSubmodule (R := R) (M := R) f)
 
 theorem tor_one_vanishes_on_torsion_free_quotient
     {R S : Type u} [CommRing R] [CommRing S]
@@ -604,7 +619,8 @@ noncomputable abbrev H0CompatiblePairEquiv
 def H0IsKernelStatement {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) : Prop :=
   ∀ X : GlueingDataCategory φ f,
-    Nonempty (H0CompatiblePairEquiv φ f X)
+    Nonempty (((H0 φ f).obj X : Type u) ≃
+      {p // p ∈ moduleFiberCompatiblePairs (blRingSquare φ f) X})
 
 theorem H0_is_kernel_of_glueing_difference
     {R S : Type u} [CommRing R] [CommRing S]
@@ -665,26 +681,26 @@ theorem finite_projectivity_descends_along_bl_pair
     {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) (hpair : IsGlueingPair φ f)
     (M : ModuleCat.{u} R) :
-    FiniteProjectiveModule (R := R) (M : Type u) ↔
+    FiniteProjectiveModule (R := R) (M := (M : Type u)) ↔
       (FiniteProjectiveModule
-          (R := S) ((ModuleCat.extendScalars φ).obj M : Type u) ∧
+          (R := S) (M := ((ModuleCat.extendScalars φ).obj M : Type u)) ∧
         FiniteProjectiveModule
           (R := Localization.Away f)
-          ((ModuleCat.extendScalars (algebraMap R (Localization.Away f))).obj M : Type u)) := by
+          (M := ((ModuleCat.extendScalars (algebraMap R (Localization.Away f))).obj M : Type u))) := by
   sorry
 
 theorem finite_projectivity_descends_for_noetherian_completion
     {R : Type u} [CommRing R] [IsNoetherianRing R]
     (f : R) (M : ModuleCat.{u} R) :
-    FiniteProjectiveModule (R := R) (M : Type u) ↔
+    FiniteProjectiveModule (R := R) (M := (M : Type u)) ↔
       (FiniteProjectiveModule
           (R := fAdicCompletion R f)
-          (((ModuleCat.extendScalars (fAdicCompletionMap R f)).obj M :
-            ModuleCat.{u} (fAdicCompletion R f)) : Type u) ∧
+          (M := (((ModuleCat.extendScalars (fAdicCompletionMap R f)).obj M :
+            ModuleCat.{u} (fAdicCompletion R f)) : Type u)) ∧
         FiniteProjectiveModule
           (R := Localization.Away f)
-          (((ModuleCat.extendScalars (algebraMap R (Localization.Away f))).obj M :
-            ModuleCat.{u} (Localization.Away f)) : Type u)) := by
+          (M := (((ModuleCat.extendScalars (algebraMap R (Localization.Away f))).obj M :
+            ModuleCat.{u} (Localization.Away f)) : Type u))) := by
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit91

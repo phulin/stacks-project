@@ -975,6 +975,113 @@ private theorem quasiRegularCanonicalMap_component_finsupp
     · exact False.elim (hdn (Finset.mem_filter.mpr ⟨hd, h⟩))
     · simp
 
+/- Proof roadmap (interface review completed):
+
+The present interface is sufficient.  The finite sequence is already a `List R`, and both a
+source element and each of its homogeneous slices have finite support through `Finsupp`; no
+`Module.Finite`, Noetherian, or extra graded hypothesis is used in the coefficient argument.
+Keep the theorem at the universes `R : Type u`, `M : Type v`.  The missing ingredient is the
+arbitrary-`M` coefficient-relation induction from Stacks, Lemma 10.69.2, not an interface repair.
+
+Implement the proof through the following private helpers immediately above this theorem.
+
+* First prove the quotient-membership bridge
+  `quasiRegularPiece_mk_eq_zero_iff`: for
+  `x : ↥((I ^ n) • (⊤ : Submodule R M))`, show that its class in
+  `quasiRegularPiece R M I n` is zero iff `(x : M)` belongs to
+  `I ^ (n + 1) • (⊤ : Submodule R M)`.  Start with
+  `Submodule.Quotient.mk_eq_zero`.  Map the denominator along the subtype map and simplify with
+  `Submodule.map_smul''`, `Submodule.map_top`, `Submodule.range_subtype`, `pow_succ`, and the
+  `Submodule.mul_smul` action law.  These declarations are in
+  `Mathlib/LinearAlgebra/Quotient/Basic.lean`, `Mathlib/Algebra/Module/Submodule/Map.lean`, and
+  `Mathlib/Algebra/Module/Submodule/Finsupp.lean`.
+
+* Prove a finite expansion helper, for every `N : Submodule R M`:
+  if `x ∈ (Ideal.ofList f) ^ n • N`, then there is
+  `b : (Fin f.length →₀ ℕ) →₀ ↥N` supported on indices `d` with
+  `quasiRegularDegree d = n` and
+  `x = b.sum (fun d m => quasiRegularMonomialCoefficient f d • (m : M))`.
+  Induct on `n`.  Degree zero is `Finsupp.single 0 ⟨x, by simpa using hx⟩`.  At the successor,
+  rewrite by `pow_succ` and `Submodule.mul_smul`; expand membership in the outer ideal action with
+  `Submodule.smul_induction_on`, and expand a scalar in `Ideal.ofList f = Ideal.span (↑f)` by
+  `Submodule.span_induction`.  A generator `f.get i` increments the exponent with
+  `d + Finsupp.single i 1`.  Combine the finite families by `Finsupp.induction`/`Finsupp.sum`.
+  The required Finsupp API is in `Mathlib/Data/Finsupp/Basic.lean`; use
+  `quasiRegularMonomialCoefficient_mem` above for all power-membership side goals.
+
+* Using that expansion, prove the central helper
+  `regular_homogeneous_coeff_relation`: if
+  `hf : RingTheory.Sequence.IsRegular M f`, if
+  `b : (Fin f.length →₀ ℕ) →₀ M` is supported in total degree `n`, and if
+  `b.sum (fun d m => quasiRegularMonomialCoefficient f d • m)` belongs to
+  `(Ideal.ofList f) ^ (n + 1) • (⊤ : Submodule R M)`, then every `b d` belongs to
+  `Ideal.ofList f • (⊤ : Submodule R M)`.
+
+  Reduce this first to the same assertion with the displayed sum equal to zero.  Apply the
+  expansion helper at degree `n` with
+  `N := Ideal.ofList f • (⊤ : Submodule R M)` to the element in the `(n+1)`-st power, using
+  `pow_succ` and `Submodule.mul_smul`.  Subtract the resulting homogeneous family, whose values
+  already lie in `N`; this is the formal version of replacing the coefficients by coefficients
+  of an exact relation.
+
+  Prove the zero-relation assertion by `List.reverseRecOn f`, writing the successor case as
+  `g ++ [a]`.  Obtain regularity of `g` from
+  `RingTheory.Sequence.isWeaklyRegular_append_iff` plus `hf.toIsWeaklyRegular`; its
+  `top_ne_smul` field follows by rewriting `Ideal.ofList_append`, `Submodule.sup_smul`, and a
+  hypothetical `⊤ = Ideal.ofList g • ⊤`.  Obtain
+  `ha : IsSMulRegular (M ⨸ (Ideal.ofList g • ⊤ : Submodule R M)) a` from the second half
+  of the same append equivalence and
+  `RingTheory.Sequence.isWeaklyRegular_singleton_iff`.  These regular-sequence declarations are
+  in `Mathlib/RingTheory/Regular/RegularSequence.lean`.
+
+  Split a multi-index into its last exponent and its prefix by the explicit equivalence
+  ```
+  Fin (g ++ [a]).length ≃ Option (Fin g.length)
+  ```
+  obtained from `finCongr (by simp)` followed by `finSuccEquivLast`, then use
+  `(Finsupp.domCongr e).toEquiv`, `Finsupp.optionEquiv`, and `Finsupp.curry` to identify
+  `(Fin (g ++ [a]).length →₀ ℕ) →₀ M` with
+  `ℕ →₀ ((Fin g.length →₀ ℕ) →₀ M)`.  Record simp lemmas saying that
+  total degree is `e + quasiRegularDegree d'` and the monomial coefficient is
+  `a ^ e * quasiRegularMonomialCoefficient g d'`.  Prove them with
+  `Finsupp.sum_equivMapDomain`, `Finsupp.prod_equivMapDomain`, and
+  `Finsupp.prod_option_index` from `Mathlib/Data/Finsupp/Basic.lean` and
+  `Mathlib/Data/Finsupp/Option.lean`; this avoids repeated casts later.
+
+  For the textbook's inner induction, strengthen the zero assertion to a relation whose last
+  exponent is bounded by `l ≤ n`.  Group it as
+  `∑ e ≤ l, a ^ e • (∑ |d'| = n-e, (g^d') • b(e,d')) = 0` and induct on `l`.
+  The top block multiplied by `a ^ l` lies in
+  `(Ideal.ofList g) ^ (n - l + 1) • ⊤`, because every lower block has prefix degree at least
+  `n-l+1`.  Apply the outer induction hypothesis for `g` at degree `n-l` to conclude
+  `a ^ l • b(l,d') ∈ Ideal.ofList g • ⊤`.  Pass to the quotient and cancel `a ^ l` with
+  `ha.pow l`, using `Submodule.Quotient.mk_eq_zero`, to get
+  `b(l,d') ∈ Ideal.ofList g • ⊤`.  Expand these top coefficients once more with the finite
+  expansion helper at degree one for `g`; fold the resulting terms into the `l-1` block (their
+  new coefficients have the form `old + a • correction`) and invoke the inner induction
+  hypothesis.  The `l = 0` case stops immediately.  For a one-element sequence,
+  `regular_single_power_coeff_relation` above is the already checked cancellation special case.
+  Do not try to apply that one-element lemma independently to every monomial: the input is a sum,
+  and cancellation becomes available only after grouping by the last exponent and passing modulo
+  the whole prefix ideal.
+
+* Finally prove injectivity of `quasiRegularCanonicalMap`.  For `z` in its kernel put
+  `c := quasiRegularSourceFinsuppEquiv R M f z`.  For a fixed multi-index `d`, set
+  `n := quasiRegularDegree d` and take the homogeneous slice
+  `c.filter (fun e => quasiRegularDegree e = n)`.  Lift that slice coefficientwise from
+  `M ⨸ Ideal.ofList f • ⊤` to `M` using `Finsupp.mapRange_surjective` together with
+  `Submodule.Quotient.mk_surjective`, then filter the lift once more by degree `n`; an `ext`/`simp`
+  calculation shows that it still maps to the slice.  Apply degree component `n` to the kernel
+  equation and rewrite with `quasiRegularCanonicalMap_component_finsupp`.  Simplify the finite
+  sum with `DirectSum.component.of` (from `Mathlib/Algebra/DirectSum/Module.lean`) and
+  `quasiRegularMonomialMapQuotient_mk`, then use `quasiRegularPiece_mk_eq_zero_iff` to obtain the
+  homogeneous coefficient relation in `M`.  The central helper makes the lifted coefficient at
+  `d` lie in `Ideal.ofList f • ⊤`, hence `c d = 0`.  Since `d` was arbitrary, `Finsupp.ext`
+  gives `c = 0`, and injectivity of `quasiRegularSourceFinsuppEquiv` gives `z = 0`.
+
+Assemble `Function.Bijective` as the proved injectivity together with
+`quasiRegularCanonicalMap_surjective R M f`; no additional assumptions are needed.
+-/
 theorem isMQuasiRegular_of_isRegular
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     {f : List R} (hf : RingTheory.Sequence.IsRegular M f) :

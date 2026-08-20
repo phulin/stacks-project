@@ -32,6 +32,17 @@ def rank
     [AddCommGroup M] [Module R M] : Cardinal :=
   Module.rank K (K ⊗[R] M)
 
+private theorem rank_eq_lift_module_rank
+    {R K : Type u} {M : Type v} [CommRing R] [IsDomain R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    [AddCommGroup M] [Module R M] :
+    rank R K M = Cardinal.lift.{u} (Module.rank R M) := by
+  unfold rank
+  rw [IsLocalization.rank_eq K (nonZeroDivisors R) le_rfl]
+  apply Cardinal.lift_injective.{v}
+  simpa using IsLocalizedModule.lift_rank_eq (nonZeroDivisors R)
+    (TensorProduct.mk R K M 1) le_rfl
+
 /- The source's remark that this agrees with locally free rank is a
    compatibility observation, not a separate mathematical assertion: the
    canonical `Module.Free`/basis APIs remain the interfaces for freeness. -/
@@ -47,7 +58,14 @@ theorem rank_torsion_invariant
     (hker : Module.IsTorsion R (LinearMap.ker f))
     (hcoker : Module.IsTorsion R (M' ⧸ LinearMap.range f)) :
     rank R K M = rank R K M' := by
-  sorry
+  rw [rank_eq_lift_module_rank, rank_eq_lift_module_rank]
+  have hk : Module.rank R (LinearMap.ker f) = 0 := hker.rank_eq_zero
+  have hc : Module.rank R (M' ⧸ LinearMap.range f) = 0 := hcoker.rank_eq_zero
+  have hM : Module.rank R (LinearMap.range f) = Module.rank R M := by
+    rw [← LinearMap.rank_range_add_rank_ker f, hk, add_zero]
+  have hM' : Module.rank R (LinearMap.range f) = Module.rank R M' := by
+    rw [← Submodule.rank_quotient_add_rank f.range, hc, zero_add]
+  exact congrArg (Cardinal.lift.{u}) (hM.symm.trans hM')
 
 /-- Rank is additive in a short exact sequence of modules. -/
 theorem rank_additive
@@ -61,7 +79,13 @@ theorem rank_additive
     (h_exact : Function.Exact (f : M → M') (g : M' → M''))
     (hg : Function.Surjective g) :
     rank R K M' = rank R K M + rank R K M'' := by
-  sorry
+  rw [rank_eq_lift_module_rank, rank_eq_lift_module_rank, rank_eq_lift_module_rank]
+  have hrg : LinearMap.range f = LinearMap.ker g := (LinearMap.exact_iff.mp h_exact).symm
+  have hdim := LinearMap.rank_range_add_rank_ker g
+  rw [rank_range_of_surjective g hg, ← hrg, rank_range_of_injective f hf] at hdim
+  have hbase : Module.rank R M' = Module.rank R M + Module.rank R M'' :=
+    hdim.symm.trans (add_comm _ _)
+  simpa only [Cardinal.lift_add] using congrArg (Cardinal.lift.{u}) hbase
 
 /-! ## Tensor products and Hom -/
 
@@ -71,7 +95,10 @@ theorem rank_tensor
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N] :
     rank R K (M ⊗[R] N) = rank R K M * rank R K N := by
-  sorry
+  unfold rank
+  let e₁ := (TensorProduct.isBaseChange R N K).tensorEquiv (K ⊗[R] M)
+  let e₂ := TensorProduct.AlgebraTensorModule.assoc R R K K M N
+  rw [← (e₁.trans e₂).rank_eq, rank_tensorProduct']
 
 /-- Rank is multiplicative for `Hom` when the source is finitely presented. -/
 theorem rank_hom
@@ -80,7 +107,11 @@ theorem rank_hom
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     [Module.FinitePresentation R M] :
     rank R K (M →ₗ[R] N) = rank R K M * rank R K N := by
-  sorry
+  unfold rank
+  let _ : Module.Flat R K := IsLocalization.flat K (nonZeroDivisors R)
+  have hbc := Module.FinitePresentation.isBaseChange_map R M N K
+  rw [hbc.equiv.rank_eq, Module.rank_linearMap]
+  simp
 
 /-! ## Pullback along a domain extension -/
 

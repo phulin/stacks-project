@@ -113,7 +113,35 @@ theorem tr_deg_specialization
     (q q' : PrimeSpectrum S) (hqq' : q < q') :
     Algebra.trdeg k q'.asIdeal.ResidueField <
       Algebra.trdeg k q.asIdeal.ResidueField := by
-  sorry
+  let A := S ⧸ q.asIdeal
+  let A' := S ⧸ q'.asIdeal
+  have hqdim := dimension_prime_polynomial_ring
+    (k := k) (S := A) (K := q.asIdeal.ResidueField)
+  have hq'dim := dimension_prime_polynomial_ring
+    (k := k) (S := A') (K := q'.asIdeal.ResidueField)
+  obtain ⟨r, htr, hdim, _⟩ := hqdim
+  obtain ⟨r', htr', hdim', _⟩ := hq'dim
+  have hqq'ideal : q.asIdeal ≤ q'.asIdeal :=
+    (PrimeSpectrum.asIdeal_le_asIdeal q q').mpr hqq'.le
+  obtain ⟨x, hxq', hxq⟩ := SetLike.exists_of_lt
+    ((PrimeSpectrum.asIdeal_lt_asIdeal q q').mpr hqq')
+  have hxne : Ideal.Quotient.mk q.asIdeal x ≠ 0 := by
+    simpa [Ideal.Quotient.eq_zero_iff_mem] using hxq
+  have hxreg : Ideal.Quotient.mk q.asIdeal x ∈ nonZeroDivisors A := by
+    rw [mem_nonZeroDivisors_iff_ne_zero]
+    exact hxne
+  have hdimlt : ringKrullDim A' + 1 ≤ ringKrullDim A := by
+    apply ringKrullDim_succ_le_of_surjective
+      (Ideal.Quotient.factor hqq'ideal)
+      (Ideal.Quotient.factor_surjective hqq'ideal)
+      hxreg
+    exact Ideal.Quotient.factor_mk hqq'ideal x ▸
+      (Ideal.Quotient.eq_zero_iff_mem.mpr hxq')
+  have hnat : r' + 1 ≤ r := by
+    rw [hdim', hdim] at hdimlt
+    exact_mod_cast hdimlt
+  rw [htr', htr]
+  exact_mod_cast (show r' < r by omega)
 
 /- The local dimension formula at an arbitrary point of a finite-type affine
    algebra over a field. -/
@@ -146,7 +174,92 @@ theorem dimension_preserved_field_extension
     {k S K : Type u} [Field k] [CommRing S] [Algebra k S]
     [Algebra.FiniteType k S] [Field K] [Algebra k K] :
     ringKrullDim S = ringKrullDim (K ⊗[k] S) := by
-  sorry
+  classical
+  by_cases hS : Nontrivial S
+  · letI : Nontrivial S := hS
+    obtain ⟨n, φ, hφ⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
+      (inferInstance : Algebra.FiniteType k S)
+    have hI : RingHom.ker φ ≠ ⊤ := by
+      intro hI
+      have hzero : φ (1 : MvPolynomial (Fin n) k) = 0 := by
+        have hmem : (1 : MvPolynomial (Fin n) k) ∈ RingHom.ker φ := by
+          rw [hI]
+          trivial
+        exact hmem
+      simpa using hzero
+    let A := (MvPolynomial (Fin n) k) ⧸ RingHom.ker φ
+    let e : A ≃ₐ[k] S :=
+      AlgEquiv.ofBijective (Ideal.kerLiftAlg φ) ⟨
+        Ideal.kerLiftAlg_injective φ, by
+          intro s
+          obtain ⟨p, hp⟩ := hφ s
+          refine ⟨Ideal.Quotient.mk (RingHom.ker φ) p, ?_⟩
+          exact (Ideal.kerLiftAlg_mk φ p).trans hp
+          ⟩
+    obtain ⟨r, _, g, hginj, hgfinite, hdim, _⟩ :=
+      Formalization.Books.Algebra.Unit115.noether_normalization
+        (RingHom.ker φ) hI
+    have hdimS : ringKrullDim S = r := by
+      calc
+        ringKrullDim S = ringKrullDim A :=
+          (ringKrullDim_eq_of_ringEquiv e.toRingEquiv).symm
+        _ = r := hdim
+    let eK : (K ⊗[k] A) ≃ₐ[K] (K ⊗[k] S) :=
+      Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[K] K) e
+    let pK : (K ⊗[k] MvPolynomial (Fin r) k) ≃ₐ[K]
+        MvPolynomial (Fin r) K :=
+      MvPolynomial.algebraTensorAlgEquiv k K
+    letI cKP : CommRing (K ⊗[k] MvPolynomial (Fin r) k) := inferInstance
+    letI cKA : CommRing (K ⊗[k] A) := inferInstance
+    letI cPK : CommRing (MvPolynomial (Fin r) k ⊗[k] K) := inferInstance
+    letI cAK : CommRing (A ⊗[k] K) := inferInstance
+    letI : Semiring (K ⊗[k] MvPolynomial (Fin r) k) := cKP.toSemiring
+    letI : Semiring (K ⊗[k] A) := cKA.toSemiring
+    letI : Semiring (MvPolynomial (Fin r) k ⊗[k] K) := cPK.toSemiring
+    letI : Semiring (A ⊗[k] K) := cAK.toSemiring
+    let gT : (K ⊗[k] MvPolynomial (Fin r) k) →+*
+        (K ⊗[k] A) :=
+      (Algebra.TensorProduct.map (AlgHom.id K K) g).toRingHom
+    let gK : MvPolynomial (Fin r) K →+* (K ⊗[k] S) :=
+      eK.toRingEquiv.toRingHom.comp
+        (gT.comp pK.symm.toRingEquiv.toRingHom)
+    have hgTinj : Function.Injective gT := by
+      change Function.Injective ((g.toLinearMap).lTensor K)
+      exact Module.Flat.lTensor_preserves_injective_linearMap g.toLinearMap hginj
+    have hgKinj : Function.Injective gK := by
+      exact eK.injective.comp (hgTinj.comp pK.symm.injective)
+    have hgTfinite : RingHom.Finite gT := by
+      let gT' : (MvPolynomial (Fin r) k ⊗[k] K) →+* (A ⊗[k] K) :=
+        (Algebra.TensorProduct.map g (AlgHom.id k K)).toRingHom
+      have hgT'finite : RingHom.Finite gT' :=
+        RingHom.Finite.tensorProductMap hgfinite (AlgHom.Finite.id k K)
+      have hcomm :
+          (Algebra.TensorProduct.comm k A K).toRingEquiv.toRingHom.comp
+              (gT'.comp (Algebra.TensorProduct.comm k K
+                (MvPolynomial (Fin r) k)).toRingEquiv.toRingHom) = gT := by
+        ext <;> simp [gT, gT']
+      rw [← hcomm]
+      exact (Algebra.TensorProduct.comm k A K).toRingEquiv.finite.comp
+        (hgT'finite.comp
+          (Algebra.TensorProduct.comm k K (MvPolynomial (Fin r) k)).toRingEquiv.finite)
+    have hgKfinite : RingHom.Finite gK := by
+      exact eK.toRingEquiv.finite.comp
+        (hgTfinite.comp pK.symm.toRingEquiv.finite)
+    have hdimK : ringKrullDim (K ⊗[k] S) = r := by
+      have hdim' : ringKrullDim (MvPolynomial (Fin r) K) =
+        ringKrullDim (K ⊗[k] S) :=
+        Formalization.Books.Algebra.Unit112.integral_subring_ringKrullDim_eq
+          gK hgKinj hgKfinite.to_isIntegral
+      calc
+        ringKrullDim (K ⊗[k] S) = ringKrullDim (MvPolynomial (Fin r) K) := hdim'.symm
+        _ = r := by
+          rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+            ringKrullDim_eq_zero_of_field]
+          simp [Nat.card_fin]
+    exact hdimS.trans hdimK.symm
+  · letI : Subsingleton S := not_nontrivial_iff_subsingleton.mp hS
+    haveI : Subsingleton (K ⊗[k] S) := inferInstance
+    simp only [ringKrullDim_eq_bot_of_subsingleton]
 
 /- The local dimension is unchanged at corresponding points after base change.
    The right tensor inclusion is the map defining “lying over” here. -/

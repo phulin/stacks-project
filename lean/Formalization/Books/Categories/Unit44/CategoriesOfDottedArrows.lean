@@ -1504,6 +1504,15 @@ theorem dottedArrow_baseChange_equivalence
       (Iso.inv_hom_id_app counitIso (forward.obj A)))⟩
 /-! ## Composition -/
 
+/-- The type of the comparison 2-cell in a composable solid diagram.
+Naming this dependent hom type keeps the `CompositionData` declaration small. -/
+def CompositionGamma {C : Type u} [Bicategory.{w, v} C]
+    [Bicategory.Strict C]
+    {objS objX objY objZ objT : C}
+    (j : objS ⟶ objT) (x : objS ⟶ objX)
+    (f : objX ⟶ objY) (g : objY ⟶ objZ) (z : objT ⟶ objZ) : Type w :=
+  j ≫ z ⟶ (x ≫ f) ≫ g
+
 /-- The data of the composable solid diagram in the composition lemma. -/
 structure CompositionData {C : Type u} [Bicategory.{w, v} C]
     [Bicategory.Strict C] where
@@ -1517,7 +1526,7 @@ structure CompositionData {C : Type u} [Bicategory.{w, v} C]
   f : objX ⟶ objY
   g : objY ⟶ objZ
   z : objT ⟶ objZ
-  gamma : j ≫ z ⟶ (x ≫ f) ≫ g
+  gamma : CompositionGamma j x f g z
   gamma_isIso : IsIso gamma
 
 attribute [instance] CompositionData.gamma_isIso

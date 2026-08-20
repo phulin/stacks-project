@@ -191,12 +191,91 @@ theorem regular_graded
   -/
   sorry
 
+/-- Multiplicative form of `regular_graded`, using Chapter 69's Rees-quotient
+model of the associated graded ring.  The ring equivalence, rather than only
+the degreewise linear equivalence, is the interface needed by
+`regular_domain`. -/
+theorem regular_adicAssociatedGradedRing
+    {R : Type u} [CommRing R] [IsRegularLocalRing R]
+    (d : ℕ) (hd : ringKrullDim R = d)
+    (xs : List R)
+    (hxs : IsMinimalIdealGeneratingList (maximalIdeal R) xs)
+    (hxd : xs.length = d) :
+    Nonempty
+      (MvPolynomial (Fin d) (R ⧸ maximalIdeal R) ≃+*
+        Formalization.Books.Algebra.Unit69.adicAssociatedGradedRing
+          (maximalIdeal R)) := by
+  /-
+  Roadmap.  Reuse the injectivity and surjectivity calculation of
+  `regular_graded`; do not prove a second Hilbert-function theorem.  Chapter
+  69 should provide one generic bridge identifying its direct-sum target
+  `quasiRegularTarget R R I` with the Rees-quotient ring
+  `adicAssociatedGradedRing I`, and prove that the canonical polynomial map
+  respects multiplication under this identification.  Transport the
+  bijective canonical map through that bridge and package it as a
+  `RingEquiv`.  Once this theorem exists, the associated graded ring is a
+  domain by `MonoidEquiv.isDomain_iff` and the polynomial instance.
+  -/
+  sorry
+
 /-! ## Basic properties -/
+
+/-- Every nonzero element of a Noetherian local ring has a well-defined
+initial degree for the maximal-ideal filtration.  This is the separatedness
+input in the textbook proof that a regular local ring is a domain. -/
+theorem exists_maximalIdeal_adicOrder
+    {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    {x : R} (hx : x ≠ 0) :
+    ∃ n : ℕ, x ∈ (maximalIdeal R) ^ n ∧
+      x ∉ (maximalIdeal R) ^ (n + 1) := by
+  classical
+  have hex : ∃ k : ℕ, x ∉ (maximalIdeal R) ^ k := by
+    by_contra h
+    push Not at h
+    have hxinf : x ∈
+        Formalization.Books.Algebra.Unit51.powersIntersectionIdeal
+          (maximalIdeal R) := by
+      exact Ideal.mem_iInf.mpr h
+    rw [Formalization.Books.Algebra.Unit51.powersIntersectionIdeal_eq_bot_of_isLocalRing
+        (maximalIdeal R) (maximalIdeal.isMaximal R).ne_top] at hxinf
+    exact hx (Ideal.mem_bot.mp hxinf)
+  let k := Nat.find hex
+  have hk : x ∉ (maximalIdeal R) ^ k := Nat.find_spec hex
+  have hk0 : k ≠ 0 := by
+    intro hk0
+    apply hk
+    rw [hk0]
+    simpa only [pow_zero, Ideal.one_eq_top] using
+      (show x ∈ (⊤ : Ideal R) from trivial)
+  obtain ⟨n, hn⟩ := Nat.exists_eq_succ_of_ne_zero hk0
+  refine ⟨n, ?_, ?_⟩
+  · simpa only [not_not] using
+      (Nat.find_min hex (show n < k by omega))
+  · rw [hn] at hk
+    simpa [Nat.succ_eq_add_one] using hk
 
 /-- A regular local ring is a domain. -/
 theorem regular_domain
     {R : Type u} [CommRing R] [IsRegularLocalRing R] :
     IsDomain R := by
+  /-
+  Roadmap.  Choose a minimal generating list with
+  `exists_minimalIdealGeneratingList` and use
+  `regular_adicAssociatedGradedRing` to make the maximal-ideal associated
+  graded ring a domain.  For nonzero `f` and `g`, obtain their maximal adic
+  orders `a` and `b` from `exists_maximalIdeal_adicOrder`.  Chapter 69 needs
+  the following two generic Rees-quotient lemmas:
+
+  * `adicAssociatedGradedForm_eq_zero_iff`, saying the degree-`n` form of
+    `x ∈ I^n` vanishes exactly when `x ∈ I^(n+1)`;
+  * `adicAssociatedGradedForm_mul`, identifying the product of the forms of
+    `f` and `g` with the degree-`a+b` form of `f*g`.
+
+  The first lemma makes both initial forms nonzero; the graded domain and the
+  second make the initial form of `f*g` nonzero, hence `f*g ≠ 0`.  This is
+  exactly the source proof and avoids routing through the later
+  Cohen--Macaulay theorem (which would be circular here).
+  -/
   sorry
 
 /-- A minimal generating list of the maximal ideal is a regular sequence; all

@@ -1425,9 +1425,12 @@ theorem five_product_ratio_square (D : LocalNumericalData 5)
 
 theorem star_five_matrix_singular (r : ℤ) :
     Matrix.det (scalarMatrix (starMatrix 5 0 (constantVector (-2)) 1) r) = 0 := by
-  simp [scalarMatrix, starMatrix, constantVector, Matrix.det_succ_row_zero,
-    Fin.sum_univ_succ, Fin.succAbove]
-  ring
+  rw [show scalarMatrix (starMatrix 5 0 (constantVector (-2)) 1) r =
+    r • starMatrix 5 0 (constantVector (-2)) 1 by rfl, Matrix.det_smul]
+  have hdet : Matrix.det (starMatrix 5 0 (constantVector (-2)) 1) = 0 := by
+    native_decide
+  rw [hdet]
+  simp
 
 theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
     Matrix.det (scalarMatrix (doubleTripleMatrix t) r) = 0 := by
@@ -2115,14 +2118,22 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
 
 theorem e6_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 6 4 2 5 (-2) 1) r) = 3 * r ^ 6 := by
-  simp [scalarMatrix, pathUntilLeafMatrix, Matrix.det_succ_row_zero,
-    Fin.sum_univ_succ, Fin.succAbove]
+  rw [show scalarMatrix (pathUntilLeafMatrix 6 4 2 5 (-2) 1) r =
+    r • pathUntilLeafMatrix 6 4 2 5 (-2) 1 by rfl, Matrix.det_smul]
+  have hdet : Matrix.det (pathUntilLeafMatrix 6 4 2 5 (-2) 1) = 3 := by
+    native_decide
+  rw [hdet]
+  simp
   ring
 
 theorem e7_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 7 5 3 6 (-2) 1) r) = -2 * r ^ 7 := by
-  simp [scalarMatrix, pathUntilLeafMatrix, Matrix.det_succ_row_zero,
-    Fin.sum_univ_succ, Fin.succAbove]
+  rw [show scalarMatrix (pathUntilLeafMatrix 7 5 3 6 (-2) 1) r =
+    r • pathUntilLeafMatrix 7 5 3 6 (-2) 1 by rfl, Matrix.det_smul]
+  have hdet : Matrix.det (pathUntilLeafMatrix 7 5 3 6 (-2) 1) = -2 := by
+    native_decide
+  rw [hdet]
+  simp
   ring
 
 /-! A genus-one consequence used repeatedly in the chapter's discussion. -/

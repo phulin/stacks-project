@@ -3261,7 +3261,7 @@ theorem genericGeneralLinearDet_ne_zero
       (MvPolynomial.eval₂ (RingHom.id k)
         (fun ij : Fin n × Fin n => if ij.1 = ij.2 then 1 else 0))).det = 0 at he
   rw [hm] at he
-  simpa using he
+  simp at he
 
 theorem generalLinearCoordinateRing_isDomain
     (k : Type u) [Field k] (n : ℕ) :
@@ -3308,14 +3308,14 @@ def idempotentRankOrbitPrime (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) 
 theorem idempotentRankOrbitPrime_isPrime
     (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) :
     (idempotentRankOrbitPrime k n r).IsPrime := by
-  letI : IsDomain (GeneralLinearCoordinateRing k n) :=
+  let : IsDomain (GeneralLinearCoordinateRing k n) :=
     generalLinearCoordinateRing_isDomain k n
   refine ⟨?_, ?_⟩
   · intro htop
     have hmem : (1 : IdempotentMatrixPolynomial k n) ∈
         idempotentRankOrbitPrime k n r := by rw [htop]; simp
     change idempotentRankOrbitHom k n r 1 = 0 at hmem
-    simpa using hmem
+    simp at hmem
   · intro a b hab
     change idempotentRankOrbitHom k n r (a * b) = 0 at hab
     rw [map_mul] at hab
@@ -3348,7 +3348,7 @@ theorem idempotentMatrixIdeal_le_rankOrbitPrime
         (g : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) *
           (D * D) *
           (↑(g⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) by
-      simp only [mul_assoc, ← Matrix.GeneralLinearGroup.coe_mul]; simp]
+      simp only [mul_assoc]; simp]
     rw [hD]
   rw [idempotentMatrixIdeal]
   apply Ideal.span_le.mpr
@@ -3385,7 +3385,7 @@ theorem diagonalIdempotent_charpoly
     _ = (Polynomial.X - Polynomial.C 1) ^ r.1 *
         Polynomial.X ^ (n - r.1) := by
           have hlt : (Finset.univ.filter (fun i : Fin n => i.1 < r.1)).card = r.1 := by
-            simpa [Fin.card_filter_val_lt,
+            simp [Fin.card_filter_val_lt,
               min_eq_right (Nat.le_of_lt_succ r.2)]
           have hrn : r.1 ≤ n := Nat.le_of_lt_succ r.2
           let e : Fin (n - r.1) ≃
@@ -3703,7 +3703,7 @@ theorem exists_rankOrbitPrime_le_of_prime_over_idempotentMatrixIdeal
     (hIp : idempotentMatrixIdeal (k := k) n ≤ p) :
     ∃ r : Fin (n + 1), idempotentRankOrbitPrime k n r ≤ p := by
   classical
-  letI : p.IsPrime := hp
+  let : p.IsPrime := hp
   let K := p.ResidueField
   let q : IdempotentMatrixPolynomial k n →+* K :=
     algebraMap (IdempotentMatrixPolynomial k n) K
@@ -3725,8 +3725,7 @@ theorem exists_rankOrbitPrime_le_of_prime_over_idempotentMatrixIdeal
             genericIdempotentMatrix (k := k) n l j) -
             genericIdempotentMatrix (k := k) n i j) = 0 :=
       Ideal.algebraMap_residueField_eq_zero.mpr hrel
-    simp only [map_sub, map_sum, map_mul, genericIdempotentMatrix,
-      MvPolynomial.eval₂Hom_X'] at hz
+    simp only [map_sub, map_sum, map_mul, genericIdempotentMatrix] at hz
     change (E * E) i j - E i j = 0 at hz
     exact sub_eq_zero.mp hz
   obtain ⟨r, g, _hrank, hdiag⟩ :=
@@ -3868,7 +3867,7 @@ theorem idempotentMatrix_minimalPrimes
           idempotentMatrixIdeal_le_rankOrbitPrime k n r⟩
       · exact hrp
   · rintro ⟨r, rfl⟩
-    letI : (idempotentRankOrbitPrime k n r).IsPrime :=
+    let : (idempotentRankOrbitPrime k n r).IsPrime :=
       idempotentRankOrbitPrime_isPrime k n r
     obtain ⟨q, hq, hqr⟩ :=
       Ideal.exists_minimalPrimes_le

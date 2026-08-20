@@ -2,6 +2,7 @@ import Formalization.Books.Simplicial.Unit12.TruncatedSimplicialObjects
 import Mathlib.AlgebraicTopology.SimplicialObject.Coskeletal
 import Mathlib.AlgebraicTopology.SimplicialSet.FiniteProd
 import Mathlib.CategoryTheory.Functor.KanExtension.Pointwise
+import Mathlib.CategoryTheory.Adjunction.Unique
 import Mathlib.CategoryTheory.Limits.Constructions.Over.Connected
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
@@ -2338,7 +2339,17 @@ theorem inductive_tower_component_stabilizes {C : Type u} [Category.{v} C]
     (h : r ≤ k) (h' : r ≤ k + 1) :
     inductiveCoskeletonComponent T r k h =
       inductiveCoskeletonComponent T r (k + 1) h' := by
-  sorry
+  have e := congrArg (fun V : SimplicialObject.Truncated C (m + k) =>
+    V.obj (op ⟨SimplexCategory.mk (m + r), Nat.add_le_add_left h m⟩)) (T.next_restrict k)
+  have hobj : (op ((SimplexCategory.Truncated.incl (m + k) (m + k + 1)).obj
+      ⟨SimplexCategory.mk (m + r), Nat.add_le_add_left h m⟩)) =
+      (op ⟨SimplexCategory.mk (m + r), Nat.add_le_add_left h' m⟩) := by
+    apply congrArg op
+    apply ObjectProperty.FullSubcategory.ext
+    rfl
+  change (T.level k).obj _ = (T.level (k + 1)).obj _
+  rw [← hobj]
+  exact e.symm
 
 /-! ## Consequences usually packaged as the cosk-up lemma -/
 
@@ -2384,7 +2395,14 @@ theorem cosk_up_coskeleton_iso {C : Type u} [Category.{v} C]
         ((SimplicialObject.truncation m).obj
           ((SimplicialObject.Truncated.cosk n).obj U)) ≅
       (SimplicialObject.Truncated.cosk n).obj U) := by
-  sorry
+  let adjR : SimplicialObject.Truncated.trunc C m n h ⊣
+      restrictedCoskeleton n m h :=
+    Classical.choice (restricted_coskeleton_right_adjoint n m h)
+  let adjComp := (cosk_up_right_adjoint m).comp adjR
+  let adjComp' := Adjunction.ofNatIsoLeft adjComp
+    (SimplicialObject.truncationCompTrunc h)
+  let e := Adjunction.rightAdjointUniq (cosk_up_right_adjoint n) adjComp'
+  exact ⟨e.symm.app U⟩
 
 theorem cosk_up_preserves_coskeletal {C : Type u} [Category.{v} C]
     (n m : ℕ) (h : n ≤ m)
@@ -2406,13 +2424,89 @@ theorem has_coskeleton_of_has_finite_connected_limits
     (hC : HasFiniteConnectedLimits C)
     (U : SimplicialObject.Truncated C k) :
     HasCoskeleton k U := by
-  sorry
+  let : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
+  let : (truncInclusion k).HasPointwiseRightKanExtension U := by
+    intro X
+    have : Finite (SimplexCategory.Truncated k) :=
+      Finite.of_injective
+        (fun x => ⟨x.1.len, Nat.lt_succ_of_le x.2⟩ :
+          SimplexCategory.Truncated k → Fin (k + 1))
+        (by
+          intro x y h
+          cases x with
+          | mk x hx =>
+            cases y with
+            | mk y hy =>
+              congr
+              exact SimplexCategory.ext (Fin.ext_iff.mp h))
+    let : Fintype (SimplexCategory.Truncated k) := Fintype.ofFinite _
+    let : Fintype ((SimplexCategory.Truncated k)ᵒᵖ) :=
+      Fintype.ofEquiv _ equivToOpposite
+    let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+        Finite (X ⟶ (truncInclusion k).obj T) := fun T =>
+      Finite.of_injective (fun f => f.unop.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Opposite.unop_injective
+          apply SimplexCategory.Hom.ext
+          exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+        Fintype (X ⟶ (truncInclusion k).obj T) := fun T => Fintype.ofFinite _
+    let : Fintype (StructuredArrow X (truncInclusion k)) :=
+      Fintype.ofInjective
+        (fun j : StructuredArrow X (truncInclusion k) =>
+          (⟨j.right, j.hom⟩ : Σ T, X ⟶ (truncInclusion k).obj T))
+        (by
+          rintro ⟨⟨⟩, jr, jh⟩ ⟨⟨⟩, kr, kh⟩ h
+          cases h
+          rfl)
+    let : ∀ j k : StructuredArrow X (truncInclusion k), Finite (j ⟶ k) :=
+      fun j k =>
+        Finite.of_injective (fun f => f.right.unop.hom.toOrderHom.toFun)
+          (by
+            intro f g h
+            apply Comma.hom_ext f g
+            · exact Subsingleton.elim _ _
+            · apply Opposite.unop_injective
+              apply SimplexCategory.Truncated.Hom.ext
+              exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : FinCategory (StructuredArrow X (truncInclusion k)) :=
+      { fintypeObj := inferInstance
+        fintypeHom := fun j k => Fintype.ofFinite _ }
+    by_cases hX : X.unop.len ≤ k
+    · let Y : (SimplexCategory.Truncated k)ᵒᵖ :=
+        op ⟨SimplexCategory.mk X.unop.len, hX⟩
+      have e : (truncInclusion k).obj Y = X := by
+        apply Opposite.unop_injective
+        exact SimplexCategory.ext rfl
+      rw [← e]
+      let hInitial : IsInitial (StructuredArrow.mk (𝟙 (truncInclusion k).obj Y)) :=
+        StructuredArrow.mkIdInitial
+      exact HasLimit.mk
+        { cone := coneOfDiagramInitial hInitial
+            (StructuredArrow.proj ((truncInclusion k).obj Y) (truncInclusion k) ⋙ U)
+          isLimit := limitOfDiagramInitial hInitial
+            (StructuredArrow.proj ((truncInclusion k).obj Y) (truncInclusion k) ⋙ U) }
+    · let e : X = op (SimplexCategory.mk X.unop.len) := by
+        apply Opposite.unop_injective
+        exact SimplexCategory.ext rfl
+      rw [e]
+      let : IsConnected (coskeletonIndex k X.unop.len) := by infer_instance
+      let : HasLimitsOfShape (coskeletonIndex k X.unop.len) C :=
+        hC (coskeletonIndex k X.unop.len)
+      change HasLimit (coskeletonIndexDiagram k X.unop.len U)
+      exact (inferInstance :
+        HasLimitsOfShape (coskeletonIndex k X.unop.len) C).has_limit _
+  exact
+    (Functor.pointwiseRightKanExtensionIsPointwiseRightKanExtension
+      (truncInclusion k) U).hasRightKanExtension
 
 theorem has_coskeleton_functor_of_has_finite_connected_limits
     {C : Type u} [Category.{v} C] (k : ℕ) (hk : 1 ≤ k)
     (hC : HasFiniteConnectedLimits C) :
     HasCoskeletonFunctor (C := C) k := by
-  sorry
+  intro U
+  exact has_coskeleton_of_has_finite_connected_limits k hk hC U
 
 theorem coskeleton_index_is_connected (k n : ℕ) (hk : 1 ≤ k)
     (hkn : k + 1 ≤ n) :

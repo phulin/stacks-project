@@ -91,6 +91,7 @@ noncomputable def internalHomSectionsEquiv {X : TopCat.{v}}
     (internalHom O F G).val.obj (op U) ≃ LocalModuleHom O F G U :=
   Classical.choice ((internalHomData O F G).sections U)
 
+@[instance_reducible]
 noncomputable def internalHom_sectionwiseModule {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G : CommRingSheafModule O) (U : Opens X) :
     Module (↑(O.obj.obj (op U))) (LocalModuleHom O F G U) :=

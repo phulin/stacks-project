@@ -207,11 +207,14 @@ theorem hypersurface_jacobian_smooth
     rw [LinearMap.comp_apply]
     change q (P.toExtension.cotangentComplex
       (Algebra.Extension.Cotangent.mk (b • rf))) = 0
-    rw [map_smul]
-    have hqv' : q (P.toExtension.cotangentComplex
-        (Algebra.Extension.Cotangent.mk rf)) = 0 := by
-      simpa [m] using hqv
-    rw [← algebraMap_smul (Hypersurface R f), map_smul, hqv', smul_zero]
+    have hmk : Algebra.Extension.Cotangent.mk (b • rf) =
+        algebraMap P.toExtension.Ring (Hypersurface R f) b • m := by
+      change Algebra.Extension.Cotangent.mk (b • rf) =
+        algebraMap P.toExtension.Ring (Hypersurface R f) b •
+          Algebra.Extension.Cotangent.mk rf
+      rw [map_smul, ← algebraMap_smul (Hypersurface R f)]
+    rw [hmk]
+    rw [P.toExtension.cotangentComplex.map_smul, q.map_smul, hqv, smul_zero]
   have hq_surj : Function.Surjective q := by
     intro b
     refine ⟨b • ((-c 1) • P.cotangentSpaceBasis 0 +
@@ -504,8 +507,9 @@ theorem inseparable_hypersurface_warning
     have hJ : J = I1.map (e2 : (K ⊗[R] T) →+* MvPolynomial (Fin 2) K) := by
       rfl
     have heFiber :
-        Unit136.Fiber R (InseparableHypersurface R p) q ≃ₐ[K]
+        @Unit136.Fiber R (InseparableHypersurface R p) _ _ alg q ≃ₐ[K]
           MvPolynomial (Fin 2) K ⧸ J := by
+      rw [halg]
       exact e1.trans (Ideal.quotientEquivAlg I1 J e2 hJ)
     let r : MvPolynomial (Fin 2) K := e2 (1 ⊗ₜ[R] g)
     have hr_map : r = MvPolynomial.map (algebraMap R K) g := by
@@ -605,7 +609,7 @@ theorem inseparable_hypersurface_warning
     have hdimQ : ringKrullDim (MvPolynomial (Fin 2) K ⧸ J) = 1 :=
       le_antisymm hupper' hlower
     calc
-      ringKrullDim (Unit136.Fiber R (InseparableHypersurface R p) q) =
+      ringKrullDim (@Unit136.Fiber R (InseparableHypersurface R p) _ _ alg q) =
           ringKrullDim (MvPolynomial (Fin 2) K ⧸ J) :=
         ringKrullDim_eq_of_ringEquiv heFiber.toRingEquiv
       _ = 1 := hdimQ

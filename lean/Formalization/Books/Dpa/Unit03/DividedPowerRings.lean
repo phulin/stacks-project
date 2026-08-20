@@ -104,10 +104,9 @@ def IsDividedPowerAlgebra (A B : DividedPowerRing.{u}) : Prop :=
 
 /-! ## Limits and Brown's representability criterion -/
 
-/-- The source's assertion that the divided-power-ring category has all limits
-and that the underlying ring limit is the ordinary ring limit. -/
-theorem hasLimits_and_forget_creates_limits :
-    HasLimits (DividedPowerRing.{u}) ∧ Nonempty (CreatesLimits (forget)) := by
+/-- The category of divided-power rings has all limits.  The underlying-ring
+forgetful functor does not in general create limits. -/
+theorem hasLimits : HasLimits (DividedPowerRing.{u}) := by
   sorry
 
 /-- The small-source hypothesis in the chapter's version of Brown's lemma. -/

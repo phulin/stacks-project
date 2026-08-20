@@ -1481,7 +1481,7 @@ noncomputable def extensionIndexEquiv (n k : ℕ) :
         · simp [α.2]
         · have hne : ¬Epi (α.1 ≫ SimplexCategory.δ (Fin.last (k + 1))) := by
             intro h
-            letI : Epi (α.1 ≫ SimplexCategory.δ (Fin.last (k + 1))) := h
+            let : Epi (α.1 ≫ SimplexCategory.δ (Fin.last (k + 1))) := h
             have hδ : Epi (SimplexCategory.δ (Fin.last (k + 1))) :=
               epi_of_epi_fac (f := α.1) (g := SimplexCategory.δ (Fin.last (k + 1)))
                 (h := α.1 ≫ SimplexCategory.δ (Fin.last (k + 1))) rfl
@@ -1489,7 +1489,7 @@ noncomputable def extensionIndexEquiv (n k : ℕ) :
               rw [SimplexCategory.epi_iff_surjective] at hδ
               obtain ⟨x, hx⟩ := hδ (Fin.last (k + 1))
               apply Fin.succAbove_ne (Fin.last (k + 1)) x
-              simpa [SimplexCategory.δ] using hx)
+              simp [SimplexCategory.δ] at hx)
           have hfac : ∃ (e : ⦋n⦌ ⟶ ⦋k⦌), Epi e ∧
               e ≫ SimplexCategory.δ (Fin.last (k + 1)) =
                 α.1 ≫ SimplexCategory.δ (Fin.last (k + 1)) :=
@@ -1529,7 +1529,7 @@ noncomputable def extensionBiproductIso
       eilenbergMacLaneDegreeDirectSum A (k + 1) n) :
     ((eilenbergMacLaneObject A k ⊞ eilenbergMacLaneObject A (k + 1)).obj
         (op ⦋n⦌)) ≅
-      (∐ fun α : Sum (SurjectiveSimplexIndex n (k + 1))
+      (∐ fun _ : Sum (SurjectiveSimplexIndex n (k + 1))
           (SurjectiveSimplexIndex n k) => A) := by
   classical
   let E := (evaluation (SimplexCategoryᵒᵖ) C).obj (op ⦋n⦌)
@@ -1651,29 +1651,13 @@ noncomputable def extensionBiproductIso
           ·
             rw [Category.assoc, hwr]
             apply biprod.hom_ext'
-            · simpa [E, ← Category.assoc, biprod.inl_desc, hfr, Category.id_comp,
-                Category.comp_id] using
-                (biprod.inl_fst
-                  (X := (eilenbergMacLaneObject A k).obj (op ⦋n⦌))
-                  (Y := (eilenbergMacLaneObject A (k + 1)).obj (op ⦋n⦌))).symm
-            · simpa [E, ← Category.assoc, biprod.inr_desc, hgr, Category.id_comp,
-                Category.comp_id] using
-                (biprod.inr_fst
-                  (X := (eilenbergMacLaneObject A k).obj (op ⦋n⦌))
-                  (Y := (eilenbergMacLaneObject A (k + 1)).obj (op ⦋n⦌))).symm
+            · simp [E, ← Category.assoc, biprod.inl_desc, hfr, Category.id_comp]
+            · simp [E, ← Category.assoc, biprod.inr_desc, hgr, Category.id_comp]
           ·
             rw [Category.assoc, hws]
             apply biprod.hom_ext'
-            · simpa [E, ← Category.assoc, biprod.inl_desc, hfs, Category.id_comp,
-                Category.comp_id] using
-                (biprod.inl_snd
-                  (X := (eilenbergMacLaneObject A k).obj (op ⦋n⦌))
-                  (Y := (eilenbergMacLaneObject A (k + 1)).obj (op ⦋n⦌))).symm
-            · simpa [E, ← Category.assoc, biprod.inr_desc, hgs, Category.id_comp,
-                Category.comp_id] using
-                (biprod.inr_snd
-                  (X := (eilenbergMacLaneObject A k).obj (op ⦋n⦌))
-                  (Y := (eilenbergMacLaneObject A (k + 1)).obj (op ⦋n⦌))).symm
+            · simp [E, ← Category.assoc, biprod.inl_desc, hfs, Category.id_comp]
+            · simp [E, ← Category.assoc, biprod.inr_desc, hgs, Category.id_comp]
         have hcomp : c.hom ≫
             (biprod.desc (e₀.hom ≫ h₀) (e₁.hom ≫ h₁) ≫ w) =
             c.hom ≫ 𝟙 _ := congrArg (fun q => c.hom ≫ q) hw

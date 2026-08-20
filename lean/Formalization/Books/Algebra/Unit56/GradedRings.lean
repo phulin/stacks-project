@@ -1460,7 +1460,7 @@ theorem gradedHomComponent_spec
 
 /-! ## Graded Nakayama -/
 
-private lemma graded_finite_homogeneous_generators
+lemma graded_finite_homogeneous_generators
     (G : GradedRingData S) (𝓜 : GradedModuleData G M)
     [Module.Finite S M] :
     ∃ (n : ℕ) (d : Fin n → ℤ) (x : Fin n → M),
@@ -1744,7 +1744,7 @@ private lemma graded_smul_component_formula
             exact h
           rw [hr0, zero_smul]
 
-private lemma graded_finite_homogeneous_generators_submodule
+lemma graded_finite_homogeneous_generators_submodule
     (G : GradedRingData S) (𝓜 : GradedModuleData G M)
     (N' : Submodule S M) (hN' : IsGradedSubmodule G 𝓜 N')
     [Module.Finite S N'] :

@@ -4255,9 +4255,64 @@ noncomputable instance ftBCommRing (k : Type u) [Field k] : CommRing (ftB k) := 
 def ftCToB (k : Type u) [Field k] : ftC k →+* ftB k :=
   (ftCToCAtQ k).rangeRestrict
 
+private theorem ftCToCAtQ_ker_le_CQ (k : Type u) [Field k] :
+    RingHom.ker (ftCToCAtQ k) ≤ ftCQ k := by
+  let : IsLocalization (ftCQ k).primeCompl (ftCAtQ k) := by
+    change IsLocalization (ftCQ k).primeCompl (Localization.AtPrime (ftCQ k))
+    infer_instance
+  intro r hr
+  rw [RingHom.mem_ker] at hr
+  change algebraMap (ftC k) (ftCAtQ k) r = 0 at hr
+  have hzero : ∃ s : (ftCQ k).primeCompl, (s : ftC k) * r = 0 :=
+    (IsLocalization.map_eq_zero_iff (ftCQ k).primeCompl (ftCAtQ k) r).mp hr
+  obtain ⟨s, hsr⟩ := hzero
+  have hsr' : (s : ftC k) * r ∈ ftCQ k := hsr ▸ (ftCQ k).zero_mem
+  exact ((ftCQ_isPrime k).mem_or_mem hsr').resolve_left
+    (Ideal.mem_primeCompl_iff.mp s.prop)
+
+private theorem ftCToB_ker_le_CQ (k : Type u) [Field k] :
+    RingHom.ker (ftCToB k) ≤ ftCQ k := by
+  intro r hr
+  apply ftCToCAtQ_ker_le_CQ k
+  rw [RingHom.mem_ker]
+  have hr' : ftCToB k r = 0 := RingHom.mem_ker.mp hr
+  have hr'' := congrArg (fun x : ftB k => (x : ftCAtQ k)) hr'
+  change ftCToCAtQ k r = 0 at hr''
+  exact hr''
+
 theorem ftCToB_Xi (k : Type u) [Field k] (n : ℕ) :
     ftCToB k (ftXi k n) = 0 := by
-  sorry
+  let : IsLocalization (ftCQ k).primeCompl (ftCAtQ k) := by
+    change IsLocalization (ftCQ k).primeCompl (Localization.AtPrime (ftCQ k))
+    infer_instance
+  apply Subtype.ext
+  change algebraMap (ftC k) (ftCAtQ k) (ftXi k n) = 0
+  rw [IsLocalization.map_eq_zero_iff (ftCQ k).primeCompl (ftCAtQ k)]
+  let q : ftC k :=
+    ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1
+  have hq : q ∈ ftCQPrimeIdeal k n := by
+    dsimp [q, ftCQPrimeIdeal]
+    exact Ideal.mem_sup_right (Ideal.subset_span (by simp))
+  have hqzero : q * ftXi k n = 0 :=
+    ftCQPrimeIdeal_mul_Xi k n hq
+  have hqnot : q ∉ ftCQ k := by
+    intro hq'
+    have hx : ftCX k ∈ ftCQ k :=
+      Ideal.subset_span (Set.mem_union_left _ (by simp))
+    have hz : ftCZ k ∈ ftCQ k :=
+      Ideal.subset_span (Set.mem_union_left _ (by simp))
+    have hzx : ftCX k * ftCZ k ∈ ftCQ k :=
+      (ftCQ k).mul_mem_left (ftCX k) hz
+    have hpow : (ftCX k) ^ (n + 1) ∈ ftCQ k :=
+      (ftCQ k).pow_mem_of_mem hx (n + 1) (Nat.succ_pos n)
+    have hone : (1 : ftC k) ∈ ftCQ k := by
+      have h := (ftCQ k).sub_mem ((ftCQ k).sub_mem hq' hzx) hpow
+      convert h using 1
+      ring
+    apply (ftCQ_isMaximal k).ne_top
+    rw [Ideal.eq_top_iff_one]
+    exact hone
+  exact ⟨⟨q, hqnot⟩, hqzero⟩
 
 def ftAToB (k : Type u) [Field k] : ftA k →+* ftB k :=
   (ftCToB k).comp (ftAToC k)
@@ -4270,15 +4325,80 @@ def ftBQPrime (k : Type u) [Field k] : Ideal (ftB k) :=
 
 instance ftBQPrime_isPrime (k : Type u) [Field k] :
     (ftBQPrime k).IsPrime := by
-  sorry
+  apply Ideal.map_isPrime_of_surjective (ftCToCAtQ k).rangeRestrict_surjective
+  exact ftCToB_ker_le_CQ k
 
 theorem ftB_finiteType (k : Type u) [Field k] :
     RingHom.FiniteType (ftAToB k) := by
-  sorry
+  exact RingHom.FiniteType.comp_surjective (ftAToC_finiteType k)
+    (ftCToCAtQ k).rangeRestrict_surjective
+
+private theorem ftCToB_comap_ftBQPrime (k : Type u) [Field k] :
+    Ideal.comap (ftCToB k) (ftBQPrime k) = ftCQ k := by
+  change Ideal.comap (ftCToB k) (Ideal.map (ftCToB k) (ftCQ k)) = ftCQ k
+  calc
+    _ = ftCQ k ⊔ RingHom.ker (ftCToB k) :=
+      Ideal.comap_map_of_surjective' (ftCToB k)
+        (ftCToCAtQ k).rangeRestrict_surjective (ftCQ k)
+    _ = ftCQ k := sup_eq_left.mpr (ftCToB_ker_le_CQ k)
+
+private theorem ftB_localization_equiv_with_commutes (k : Type u) [Field k] :
+    ∃ e : Localization.AtPrime (ftBQPrime k) ≃+* ftCAtQ k,
+      ∀ b : ftB k,
+        e (algebraMap (ftB k) (Localization.AtPrime (ftBQPrime k)) b) =
+          (b : ftCAtQ k) := by
+  let : IsLocalization (ftCQ k).primeCompl (ftCAtQ k) := by
+    change IsLocalization (ftCQ k).primeCompl (Localization.AtPrime (ftCQ k))
+    infer_instance
+  let : Algebra (ftB k) (ftCAtQ k) :=
+    ((ftCToCAtQ k).range.subtype).toAlgebra
+  have hcomap := ftCToB_comap_ftBQPrime k
+  have hmap :
+      Submonoid.map (ftCToB k) (ftCQ k).primeCompl =
+        (ftBQPrime k).primeCompl := by
+    ext s
+    constructor
+    · rintro ⟨r, hr, rfl⟩
+      change ftCToB k r ∉ ftBQPrime k
+      intro hs
+      apply (Ideal.mem_primeCompl_iff.mp hr)
+      have : r ∈ Ideal.comap (ftCToB k) (ftBQPrime k) := hs
+      rw [hcomap] at this
+      exact this
+    · intro hs
+      obtain ⟨r, rfl⟩ := (ftCToCAtQ k).rangeRestrict_surjective s
+      have hr : r ∉ ftCQ k := by
+        intro hr
+        apply hs
+        exact Ideal.mem_map_of_mem (ftCToB k) hr
+      exact ⟨r, hr, rfl⟩
+  have hloc : IsLocalization
+      (Submonoid.map (ftCToB k) (ftCQ k).primeCompl) (ftCAtQ k) := by
+    apply IsLocalization.of_surjective (M := (ftCQ k).primeCompl) (S := ftCAtQ k)
+      (f := ftCToB k) (ftCToCAtQ k).rangeRestrict_surjective
+      (g := RingHom.id (ftCAtQ k)) Function.surjective_id
+    · ext x
+      rfl
+    · intro x hx
+      rw [RingHom.mem_ker] at hx
+      have hx' : x = 0 := by simpa using hx
+      rw [hx']
+      exact (Ideal.map (algebraMap (ftC k) (ftCAtQ k))
+        (RingHom.ker (ftCToB k))).zero_mem
+  let : IsLocalization (ftBQPrime k).primeCompl (ftCAtQ k) :=
+    hmap ▸ hloc
+  let e := IsLocalization.algEquiv (ftBQPrime k).primeCompl
+    (Localization.AtPrime (ftBQPrime k)) (ftCAtQ k)
+  refine ⟨e.toRingEquiv, ?_⟩
+  intro b
+  have hb := e.commutes b
+  change e (algebraMap (ftB k) (Localization.AtPrime (ftBQPrime k)) b) =
+    (b : ftCAtQ k) at hb
+  exact hb
 
 theorem ftB_localization_equiv (k : Type u) [Field k] :
     Nonempty (Localization.AtPrime (ftBQPrime k) ≃+* ftCAtQ k) := by
-  sorry
+  exact ⟨(ftB_localization_equiv_with_commutes k).choose⟩
 
 def ftAToBLocal (k : Type u) [Field k] (g : ftB k) :
     ftA k →+* Localization.Away g :=
@@ -4290,11 +4410,63 @@ def ftAToBQ (k : Type u) [Field k] :
 
 theorem ftB_localization_at_prime_flat (k : Type u) [Field k] :
     RingHom.Flat (ftAToBQ k) := by
-  sorry
+  rcases ftB_localization_equiv_with_commutes k with ⟨e, he⟩
+  have hiff :
+      (e.toRingHom.comp (ftAToBQ k)).Flat ↔ (ftAToBQ k).Flat :=
+    RingHom.Flat.comp_iff_of_bijective_left
+      (f := ftAToBQ k) (g := e.toRingHom) e.bijective
+  apply hiff.mp
+  have hcomp :
+      e.toRingHom.comp (ftAToBQ k) =
+        (ftCToCAtQ k).comp (ftAToC k) := by
+    ext a
+    change e (algebraMap (ftB k) (Localization.AtPrime (ftBQPrime k))
+        (ftAToB k a)) = ftCToCAtQ k (ftAToC k a)
+    rw [he]
+    rfl
+  rw [hcomp]
+  apply RingHom.Flat.comp (ftAToC_flat k)
+  let : IsLocalization (ftCQ k).primeCompl (ftCAtQ k) := by
+    change IsLocalization (ftCQ k).primeCompl (Localization.AtPrime (ftCQ k))
+    infer_instance
+  change RingHom.Flat (algebraMap (ftC k) (ftCAtQ k))
+  exact RingHom.flat_algebraMap_iff.mpr
+    (IsLocalization.flat (ftCAtQ k) (ftCQ k).primeCompl)
 
 theorem ftBQPrime_lies_over_maximal (k : Type u) [Field k] :
     Ideal.comap (ftAToB k) (ftBQPrime k) = IsLocalRing.maximalIdeal (ftA k) := by
-  sorry
+  have hle : IsLocalRing.maximalIdeal (ftA k) ≤
+      Ideal.comap (ftAToC k) (ftCQ k) := by
+    rw [ftA_maximalIdeal_eq_span_generators k]
+    refine Ideal.span_le.2 ?_
+    rintro a (ha | ha)
+    · rcases (show a = ftAX k ∨ a = ftAY k by simpa using ha) with rfl | rfl
+      · change ftAToC k (ftAX k) ∈ ftCQ k
+        exact Ideal.subset_span (Set.mem_union_left _ (by simp [ftCX]))
+      · change ftAToC k (ftAY k) ∈ ftCQ k
+        exact Ideal.subset_span (Set.mem_union_left _ (by simp [ftCY]))
+    · rcases ha with ⟨n, rfl⟩
+      change ftAToC k (ftAGenerator k n) ∈ ftCQ k
+      exact Ideal.subset_span (Set.mem_union_right _ ⟨n, rfl⟩)
+  have hne : Ideal.comap (ftAToC k) (ftCQ k) ≠ ⊤ := by
+    intro htop
+    have h1 : (1 : ftA k) ∈
+        Ideal.comap (ftAToC k) (ftCQ k) := by
+      rw [htop]
+      simp
+    have h1' : (1 : ftC k) ∈ ftCQ k := by
+      change ftAToC k (1 : ftA k) ∈ ftCQ k at h1
+      simpa using h1
+    apply (ftCQ_isMaximal k).ne_top
+    rw [Ideal.eq_top_iff_one]
+    exact h1'
+  have hcomap : Ideal.comap (ftAToC k) (ftCQ k) =
+      IsLocalRing.maximalIdeal (ftA k) := by
+    symm
+    exact (IsLocalRing.maximalIdeal.isMaximal (ftA k)).eq_of_le hne hle
+  change Ideal.comap (ftAToC k)
+      (Ideal.comap (ftCToB k) (ftBQPrime k)) = _
+  rw [ftCToB_comap_ftBQPrime k, hcomap]
 
 def ftBGenerator (k : Type u) [Field k] (n : ℕ) : ftB k :=
   ftCToB k (ftCZn k n)

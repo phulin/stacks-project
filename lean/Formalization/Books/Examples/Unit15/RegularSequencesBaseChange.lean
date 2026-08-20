@@ -6,6 +6,7 @@ import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.Regular.RegularSequence
 import Mathlib.RingTheory.RingHom.Flat
+import Formalization.Books.MoreAlgebra.Unit30.KoszulRegularSequences
 
 /-!
 # Examples, Chapter 15: Regular sequences and base change
@@ -23,6 +24,8 @@ universe u
 
 namespace Formalization.Books.Examples.Unit15
 
+open CategoryTheory
+open CategoryTheory.Limits
 open scoped Pointwise
 
 /-- The three variables in the polynomial ring used by the example. -/
@@ -227,79 +230,125 @@ def strangeSimplifiedModXDenominator (k : Type u) [Field k] :
 abbrev StrangeSimplifiedModX (k : Type u) [Field k] :=
   YLocalization k ⧸ strangeSimplifiedModXDenominator k
 
-/-- The low-degree Koszul differential in degree two for two elements. -/
-def koszulDifferential₂ {S : Type u} [CommRing S] (x y : S) :
-    S →ₗ[S] S × S where
-  toFun a := (-y * a, x * a)
-  map_add' a b := by
-    ext <;> simp [mul_add]
-  map_smul' r a := by
-    ext <;> simp [mul_comm, mul_left_comm]
+/- The source uses the full Koszul complex from More on Algebra, Chapter 30.
+   Its list interface is the established project API; this abbreviation only
+   adapts the source's two-element notation to that interface. -/
+abbrev koszulH₂ {S : Type u} [CommRing S] (x y : S) :=
+  Formalization.Books.MoreAlgebra.Unit30.koszulComplexOnListWithCoefficients
+    S S [x, y] |>.homology 2
 
-/-- The low-degree Koszul differential in degree one for two elements. -/
-def koszulDifferential₁ {S : Type u} [CommRing S] (x y : S) :
-    (S × S) →ₗ[S] S where
-  toFun a := x * a.1 + y * a.2
-  map_add' a b := by
-    simp [mul_add, add_assoc, add_left_comm]
-  map_smul' r a := by
-    change x * (r * a.1) + y * (r * a.2) =
-      r * (x * a.1 + y * a.2)
-    calc
-      x * (r * a.1) + y * (r * a.2) =
-          (r * x) * a.1 + (r * y) * a.2 := by
-            rw [← mul_assoc x r a.1, ← mul_assoc y r a.2,
-              mul_comm x r, mul_comm y r]
-      _ = r * (x * a.1) + r * (y * a.2) := by
-            rw [mul_assoc r x a.1, mul_assoc r y a.2]
-      _ = r * (x * a.1 + y * a.2) := by
-            rw [mul_add]
+abbrev IsKoszulRegularPair {S : Type u} [CommRing S] (x y : S) : Prop :=
+  Formalization.Books.MoreAlgebra.Unit30.IsKoszulRegular S [x, y]
 
-/-- The degree-two Koszul homology submodule for a pair. -/
-def koszulH₂ {S : Type u} [CommRing S] (x y : S) : Submodule S S :=
-  LinearMap.ker (koszulDifferential₂ x y)
-
-/-- A concrete low-degree interface for Koszul-regularity of a pair.
-
-The full Koszul complex is not exposed by the Mathlib imports available to
-this chapter. For a two-element sequence, the positive-degree condition is
-represented by injectivity in degree two together with exactness in degree
-one. -/
-def IsKoszulRegularPair {S : Type u} [CommRing S] (x y : S) : Prop :=
-  Function.Injective (koszulDifferential₂ x y) ∧
-    Function.Exact (koszulDifferential₂ x y) (koszulDifferential₁ x y)
-
-/-- A common annihilator gives a nonzero degree-two Koszul class. -/
-theorem koszulH₂_ne_bot_of_common_annihilator
+/-- A common annihilator gives a nonzero degree-two Koszul homology object. -/
+theorem koszulH₂_not_isZero_of_common_annihilator
     {S : Type u} [CommRing S] {x y a : S}
     (ha : a ≠ 0) (hxa : x * a = 0) (hya : y * a = 0) :
-    koszulH₂ x y ≠ ⊥ := by
+    ¬ IsZero (koszulH₂ x y) := by
   sorry
 
 /-- The regular-sequence predicate used below, reusing Mathlib's list API. -/
 abbrev IsRegularSequence (S : Type u) [CommRing S] (rs : List S) : Prop :=
   RingTheory.Sequence.IsRegular S rs
 
-/-- The four-term diagram in the source, including both short exact rows and
-the push-out universal property. -/
+/- The source diagram has named canonical maps, rather than arbitrary maps
+   witnessing an existential.  The quotient constructions above determine
+   these maps; the remaining well-definedness proofs belong to the proof stage. -/
+noncomputable def strangeTopLeftToTopMiddle (k : Type u) [Field k] :
+    StrangeTopLeft k →ₗ[PolynomialRing k] StrangeTopMiddle k := by
+  let fxy : YLocalization k →ₗ[PolynomialRing k] XYLocalization k :=
+    { toFun := yLocalizationToXY k
+      map_add' := by intro a b; exact (yLocalizationToXY k).map_add a b
+      map_smul' := by sorry }
+  let f : StrangeTopLeftNumerator k →ₗ[PolynomialRing k] StrangeTopMiddle k :=
+    (yTimesXLocalizationInXY k).mkQ.comp
+      (fxy.comp
+        (xTimesYLocalization k).subtype)
+  exact (strangeTopLeftDenominator k).liftQ f (by sorry)
+
+noncomputable def strangeTopLeftToBottomLeft (k : Type u) [Field k] :
+    StrangeTopLeft k →ₗ[PolynomialRing k] StrangeBottomLeft k := by
+  let mx : YLocalization k →ₗ[PolynomialRing k] YLocalization k :=
+    LinearMap.lsmul (PolynomialRing k) (YLocalization k) (xPolynomial k)
+  let mz : YLocalization k →ₗ[PolynomialRing k] YLocalization k :=
+    LinearMap.lsmul (PolynomialRing k) (YLocalization k) (zPolynomial k)
+  let emx : YLocalization k ≃ₗ[PolynomialRing k] StrangeTopLeftNumerator k :=
+    LinearEquiv.ofBijective mx.rangeRestrict (by sorry)
+  let f : StrangeTopLeftNumerator k →ₗ[PolynomialRing k] YLocalization k :=
+    mz.comp emx.symm.toLinearMap
+  exact (strangeTopLeftDenominator k).liftQ
+    ((yzPolynomialSubmodule k).mkQ.comp f) (by sorry)
+
+noncomputable def strangeTopMiddleToStrangeRight (k : Type u) [Field k] :
+    StrangeTopMiddle k →ₗ[PolynomialRing k] StrangeRight k := by
+  exact (yTimesXLocalizationInXY k).mapQ (strangeRightDenominator k)
+    LinearMap.id le_sup_left
+
+noncomputable def strangeBottomLeftToStrangeRight (k : Type u) [Field k] :
+    StrangeBottomLeft k →ₗ[PolynomialRing k] StrangeRight k := by
+  let fxy : YLocalization k →ₗ[PolynomialRing k] XYLocalization k :=
+    { toFun := yLocalizationToXY k
+      map_add' := by intro a b; exact (yLocalizationToXY k).map_add a b
+      map_smul' := by sorry }
+  let f : YLocalization k →ₗ[PolynomialRing k] StrangeRight k :=
+    (strangeRightDenominator k).mkQ.comp fxy
+  exact (yzPolynomialSubmodule k).liftQ f (by sorry)
+
+noncomputable def strangeTopMiddleToModule (k : Type u) [Field k] :
+    StrangeTopMiddle k →ₗ[PolynomialRing k] StrangeModule k := by
+  let i : StrangeTopMiddle k →ₗ[PolynomialRing k]
+      StrangeTopMiddle k × StrangeBottomLeft k :=
+    { toFun := fun a => (a, 0)
+      map_add' := by intro a b; simp
+      map_smul' := by intro r a; simp }
+  exact (strangeRelationSubmodule k).mkQ.comp i
+
+noncomputable def strangeBottomLeftToModule (k : Type u) [Field k] :
+    StrangeBottomLeft k →ₗ[PolynomialRing k] StrangeModule k := by
+  let i : StrangeBottomLeft k →ₗ[PolynomialRing k]
+      StrangeTopMiddle k × StrangeBottomLeft k :=
+    { toFun := fun b => (0, b)
+      map_add' := by intro a b; simp
+      map_smul' := by intro r a; simp }
+  exact (strangeRelationSubmodule k).mkQ.comp i
+
+noncomputable def strangeModuleToStrangeRight (k : Type u) [Field k] :
+    StrangeModule k →ₗ[PolynomialRing k] StrangeRight k := by
+  let f : StrangeTopMiddle k × StrangeBottomLeft k →ₗ[PolynomialRing k]
+      StrangeRight k :=
+    (strangeTopMiddleToStrangeRight k).comp
+        (LinearMap.fst (PolynomialRing k) (StrangeTopMiddle k)
+          (StrangeBottomLeft k)) +
+      (strangeBottomLeftToStrangeRight k).comp
+        (LinearMap.snd (PolynomialRing k) (StrangeTopMiddle k)
+          (StrangeBottomLeft k))
+  exact (strangeRelationSubmodule k).liftQ f (by sorry)
+
+/-- The four-term diagram in the source, including its two short exact rows
+and the push-out universal property. -/
 def StrangePushoutDiagram (k : Type u) [Field k] : Prop :=
-  ∃ (a : StrangeTopLeft k →ₗ[PolynomialRing k] StrangeTopMiddle k)
-    (b : StrangeTopMiddle k →ₗ[PolynomialRing k] StrangeRight k)
-    (c : StrangeTopLeft k →ₗ[PolynomialRing k] StrangeBottomLeft k)
-    (d : StrangeBottomLeft k →ₗ[PolynomialRing k] StrangeRight k)
-    (e : StrangeTopMiddle k →ₗ[PolynomialRing k] StrangeModule k)
-    (f : StrangeBottomLeft k →ₗ[PolynomialRing k] StrangeModule k)
-    (g : StrangeModule k →ₗ[PolynomialRing k] StrangeRight k),
-    Function.Injective a ∧ Function.Exact a b ∧ Function.Surjective b ∧
-    Function.Injective c ∧ Function.Injective f ∧ Function.Exact f g ∧
-        Function.Surjective g ∧
-      e.comp a = f.comp c ∧ g.comp e = b ∧ g.comp f = d ∧
-      (∀ {N : Type u} [AddCommGroup N] [Module (PolynomialRing k) N]
-        (u : StrangeTopMiddle k →ₗ[PolynomialRing k] N)
-        (v : StrangeBottomLeft k →ₗ[PolynomialRing k] N),
-        u.comp a = v.comp c →
-          ∃! t : StrangeModule k →ₗ[PolynomialRing k] N,
-            t.comp e = u ∧ t.comp f = v)
+  Function.Injective (strangeTopLeftToTopMiddle k) ∧
+    Function.Exact (strangeTopLeftToTopMiddle k)
+      (strangeTopMiddleToStrangeRight k) ∧
+    Function.Surjective (strangeTopMiddleToStrangeRight k) ∧
+    Function.Injective (strangeBottomLeftToModule k) ∧
+    Function.Exact (strangeBottomLeftToModule k)
+      (strangeModuleToStrangeRight k) ∧
+    Function.Surjective (strangeModuleToStrangeRight k) ∧
+    (strangeTopMiddleToModule k).comp (strangeTopLeftToTopMiddle k) =
+      (strangeBottomLeftToModule k).comp (strangeTopLeftToBottomLeft k) ∧
+    (strangeModuleToStrangeRight k).comp (strangeTopMiddleToModule k) =
+      strangeTopMiddleToStrangeRight k ∧
+    (strangeModuleToStrangeRight k).comp (strangeBottomLeftToModule k) =
+      strangeBottomLeftToStrangeRight k ∧
+    (∀ {N : Type u} [AddCommGroup N] [Module (PolynomialRing k) N]
+      (u : StrangeTopMiddle k →ₗ[PolynomialRing k] N)
+      (v : StrangeBottomLeft k →ₗ[PolynomialRing k] N),
+      u.comp (strangeTopLeftToTopMiddle k) =
+          v.comp (strangeTopLeftToBottomLeft k) →
+        ∃! t : StrangeModule k →ₗ[PolynomialRing k] N,
+          t.comp (strangeTopMiddleToModule k) = u ∧
+            t.comp (strangeBottomLeftToModule k) = v)
 
 /-- The source diagram has short exact rows and middle term `E` is its push-out. -/
 theorem strange_pushout_diagram (k : Type u) [Field k] :
@@ -585,10 +634,10 @@ theorem base_change_fiber_common_annihilator (k : Type u) [Field k] :
       δ ≠ 0 ∧ baseChangeFiberX k * δ = 0 ∧ baseChangeFiberY k * δ = 0 := by
   sorry
 
-theorem base_change_fiber_koszul_h₂_ne_bot (k : Type u) [Field k] :
-    koszulH₂ (baseChangeFiberX k) (baseChangeFiberY k) ≠ ⊥ := by
+theorem base_change_fiber_koszul_h₂_not_isZero (k : Type u) [Field k] :
+    ¬ IsZero (koszulH₂ (baseChangeFiberX k) (baseChangeFiberY k)) := by
   obtain ⟨δ, hδ, hxδ, hyδ⟩ := base_change_fiber_common_annihilator k
-  exact koszulH₂_ne_bot_of_common_annihilator hδ hxδ hyδ
+  exact koszulH₂_not_isZero_of_common_annihilator hδ hxδ hyδ
 
 theorem base_change_fiber_not_regular (k : Type u) [Field k] :
     ¬ IsRegularSequence (baseChangeFiber k)

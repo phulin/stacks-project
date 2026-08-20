@@ -12,6 +12,7 @@ import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.RingTheory.Polynomial.Quotient
 import Mathlib.Data.Rat.Sqrt
 import Mathlib.Algebra.Polynomial.Eval.Irreducible
+import Mathlib.Algebra.QuadraticAlgebra.Basic
 import Mathlib.Tactic.NormNum.IsSquare
 import Mathlib.FieldTheory.KummerPolynomial
 
@@ -800,6 +801,135 @@ private lemma sourceT_quotient_isEisenstein :
         _ = q0 * (-u) := by ring
     apply hbnot
     exact (Ideal.mem_span_singleton (x := bS) (y := q0)).mpr hbdiv
+
+/-
+Proof roadmap for `sourceRing_isDomain` (the statement is sound).
+
+Do not try to finish from `sourceT_quotient_isEisenstein.irreducible` by turning
+that irreducible polynomial into a prime element.  Its coefficient ring
+
+  A := Polynomial (Polynomial ℚ) ⧸ Ideal.span {sourceSPolynomial}
+
+is currently known only to be a domain (via the local instance
+`sourceSPolynomial_span_isPrime`).  There is no `UniqueFactorizationMonoid A`
+or `IsIntegrallyClosed A` instance, so irreducible does not imply prime here.
+Instead embed `A` in the quadratic function field and test the second
+quadratic there, as follows.
+
+1. Put `R := Polynomial ℚ`, `K := FractionRing R`,
+   `P := sourceBaseRelation`, and `Q := planeSecondPolynomial`.  Prove the
+   following three facts in `K`:
+
+     `∀ z : K, z ^ 2 ≠ algebraMap R K P`,
+     `∀ z : K, z ^ 2 ≠ algebraMap R K Q`, and
+     `∀ z : K, z ^ 2 ≠ algebraMap R K (P * Q)`.
+
+   For the first, reuse `sourceSPolynomial_isEisenstein` and the monicity of
+   `sourceSPolynomial`; apply
+   `Polynomial.IsEisensteinAt.irreducible` from
+   `Mathlib/RingTheory/Polynomial/Eisenstein/Basic.lean`, then transport the
+   result to `K[X]` with
+   `Polynomial.Monic.irreducible_iff_irreducible_map_fraction_map` from
+   `Mathlib/RingTheory/Polynomial/GaussLemma.lean`.  Convert the resulting
+   irreducibility of `X ^ 2 - C (algebraMap R K P)` to the displayed
+   nonsquare statement with `X_pow_sub_C_irreducible_iff_of_prime
+   Nat.prime_two` from `Mathlib/FieldTheory/KummerPolynomial.lean`.
+
+   Establish the other two facts by the same sequence.  Over `R`, use the
+   monic polynomials `X ^ 2 - C Q` and `X ^ 2 - C (P * Q)`.  They are
+   Eisenstein respectively at
+   `Ideal.span {X - C (-1 : ℚ)}` and
+   `Ideal.span {X - C (1 : ℚ)}`.  The constant-coefficient checks are the
+   same cancellation/root-evaluation argument already used in
+   `sourceSPolynomial_isEisenstein`: after removing the indicated linear
+   factor, evaluate the remaining factors at `-1` or `1` to show that a
+   second copy cannot divide.  Use `Polynomial.prime_X_sub_C` and
+   `Ideal.isPrime_span_singleton_of_prime` for the prime ideals.
+
+2. Let
+
+     `L := QuadraticAlgebra K (algebraMap R K P) 0`.
+
+   Install the first nonsquare fact as the required
+   `Fact (∀ z : K, z ^ 2 ≠ algebraMap R K P + 0 * z)`; the field instance for
+   `L` is in `Mathlib/Algebra/QuadraticAlgebra/Basic.lean`.  Prove
+
+     `∀ z : L, z ^ 2 ≠ algebraMap K L (algebraMap R K Q)`.
+
+   Apply `congrArg QuadraticAlgebra.re` and `.im` to a hypothetical square
+   equality and simplify with `QuadraticAlgebra.re_mul`,
+   `QuadraticAlgebra.im_mul`, and `pow_two`.  The imaginary equation is
+   `2 * z.re * z.im = 0`, hence `z.re = 0 ∨ z.im = 0`.  If `z.im = 0`, the
+   second nonsquare fact gives a contradiction.  If `z.re = 0`, the real
+   equation gives `P * z.im ^ 2 = Q`; after multiplying by `P`, it makes
+   `P * Q` the square `(P * z.im) ^ 2`, contradicting the third fact.  The
+   first nonsquare fact also supplies `algebraMap R K P ≠ 0` for cancellation.
+
+3. Regard `A` definitionally as `AdjoinRoot sourceSPolynomial`.  Construct an
+   injective ring hom `iA : A →+* L` in two small steps.  First use
+   `AdjoinRoot.map (algebraMap R K)` to map into
+   `AdjoinRoot (sourceSPolynomial.map (algebraMap R K))`.  Its injectivity
+   follows from `AdjoinRoot.mk_eq_zero` and
+   `Polynomial.map_dvd_map`: the latter applies because
+   `sourceSPolynomial` is monic and `algebraMap R K` is injective.  Then make
+   the explicit `K`-algebra equivalence from that adjoin-root to `L`: send
+   `AdjoinRoot.root` to `QuadraticAlgebra.omega` using
+   `AdjoinRoot.liftAlgHom`, and send `omega` back to the root using
+   `QuadraticAlgebra.lift`; prove the two composites by
+   `AdjoinRoot.algHom_ext` and `QuadraticAlgebra.algHom_ext`.  The defining
+   root equations reduce to `QuadraticAlgebra.omega_mul_omega_eq_algebraMap`
+   and `AdjoinRoot.eval₂_root`.
+
+4. Write `qA := Ideal.Quotient.mk (Ideal.span {sourceSPolynomial})` and
+   `g := sourceTPolynomial.map qA : Polynomial A`.  It is monic because
+   `sourceTPolynomial` is monic.  Show
+
+     `g.map iA = X ^ 2 - C (algebraMap K L (algebraMap R K Q))`
+
+   by unfolding `sourceTPolynomial`, `planeSecondPolynomial`, and the
+   construction of `iA`.  Step 2 and
+   `X_pow_sub_C_irreducible_of_prime Nat.prime_two` make the right side
+   irreducible in `L[X]`, hence prime by
+   `UniqueFactorizationMonoid.irreducible_iff_prime`.  Therefore its
+   singleton span is prime.  Apply the existing local helper
+   `monic_span_isPrime_of_map_isPrime` with `R := A`, `S := L`, `f := iA`,
+   and `g := g` to obtain `(Ideal.span {g}).IsPrime` in `Polynomial A`.
+
+5. Lift that prime ideal back through the first relation.  Use
+   `Ideal.polynomialQuotientEquivQuotientPolynomial
+   (Ideal.span {sourceSPolynomial})` and its theorem
+   `Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk` (both in
+   `Mathlib/RingTheory/Polynomial/Quotient.lean`) to identify the image of
+   `Ideal.span {g}` with the image of `Ideal.span {sourceTPolynomial}` under
+   the quotient by
+   `Ideal.map Polynomial.C (Ideal.span {sourceSPolynomial})`.  Transport
+   primeness across the equivalence with `Ideal.map_isPrime_of_equiv`, then
+   comap along the quotient map.  Rewrite the comap with
+   `Ideal.comap_map_quotientMk` from
+   `Mathlib/RingTheory/Ideal/Quotient/Operations.lean`, and rewrite
+   `Ideal.map_span`, to conclude
+
+     `(Ideal.span {Polynomial.C sourceSPolynomial, sourceTPolynomial}).IsPrime`.
+
+6. Package the existing three-variable reindexing as an actual `RingEquiv`:
+   use `MvPolynomial.renameEquiv`, `MvPolynomial.finSuccEquiv`, and twice
+   `Polynomial.mapEquiv` (the inner equivalence is
+   `MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)`).  Its coerced hom is the existing
+   `sourceFullReindex`.  Add the companion computation
+
+     `sourceFullReindex sourceSRelation = Polynomial.C sourceSPolynomial`
+
+   alongside `sourceFullReindex_tRelation`.  By `Ideal.map_span`, the
+   equivalence sends `sourceRelationsIdeal` to the prime ideal from step 5.
+   Equivalently, comap that prime with `Ideal.comap_isPrime` and identify the
+   comap generator-by-generator, following the already checked pattern in
+   `planeIdeal_isPrime`.  This proves `sourceRelationsIdeal.IsPrime`.
+
+7. Finish exactly as for the adjacent plane curve:
+
+     `(Ideal.Quotient.isDomain_iff_prime
+       (I := sourceRelationsIdeal)).mpr sourceRelationsIdeal_isPrime`.
+-/
 instance sourceRing_isDomain : IsDomain sourceRing := by sorry
 instance planeCurveRing_isDomain : IsDomain planeCurveRing := by
   exact (Ideal.Quotient.isDomain_iff_prime (I := Ideal.span {planeRelation})).mpr

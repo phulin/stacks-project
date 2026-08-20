@@ -30,6 +30,7 @@ namespace Formalization.Books.Proetale.Unit05
 
 open Set Function CategoryTheory CategoryTheory.Limits
 open Formalization.Books.Proetale.Unit02
+open Formalization.Books.Proetale.Unit03
 open Formalization.Books.Proetale.Unit04
 open Formalization.Books.Topology.Unit22
 open Formalization.Books.Topology.Unit24
@@ -666,6 +667,7 @@ theorem profinite_spectrum_of_quasiFinite
     (hA : IsProfiniteSpace (PrimeSpectrum A)) (f : A →+* B)
     (hf : f.QuasiFinite) :
     IsProfiniteSpace (PrimeSpectrum B) := by
+  have _ := hA
   sorry
 
 theorem profinite_spectrum_of_unramified

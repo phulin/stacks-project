@@ -263,23 +263,6 @@ theorem generatedSubcategoryIter_eq_smd_starPower
   conv_lhs => rw [← Nat.sub_add_cancel hn]
   simp [generatedSubcategoryIter, generatedSubcategoryOne, starPower, smd]
 
-private lemma generatorWindow_monotone (E : C) :
-    Monotone (fun m : {m : ℕ // 1 ≤ m} => generatorWindow E m.1) := by
-  intro m m' hmm X hX
-  change m.1 ≤ m'.1 at hmm
-  change shiftWindow (ObjectProperty.singleton E)
-    (((-(m.1 : ℤ) : ℤ) : EInt)) (((m.1 : ℤ) : EInt)) X at hX
-  change shiftWindow (ObjectProperty.singleton E)
-    (((-(m'.1 : ℤ) : ℤ) : EInt)) (((m'.1 : ℤ) : EInt)) X
-  rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX ⊢
-  obtain ⟨⟨i, hiBounds⟩, hi⟩ := hX
-  refine ⟨⟨i, ?_⟩, hi⟩
-  have hiLower : -(m.1 : ℤ) ≤ i := by
-    simpa only [WithBotTop.coe_le_coe] using hiBounds.1
-  have hiUpper : i ≤ (m.1 : ℤ) := by
-    simpa only [WithBotTop.coe_le_coe] using hiBounds.2
-  constructor <;> simp only [WithBotTop.coe_le_coe] <;> omega
-
 private lemma shiftWindow_all_eq_iSup_generatorWindow (E : C) :
     shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt) =
       ⨆ m : {m : ℕ // 1 ≤ m}, generatorWindow E m.1 := by

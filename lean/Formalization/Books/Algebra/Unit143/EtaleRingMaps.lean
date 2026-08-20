@@ -24,6 +24,7 @@ uses explicitly.
 namespace Formalization.Books.Algebra.Unit143
 
 open Set
+open Formalization.Books.Algebra.Unit136
 open scoped TensorProduct
 
 noncomputable section
@@ -447,12 +448,6 @@ theorem etale_lift_infinitesimal
 
 /-! ## The factor-polynomial example -/
 
-abbrev FactorPolynomialBase (n m : ℕ) :=
-  Formalization.Books.Algebra.Unit136.FactorPolynomialBase n m
-
-abbrev FactorPolynomialTarget (n m : ℕ) :=
-  Formalization.Books.Algebra.Unit136.FactorPolynomialTarget n m
-
 /-- The universal left factor `g`. -/
 noncomputable def factorLeftPolynomial (n m : ℕ) :
     Polynomial (FactorPolynomialTarget n m) :=
@@ -474,8 +469,9 @@ noncomputable def factorSylvesterMatrix (n m : ℕ) :
 noncomputable def factorResultant (n m : ℕ) : FactorPolynomialTarget n m :=
   Polynomial.resultant (factorLeftPolynomial n m) (factorRightPolynomial n m) n m
 
-/-- The quotient presentation of the universal factor-polynomial map.  This
-reexports the canonical presentation constructed in Chapter 136. -/
+/- The quotient presentation used by the source's factor-polynomial example
+   is already constructed in Chapter 136; this source-facing theorem retains
+   that assertion without introducing a second presentation. -/
 theorem factor_polynomial_map_presentation
     {n m : ℕ} (hn : 1 ≤ n) (hm : 1 ≤ m) :
     letI : Algebra (FactorPolynomialBase n m) (FactorPolynomialTarget n m) :=
@@ -563,14 +559,6 @@ theorem factor_polynomial_localization_etale
 
 /-! ## Lifting a coprime factorization modulo a prime -/
 
-/-- The residue-field map associated to a prime lying over a prime. -/
-noncomputable def factorResidueFieldMap
-    {R R' : Type u} [CommRing R] [CommRing R']
-    (f : R →+* R') (p : PrimeSpectrum R) (p' : PrimeSpectrum R')
-    (hlying : PrimeSpectrum.comap f p' = p) :
-    p.asIdeal.ResidueField →+* p'.asIdeal.ResidueField :=
-  Formalization.Books.Algebra.Unit113.residueFieldMapAt f p p' hlying
-
 /-- Data produced by the coprime factor-lifting lemma. -/
 structure FactorModLiftData
     {R : Type u} [CommRing R] (f : Polynomial R)
@@ -583,17 +571,23 @@ structure FactorModLiftData
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
   residueFieldMapBijective :
-    Function.Bijective (factorResidueFieldMap (algebraMap R R') p p' liesOver)
+    Function.Bijective
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap R R') p p' liesOver)
   g : Polynomial R'
   h : Polynomial R'
   factorization : Polynomial.map (algebraMap R R') f =
     (g : Polynomial R') * (h : Polynomial R')
   g_reduces :
     Polynomial.map (algebraMap R' p'.asIdeal.ResidueField) g =
-      Polynomial.map (factorResidueFieldMap (algebraMap R R') p p' liesOver) gbar
+      Polynomial.map
+        (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+          (algebraMap R R') p p' liesOver) gbar
   h_reduces :
     Polynomial.map (algebraMap R' p'.asIdeal.ResidueField) h =
-      Polynomial.map (factorResidueFieldMap (algebraMap R R') p p' liesOver) hbar
+      Polynomial.map
+        (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+          (algebraMap R R') p p' liesOver) hbar
   coprime : IsCoprime g h
 
 /-- A coprime factorization of a monic polynomial modulo a prime lifts after

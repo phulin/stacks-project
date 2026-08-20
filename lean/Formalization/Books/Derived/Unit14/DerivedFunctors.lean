@@ -36,6 +36,209 @@ variable {D D' : Type*} [Category* D] [Category* D']
   {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
   (F : D ⥤ D')
 
+private theorem isColimit_of_essentiallyConstantInd
+    {I : Type*} [Category* I] [IsFiltered I]
+    {C : Type*} [Category* C]
+    {M : I ⥤ C} (c : Cocone M) (hM : IsEssentiallyConstantInd M c) :
+    Nonempty (IsColimit c) := by
+  rcases hM with ⟨i, s, hs, hfactor⟩
+  let P : IsColimit c := {
+    desc := fun t => s ≫ t.ι.app i
+    fac := by
+      intro t j
+      rcases hfactor j with ⟨k, f, g, hfg⟩
+      have h := congrArg (fun u => u ≫ t.ι.app k) hfg
+      simpa only [Category.assoc, t.w f, t.w g] using h.symm
+    uniq := by
+      intro t m hm
+      calc
+        m = 𝟙 c.pt ≫ m := by simp
+        _ = (s ≫ c.ι.app i) ≫ m := by rw [hs]
+        _ = s ≫ (c.ι.app i ≫ m) := by rw [Category.assoc]
+        _ = s ≫ t.ι.app i := by rw [hm i]
+  }
+  exact ⟨P⟩
+
+private theorem isLimit_of_essentiallyConstantPro
+    {I : Type*} [Category* I] [IsCofiltered I]
+    {C : Type*} [Category* C]
+    {M : I ⥤ C} (c : Cone M) (hM : IsEssentiallyConstantPro M c) :
+    Nonempty (IsLimit c) := by
+  rcases hM with ⟨i, r, hr, hfactor⟩
+  let P : IsLimit c := {
+    lift := fun t => t.π.app i ≫ r
+    fac := by
+      intro t j
+      rcases hfactor j with ⟨k, f, g, hfg⟩
+      have h := congrArg (fun u => t.π.app k ≫ u) hfg
+      rw [t.w g] at h
+      rw [← Category.assoc] at h
+      rw [t.w f] at h
+      simpa only [Category.assoc] using h.symm
+    uniq := by
+      intro t m hm
+      calc
+        m = m ≫ 𝟙 c.pt := by simp
+        _ = m ≫ (c.π.app i ≫ r) := by rw [hr]
+        _ = (m ≫ c.π.app i) ≫ r := by rw [Category.assoc]
+        _ = t.π.app i ≫ r := by rw [hm i]
+  }
+  exact ⟨P⟩
+
+private theorem rightDerived_square_map_compat
+    (hS : SaturatedMultiplicativeSystem S) {X Y : D} (f : X ⟶ Y)
+    [LeftMultiplicativeSystem S]
+    {cY : Cocone (rightDerivedDiagram S F Y)}
+    (q₁ q₂ : RightDerivedSquare S f)
+    (a : q₁.source ⟶ q₂.source) :
+    F.map a.right ≫ F.map q₂.dotted ≫ cY.ι.app q₂.target =
+      F.map q₁.dotted ≫ cY.ι.app q₁.target := by
+  letI : LeftMultiplicativeSystem S := hS.1.1
+  letI : IsFiltered (LeftDenominatorCategory S Y) :=
+    left_denominator_category_is_filtered Y
+  let k : LeftDenominatorCategory S Y :=
+    IsFiltered.max q₁.target q₂.target
+  let u : q₂.target ⟶ k := IsFiltered.rightToMax q₁.target q₂.target
+  let v : q₁.target ⟶ k := IsFiltered.leftToMax q₁.target q₂.target
+  have hpre :
+      q₁.source.hom ≫ (a.right ≫ q₂.dotted ≫ u.right) =
+        q₁.source.hom ≫ (q₁.dotted ≫ v.right) := by
+    calc
+      q₁.source.hom ≫ (a.right ≫ q₂.dotted ≫ u.right) =
+          (q₁.source.hom ≫ a.right) ≫ q₂.dotted ≫ u.right := by
+            simp only [Category.assoc]
+      _ = q₂.source.hom ≫ q₂.dotted ≫ u.right := by
+            rw [MorphismProperty.Under.w a]
+      _ = (q₂.source.hom ≫ q₂.dotted) ≫ u.right := by simp only [Category.assoc]
+      _ = (f ≫ q₂.target.hom) ≫ u.right := by rw [q₂.comm]
+      _ = f ≫ k.hom := by
+            calc
+              (f ≫ q₂.target.hom) ≫ u.right =
+                  f ≫ (q₂.target.hom ≫ u.right) := by rw [Category.assoc]
+              _ = f ≫ k.hom := by rw [MorphismProperty.Under.w u]
+      _ = f ≫ q₁.target.hom ≫ v.right := by
+            rw [MorphismProperty.Under.w v]
+      _ = q₁.source.hom ≫ (q₁.dotted ≫ v.right) := by
+            simpa only [Category.assoc] using
+              congrArg (fun z => z ≫ v.right) q₁.comm.symm
+  obtain ⟨Z, w, hw, hmap⟩ :=
+    MorphismProperty.HasLeftCalculusOfFractions.ext
+      (a.right ≫ q₂.dotted ≫ u.right) (q₁.dotted ≫ v.right)
+      q₁.source.hom q₁.source.prop hpre
+  let k' : LeftDenominatorCategory S Y :=
+    MorphismProperty.Under.mk (P := S) (Q := (⊤ : MorphismProperty D))
+      (X := Y) (k.hom ≫ w) (S.comp_mem _ _ k.prop hw)
+  let b : k ⟶ k' := MorphismProperty.Under.homMk w rfl
+  let leg : ∀ z : LeftDenominatorCategory S Y, F.obj z.right ⟶ cY.pt :=
+    fun z => cY.ι.app z
+  have hcb : F.map b.right ≫ leg k' = leg k := by
+    simpa [leg, rightDerivedDiagram] using cY.w b
+  have hcu : F.map u.right ≫ leg k = leg q₂.target := by
+    simpa [leg, rightDerivedDiagram] using cY.w u
+  have hcv : F.map v.right ≫ leg k = leg q₁.target := by
+    simpa [leg, rightDerivedDiagram] using cY.w v
+  have hmap' :
+      (a.right ≫ q₂.dotted ≫ u.right) ≫ b.right =
+        (q₁.dotted ≫ v.right) ≫ b.right := by
+    dsimp [b, k', MorphismProperty.Under.homMk]
+    exact hmap
+  calc
+    F.map a.right ≫ F.map q₂.dotted ≫ leg q₂.target =
+        F.map a.right ≫ F.map q₂.dotted ≫ F.map u.right ≫ leg k := by
+          rw [hcu]
+    _ = F.map (a.right ≫ q₂.dotted ≫ u.right) ≫ leg k := by
+      simp [F.map_comp, Category.assoc]
+    _ = F.map (a.right ≫ q₂.dotted ≫ u.right) ≫ F.map b.right ≫
+          leg k' := by rw [hcb]
+    _ = F.map ((a.right ≫ q₂.dotted ≫ u.right) ≫ b.right) ≫ leg k' := by
+      simp [F.map_comp, Category.assoc]
+    _ = F.map ((q₁.dotted ≫ v.right) ≫ b.right) ≫ leg k' := by
+      rw [hmap']
+    _ = F.map q₁.dotted ≫ F.map v.right ≫ F.map b.right ≫
+          leg k' := by
+      simp [F.map_comp, Category.assoc]
+    _ = F.map q₁.dotted ≫ leg q₁.target := by
+      rw [hcb, hcv]
+
+private theorem leftDerived_square_map_compat
+    (hS : SaturatedMultiplicativeSystem S) {X Y : D} (f : X ⟶ Y)
+    [RightMultiplicativeSystem S]
+    {cX : Cone (leftDerivedDiagram S F X)}
+    (q₁ q₂ : LeftDerivedSquare S f)
+    (a : q₁.target ⟶ q₂.target) :
+    cX.π.app q₁.source ≫ F.map q₁.dotted ≫ F.map a.left =
+      cX.π.app q₂.source ≫ F.map q₂.dotted := by
+  letI : RightMultiplicativeSystem S := hS.1.2
+  letI : IsCofiltered (RightDenominatorCategory S X) :=
+    right_denominator_category_is_cofiltered X
+  letI : IsCofiltered (RightDenominatorCategory S Y) :=
+    right_denominator_category_is_cofiltered Y
+  let k : RightDenominatorCategory S X :=
+    IsCofiltered.min q₁.source q₂.source
+  let u : k ⟶ q₁.source := IsCofiltered.minToLeft q₁.source q₂.source
+  let v : k ⟶ q₂.source := IsCofiltered.minToRight q₁.source q₂.source
+  have hpre :
+      (u.left ≫ q₁.dotted ≫ a.left) ≫ q₂.target.hom =
+        (v.left ≫ q₂.dotted) ≫ q₂.target.hom := by
+    calc
+      (u.left ≫ q₁.dotted ≫ a.left) ≫ q₂.target.hom =
+          u.left ≫ q₁.dotted ≫ (a.left ≫ q₂.target.hom) := by
+            simp only [Category.assoc]
+      _ = u.left ≫ q₁.dotted ≫ q₁.target.hom := by
+            rw [MorphismProperty.Over.w a]
+      _ = u.left ≫ (q₁.dotted ≫ q₁.target.hom) := by
+            simp only [Category.assoc]
+      _ = u.left ≫ (q₁.source.hom ≫ f) := by rw [q₁.comm]
+      _ = (u.left ≫ q₁.source.hom) ≫ f := by
+            simp only [Category.assoc]
+      _ = k.hom ≫ f := by rw [MorphismProperty.Over.w u]
+      _ = (v.left ≫ q₂.source.hom) ≫ f := by
+            rw [MorphismProperty.Over.w v]
+      _ = v.left ≫ (q₂.source.hom ≫ f) := by
+            simp only [Category.assoc]
+      _ = v.left ≫ (q₂.dotted ≫ q₂.target.hom) := by rw [q₂.comm]
+      _ = (v.left ≫ q₂.dotted) ≫ q₂.target.hom := by
+            simp only [Category.assoc]
+  obtain ⟨Z, w, hw, hmap⟩ :=
+    MorphismProperty.HasRightCalculusOfFractions.ext
+      (u.left ≫ q₁.dotted ≫ a.left) (v.left ≫ q₂.dotted)
+      q₂.target.hom q₂.target.prop hpre
+  let k' : RightDenominatorCategory S X :=
+    MorphismProperty.Over.mk (P := S) (Q := (⊤ : MorphismProperty D))
+      (X := X) (w ≫ k.hom) (S.comp_mem _ _ hw k.prop)
+  let b : k' ⟶ k := MorphismProperty.Over.homMk w rfl trivial
+  let leg : ∀ z : RightDenominatorCategory S X, cX.pt ⟶ F.obj z.left :=
+    fun z => cX.π.app z
+  have hcb : leg k' ≫ F.map b.left = leg k := by
+    simpa [leg, leftDerivedDiagram] using cX.w b
+  have hcu : leg k ≫ F.map u.left = leg q₁.source := by
+    simpa [leg, leftDerivedDiagram] using cX.w u
+  have hcv : leg k ≫ F.map v.left = leg q₂.source := by
+    simpa [leg, leftDerivedDiagram] using cX.w v
+  have hmap' :
+      b.left ≫ (u.left ≫ q₁.dotted ≫ a.left) =
+        b.left ≫ (v.left ≫ q₂.dotted) := by
+    dsimp [b, k', MorphismProperty.Over.homMk]
+    exact hmap
+  calc
+    leg q₁.source ≫ F.map q₁.dotted ≫ F.map a.left =
+        (leg k ≫ F.map u.left) ≫ F.map q₁.dotted ≫ F.map a.left := by
+          rw [hcu]
+    _ = leg k ≫ F.map (u.left ≫ q₁.dotted ≫ a.left) := by
+      simp [F.map_comp, Category.assoc]
+    _ = (leg k' ≫ F.map b.left) ≫
+          F.map (u.left ≫ q₁.dotted ≫ a.left) := by rw [hcb]
+    _ = leg k' ≫ F.map (b.left ≫ (u.left ≫ q₁.dotted ≫ a.left)) := by
+      simp [F.map_comp, Category.assoc]
+    _ = leg k' ≫ F.map (b.left ≫ (v.left ≫ q₂.dotted)) := by
+      rw [hmap']
+    _ = (leg k' ≫ F.map b.left) ≫ F.map v.left ≫ F.map q₂.dotted := by
+      simp [F.map_comp, Category.assoc]
+    _ = leg q₂.source ≫ F.map q₂.dotted := by
+      rw [hcb]
+      simpa only [Category.assoc] using
+        congrArg (fun z => z ≫ F.map q₂.dotted) hcv
+
 /-- The induced map between chosen right derived values exists uniquely and is
 characterized by every commutative denominator square. -/
 theorem rightDerivedMap_exists_unique
@@ -45,7 +248,75 @@ theorem rightDerivedMap_exists_unique
     ∃! φ : rightDerivedValue S hS F X hX ⟶
         rightDerivedValue S hS F Y hY,
       rightDerivedMapCondition S hS F f hX hY φ := by
-  sorry
+  letI : LeftMultiplicativeSystem S := hS.1.1
+  letI : IsFiltered (LeftDenominatorCategory S X) :=
+    left_denominator_category_is_filtered X
+  letI : IsFiltered (LeftDenominatorCategory S Y) :=
+    left_denominator_category_is_filtered Y
+  change IsEssentiallyConstantIndDiagram (rightDerivedDiagram S F X) at hX
+  change IsEssentiallyConstantIndDiagram (rightDerivedDiagram S F Y) at hY
+  let cX := rightDerivedCocone S hS F X hX
+  let cY := rightDerivedCocone S hS F Y hY
+  have hXconst : IsEssentiallyConstantInd (rightDerivedDiagram S F X) cX := by
+    dsimp [cX, rightDerivedCocone]
+    exact Classical.choose_spec hX
+  have hYconst : IsEssentiallyConstantInd (rightDerivedDiagram S F Y) cY := by
+    dsimp [cY, rightDerivedCocone]
+    exact Classical.choose_spec hY
+  obtain ⟨hcX⟩ := isColimit_of_essentiallyConstantInd cX hXconst
+  choose ψ hψ using fun s : LeftDenominatorCategory S X =>
+    (MorphismProperty.RightFraction.mk s.hom s.prop f).exists_leftFraction
+  let t : ∀ s : LeftDenominatorCategory S X,
+      LeftDenominatorCategory S Y := fun s =>
+    MorphismProperty.Under.mk (P := S) (Q := (⊤ : MorphismProperty D))
+      (X := Y) (ψ s).s (ψ s).hs
+  let q : ∀ s : LeftDenominatorCategory S X,
+      RightDerivedSquare S f := fun s =>
+    { source := s
+      target := t s
+      dotted := (ψ s).f
+      comm := (hψ s).symm }
+  let c : Cocone (rightDerivedDiagram S F X) :=
+    { pt := cY.pt
+      ι :=
+        { app := fun s => F.map (q s).dotted ≫ cY.ι.app (q s).target
+          naturality := by
+            intro s s' a
+            simpa [rightDerivedDiagram, q, t] using
+              (rightDerived_square_map_compat F hS f (cY := cY) (q s) (q s') a) } }
+  let φ : rightDerivedValue S hS F X hX ⟶
+      rightDerivedValue S hS F Y hY := hcX.desc c
+  let legY : ∀ z : LeftDenominatorCategory S Y, F.obj z.right ⟶ cY.pt :=
+    fun z => cY.ι.app z
+  have hφ : rightDerivedMapCondition S hS F f hX hY φ := by
+    change ∀ sq : RightDerivedSquare S f,
+      F.map sq.dotted ≫ legY sq.target =
+        cX.ι.app sq.source ≫ φ
+    intro sq
+    have hcompat :=
+      rightDerived_square_map_compat F hS f (cY := cY)
+        (q sq.source) sq (𝟙 sq.source)
+    have hcompat' :
+        F.map sq.dotted ≫ legY sq.target =
+          F.map (q sq.source).dotted ≫ legY (q sq.source).target := by
+      have hcompat'' := hcompat
+      have hsq : (𝟙 sq.source : sq.source ⟶ sq.source).right =
+          𝟙 sq.source.right := rfl
+      rw [hsq, F.map_id, Category.id_comp] at hcompat''
+      simpa [legY] using hcompat''
+    have hfac :
+        F.map (q sq.source).dotted ≫ legY (q sq.source).target =
+          cX.ι.app sq.source ≫ φ := by
+      change c.ι.app sq.source = cX.ι.app sq.source ≫ hcX.desc c
+      exact (hcX.fac c sq.source).symm
+    exact hcompat'.trans hfac
+  refine ⟨φ, hφ, ?_⟩
+  intro φ' hφ'
+  apply hcX.hom_ext
+  intro s
+  have h₁ := hφ (q s)
+  have h₂ := hφ' (q s)
+  exact h₂.symm.trans h₁
 
 /-- A chosen induced map `RF(f)`. -/
 noncomputable def rightDerivedMap
@@ -71,7 +342,82 @@ theorem leftDerivedMap_exists_unique
     ∃! φ : leftDerivedValue S hS F X hX ⟶
         leftDerivedValue S hS F Y hY,
       leftDerivedMapCondition S hS F f hX hY φ := by
-  sorry
+  letI : RightMultiplicativeSystem S := hS.1.2
+  letI : IsCofiltered (RightDenominatorCategory S X) :=
+    right_denominator_category_is_cofiltered X
+  letI : IsCofiltered (RightDenominatorCategory S Y) :=
+    right_denominator_category_is_cofiltered Y
+  change IsEssentiallyConstantProDiagram (leftDerivedDiagram S F X) at hX
+  change IsEssentiallyConstantProDiagram (leftDerivedDiagram S F Y) at hY
+  let cX := leftDerivedCone S hS F X hX
+  let cY := leftDerivedCone S hS F Y hY
+  have hYconst : IsEssentiallyConstantPro (leftDerivedDiagram S F Y) cY := by
+    dsimp [cY, leftDerivedCone]
+    exact Classical.choose_spec hY
+  obtain ⟨hcY⟩ := isLimit_of_essentiallyConstantPro cY hYconst
+  choose ψ hψ using fun t : RightDenominatorCategory S Y =>
+    (MorphismProperty.LeftFraction.mk f t.hom t.prop).exists_rightFraction
+  let u : ∀ t : RightDenominatorCategory S Y,
+      RightDenominatorCategory S X := fun t =>
+    MorphismProperty.Over.mk (P := S) (Q := (⊤ : MorphismProperty D))
+      (X := X) (ψ t).s (ψ t).hs
+  let q : ∀ t : RightDenominatorCategory S Y,
+      LeftDerivedSquare S f := fun t =>
+    { source := u t
+      target := t
+      dotted := (ψ t).f
+      comm := (hψ t).symm }
+  let c : Cone (leftDerivedDiagram S F Y) :=
+    { pt := cX.pt
+      π :=
+        { app := fun t => cX.π.app (q t).source ≫ F.map (q t).dotted
+          naturality := by
+            intro t t' a
+            simpa [leftDerivedDiagram, q, u] using
+              (leftDerived_square_map_compat F hS f (cX := cX)
+                (q t) (q t') a).symm } }
+  let φ : leftDerivedValue S hS F X hX ⟶
+      leftDerivedValue S hS F Y hY := hcY.lift c
+  have hφ : leftDerivedMapCondition S hS F f hX hY φ := by
+    change ∀ sq : LeftDerivedSquare S f,
+      φ ≫ cY.π.app sq.target =
+        cX.π.app sq.source ≫ F.map sq.dotted
+    intro sq
+    have hfac :
+        cX.π.app sq.source ≫ F.map sq.dotted =
+          cX.π.app (q sq.target).source ≫ F.map (q sq.target).dotted := by
+      have hcompat :=
+        leftDerived_square_map_compat F hS f (cX := cX)
+          (q sq.target) sq (𝟙 sq.target)
+      have hcompat' := hcompat
+      change
+        cX.π.app (q sq.target).source ≫
+            F.map (q sq.target).dotted ≫ F.map (𝟙 sq.target.left) =
+          cX.π.app sq.source ≫ F.map sq.dotted at hcompat'
+      rw [F.map_id] at hcompat'
+      have hright :
+          F.map (q sq.target).dotted ≫
+              𝟙 (F.obj (q sq.target).target.left) =
+            F.map (q sq.target).dotted := by simp
+      have hright' := congrArg
+        (fun z => cX.π.app (q sq.target).source ≫ z) hright
+      have hcompat'' := hright'.symm.trans hcompat'
+      simpa [leftDerivedDiagram] using hcompat''.symm
+    have hc : c.π.app sq.target =
+        cX.π.app (q sq.target).source ≫ F.map (q sq.target).dotted := by
+      rfl
+    exact (hcY.fac c sq.target).trans (hc.trans hfac.symm)
+  refine ⟨φ, hφ, ?_⟩
+  intro φ' hφ'
+  apply hcY.hom_ext
+  intro t
+  have h₁ := hφ' (q t)
+  have h₂ := hφ (q t)
+  change φ' ≫ cY.π.app t =
+      cX.π.app (q t).source ≫ F.map (q t).dotted at h₁
+  change φ ≫ cY.π.app t =
+      cX.π.app (q t).source ≫ F.map (q t).dotted at h₂
+  exact h₁.trans h₂.symm
 
 noncomputable def leftDerivedMap
     {X Y : D} (f : X ⟶ Y)

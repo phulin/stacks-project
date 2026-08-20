@@ -90,8 +90,15 @@ instance : CommRing (FirstOrderThickening A M) :=
             z.base • (x.base • y.infinitesimal + y.base • x.infinitesimal)) =
             x.base • (y.base • z.infinitesimal + z.base • y.infinitesimal) +
               (y.base * z.base) • x.infinitesimal
-        simp [smul_add, add_smul, smul_smul, mul_assoc, mul_comm, mul_left_comm,
-          add_assoc, add_comm, add_left_comm])
+        simp only [smul_add, mul_smul]
+        have h₁ : z.base • (x.base • y.infinitesimal) =
+            x.base • (z.base • y.infinitesimal) := by
+          rw [← mul_smul, ← mul_smul, mul_comm z.base x.base]
+        have h₂ : z.base • (y.base • x.infinitesimal) =
+            y.base • (z.base • x.infinitesimal) := by
+          rw [← mul_smul, ← mul_smul, mul_comm z.base y.base]
+        rw [h₁, h₂]
+        abel)
     (by
       intro x y
       apply FirstOrderThickening.ext
@@ -116,7 +123,8 @@ instance : CommRing (FirstOrderThickening A M) :=
           (y.base + z.base) • x.infinitesimal =
           (x.base • y.infinitesimal + y.base • x.infinitesimal) +
             (x.base • z.infinitesimal + z.base • x.infinitesimal)
-        simp [smul_add, add_smul, add_assoc, add_comm, add_left_comm])
+        simp only [smul_add, add_smul]
+        abel)
 
 /-- The canonical inclusion of `A` into its first-order thickening. -/
 def baseHom : A →+* FirstOrderThickening A M where

@@ -1,5 +1,6 @@
 import Mathlib.Algebra.DirectSum.Basic
 import Mathlib.Algebra.MvPolynomial.CommRing
+import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Ideal.Maps
@@ -47,15 +48,90 @@ def ftBaseY (k : Type u) [Field k] : ftBasePolynomialRing k :=
 def ftBaseMaximalIdeal (k : Type u) [Field k] : Ideal (ftBasePolynomialRing k) :=
   Ideal.span {ftBaseX k, ftBaseY k}
 
+private theorem ftBase_generators_eq_X_image (k : Type u) [Field k] :
+    ({ftBaseX k, ftBaseY k} : Set (ftBasePolynomialRing k)) =
+      MvPolynomial.X '' ({0, 1} : Set (Fin 2)) := by
+  ext p
+  constructor
+  · intro hp
+    have hp' : p = ftBaseX k ∨ p = ftBaseY k := by
+      simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hp
+    cases hp' with
+    | inl h =>
+        refine ⟨0, by simp, ?_⟩
+        simpa [ftBaseX, ftBaseXVar] using h.symm
+    | inr h =>
+        refine ⟨1, by simp, ?_⟩
+        simpa [ftBaseY, ftBaseYVar] using h.symm
+  · intro hp
+    cases hp with
+    | intro i hi =>
+        cases hi with
+        | intro hi hpi =>
+            have hi' : i = 0 ∨ i = 1 := by
+              fin_cases i <;> simp
+            have hp' : p = ftBaseX k ∨ p = ftBaseY k := by
+              cases hi' with
+              | inl hi0 =>
+                  left
+                  subst i
+                  simpa [ftBaseX, ftBaseXVar] using hpi.symm
+              | inr hi1 =>
+                  right
+                  subst i
+                  simpa [ftBaseY, ftBaseYVar] using hpi.symm
+            simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hp'
+
+private theorem ftBaseMaximalIdeal_eq_constantCoeff_ker (k : Type u) [Field k] :
+    ftBaseMaximalIdeal k =
+      RingHom.ker (MvPolynomial.constantCoeff : ftBasePolynomialRing k →+* k) := by
+  rw [ftBaseMaximalIdeal, ftBase_generators_eq_X_image k]
+  apply le_antisymm
+  · refine Ideal.span_le.2 ?_
+    intro p hp
+    cases hp with
+    | intro i hi =>
+        cases hi with
+        | intro hi hpi =>
+            rw [← hpi]
+            simp
+  · intro p hp
+    rw [RingHom.mem_ker] at hp
+    apply (MvPolynomial.mem_ideal_span_X_image).2
+    intro d hd
+    have hd0 : d ≠ 0 := by
+      intro hzero
+      subst d
+      have hd' : p.coeff 0 ≠ 0 := by
+        simpa [MvPolynomial.mem_support_iff] using hd
+      have hp' : p.coeff 0 = 0 := by
+        simpa [MvPolynomial.constantCoeff_eq] using hp
+      exact hd' hp'
+    classical
+    by_cases hne : ∃ i, d i ≠ 0
+    · cases hne with
+      | intro i hi =>
+          fin_cases i
+          · exact ⟨0, by simp, hi⟩
+          · exact ⟨1, by simp, hi⟩
+    · exfalso
+      apply hd0
+      ext i
+      exact Classical.not_not.mp (fun hi => hne ⟨i, hi⟩)
+
 /-- The base maximal ideal is prime. -/
 instance ftBaseMaximalIdeal_isPrime (k : Type u) [Field k] :
     (ftBaseMaximalIdeal k).IsPrime := by
-  sorry
+  rw [ftBaseMaximalIdeal_eq_constantCoeff_ker k]
+  exact RingHom.ker_isPrime _
 
 /-- The base maximal ideal is maximal. -/
 instance ftBaseMaximalIdeal_isMaximal (k : Type u) [Field k] :
     (ftBaseMaximalIdeal k).IsMaximal := by
-  sorry
+  rw [ftBaseMaximalIdeal_eq_constantCoeff_ker k]
+  apply RingHom.ker_isMaximal_of_surjective
+  intro a
+  exact ⟨MvPolynomial.C a, by simp⟩
 
 /-- The local ring `A₀ = k[x, y]_(x,y)`. -/
 def ftA0 (k : Type u) [Field k] :=
@@ -142,7 +218,22 @@ def ftAAugmentation (k : Type u) [Field k] :
 
 theorem ftARelations_le_augmentation_ker (k : Type u) [Field k] :
     ftARelationsIdeal k ≤ RingHom.ker (ftAAugmentation k) := by
-  sorry
+  simp [ftARelationsIdeal, ftARelations, ftAAugmentation]
+  constructor
+  · refine Ideal.span_le.2 ?_
+    intro p hp
+    cases hp with
+    | intro q hq =>
+        cases q with
+        | mk i j =>
+            rw [← hq]
+            simp
+  · refine Ideal.span_le.2 ?_
+    intro p hp
+    cases hp with
+    | intro n hn =>
+        rw [← hn]
+        simp
 
 /-- The quotient map `A → A₀`. -/
 def ftAToA0 (k : Type u) [Field k] : ftA k →+* ftA0 k :=
@@ -151,7 +242,16 @@ def ftAToA0 (k : Type u) [Field k] : ftA k →+* ftA0 k :=
 
 theorem ftAToA0_surjective (k : Type u) [Field k] :
     Function.Surjective (ftAToA0 k) := by
-  sorry
+  intro a
+  refine ⟨algebraMap (ftA0 k) (ftA k) a, ?_⟩
+  have hzero : ∀ x ∈ ftARelationsIdeal k, ftAAugmentation k x = 0 := by
+    intro x hx
+    exact ftARelations_le_augmentation_ker k hx
+  change Ideal.Quotient.lift (ftARelationsIdeal k) (ftAAugmentation k)
+      hzero
+      (Ideal.Quotient.mk (ftARelationsIdeal k) (MvPolynomial.C a)) = a
+  rw [Ideal.Quotient.lift_mk]
+  simp [ftAAugmentation]
 
 theorem ftAToA0_kernel_square_zero (k : Type u) [Field k] :
     (RingHom.ker (ftAToA0 k)) ^ 2 = ⊥ := by

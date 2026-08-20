@@ -306,7 +306,141 @@ theorem exists_inducedIdealFMap
       φ ≫ (ringedSpaceModulePushforward M.f').map M.sourceIdeal.inclusion =
         M.baseIdeal.inclusion ≫
           SheafOfModules.unitToPushforwardObjUnit M.f'.sharp := by
-  sorry
+  have : (PresheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp.hom).IsRightAdjoint :=
+    PresheafOfModules.instIsRightAdjointPushforward
+      (F := Opens.map M.f'.continuous) (φ := M.f'.sharp.hom)
+  have : (SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint :=
+    SheafOfModules.instIsRightAdjointPushforward
+      (F := Opens.map M.f'.continuous) (φ := M.f'.sharp)
+  let uf : SheafOfModules.unit M.S'.structureSheaf ⟶
+      (ringedSpaceModulePushforward M.f').obj
+        (SheafOfModules.unit M.X'.structureSheaf) :=
+    SheafOfModules.unitToPushforwardObjUnit M.f'.sharp
+  let ut : SheafOfModules.unit M.S'.structureSheaf ⟶
+      (ringedSpaceModulePushforward M.t).obj
+        (SheafOfModules.unit M.S.structureSheaf) :=
+    SheafOfModules.unitToPushforwardObjUnit M.t.sharp
+  let uf0 : SheafOfModules.unit M.S.structureSheaf ⟶
+      (ringedSpaceModulePushforward M.f).obj
+        (SheafOfModules.unit M.X.structureSheaf) :=
+    SheafOfModules.unitToPushforwardObjUnit M.f.sharp
+  let qi : SheafOfModules.unit M.X'.structureSheaf ⟶
+      (ringedSpaceModulePushforward M.i).obj
+        (SheafOfModules.unit M.X.structureSheaf) :=
+    SheafOfModules.unitToPushforwardObjUnit M.i.sharp
+  let K :=
+    (ringedSpaceModulePushforwardCompIso M.f M.t).app
+        (SheafOfModules.unit M.X.structureSheaf) ≪≫
+      (eqToIso (congrArg (fun g => ringedSpaceModulePushforward g)
+        M.commutes)).app (SheafOfModules.unit M.X.structureSheaf) ≪≫
+      ((ringedSpaceModulePushforwardCompIso M.i M.f').app
+        (SheafOfModules.unit M.X.structureSheaf)).symm
+  have hft : SheafOfModules.unitToPushforwardObjUnit
+      (RingedSpaceHom.comp M.f M.t).sharp =
+      ut ≫ (ringedSpaceModulePushforward M.t).map uf0 ≫
+        (ringedSpaceModulePushforwardCompIso M.f M.t).hom.app
+          (SheafOfModules.unit M.X.structureSheaf) := by
+    ext U
+    have h := SheafOfModules.unitToPushforwardObjUnit_val_app_apply
+      ((RingedSpaceHom.comp M.f M.t).sharp) (X := U)
+      (1 : M.S'.structureSheaf.obj.obj U)
+    change (ConcreteCategory.hom
+      ((SheafOfModules.unitToPushforwardObjUnit
+        (RingedSpaceHom.comp M.f M.t).sharp).val.app U))
+      (1 : M.S'.structureSheaf.obj.obj U) = _
+    rw [h]
+    simp [ut, uf0, RingedSpaceHom.comp_sharp,
+      Formalization.Books.Sheaves.Unit22.algebraicFMapComp] ; rfl
+  have hif : SheafOfModules.unitToPushforwardObjUnit
+      (RingedSpaceHom.comp M.i M.f').sharp =
+      uf ≫ (ringedSpaceModulePushforward M.f').map qi ≫
+        (ringedSpaceModulePushforwardCompIso M.i M.f').hom.app
+          (SheafOfModules.unit M.X.structureSheaf) := by
+    ext U
+    have h := SheafOfModules.unitToPushforwardObjUnit_val_app_apply
+      ((RingedSpaceHom.comp M.i M.f').sharp) (X := U)
+      (1 : M.S'.structureSheaf.obj.obj U)
+    change (ConcreteCategory.hom
+      ((SheafOfModules.unitToPushforwardObjUnit
+        (RingedSpaceHom.comp M.i M.f').sharp).val.app U))
+      (1 : M.S'.structureSheaf.obj.obj U) = _
+    rw [h]
+    simp [uf, qi, RingedSpaceHom.comp_sharp,
+      Formalization.Books.Sheaves.Unit22.algebraicFMapComp] ; rfl
+  have hft' :
+      (ut ≫ (ringedSpaceModulePushforward M.t).map uf0) ≫
+          (ringedSpaceModulePushforwardCompIso M.f M.t).hom.app
+            (SheafOfModules.unit M.X.structureSheaf) =
+        SheafOfModules.unitToPushforwardObjUnit
+          (RingedSpaceHom.comp M.f M.t).sharp := by
+    rw [Category.assoc]
+    simpa only [ringedSpaceModulePushforward, moduleSheafPushforwardAlong]
+      using hft.symm
+  have hif' :
+      (uf ≫ (ringedSpaceModulePushforward M.f').map qi) ≫
+          (ringedSpaceModulePushforwardCompIso M.i M.f').hom.app
+            (SheafOfModules.unit M.X.structureSheaf) =
+        SheafOfModules.unitToPushforwardObjUnit
+          (RingedSpaceHom.comp M.i M.f').sharp := by
+    rw [Category.assoc]
+    simpa only [ringedSpaceModulePushforward, moduleSheafPushforwardAlong]
+      using hif.symm
+  have hcompat : uf ≫ (ringedSpaceModulePushforward M.f').map qi =
+      ut ≫ (ringedSpaceModulePushforward M.t).map uf0 ≫ K.hom := by
+    apply (cancel_mono
+      ((ringedSpaceModulePushforwardCompIso M.i M.f').hom.app
+        (SheafOfModules.unit M.X.structureSheaf))).1
+    simp [K, Category.assoc]
+    simp only [← Category.assoc]
+    rw [hif', hft']
+    have hunit (p q : RingedSpaceHom M.X M.S') (h : p = q) :
+        SheafOfModules.unitToPushforwardObjUnit q.sharp =
+          SheafOfModules.unitToPushforwardObjUnit p.sharp ≫
+            eqToHom (congrArg (fun g : RingedSpaceHom M.X M.S' =>
+              (SheafOfModules.pushforward (F := Opens.map g.continuous) g.sharp).obj
+                (SheafOfModules.unit M.X.structureSheaf)) h) := by
+      subst q
+      simp
+    simpa [ringedSpaceModulePushforward, moduleSheafPushforwardAlong] using
+      hunit (RingedSpaceHom.comp M.f M.t)
+      (RingedSpaceHom.comp M.i M.f') M.commutes
+  let u : M.baseIdeal.carrier ⟶
+      (ringedSpaceModulePushforward M.f').obj (SheafOfModules.unit M.X'.structureSheaf) :=
+    M.baseIdeal.inclusion ≫ uf
+  have hkernel : kernel qi = M.sourceIdeal.carrier := by
+    rfl
+  have hbase : M.baseIdeal.inclusion ≫ ut = 0 := by
+    change kernel.ι ut ≫ ut = 0
+    exact kernel.condition ut
+  let u' :=
+    (ringedSpaceModuleFMapPullbackHomEquiv M.f'
+      M.baseIdeal.carrier (SheafOfModules.unit M.X'.structureSheaf)).symm
+      u
+  have hzero : u' ≫ qi = 0 := by
+    apply (ringedSpaceModuleFMapPullbackHomEquiv M.f'
+      M.baseIdeal.carrier ((ringedSpaceModulePushforward M.i).obj
+        (SheafOfModules.unit M.X.structureSheaf))).injective
+    rw [Adjunction.homEquiv_naturality_right]
+    dsimp [u']
+    simp only [Equiv.apply_symm_apply]
+    change u ≫ (ringedSpaceModulePushforward M.f').map qi = 0
+    change (M.baseIdeal.inclusion ≫ uf) ≫
+      (ringedSpaceModulePushforward M.f').map qi = 0
+    rw [Category.assoc, hcompat]
+    rw [← Category.assoc, ← Category.assoc, hbase]
+    simp
+  let l := kernel.lift qi u' hzero
+  let eI := ringedSpaceModuleFMapPullbackHomEquiv M.f'
+    M.baseIdeal.carrier (kernel qi)
+  refine ⟨eI l, ?_⟩
+  change eI l ≫ (ringedSpaceModulePushforward M.f').map
+      (kernel.ι qi) = u
+  rw [← Adjunction.homEquiv_naturality_right]
+  rw [kernel.lift_ι]
+  exact (ringedSpaceModuleFMapPullbackHomEquiv M.f'
+    M.baseIdeal.carrier (SheafOfModules.unit M.X'.structureSheaf)).apply_symm_apply u
 
 /- A chosen source-facing representative of the induced map before extension
    of scalars. -/
@@ -372,7 +506,7 @@ theorem firstOrder_baseIdeal_is_module
     ∃ J : Mod M.S.structureSheaf,
       Nonempty
         ((ringedSpaceModulePushforward M.t).obj J ≅ M.baseIdeal.carrier) := by
-  sorry
+  simpa only [baseIdeal] using (firstOrderThickening_kernel_is_module M.t ht)
 
 /-- After identifying the two square-zero ideals with modules on the reduced
 spaces, maps `(f')^*𝓙 ⟶ 𝓘` are identified with maps `i_*f^*𝓙 ⟶ 𝓘`.
@@ -431,13 +565,40 @@ theorem firstOrder_pullback_baseIdeal_iso
       M.f.sharp).IsRightAdjoint)]
     [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
       M.f'.sharp).IsRightAdjoint)] :
-    Nonempty
+      Nonempty
       ((M.baseIdeal.carrier ⟶
           (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier) ≃
         ((ringedSpaceModulePushforward M.i).obj
             ((ringedSpaceModulePullback M.f).obj J) ⟶
           M.sourceIdeal.carrier)) := by
-  sorry
+  let hI := firstOrderThickening_kernel_is_module M.i hi
+  let I := Classical.choose hI
+  let eI : (ringedSpaceModulePushforward M.i).obj I ≅
+      M.sourceIdeal.carrier :=
+    Classical.choice (Classical.choose_spec hI)
+  let eJ : (ringedSpaceModulePushforward M.t).obj J ≅
+      M.baseIdeal.carrier :=
+    Classical.choice hJ
+  let ffi : (ringedSpaceModulePushforward M.i).FullyFaithful :=
+    Classical.choice (closedImmersion_pushforward_fullyFaithful M.i
+      hi.toIsThickening.underlying_homeomorph.isClosedEmbedding
+      hi.toIsThickening.structureSheaf_surjective)
+  let fft : (ringedSpaceModulePushforward M.t).FullyFaithful :=
+    Classical.choice (closedImmersion_pushforward_fullyFaithful M.t
+      ht.toIsThickening.underlying_homeomorph.isClosedEmbedding
+      ht.toIsThickening.structureSheaf_surjective)
+  let K :=
+    (ringedSpaceModulePushforwardCompIso M.f M.t).app I ≪≫
+      (eqToIso (congrArg (fun g => ringedSpaceModulePushforward g)
+        M.commutes)).app I ≪≫
+      ((ringedSpaceModulePushforwardCompIso M.i M.f').app I).symm
+  let E :=
+    (Iso.homCongr eJ.symm
+      ((ringedSpaceModulePushforward M.f').mapIso eI.symm)).trans
+      (Iso.homCongr (Iso.refl _) K.symm) |>.trans fft.homEquiv.symm |>.trans
+      (ringedSpaceModuleHomEquiv M.f J I).symm |>.trans ffi.homEquiv |>.trans
+      (Iso.homCongr (Iso.refl _) eI)
+  exact ⟨E⟩
 
 /-- The chosen first-order identification of the two presentations of an
 ideal map. -/
@@ -484,7 +645,9 @@ theorem exists_firstOrder_idealMap
         M.sourceIdeal.carrier,
       (firstOrderIdealMapHomEquiv M hi ht J hJ).symm φ =
         inducedIdealFMap M := by
-  sorry
+  let e := firstOrderIdealMapHomEquiv M hi ht J hJ
+  refine ⟨e (inducedIdealFMap M), ?_⟩
+  exact e.symm_apply_apply (inducedIdealFMap M)
 
 end MorphismOfThickenings
 

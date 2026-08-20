@@ -106,20 +106,22 @@ variable {D D' : Type*} [Category* D] [Category* D']
 
 /-- The pre-derived adjunction Hom-equivalence from the source's first lemma.
 
-`S.Q` and `S'.Q` are Mathlib's canonical localization functors.  The
+`Q` and `Q'` are arbitrary localization functors for `S` and `S'`.  The
 compatibility assumptions are retained as typeclasses, while the established
 Chapter 14 API uses the stronger saturated multiplicative-system witnesses
 `hS` and `hS'` to define the partial derived values.
 -/
 theorem preDerivedAdjunction
+    {E E' : Type*} [Category* E] [Category* E']
     (S : MorphismProperty D) (hS : SaturatedMultiplicativeSystem S)
     (S' : MorphismProperty D') (hS' : SaturatedMultiplicativeSystem S')
     [CompatibleWithTriangulation S] [CompatibleWithTriangulation S']
+    (Q : D ⥤ E) (Q' : D' ⥤ E') [Q.IsLocalization S] [Q'.IsLocalization S']
     (F : D ⥤ D') (G : D' ⥤ D) (adj : G ⊣ F)
     [F.CommShift ℤ] [F.IsTriangulated]
     [G.CommShift ℤ] [G.IsTriangulated] :
     Nonempty
-      (PartialDerivedAdjunction S hS S' hS' S.Q S'.Q F G adj) := by
+      (PartialDerivedAdjunction S hS S' hS' Q Q' F G adj) := by
   sorry
 
 end Triangulated
@@ -197,16 +199,25 @@ def IsUnboundedRightDerivedFunctor
   ∃ R : Formalization.Books.Derived.Unit16.UnboundedRightDerivedFunctorData F,
     R.functor = RF
 
-/-- `LG` is an exact left derived functor on the unbounded derived category
-when it carries the canonical localization comparison map, satisfies
-Mathlib's left-derived universal property, and is exact as a triangulated
-functor. -/
+/- A chosen everywhere-defined left derived functor on the unbounded derived
+category. Chapter 16 provides the corresponding right-derived package; the
+left package is introduced here because that chapter does not need it. -/
+structure UnboundedLeftDerivedFunctorData
+    (G : B ⥤ A) [G.Additive]
+    where
+  functor : DerivedCategory B ⥤ DerivedCategory A
+  counit : (DerivedCategory.Qh (C := B)) ⋙ functor ⟶
+    classicalHomotopyToDerived G
+  isLeftDerived : Functor.IsLeftDerivedFunctor functor counit
+    (quasiIsoHomotopyProperty B)
+  exact : Nonempty (ExactTriangulatedFunctorData functor)
+
+/- `LG` is an exact left derived functor on the unbounded derived category
+when it is represented by the package above. -/
 def IsUnboundedLeftDerivedFunctor
     (G : B ⥤ A) [G.Additive]
     (LG : DerivedCategory B ⥤ DerivedCategory A) : Prop :=
-  ∃ β : (DerivedCategory.Qh (C := B)) ⋙ LG ⟶ classicalHomotopyToDerived G,
-    Functor.IsLeftDerivedFunctor LG β (quasiIsoHomotopyProperty B) ∧
-      Nonempty (ExactTriangulatedFunctorData LG)
+  ∃ L : UnboundedLeftDerivedFunctorData G, L.functor = LG
 
 /- The generic Mathlib construction of a derived adjunction requires the
    two comparison transformations for the original adjunction and the
@@ -234,9 +245,9 @@ theorem derivedAdjunction_of_absolute
     Nonempty (LG ⊣ RF) := by
   /- Prior attempt: install the four derived-functor instances and apply
      `CategoryTheory.Adjunction.derived` with `β` as its left comparison and
-     `α` as its right comparison.  The current Mathlib elaborator still
-     requests the left-derived instance for `LG` at the final application;
-     the statement is retained while its proof is deferred. -/
+     `α` as its right comparison.  A direct uninstantiated application leaves
+     category metavariables stuck; the statement is retained while its proof
+     is deferred. -/
   sorry
 
 /-- The source's final lemma: everywhere-defined derived functors preserve the

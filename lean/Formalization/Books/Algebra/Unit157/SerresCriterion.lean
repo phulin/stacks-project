@@ -420,7 +420,126 @@ theorem criterion_reduced
     `Mathlib/Algebra/Module/LocalizedModule/Basic.lean`) to conclude `x = 0`.
     Finish with `isReduced_iff`/`isNilpotent_iff_eq_zero`.
   -/
-  sorry
+  constructor
+  · intro hR
+    let : IsReduced R := hR
+    constructor
+    · intro p hp
+      have hp0 : p.asIdeal.height = 0 := bot_unique hp
+      have hpmin : p.asIdeal ∈ minimalPrimes R :=
+        (Ideal.height_eq_zero_iff).mp hp0
+      let q : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R :=
+        ⟨p, hpmin⟩
+      let hfield : IsField (Localization.AtPrime p.asIdeal) :=
+        Formalization.Books.Algebra.Unit25.isField_localizationAt_minimalPrime_of_isReduced q
+      let : Field (Localization.AtPrime p.asIdeal) := hfield.toField
+      infer_instance
+    · have hempty : embeddedAssociatedPrimes (R := R) (M := R) = ∅ := by
+        rw [Set.eq_empty_iff_forall_notMem]
+        intro p hp
+        change p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R R ∧
+          ¬ Minimal (fun q : PrimeSpectrum R =>
+            q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R R) p at hp
+        rcases hp with ⟨hp, hpnot⟩
+        apply hpnot
+        refine ⟨hp, ?_⟩
+        intro q hq hqle
+        change ∃ m : R,
+          (⊥ : Submodule R R).colon ({m} : Set R) = p.asIdeal at hp
+        obtain ⟨m, hm⟩ := hp
+        have hmq : m ∉ q.asIdeal := by
+          intro hmq
+          have hmp : m ∈ p.asIdeal := hqle hmq
+          have hmpow : m * m = 0 := by
+            have hmem : m ∈ (⊥ : Submodule R R).colon ({m} : Set R) := by
+              rw [hm]
+              exact hmp
+            simpa [Submodule.mem_colon_singleton] using hmem
+          have hmzero : m = 0 := by
+            apply IsReduced.eq_zero m
+            exact ⟨2, by simpa [pow_two] using hmpow⟩
+          have htop : p.asIdeal = (⊤ : Ideal R) := by
+            rw [← hm, hmzero]
+            ext r
+            simp [Submodule.mem_colon_singleton]
+          exact p.isPrime.ne_top htop
+        intro r hr
+        have hmem : r ∈ (⊥ : Submodule R R).colon ({m} : Set R) := by
+          rw [hm]
+          exact hr
+        have hrm : r * m = 0 := by
+          simpa [Submodule.mem_colon_singleton] using hmem
+        exact (q.isPrime.mem_or_mem (by rw [hrm]; exact q.asIdeal.zero_mem)).resolve_right hmq
+      have hmodule : HasPropertySkModule R R 1 :=
+        (criterion_no_embedded_primes (R := R) (M := R)).mp hempty
+      intro p
+      simpa only [HasPropertySkModule, HasPropertySk,
+        Module.supportDim_self_eq_ringKrullDim] using hmodule p
+  · intro h
+    rcases h with ⟨hR0, hS1⟩
+    have hS1' : HasPropertySkModule R R 1 := by
+      simpa only [HasPropertySkModule, HasPropertySk,
+        Module.supportDim_self_eq_ringKrullDim] using hS1
+    have hempty : embeddedAssociatedPrimes (R := R) (M := R) = ∅ :=
+      (criterion_no_embedded_primes (R := R) (M := R)).mpr hS1'
+    constructor
+    intro x hx
+    have hmapzero :
+        Formalization.Books.Algebra.Unit63.localizationAtAssociatedPrimesMap
+            (R := R) (M := R) x = 0 := by
+      funext p
+      change algebraMap R (Localization.AtPrime p.1.asIdeal) x = 0
+      have hpheight : p.1.asIdeal.height = 0 := by
+        have hpassoc := p.2
+        have hpmin : Minimal (fun q : PrimeSpectrum R =>
+            q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R R) p.1 := by
+          by_contra hnot
+          have hbad : p.1 ∈ embeddedAssociatedPrimes (R := R) (M := R) :=
+            ⟨hpassoc, hnot⟩
+          have hbad' : p.1 ∈ (∅ : Set (PrimeSpectrum R)) := by
+            rw [← hempty]
+            exact hbad
+          simp at hbad'
+        have hann : Module.annihilator R R = (⊥ : Ideal R) :=
+          (Module.annihilator_eq_bot).mpr inferInstance
+        have hpann : Module.annihilator R R ≤ p.1.asIdeal := by
+          rw [hann]
+          exact bot_le
+        obtain ⟨qI, hqI, hqle⟩ :=
+          Ideal.exists_minimalPrimes_le hpann
+        let q : PrimeSpectrum R := ⟨qI, hqI.isPrime⟩
+        have hqsupp : q ∈ Module.support R R :=
+          Module.mem_support_iff_of_finite.mpr hqI.le
+        have hqmin : Minimal (fun z : PrimeSpectrum R =>
+            z ∈ Module.support R R) q := by
+          refine ⟨hqsupp, ?_⟩
+          intro z hz hzq
+          change qI ≤ z.asIdeal
+          change z.asIdeal ≤ qI at hzq
+          exact hqI.2
+            ⟨z.isPrime, by rw [hann]; exact bot_le⟩ hzq
+        have hqassoc :=
+          Formalization.Books.Algebra.Unit63.ass_of_minimal_support q hqsupp hqmin
+        have hpq : p.1 ≤ q := hpmin.2 hqassoc hqle
+        have hpeq : p.1 = q := le_antisymm hpq hqle
+        have hqheight : q.asIdeal.height = 0 := by
+          let : q.asIdeal.IsPrime := q.isPrime
+          have hqIbot : qI ∈ (⊥ : Ideal R).minimalPrimes := by
+            simpa [hann] using hqI
+          exact (Ideal.height_eq_zero_iff).mpr hqIbot
+        simpa [hpeq] using hqheight
+      let : IsRegularLocalRing (Localization.AtPrime p.1.asIdeal) :=
+        hR0 p.1 hpheight.le
+      let : IsDomain (Localization.AtPrime p.1.asIdeal) :=
+        Formalization.Books.Algebra.Unit106.regular_domain
+      rcases hx with ⟨n, hn⟩
+      apply isNilpotent_iff_eq_zero.mp
+      refine ⟨n, ?_⟩
+      rw [← map_pow, hn]
+      exact map_zero _
+    apply Formalization.Books.Algebra.Unit63.localizationAtAssociatedPrimesMap_injective
+      (R := R) (M := R)
+    simpa using hmapzero
 
 /-- Serre's criterion for normality: normal is equivalent to `(R_1)` plus
 `(S_2)`. -/
@@ -535,7 +654,88 @@ theorem regularRing_isNormal
   from the Mathlib `IsRegularLocalRing` class; the bridge in this dependency
   graph is `Unit106.regular_ring_CM`, and it needs the explicit list above.
   -/
-  sorry
+  apply criterion_normal.mpr
+  constructor
+  · intro p hp
+    exact IsRegularRing.isRegularLocalRing_localization p.asIdeal
+  · intro p
+    let A := Localization.AtPrime p.asIdeal
+    have hxs_exists : ∃ xs : List A,
+        Formalization.Books.Algebra.Unit106.IsMinimalIdealGeneratingList
+          (IsLocalRing.maximalIdeal A) xs ∧
+          xs.length = (IsLocalRing.maximalIdeal A).spanFinrank := by
+      classical
+      let S : Set A := (IsLocalRing.maximalIdeal A).generators
+      let hfg : (IsLocalRing.maximalIdeal A).FG :=
+        IsNoetherian.noetherian (IsLocalRing.maximalIdeal A)
+      let hS : S.Finite := Submodule.FG.finite_generators hfg
+      let F : Finset A := hS.toFinset
+      let xs : List A := F.toList
+      have hSF : (F : Set A) = S := hS.coe_toFinset
+      have hspan : Ideal.ofList xs = IsLocalRing.maximalIdeal A := by
+        simpa [Ideal.ofList, xs, hSF] using
+          (IsLocalRing.maximalIdeal A).span_generators
+      have hgen : (IsLocalRing.maximalIdeal A).spanFinrank = F.card := by
+        rw [← Submodule.FG.generators_ncard hfg]
+        simpa [F, S] using Set.ncard_eq_toFinset_card (hs := hS)
+      refine ⟨xs, ⟨hspan, ?_⟩, ?_⟩
+      · intro i hi
+        have hcard : (xs.eraseIdx i.1).length + 1 = xs.length :=
+          List.length_eraseIdx_add_one i.isLt
+        have hspan_erase : Ideal.ofList (xs.eraseIdx i.1) =
+            IsLocalRing.maximalIdeal A := by
+          apply le_antisymm
+          · rw [← hspan]
+            apply Ideal.span_le.mpr
+            intro y hy
+            change y ∈ Ideal.span {r | r ∈ xs}
+            exact Ideal.subset_span (List.eraseIdx_subset hy)
+          · rw [← hspan]
+            apply Ideal.span_le.mpr
+            intro y hy
+            by_cases hyeq : y = xs.get i
+            · simpa [hyeq] using hi
+            · have hy' : y ∈ xs.eraseIdx i.1 := by
+                change y ∈ xs at hy
+                obtain ⟨j, hj, hget⟩ := (List.mem_iff_getElem.mp hy)
+                have hji : j ≠ i.1 := by
+                  intro hji
+                  apply hyeq
+                  subst j
+                  exact hget.symm
+                rw [List.mem_eraseIdx_iff_getElem]
+                exact ⟨j, hj, hji, hget⟩
+              change y ∈ Ideal.span {r | r ∈ xs.eraseIdx i.1}
+              exact Ideal.subset_span hy'
+        let E : Finset A := (xs.eraseIdx i.1).toFinset
+        have hspanE : Ideal.span (↑E : Set A) = IsLocalRing.maximalIdeal A := by
+          simpa [E, Ideal.ofList] using hspan_erase
+        have hspanE' : Submodule.span A (↑E : Set A) =
+            IsLocalRing.maximalIdeal A := hspanE
+        have hle := Submodule.spanFinrank_span_le_ncard_of_finite
+          (R := A) (M := A) (s := (↑E : Set A)) E.finite_toSet
+        rw [hspanE'] at hle
+        rw [hgen] at hle
+        have hcard' : E.card ≤ (xs.eraseIdx i.1).length := by
+          simpa [E] using List.toFinset_card_le (xs.eraseIdx i.1)
+        have hle' : F.card ≤ (xs.eraseIdx i.1).length := by
+          exact le_trans (by simpa using hle) hcard'
+        have hle'' : xs.length ≤ (xs.eraseIdx i.1).length := by
+          simpa [xs] using hle'
+        omega
+      · simpa [xs] using hgen.symm
+    obtain ⟨xs, hxs, _⟩ := hxs_exists
+    have hcm : Formalization.Books.Algebra.Unit103.IsCohenMacaulay A A :=
+      (Formalization.Books.Algebra.Unit106.regular_ring_CM xs hxs).2.2
+    change ((localDepth A A : ℕ∞) : WithBot ℕ∞) = Module.supportDim A A at hcm
+    change min ((2 : ℕ∞) : WithBot ℕ∞) (ringKrullDim A) ≤
+      ((localDepth A A : ℕ∞) : WithBot ℕ∞)
+    calc
+      min ((2 : ℕ∞) : WithBot ℕ∞) (ringKrullDim A) ≤ ringKrullDim A :=
+        min_le_right _ _
+      _ = Module.supportDim A A :=
+        (Module.supportDim_self_eq_ringKrullDim A).symm
+      _ = ((localDepth A A : ℕ∞) : WithBot ℕ∞) := hcm.symm
 
 /-! ## Height-one localizations of a normal domain -/
 
@@ -590,7 +790,84 @@ theorem normalDomain_eq_heightOneLocalizationIntersection
     (hR : IsNormalDomain R) :
     Set.range (algebraMap R K) =
       heightOneLocalizationIntersection R K hR.1 := by
-  sorry
+  let : IsDomain R := hR.1
+  let : IsIntegrallyClosed R := hR.2
+  ext x
+  constructor
+  · rintro ⟨r, rfl⟩
+    rw [heightOneLocalizationIntersection]
+    refine Set.mem_iInter.mpr ?_
+    intro p
+    unfold Localization.subalgebra.ofField
+    change ∃ a s : R, ∃ (_ : s ∈ p.1.asIdeal.primeCompl),
+      algebraMap R K r = algebraMap R K a * (algebraMap R K s)⁻¹
+    exact ⟨r, 1, p.1.asIdeal.primeCompl.one_mem, by simp⟩
+  · intro hx
+    rw [heightOneLocalizationIntersection] at hx
+    rcases IsFractionRing.div_surjective R x with ⟨b, a, ha, hxa⟩
+    have ha0 : a ≠ 0 := by
+      intro ha0
+      subst a
+      exact (nonZeroDivisors.ne_zero ha) rfl
+    have haK : algebraMap R K a ≠ 0 := by
+      intro haK
+      have : a = 0 := (IsFractionRing.to_map_eq_zero_iff).mp haK
+      exact ha0 this
+    have hall : ∀ p : PrimeSpectrum R, p.asIdeal.height = 1 →
+        ∃ z : Localization.AtPrime p.asIdeal,
+          algebraMap R (Localization.AtPrime p.asIdeal) b =
+            algebraMap R (Localization.AtPrime p.asIdeal) a * z := by
+      intro p hp
+      have hxp : x ∈ Localization.subalgebra.ofField K p.asIdeal.primeCompl
+          p.asIdeal.primeCompl_le_nonZeroDivisors :=
+        Set.mem_iInter.mp hx ⟨p, hp⟩
+      unfold Localization.subalgebra.ofField at hxp
+      change ∃ u s : R, ∃ (_ : s ∈ p.asIdeal.primeCompl),
+        x = algebraMap R K u * (algebraMap R K s)⁻¹ at hxp
+      rcases hxp with ⟨u, s, hs, hxu⟩
+      let z : Localization.AtPrime p.asIdeal :=
+        IsLocalization.mk' (Localization.AtPrime p.asIdeal) u ⟨s, hs⟩
+      refine ⟨z, ?_⟩
+      have hs0 : s ≠ 0 :=
+        nonZeroDivisors.ne_zero
+          (p.asIdeal.primeCompl_le_nonZeroDivisors hs)
+      have hsK : algebraMap R K s ≠ 0 := by
+        intro hsK
+        have : s = 0 := (IsFractionRing.to_map_eq_zero_iff).mp hsK
+        exact hs0 this
+      have hratio : algebraMap R K b / algebraMap R K a =
+          algebraMap R K u * (algebraMap R K s)⁻¹ :=
+        hxa.trans hxu
+      have hcross : algebraMap R K b * algebraMap R K s =
+          algebraMap R K u * algebraMap R K a := by
+        field_simp [haK, hsK] at hratio
+        simpa [mul_assoc, mul_left_comm, mul_comm] using hratio
+      have hR : b * s = a * u := by
+        apply IsFractionRing.injective R K
+        simpa [map_mul, mul_assoc, mul_left_comm, mul_comm] using hcross
+      calc
+        algebraMap R (Localization.AtPrime p.asIdeal) b =
+            IsLocalization.mk' (Localization.AtPrime p.asIdeal) (s * b)
+              ⟨s, hs⟩ := by
+          symm
+          simpa [mul_comm] using
+            (IsLocalization.mk'_mul_cancel_left
+              (S := Localization.AtPrime p.asIdeal) b ⟨s, hs⟩)
+        _ = IsLocalization.mk' (Localization.AtPrime p.asIdeal) (a * u)
+              ⟨s, hs⟩ := by
+          have hsb : s * b = a * u := by simpa [mul_comm] using hR
+          rw [hsb]
+        _ = algebraMap R (Localization.AtPrime p.asIdeal) a * z := by
+          simpa [z] using
+            (IsLocalization.mul_mk'_eq_mk'_of_mul
+              (S := Localization.AtPrime p.asIdeal) a u ⟨s, hs⟩).symm
+    obtain ⟨c, hc⟩ :=
+      (principal_mem_iff_mem_all_heightOne_localizations
+        (a := a) (b := b) ha0).mpr hall
+    refine ⟨c, ?_⟩
+    rw [← hxa, hc]
+    field_simp [haK]
+    simp [map_mul, mul_comm]
 
 /-- The fractional ideal `R ∩ xR`, represented as the comap of the
 `R`-submodule generated by `x` in the fraction field. -/

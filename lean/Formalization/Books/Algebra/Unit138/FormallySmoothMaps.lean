@@ -717,6 +717,9 @@ theorem smooth_finite_type_descent
     letI : Algebra.Smooth R S := hf.toAlgebra
     Algebra.Smooth.exists_finiteType ℤ R S
 
+/-
+Prior attempt (rejected interface):
+
 theorem smooth_descends_through_colimit
     {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B)
     (D : Formalization.Books.Algebra.Unit127.DirectedFinitePresentationApproximation f)
@@ -725,6 +728,13 @@ theorem smooth_descends_through_colimit
       (D.base.colimit.stageMap i).Smooth ∧
         Nonempty (directedStageBaseChangeRing D.base.colimit i ≃+* B) := by
   sorry
+
+The Chapter 127 approximation records finite-type stages and bijective
+transition base changes, but it does not record the stage-to-target data
+needed for this conclusion for an arbitrary approximation.  The
+source-faithful smooth finite-type model is recorded by
+`smooth_finite_type_descent` above instead.
+-/
 
 theorem formallySmooth_iff_faithfullyFlat_baseChange
     {R S R' : Type*} [CommRing R] [CommRing S] [CommRing R']

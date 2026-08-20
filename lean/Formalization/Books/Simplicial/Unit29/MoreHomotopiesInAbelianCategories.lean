@@ -53,6 +53,46 @@ def diamondBoundary
     (biprod.desc 0
       ((-A.d (n - 1) (n - 2)) ≫ eqToHom (by congr 1; omega)))
 
+private def diamondBoundary_explicit
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) (n : ℤ) :
+    ((A.X n ⊞ A.X n) ⊞ A.X (n - 1)) ⟶
+      ((A.X (n - 1) ⊞ A.X (n - 1)) ⊞ A.X (n - 1 - 1)) :=
+  biprod.lift
+    (biprod.desc
+      (biprod.lift
+        (biprod.desc (A.d n (n - 1)) 0)
+        (biprod.desc 0 (A.d n (n - 1))))
+      (biprod.lift (𝟙 _) 0))
+    (biprod.desc 0
+      ((-A.d (n - 1) (n - 2)) ≫ eqToHom (by congr 1; omega)))
+
+private lemma diamondBoundary_comp
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) (n : ℤ) :
+    diamondBoundary A n ≫ diamondBoundary A (n - 1) = 0 := by
+  change diamondBoundary_explicit A n ≫ diamondBoundary_explicit A (n - 1) = 0
+  simp [diamondBoundary_explicit, Category.assoc]
+  apply biprod.hom_ext
+  · apply biprod.hom_ext'
+    · apply biprod.hom_ext
+      · apply biprod.hom_ext'
+        · simp [Category.assoc]
+        · simp [Category.assoc]
+      · apply biprod.hom_ext'
+        · simp [Category.assoc]
+        · simp [Category.assoc]
+    · apply biprod.hom_ext
+      · have h : n - 1 - 1 = n - 2 := by omega
+        simp [h, Category.assoc]
+      · simp [Category.assoc]
+  · apply biprod.hom_ext'
+    · simp [Category.assoc]
+    · simp [Category.assoc]
+      have h₁ : n - 1 - 1 = n - 2 := by omega
+      have h₂ : n - 1 - 2 = n - 1 - 1 - 1 := by omega
+      simp [h₁, h₂, Category.assoc]
+
 /-- The differential with the zero maps away from the immediate predecessor. -/
 def diamondDifferential
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -62,16 +102,36 @@ def diamondDifferential
     diamondBoundary A i ≫ eqToHom (by subst j; rfl)
   else 0
 
+private lemma diamondDifferential_comp
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) {i j k : ℤ}
+    (hij : j = i - 1) (hjk : k = j - 1) :
+    diamondDifferential A i j ≫ diamondDifferential A j k = 0 := by
+  subst j
+  subst k
+  simp [diamondDifferential]
+  exact diamondBoundary_comp A i
+
 /-- The chain complex `◇ A` from the source. -/
 def diamond
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℤ) : ChainComplex C ℤ where
   X := diamondObject A
   d := diamondDifferential A
-  shape := by sorry
+  shape := by
+    intro i j hij
+    simp only [ComplexShape.down_Rel] at hij
+    simp only [diamondDifferential]
+    rw [dif_neg]
+    intro h
+    apply hij
+    simp [h]
   d_comp_d' := by
     intro i j k hij hjk
-    sorry
+    simp only [ComplexShape.down_Rel] at hij hjk
+    have hij' : j = i - 1 := by omega
+    have hjk' : k = j - 1 := by omega
+    exact diamondDifferential_comp A hij' hjk'
 
 @[simp]
 theorem diamond_X
@@ -101,6 +161,47 @@ def diamondThirdInclusionChain
   change A.X (n - 1) ⟶ diamondObject A n
   exact diamondThirdInclusion A n
 
+private lemma diamond_endpoint_formula
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) (q : ℤ) :
+    ((biprod.inl ≫ biprod.inl) :
+      A.X (q - 1) ⟶ ((A.X (q - 1) ⊞ A.X (q - 1)) ⊞ A.X (q - 1 - 1))) =
+      A.d (q - 1) (q - 1 - 1) ≫ (biprod.inr :
+        A.X (q - 1 - 1) ⟶
+          ((A.X (q - 1) ⊞ A.X (q - 1)) ⊞ A.X (q - 1 - 1))) +
+        (biprod.inr : A.X (q - 1) ⟶
+          ((A.X q ⊞ A.X q) ⊞ A.X (q - 1))) ≫
+          diamondBoundary_explicit A q +
+        (biprod.inl ≫ biprod.snd :
+          A.X (q - 1) ⟶
+            ((A.X (q - 1) ⊞ A.X (q - 1)) ⊞ A.X (q - 1 - 1))) := by
+  simp [diamondBoundary_explicit, Category.assoc]
+  apply biprod.hom_ext
+  · rw [Preadditive.add_comp]
+    simp [Category.assoc]
+    apply biprod.hom_ext
+    · simp [Category.assoc]
+    · simp [Category.assoc]
+  · rw [Preadditive.add_comp]
+    simp [Category.assoc]
+    have h : q - 1 - 1 = q - 2 := by omega
+    simp [h, Category.assoc]
+
+private lemma diamond_endpoint_formula_transport
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) {i q : ℤ} (h : q - 1 = i) :
+    ((biprod.inl ≫ biprod.inl) :
+      A.X i ⟶ ((A.X i ⊞ A.X i) ⊞ A.X (i - 1))) =
+      A.d i (i - 1) ≫ (biprod.inr :
+        A.X (i - 1) ⟶ ((A.X i ⊞ A.X i) ⊞ A.X (i - 1))) +
+        ((eqToHom (by subst i; rfl) ≫ (biprod.inr :
+          A.X (q - 1) ⟶ ((A.X q ⊞ A.X q) ⊞ A.X (q - 1)))) ≫
+          diamondBoundary_explicit A q ≫ eqToHom (by subst i; rfl)) +
+        (0 : A.X i ⟶ ((A.X i ⊞ A.X i) ⊞ A.X (i - 1))) := by
+  subst i
+  simpa [Category.assoc, eqToHom_trans, eqToHom_refl] using
+    (diamond_endpoint_formula A q)
+
 /-- The two endpoint maps into `◇ A`. -/
 def diamondLeft
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -108,7 +209,29 @@ def diamondLeft
   f n := biprod.inl ≫ biprod.inl
   comm' := by
     intro i j hij
-    sorry
+    simp only [ComplexShape.down_Rel] at hij
+    have hj : j = i - 1 := by
+      calc
+        j = (j + 1) - 1 := by
+          simp
+        _ = i - 1 := by rw [hij]
+    subst j
+    change (biprod.inl ≫ biprod.inl) ≫ diamondDifferential A i (i - 1) =
+      A.d i (i - 1) ≫ biprod.inl ≫ biprod.inl
+    simp only [diamondDifferential]
+    simp
+    apply biprod.hom_ext
+    · simp only [diamondBoundary]
+      erw [Category.assoc, biprod.lift_fst]
+      simp [diamondThirdInclusionChain, diamondThirdInclusion, diamondObject,
+        Category.assoc]
+      apply biprod.hom_ext
+      · simp [Category.assoc]
+      · simp [Category.assoc]
+    · simp only [diamondBoundary]
+      erw [Category.assoc, biprod.lift_snd]
+      simp [diamondThirdInclusionChain, diamondThirdInclusion, diamondObject,
+        Category.assoc]
 
 def diamondRight
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -116,24 +239,44 @@ def diamondRight
   f n := biprod.inl ≫ biprod.snd
   comm' := by
     intro i j hij
-    sorry
+    simp only [ComplexShape.down_Rel] at hij
+    subst i
+    simp [diamond, diamondDifferential, diamondBoundary]
+
+private def diamondHomComponent
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) (i j : ℤ) :
+    A.X i ⟶ (diamond A).X j := by
+  by_cases h : j = i + 1
+  · exact eqToHom (by congr 1; omega) ≫ diamondThirdInclusionChain A j
+  · exact 0
 
 /-- The canonical chain homotopy between the endpoint maps. -/
 def diamondHomotopy
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℤ) :
     _root_.Homotopy (diamondLeft A) (diamondRight A) where
-  hom i j :=
-    by
-      by_cases h : j = i + 1
-      · subst j
-        change A.X i ⟶ diamondObject A (i + 1)
-        exact eqToHom (by simp) ≫ diamondThirdInclusion A (i + 1)
-      · exact 0
-  zero i j hij := by sorry
+  hom i j := diamondHomComponent A i j
+  zero i j hij := by
+    simp only [ComplexShape.down_Rel] at hij
+    have h : ¬j = i + 1 := by
+      intro h'
+      apply hij
+      exact h'.symm
+    simp [diamondHomComponent, h]
+    rfl
   comm := by
     intro i
-    sorry
+    rw [dNext_eq _ (show (ComplexShape.down ℤ).Rel i (i - 1) by simp),
+      prevD_eq _ (show (ComplexShape.down ℤ).Rel (i + 1) i by simp)]
+    convert (diamond_endpoint_formula_transport A (i := i) (q := i + 1) (by omega)) using 1 <;>
+      simp [diamondLeft, diamondRight, diamondHomComponent, diamond,
+        diamondDifferential, diamondBoundary,
+        diamondBoundary_explicit, diamondThirdInclusionChain,
+        diamondThirdInclusion, diamondObject, Category.assoc, eqToHom_trans,
+        eqToHom_refl, eqToHom_trans_assoc, Category.comp_id,
+        Category.id_comp] <;>
+      abel_nf
 
 /-! ## Representability and functoriality -/
 

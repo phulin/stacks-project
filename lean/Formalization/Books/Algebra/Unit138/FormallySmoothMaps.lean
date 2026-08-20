@@ -330,14 +330,207 @@ theorem differential_seq_formallySmooth
     (hAC : Algebra.FormallySmooth A C)
     (hBC : Function.Surjective (algebraMap B C)) :
     extensionDifferentialSplitExact (surjectiveExtensionOver (A := A) hBC) := by
-  sorry
+  letI : Algebra.FormallySmooth A C := hAC
+  let P := surjectiveExtensionOver (A := A) hBC
+  change IsSplitExactLinearSequence P.cotangentComplex P.toKaehler
+  have hPsub : Subsingleton P.H1Cotangent := by
+    constructor
+    intro x y
+    obtain ⟨x', rfl⟩ := Algebra.Extension.H1Cotangent.map_defaultHom_surjective P x
+    obtain ⟨y', rfl⟩ := Algebra.Extension.H1Cotangent.map_defaultHom_surjective P y
+    exact congrArg _ (@Subsingleton.elim _ hAC.subsingleton_h1Cotangent x' y')
+  have hinj : Function.Injective P.cotangentComplex :=
+    P.subsingleton_h1Cotangent.mp hPsub
+  have hExact : Function.Exact P.cotangentComplex P.toKaehler :=
+    P.exact_cotangentComplex_toKaehler
+  have hSurj : Function.Surjective P.toKaehler := P.toKaehler_surjective
+  obtain ⟨s, hs⟩ := Module.projective_lifting_property P.toKaehler LinearMap.id hSurj
+  exact ⟨hinj, hExact, hSurj, ⟨s, hs⟩⟩
 
 theorem surjective_of_composite_algebraMap
     {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
     [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
     (hAC : Function.Surjective (algebraMap A C)) :
     Function.Surjective (algebraMap B C) := by
-  sorry
+  intro c
+  obtain ⟨a, ha⟩ := hAC c
+  refine ⟨algebraMap A B a, ?_⟩
+  rw [← IsScalarTower.algebraMap_apply A B C a]
+  exact ha
+
+private theorem cotangent_map_injective_of_formallySmooth
+    {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
+    (hAC : Function.Surjective (algebraMap A C))
+    (hAB : Algebra.FormallySmooth A B)
+    (hBC : Function.Surjective (algebraMap B C)) :
+    Function.Injective
+      (Algebra.Extension.Cotangent.map
+        (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC)) := by
+  letI : Algebra.FormallySmooth A B := hAB
+  let fAC : A →ₐ[A] C := IsScalarTower.toAlgHom A A C
+  let q := fAC.kerSquareLift
+  have hfAC : Function.Surjective fAC := by
+    simpa [fAC] using hAC
+  have hq : Function.Surjective q :=
+    Ideal.Quotient.lift_surjective_of_surjective _ _ hfAC
+  have hqnil : IsNilpotent (RingHom.ker q.toRingHom) := by
+    refine ⟨2, ?_⟩
+    rw [AlgHom.ker_kerSquareLift]
+    exact Ideal.cotangentIdeal_square _
+  let σ : B →ₐ[A] A ⧸ (RingHom.ker fAC.toRingHom) ^ 2 :=
+    Algebra.FormallySmooth.liftOfSurjective
+      (IsScalarTower.toAlgHom A B C) q hq hqnil
+  have hσ : q.comp σ = IsScalarTower.toAlgHom A B C :=
+    Algebra.FormallySmooth.comp_liftOfSurjective
+      (IsScalarTower.toAlgHom A B C) q hq hqnil
+  have hmapf (a : A) :
+      (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC).toAlgHom a =
+        algebraMap A B a := by
+    change (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC).toRingHom a = _
+    simpa [Formalization.Books.Algebra.Unit134.surjectiveExtension] using
+      (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC).toRingHom_algebraMap a
+  intro x y hxy
+  obtain ⟨x, rfl⟩ :=
+    Algebra.Extension.Cotangent.mk_surjective (P :=
+      Formalization.Books.Algebra.Unit134.surjectiveExtension hAC) x
+  obtain ⟨y, rfl⟩ :=
+    Algebra.Extension.Cotangent.mk_surjective (P :=
+      Formalization.Books.Algebra.Unit134.surjectiveExtension hAC) y
+  have hprod :
+      algebraMap A B (x - y) ∈ (RingHom.ker (algebraMap B C)) ^ 2 := by
+    have hmk := hxy
+    simp only [Algebra.Extension.Cotangent.map_mk] at hmk
+    have hmem := (Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem _ _).mp hmk
+    change
+      (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC).toAlgHom
+          (x : A) -
+        (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC).toAlgHom
+          (y : A) ∈
+          (Formalization.Books.Algebra.Unit134.surjectiveExtension hBC).ker ^ 2 at hmem
+    rw [hmapf, hmapf] at hmem
+    simpa using hmem
+  have hker : ∀ (z : B), z ∈ RingHom.ker (algebraMap B C) →
+      σ z ∈ RingHom.ker q.toRingHom := by
+    intro z hz
+    change q (σ z) = 0
+    rw [show q (σ z) = (IsScalarTower.toAlgHom A B C) z from
+      DFunLike.congr_fun hσ z]
+    exact RingHom.mem_ker.mp hz
+  have hmap :
+      Ideal.map σ.toRingHom (RingHom.ker (algebraMap B C)) ≤
+        RingHom.ker q.toRingHom := by
+    rw [Ideal.map_le_iff_le_comap]
+    exact hker
+  have hprod' :
+      σ (algebraMap A B (x - y)) ∈ (RingHom.ker q.toRingHom) ^ 2 := by
+    have hmap_pow :
+        Ideal.map σ.toRingHom (RingHom.ker (algebraMap B C) ^ 2) ≤
+          (RingHom.ker q.toRingHom) ^ 2 := by
+      rw [Ideal.map_pow]
+      exact Ideal.pow_right_mono hmap 2
+    exact hmap_pow (Ideal.mem_map_of_mem σ.toRingHom hprod)
+  have hqzero : (RingHom.ker q.toRingHom) ^ 2 = ⊥ := by
+    rw [AlgHom.ker_kerSquareLift]
+    exact Ideal.cotangentIdeal_square _
+  have hzero : σ (algebraMap A B (x - y)) = 0 := by
+    rw [← Ideal.mem_bot, ← hqzero]
+    exact hprod'
+  have hzero' :
+      algebraMap A (A ⧸ (RingHom.ker fAC.toRingHom) ^ 2) (x - y) = 0 := by
+    rw [← σ.commutes]
+    exact hzero
+  rw [Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem]
+  have hmemI : (x - y : A) ∈ (RingHom.ker fAC.toRingHom) ^ 2 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    rw [← Ideal.Quotient.algebraMap_eq]
+    exact hzero'
+  simpa [fAC, Formalization.Books.Algebra.Unit134.surjectiveExtension] using hmemI
+
+private theorem cotangent_map_injective_of_formallySmooth_over
+    {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
+    (hAC : Function.Surjective (algebraMap A C))
+    (hAB : Algebra.FormallySmooth A B)
+    (hBC : Function.Surjective (algebraMap B C)) :
+    Function.Injective
+      (Algebra.Extension.Cotangent.map (surjectiveExtensionOverHom hAC hBC)) := by
+  let P := surjectiveExtensionOver (A := A) hBC
+  let f := surjectiveExtensionOverHom hAC hBC
+  change Function.Injective (Algebra.Extension.Cotangent.map f)
+  letI : Algebra.FormallySmooth A P.Ring := hAB
+  let fAC : A →ₐ[A] C := IsScalarTower.toAlgHom A A C
+  let q := fAC.kerSquareLift
+  have hfAC : Function.Surjective fAC := by
+    simpa [fAC] using hAC
+  have hq : Function.Surjective q :=
+    Ideal.Quotient.lift_surjective_of_surjective _ _ hfAC
+  have hqnil : IsNilpotent (RingHom.ker q.toRingHom) := by
+    refine ⟨2, ?_⟩
+    rw [AlgHom.ker_kerSquareLift]
+    exact Ideal.cotangentIdeal_square _
+  let σ : P.Ring →ₐ[A] A ⧸ (RingHom.ker fAC.toRingHom) ^ 2 :=
+    Algebra.FormallySmooth.liftOfSurjective
+      (IsScalarTower.toAlgHom A P.Ring C) q hq hqnil
+  have hσ : q.comp σ = IsScalarTower.toAlgHom A P.Ring C :=
+    Algebra.FormallySmooth.comp_liftOfSurjective
+      (IsScalarTower.toAlgHom A P.Ring C) q hq hqnil
+  have hmapf (a : A) :
+      f.toAlgHom a = algebraMap A P.Ring a := by
+    rfl
+  intro x y hxy
+  obtain ⟨x, rfl⟩ :=
+    Algebra.Extension.Cotangent.mk_surjective (P :=
+      Formalization.Books.Algebra.Unit134.surjectiveExtension hAC) x
+  obtain ⟨y, rfl⟩ :=
+    Algebra.Extension.Cotangent.mk_surjective (P :=
+      Formalization.Books.Algebra.Unit134.surjectiveExtension hAC) y
+  have hprod :
+      algebraMap A P.Ring (x - y) ∈ P.ker ^ 2 := by
+    have hmk := hxy
+    simp only [Algebra.Extension.Cotangent.map_mk] at hmk
+    have hmem := (Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem _ _).mp hmk
+    change
+      f.toAlgHom (x : A) - f.toAlgHom (y : A) ∈ P.ker ^ 2 at hmem
+    rw [hmapf, hmapf] at hmem
+    simpa only [map_sub] using hmem
+  have hker : ∀ (z : P.Ring), z ∈ P.ker →
+      σ z ∈ RingHom.ker q.toRingHom := by
+    intro z hz
+    change q (σ z) = 0
+    rw [show q (σ z) = (IsScalarTower.toAlgHom A P.Ring C) z from
+      DFunLike.congr_fun hσ z]
+    change (algebraMap P.Ring C) z = 0
+    exact RingHom.mem_ker.mp hz
+  have hmap :
+      Ideal.map σ.toRingHom P.ker ≤
+        RingHom.ker q.toRingHom := by
+    rw [Ideal.map_le_iff_le_comap]
+    exact hker
+  have hprod' :
+      σ (algebraMap A P.Ring (x - y)) ∈ (RingHom.ker q.toRingHom) ^ 2 := by
+    have hmap_pow :
+        Ideal.map σ.toRingHom (P.ker ^ 2) ≤
+          (RingHom.ker q.toRingHom) ^ 2 := by
+      rw [Ideal.map_pow]
+      exact Ideal.pow_right_mono hmap 2
+    exact hmap_pow (Ideal.mem_map_of_mem σ.toRingHom hprod)
+  have hqzero : (RingHom.ker q.toRingHom) ^ 2 = ⊥ := by
+    rw [AlgHom.ker_kerSquareLift]
+    exact Ideal.cotangentIdeal_square _
+  have hzero : σ (algebraMap A P.Ring (x - y)) = 0 := by
+    rw [← Ideal.mem_bot, ← hqzero]
+    exact hprod'
+  have hzero' :
+      algebraMap A (A ⧸ (RingHom.ker fAC.toRingHom) ^ 2) (x - y) = 0 := by
+    rw [← σ.commutes]
+    exact hzero
+  rw [Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem]
+  have hmemI : (x - y : A) ∈ (RingHom.ker fAC.toRingHom) ^ 2 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    rw [← Ideal.Quotient.algebraMap_eq]
+    exact hzero'
+  simpa [fAC, Formalization.Books.Algebra.Unit134.surjectiveExtension] using hmemI
 
 /-- The source's application lemma with its canonical differential map. -/
 theorem application_NL_formallySmooth_canonical
@@ -351,7 +544,90 @@ theorem application_NL_formallySmooth_canonical
           (surjective_of_composite_algebraMap (B := B) hAC)))
       (surjectiveExtensionOver (A := A)
         (surjective_of_composite_algebraMap (B := B) hAC)).cotangentComplex := by
-  sorry
+  let hBC := surjective_of_composite_algebraMap (B := B) hAC
+  letI : Algebra.FormallySmooth A B := hAB
+  let E := Formalization.Books.Algebra.Unit134.surjectiveExtension hAC
+  let P := surjectiveExtensionOver (A := A) hBC
+  let f := surjectiveExtensionOverHom hAC hBC
+  change IsSplitExactLinearSequence (Algebra.Extension.Cotangent.map f) P.cotangentComplex
+  let ERT := E.h1CotangentEquivCotangent
+  let EST := P.h1CotangentEquivCotangent
+  have hmapid :
+      Algebra.H1Cotangent.map A A C C = LinearMap.id := by
+    change Algebra.Extension.H1Cotangent.map
+      ((Algebra.Generators.self A C).defaultHom
+        (Algebra.Generators.self A C)).toExtensionHom = _
+    rw [Algebra.Extension.H1Cotangent.map_eq]
+    exact Algebra.Extension.H1Cotangent.map_id
+  have hEeq :
+      ERT =
+        E.h1Cotangentι ∘ₗ
+          Algebra.Extension.H1Cotangent.map E.defaultHom := by
+    have h := E.h1CotangentEquivCotangent_comp_map
+    simpa only [ERT, E, hmapid, LinearMap.comp_id] using h
+  have hPeq := P.h1CotangentEquivCotangent_comp_map
+  have hcomp :
+      Algebra.Extension.Cotangent.map f ∘ₗ ERT.toLinearMap =
+        EST.toLinearMap ∘ₗ (Algebra.H1Cotangent.map A P.Ring C C) := by
+    rw [hEeq, hPeq]
+    rw [← LinearMap.comp_assoc, Algebra.Extension.Cotangent.map_comp_h1Cotangentι]
+    rw [LinearMap.comp_assoc]
+    ext x
+    simp only [LinearMap.comp_apply]
+    rw [← Algebra.Extension.H1Cotangent.map_comp_apply E.defaultHom f]
+    have hmapeq := Algebra.Extension.H1Cotangent.map_eq
+      (f.comp E.defaultHom)
+      P.defaultHom
+    exact congrArg (fun z => Algebra.Extension.h1Cotangentι z)
+      (DFunLike.congr_fun hmapeq x)
+  have hPcomp :
+      P.cotangentComplex.comp EST.toLinearMap =
+        Algebra.H1Cotangent.δ A P.Ring C :=
+    P.cotangentComplex_comp_h1CotangentEquivCotangent
+  have hd_eq :
+      (Algebra.H1Cotangent.δ A P.Ring C).comp EST.symm.toLinearMap =
+        P.cotangentComplex := by
+    rw [← hPcomp, LinearMap.comp_assoc]
+    simp
+  have hcanon :
+      Function.Exact
+        (EST.toLinearMap.comp (Algebra.H1Cotangent.map A P.Ring C C))
+        ((Algebra.H1Cotangent.δ A P.Ring C).comp EST.symm.toLinearMap) :=
+    (LinearEquiv.conj_exact_iff_exact
+      (Algebra.H1Cotangent.map A P.Ring C C)
+      (Algebra.H1Cotangent.δ A P.Ring C) EST).2
+      (Algebra.H1Cotangent.exact_map_δ A P.Ring C)
+  have htarget :
+      Function.Exact
+        ((Algebra.Extension.Cotangent.map f).comp ERT.toLinearMap)
+        P.cotangentComplex := by
+    rw [hcomp, ← hd_eq]
+    exact hcanon
+  have hexact :
+      Function.Exact (Algebra.Extension.Cotangent.map f) P.cotangentComplex := by
+    intro z
+    constructor
+    · intro hz
+      obtain ⟨x, hx⟩ := (htarget z).mp hz
+      exact ⟨ERT x, by simpa [LinearMap.comp_apply] using hx⟩
+    · rintro ⟨x, hx⟩
+      apply (htarget z).mpr
+      refine ⟨ERT.symm x, ?_⟩
+      simpa [LinearMap.comp_apply] using hx
+  letI : Subsingleton (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials A C) :=
+    Formalization.Books.Algebra.Unit131.moduleOfDifferentials_subsingleton_of_surjective
+      hAC
+  have hsurj : Function.Surjective P.cotangentComplex := by
+    intro z
+    have hz : P.toKaehler z = 0 := Subsingleton.elim _ _
+    exact (P.exact_cotangentComplex_toKaehler z).mp hz
+  have hinj : Function.Injective (Algebra.Extension.Cotangent.map f) := by
+    exact cotangent_map_injective_of_formallySmooth_over hAC hAB hBC
+  letI : Algebra.FormallySmooth A P.Ring := hAB
+  letI : Module.Projective C P.CotangentSpace := by
+    infer_instance
+  obtain ⟨s, hs⟩ := Module.projective_lifting_property P.cotangentComplex LinearMap.id hsurj
+  exact ⟨hinj, hexact, hsurj, ⟨s, hs⟩⟩
 
 /-- Compatibility form of `application_NL_formallySmooth_canonical` retained
 for clients which supplied the differential map as an existential. -/
@@ -368,7 +644,15 @@ theorem application_NL_formallySmooth
         (Algebra.Extension.Cotangent.map
           (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC
             (surjective_of_composite_algebraMap (B := B) hAC))) d := by
-  sorry
+  let hBC := surjective_of_composite_algebraMap (B := B) hAC
+  letI : Algebra.FormallySmooth A B := hAB
+  obtain ⟨d, hd, hdsurj⟩ :=
+    Formalization.Books.Algebra.Unit134.conormal_exact_for_two_surjections hAC hBC
+  refine ⟨d,
+    cotangent_map_injective_of_formallySmooth hAC hAB hBC,
+    hd, hdsurj, ?_⟩
+  obtain ⟨s, hs⟩ := Module.projective_lifting_property d LinearMap.id hdsurj
+  exact ⟨s, hs⟩
 
 /-! ## Square-zero lifting and smoothness -/
 

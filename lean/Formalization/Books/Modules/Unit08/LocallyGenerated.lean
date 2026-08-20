@@ -246,6 +246,28 @@ theorem positiveHalfLineExtension_stalk_zero :
 
 /-- Sections of the extension by zero on an open interval containing `0` are
 the zero additive group. -/
+/-
+Proof roadmap (checked against the current Unit 31 API).
+
+* The result is already the specialization at `AddCommGrpCat.of ℤ` of
+  `Formalization.Books.Sheaves.Unit22.
+    positiveRealHalfLineConstantExtension_interval_sections_isZero`, proved in
+  `lean/Formalization/Books/Sheaves/Unit31/Infrastructure.lean`.  The local
+  definitions `positiveHalfLine`, `positiveHalfLineIntegers`, and
+  `positiveHalfLineExtension` are definitionally the corresponding Unit 31
+  definitions, modulo proof irrelevance for the `Opens` witnesses.
+
+* First use `change` to put the goal in the exact form
+  `IsZero ((positiveRealHalfLineConstantExtension (AddCommGrpCat.of ℤ)).presheaf.obj
+    (op (⟨Set.Ioo a b, isOpen_Ioo⟩ : Opens realLine)))`.  Then apply
+  `positiveRealHalfLineConstantExtension_interval_sections_isZero
+    (AddCommGrpCat.of ℤ) a b ha hb`.  This two-step proof has been checked by a
+  tactic trial with no diagnostics.
+
+Known dead end: a broad `simpa` after unfolding both sets of definitions can
+leave two visibly identical `Opens` values whose proof fields have different
+names.  The explicit `change` above avoids that dependent-proof comparison.
+-/
 theorem positiveHalfLineExtension_interval_sections_zero
     (a b : ℝ) (ha : a < 0) (hb : 0 < b) :
     IsZero
@@ -255,6 +277,86 @@ theorem positiveHalfLineExtension_interval_sections_zero
 
 /-- No neighbourhood of `0` globally generates the extension by zero from
 its integral sections. -/
+/-
+Proof roadmap (all named infrastructure below is in the historical namespace
+`Formalization.Books.Sheaves.Unit22` and is provided by
+`lean/Formalization/Books/Sheaves/Unit31/Infrastructure.lean`).
+
+* First prove a small local claim, explicitly typed at universe zero:
+  `∀ p : openSubspace positiveHalfLine,
+    ¬ IsZero (positiveHalfLineIntegers.presheaf.stalk p)`.  Put
+  `A : AddCommGrpCat := AddCommGrpCat.of ℤ` and
+  `P : TopCat.Presheaf AddCommGrpCat (openSubspace positiveHalfLine) :=
+    (Functor.const (Opens (openSubspace positiveHalfLine))ᵒᵖ).obj A`.
+  The map
+  `eta : P ⟶ positiveHalfLineIntegers.presheaf` is
+  `CategoryTheory.toSheafify
+    (Opens.grothendieckTopology (openSubspace positiveHalfLine)) P`.
+  Let `z` be the germ at `p` of the element `(1 : ℤ)` over `⊤`.  To prove
+  `z ≠ 0`, turn an equality with zero into equality with the germ of the zero
+  section using `map_zero`, apply `TopCat.Presheaf.germ_eq`, and `change` its
+  resulting equality of restrictions to `(1 : ℤ) = 0`.
+  `TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso` says that the stalk
+  map of `eta` is an isomorphism.  Install that witness with an anonymous
+  `let _ : IsIso ... := ...`; its underlying map is injective by
+  `AddCommGrpCat.mono_iff_injective`.  If the target stalk were zero,
+  `AddCommGrpCat.subsingleton_of_isZero` would make the image of `z` zero,
+  contradicting injectivity and `z ≠ 0`.  This entire intermediate claim has
+  been checked in a tactic trial.
+
+* Now assume `additiveLocallyGenerated positiveHalfLineExtension` and evaluate
+  it at `(0 : realLine)`, obtaining `U`, `h0U`, and generators `I`, `s`, `hs`
+  for the restriction.  Apply
+  `mem_nhds_iff_exists_Ioo_subset` to `U.isOpen.mem_nhds h0U`; write the result
+  as `a`, `b`, `hab : 0 ∈ Set.Ioo a b`, and
+  `hWU : Set.Ioo a b ⊆ U`.  Set
+  `W : Opens realLine := ⟨Set.Ioo a b, isOpen_Ioo⟩` and define
+  `V : Opens (openSubspace U)` to have carrier
+  `(Subtype.val : U → realLine) ⁻¹' W`.  Take `x₁ := b / 2` and
+  `xu : openSubspace U := ⟨x₁, hWU (by constructor <;> linarith [hab.1,
+    hab.2])⟩`.  Prove `xu ∈ V` and, by `Opens.ext`, the important typed equality
+  `⟨(openInclusion U) '' V,
+      U.isOpenEmbedding.isOpenMap V V.2⟩ = W`.
+
+* Use `positiveHalfLineExtension_interval_sections_zero a b hab.1 hab.2` on
+  `W`.  For each `i : I`, feed that result, the last open equality, and `xu ∈ V`
+  to
+  `constantAddCommGrpSheaf_stalk_map_eq_zero_of_restriction_image_isZero`.
+  Instantiate its coefficient object as
+  `AddCommGrpCat.of (ULift.{0} ℤ)`, matching `integralConstantSheaf`.  This gives
+  `(TopCat.Presheaf.stalkFunctor AddCommGrpCat xu).map (s i).hom = 0`.
+
+* Put
+  `T := TopCat.Sheaf.forget AddCommGrpCat (openSubspace U) ⋙
+    TopCat.Presheaf.stalkFunctor AddCommGrpCat xu` and
+  `K : I → TopCat.Sheaf AddCommGrpCat (openSubspace U) :=
+    fun _ => integralConstantSheaf`.  The current import closure supplies the
+  stalk functor's left-adjoint instance, so
+  `isColimitOfPreserves T (coproductIsCoproduct K)` is an `IsColimit` witness
+  for `T.mapCocone (Cofan.mk _ (Sigma.ι K))`.  Use that witness's generic
+  `hom_ext` (with an index introduced as `⟨i⟩`) to show
+  `T.map (additiveGlobalGenerationMap s) = 0`.  On each summand first record
+  the typed equality
+  `Sigma.ι K i ≫ additiveGlobalGenerationMap s = s i` via
+  `Cofan.IsColimit.fac (coproductIsCoproduct K) s i`, and then use the preceding
+  stalk-map equality.
+
+* Install `hs` with `let _ : Epi (additiveGlobalGenerationMap s) := hs` and
+  apply `openAbelianSheaf_target_stalk_isZero_of_epi_of_map_eq_zero` to conclude
+  that the restricted target stalk at `xu` is zero.  Transport this first
+  across `openSheafRestriction_stalk_iso AddCommGrpCat U
+    positiveHalfLineExtension xu`, and then, using `0 < x₁`, across
+  `openAlgebraicSheafExtension_stalk_iso AddCommGrpCat positiveHalfLine
+    positiveHalfLineIntegers x₁ _`.  The result says that
+  `positiveHalfLineIntegers.presheaf.stalk ⟨x₁, _⟩` is zero, contradicting the
+  first local claim.
+
+Known dead ends: the zero stalk at the boundary alone does not imply that
+sections vanish on a neighbourhood, so use the interval lemma.  Also,
+`Cofan.IsColimit.hom_ext` does not elaborate directly on the generic mapped
+cocone; call `hom_ext` on the concrete witness returned by
+`isColimitOfPreserves`.
+-/
 theorem positiveHalfLineExtension_not_locally_generated :
     ¬ additiveLocallyGenerated positiveHalfLineExtension := by
   sorry

@@ -168,7 +168,51 @@ theorem flatAtPrimesOverSource_powers
       ∀ q : PrimeSpectrum S, J + I.map f ≤ q.asIdeal →
         flatPowerQuotientAtPrime (M := M) f I n q) :
     flatAtPrimesOverSourceAtBase (M := M) f J I := by
-  sorry
+  intro q hq
+  letI : Algebra R S := f.toAlgebra
+  letI : Module R M := Module.compHom M f
+  letI : IsScalarTower R S M := SMul.comp.isScalarTower f
+  have hcomp :
+      (algebraMap S (Localization.AtPrime q.asIdeal)).comp f =
+        algebraMap R (Localization.AtPrime q.asIdeal) := by
+    exact (IsScalarTower.algebraMap_eq R S (Localization.AtPrime q.asIdeal)).symm
+  letI : Algebra R (Localization.AtPrime q.asIdeal) :=
+    (algebraMap R (Localization.AtPrime q.asIdeal)).toAlgebra
+  letI : SMul R (Localization.AtPrime q.asIdeal) :=
+    (Module.compHom (Localization.AtPrime q.asIdeal)
+      (algebraMap R (Localization.AtPrime q.asIdeal))).toDistribMulAction.toSMul
+  letI : Module R (LocalizedModule q.asIdeal.primeCompl M) :=
+    Module.compHom _ (algebraMap R (Localization.AtPrime q.asIdeal))
+  letI : SMul R (LocalizedModule q.asIdeal.primeCompl M) :=
+    (Module.compHom (LocalizedModule q.asIdeal.primeCompl M)
+      (algebraMap R (Localization.AtPrime q.asIdeal))).toDistribMulAction.toSMul
+  letI : IsScalarTower R (Localization.AtPrime q.asIdeal)
+      (LocalizedModule q.asIdeal.primeCompl M) :=
+    SMul.comp.isScalarTower (algebraMap R (Localization.AtPrime q.asIdeal))
+  have hqflat : ∀ n : ℕ, 0 < n →
+      Module.Flat (R ⧸ I ^ n)
+        ((LocalizedModule q.asIdeal.primeCompl M) ⧸
+          (I ^ n • (⊤ : Submodule R (LocalizedModule q.asIdeal.primeCompl M)))) := by
+    intro n hn
+    simpa [flatPowerQuotientAtPrime] using hflat n hn q hq
+  have hpow := Formalization.Books.Algebra.Unit99.flat_module_powers
+    (R := R) (S := Localization.AtPrime q.asIdeal)
+    (M := LocalizedModule q.asIdeal.primeCompl M) I hqflat
+  have hImax : I.map (algebraMap R (Localization.AtPrime q.asIdeal)) ≤
+      IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal) := by
+    rw [← Localization.AtPrime.map_eq_maximalIdeal]
+    have hmap : I.map (algebraMap R (Localization.AtPrime q.asIdeal)) =
+        (I.map f).map (algebraMap S (Localization.AtPrime q.asIdeal)) := by
+      rw [Ideal.map_map]
+      rw [hcomp]
+      rfl
+    rw [hmap]
+    have hle : I.map f ≤ q.asIdeal := by
+      have hadd : I.map f ≤ J + I.map f := by
+        simpa [add_comm] using (self_le_add_right (I.map f) J)
+      exact hadd.trans hq
+    exact Ideal.map_mono hle
+  simpa [Formalization.Books.Algebra.Unit99.flatAtPrimeOverBase] using hpow.2 hImax
 
 end
 

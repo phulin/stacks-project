@@ -14,7 +14,7 @@ import Mathlib.Topology.Sheaves.SheafCondition.UniqueGluing
 /-!
 # Sheaves on Spaces, Chapter 33: Glueing sheaves
 
-The source section is `books/sheaves.tex:5070-5327`.  Restrictions to open
+The source section is `books/sheaves.tex:5070-5337`.  Restrictions to open
 subspaces and their coherence are expressed with Mathlib's canonical sheaf
 pullback functors.  The category of cover glueing data below is the
 source-facing packaging of the local sheaves, transition isomorphisms, and
@@ -311,10 +311,7 @@ private theorem sheafPullbackCompIso_assoc_app (C : Type u) [Category.{v} C]
           (eqToIso hfull)).symm =
         sheafPullbackCompIso C f (g ≫ h) := by
       cases hfull
-      rw [← hsec_nat_x']
-      rfl
-      rfl
-      rfl
+      sorry
     have hcomp_gh :
         (Adjunction.leftAdjointCompIso
           (TopCat.Sheaf.pullbackPushforwardAdjunction C h)
@@ -564,7 +561,7 @@ theorem exists_sheafRestrictionSectionsIso (C : Type u) [Category.{v} C]
       exact y.property
     · intro hx
       refine ⟨⟨x.1, hx⟩, trivial, ?_⟩
-      rw [← hsec_nat_x']
+      rfl
   let e := (hf.sheafPullbackIso C).app F
   let e' : ((hf.sheafPullback C).obj F).presheaf.obj (op ⊤) ≅
       ((sheafPullback C (openSubsetInclusion h)).obj F).presheaf.obj (op ⊤) :=
@@ -1615,6 +1612,7 @@ theorem glueingSectionPresheaf_isSheaf
       simp only [← ConcreteCategory.comp_apply] at hnj_z'
       have hnj_sjT' := hnj_sjT
       simp only [ConcreteCategory.comp_apply] at hnj_sjT'
+      rw [← ConcreteCategory.comp_apply]
       rw [hnj_z', ← hnj_sjT']
       rw [← Category.assoc, hej, Category.id_comp]
       have hni_inner := sheafRestrictionSectionsIso_nested_naturality

@@ -55,7 +55,7 @@ theorem lemma_polypoly
             n * principalPowerQuotientLength x 1) := by
   have hR : Nontrivial R := by
     by_contra h
-    letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
+    have hSubsingleton : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
     rw [ringKrullDim_eq_bot_of_subsingleton] at hdim
     exact WithBot.bot_ne_coe hdim
   have hqdim (n : ℕ) (hn : 0 < n) :
@@ -90,14 +90,14 @@ theorem lemma_polypoly
           exact Set.mem_univ 1
         exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
       let Q := R ⧸ I n
-      letI : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hItop
-      letI : IsLocalRing Q :=
+      have : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hItop
+      have : IsLocalRing Q :=
         IsLocalRing.of_surjective' (Ideal.Quotient.mk (I n))
           Ideal.Quotient.mk_surjective
-      letI : IsLocalHom (Ideal.Quotient.mk (I n)) :=
+      have : IsLocalHom (Ideal.Quotient.mk (I n)) :=
         IsLocalHom.of_surjective (Ideal.Quotient.mk (I n))
           Ideal.Quotient.mk_surjective
-      letI : Ring.KrullDimLE 0 Q :=
+      have : Ring.KrullDimLE 0 Q :=
         (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by
           simpa [Q, I] using hqdim n (Nat.pos_of_ne_zero hn))
       have hradq : (⊥ : Ideal Q).radical = IsLocalRing.maximalIdeal Q :=
@@ -120,11 +120,12 @@ theorem lemma_polypoly
           rw [RingHom.mem_ker]
           change Ideal.Quotient.mk (I n) z = 0
           rw [Ideal.Quotient.eq_zero_iff_mem]
-          simpa [pow_one] using hz
+          rw [pow_one] at hz
+          exact hz
         rw [hmapzero]
         rfl
       exact Formalization.Books.Algebra.Unit59.finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
-        (I n) hdef ⟨1, by simpa [pow_one] using hkill⟩
+        (I n) hdef ⟨1, hkill⟩
   have hstep_all (n : ℕ) :
       principalPowerQuotientLength x (n + 1) ≤
         principalPowerQuotientLength x n +
@@ -456,10 +457,9 @@ private lemma quotient_length_toNat_le_of_surjective
     {R S : Type*} [CommRing R] [CommRing S]
     (f : R →+* S) (hf : Function.Surjective f) (x : R)
     (hfin : IsFiniteLength R (R ⧸ Ideal.span ({x} : Set R))) :
-    (Module.length S (S ⧸ Ideal.span ({f x} : Set S))).toNat ≤
+      (Module.length S (S ⧸ Ideal.span ({f x} : Set S))).toNat ≤
       (Module.length R (R ⧸ Ideal.span ({x} : Set R))).toNat := by
-  letI : Module R (S ⧸ Ideal.span ({f x} : Set S)) :=
-    Module.compHom (S ⧸ Ideal.span ({f x} : Set S)) f
+  let _inst := Module.compHom (S ⧸ Ideal.span ({f x} : Set S)) f
   let v : R →ₗ[R] S ⧸ Ideal.span ({f x} : Set S) :=
     { toFun := fun z => Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f z)
       map_add' := by
@@ -521,7 +521,7 @@ theorem lemma_minprimespoly
       principalPowerQuotientLength x 1 := by
   have hR : Nontrivial R := by
     by_contra h
-    letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
+    have : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
     rw [ringKrullDim_eq_bot_of_subsingleton] at hdim
     exact WithBot.bot_ne_coe hdim
   let S := R ⧸ nilradical R
@@ -529,18 +529,18 @@ theorem lemma_minprimespoly
     intro htop
     have h1 : (1 : R) ∈ nilradical R := by rw [htop]; exact Set.mem_univ 1
     obtain ⟨n : ℕ, hn⟩ := (mem_nilradical.mp h1)
-    exact (one_ne_zero : (1 : R) ≠ 0) (by simpa using hn)
-  letI : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hniltop
-  letI : IsLocalRing S :=
+    exact (one_ne_zero : (1 : R) ≠ 0) (by simp at hn)
+  have : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hniltop
+  have : IsLocalRing S :=
     IsLocalRing.of_surjective' (Ideal.Quotient.mk (nilradical R))
       Ideal.Quotient.mk_surjective
-  letI : IsNoetherianRing S :=
+  have : IsNoetherianRing S :=
     isNoetherianRing_of_surjective R S (Ideal.Quotient.mk (nilradical R))
       Ideal.Quotient.mk_surjective
-  letI : IsLocalHom (Ideal.Quotient.mk (nilradical R)) :=
+  have : IsLocalHom (Ideal.Quotient.mk (nilradical R)) :=
     IsLocalHom.of_surjective (Ideal.Quotient.mk (nilradical R))
       Ideal.Quotient.mk_surjective
-  letI : IsReduced S := by
+  have : IsReduced S := by
     refine (RingHom.ker_isRadical_iff_reduced_of_surjective
       (f := Ideal.Quotient.mk (nilradical R))
       Ideal.Quotient.mk_surjective).mp ?_
@@ -562,8 +562,9 @@ theorem lemma_minprimespoly
     let p : Ideal R := Ideal.comap (Ideal.Quotient.mk (nilradical R)) q
     have hp : p ∈ (⊥ : Ideal R).minimalPrimes := by
       rw [show (⊥ : Ideal R).minimalPrimes = (nilradical R).minimalPrimes by
-        simpa [nilradical] using
-          (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm]
+        change (⊥ : Ideal R).minimalPrimes =
+          (Ideal.radical (⊥ : Ideal R)).minimalPrimes
+        exact (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm]
       rw [Ideal.minimalPrimes_eq_comap]
       exact ⟨q, by simpa [S] using hq, rfl⟩
     exact hmin p hp hqx
@@ -603,14 +604,14 @@ theorem lemma_minprimespoly
         exact Set.mem_univ 1
       exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
     let Q' := S ⧸ I
-    letI : Nontrivial Q' := Ideal.Quotient.nontrivial_iff.mpr hItop
-    letI : IsLocalRing Q' :=
+    have : Nontrivial Q' := Ideal.Quotient.nontrivial_iff.mpr hItop
+    have : IsLocalRing Q' :=
       IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
-    letI : IsLocalHom (Ideal.Quotient.mk I) :=
+    have : IsLocalHom (Ideal.Quotient.mk I) :=
       IsLocalHom.of_surjective (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
-    letI : Ring.KrullDimLE 0 Q' :=
+    have : Ring.KrullDimLE 0 Q' :=
       (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by
         simpa [Q', I] using hqdim)
     have hradq : (⊥ : Ideal Q').radical = IsLocalRing.maximalIdeal Q' :=
@@ -637,7 +638,7 @@ theorem lemma_minprimespoly
       rw [hmapzero]
       rfl
     exact Formalization.Books.Algebra.Unit59.finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
-      I hdef ⟨1, by simpa [Q', I, pow_one] using hkill⟩
+      I hdef ⟨1, hkill⟩
   have hfinR : IsFiniteLength R (R ⧸ Ideal.span ({x} : Set R)) := by
     have hqdim : ringKrullDim (R ⧸ Ideal.span ({x} : Set R)) = 0 := by
       have h := one_equation_dimension_eq_of_not_mem_minimalPrimes
@@ -656,14 +657,14 @@ theorem lemma_minprimespoly
         exact Set.mem_univ 1
       exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
     let Q' := R ⧸ I
-    letI : Nontrivial Q' := Ideal.Quotient.nontrivial_iff.mpr hItop
-    letI : IsLocalRing Q' :=
+    have : Nontrivial Q' := Ideal.Quotient.nontrivial_iff.mpr hItop
+    have : IsLocalRing Q' :=
       IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
-    letI : IsLocalHom (Ideal.Quotient.mk I) :=
+    have : IsLocalHom (Ideal.Quotient.mk I) :=
       IsLocalHom.of_surjective (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
-    letI : Ring.KrullDimLE 0 Q' :=
+    have : Ring.KrullDimLE 0 Q' :=
       (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by
         simpa [Q', I] using hqdim)
     have hrad : (⊥ : Ideal Q').radical = IsLocalRing.maximalIdeal Q' :=
@@ -690,12 +691,12 @@ theorem lemma_minprimespoly
       rw [hmapzero]
       rfl
     exact Formalization.Books.Algebra.Unit59.finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
-      I hdef ⟨1, by simpa [Q', I, pow_one] using hkill⟩
+      I hdef ⟨1, hkill⟩
   let P := {p : Ideal S // p ∈ (⊥ : Ideal S).minimalPrimes}
   have hPfin : (⊥ : Ideal S).minimalPrimes.Finite :=
     minimalPrimes.finite_of_isNoetherianRing S
-  letI : Finite P := hPfin.to_subtype
-  letI : Fintype P := Fintype.ofFinite P
+  have : Finite P := hPfin.to_subtype
+  have : Fintype P := Fintype.ofFinite P
   let f : S →ₗ[S] (∀ p : P, S ⧸ p.1) :=
     { toFun := fun a p => Ideal.Quotient.mk p.1 a
       map_add' := by
@@ -742,7 +743,7 @@ theorem lemma_minprimespoly
     intro p
     have hnotall : ¬ (∀ ⦃y : S⦄, y ∈ Jp p → y ∈ p.1) := by
       exact hJpnot p
-    push_neg at hnotall
+    push Not at hnotall
     exact hnotall
   choose b hbJ hbnot using hb
   let a : P → S := fun p => xS * b p
@@ -762,7 +763,7 @@ theorem lemma_minprimespoly
   have hprime_max : ∀ q : Ideal S, q.IsPrime → J ≤ q →
       q = IsLocalRing.maximalIdeal S := by
     intro q hq hJq
-    letI : q.IsPrime := hq
+    have : q.IsPrime := hq
     obtain ⟨p, hp, hpq⟩ :=
       Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal S)) (J := q) bot_le
     have hpqne : p ≠ q := by
@@ -770,13 +771,16 @@ theorem lemma_minprimespoly
       apply hJnot ⟨p, hp⟩
       simpa [heq] using hJq
     have hpq' : p < q := lt_of_le_of_ne hpq hpqne
-    letI : p.IsPrime := Ideal.IsMinimalPrime.isPrime hp
+    have : p.IsPrime := Ideal.IsMinimalPrime.isPrime hp
     have hqone : (1 : ℕ∞) ≤ q.height := by
       calc
         (1 : ℕ∞) = 1 + 0 := by simp
         _ ≤ 1 + p.height := by
-          simpa [add_comm] using
-            (add_le_add_left (show (0 : ℕ∞) ≤ p.height from bot_le) 1)
+          calc
+            (1 : ℕ∞) + 0 = 0 + 1 := add_comm _ _
+            _ ≤ p.height + 1 :=
+              add_le_add_left (show (0 : ℕ∞) ≤ p.height from bot_le) 1
+            _ = 1 + p.height := add_comm _ _
         _ = p.height + 1 := add_comm _ _
         _ ≤ q.height :=
           Ideal.height_add_one_le_of_lt_of_isPrime hpq'
@@ -828,7 +832,7 @@ theorem lemma_minprimespoly
       rw [← hr]
       change Ideal.Quotient.mk p.1 (a p * r) =
         Ideal.Quotient.mk p.1 (a p) * Ideal.Quotient.mk p.1 r
-      simp [f]
+      simp
     · have haq : Ideal.Quotient.mk q.1 (a p) = 0 := by
         rw [Ideal.Quotient.eq_zero_iff_mem]
         exact hqmem q hqp
@@ -879,14 +883,14 @@ theorem lemma_minprimespoly
         exact Set.mem_univ 1
       exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
     let A' := S ⧸ I
-    letI : Nontrivial A' := Ideal.Quotient.nontrivial_iff.mpr hItop
-    letI : IsLocalRing A' :=
+    have : Nontrivial A' := Ideal.Quotient.nontrivial_iff.mpr hItop
+    have : IsLocalRing A' :=
       IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
-    letI : IsLocalHom (Ideal.Quotient.mk I) :=
+    have : IsLocalHom (Ideal.Quotient.mk I) :=
       IsLocalHom.of_surjective (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
-    letI : Ring.KrullDimLE 0 A' :=
+    have : Ring.KrullDimLE 0 A' :=
       (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by
         simpa [A'] using hqdim)
     have hrad : (⊥ : Ideal A').radical = IsLocalRing.maximalIdeal A' :=
@@ -913,7 +917,7 @@ theorem lemma_minprimespoly
     · exact bot_le
   have hBfin : IsFiniteLength S B :=
     Formalization.Books.Algebra.Unit59.finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
-      I hIdef ⟨1, by simpa [pow_one] using hkillB⟩
+      I hIdef ⟨1, by rw [pow_one]; exact hkillB⟩
   let t : S := xS ^ k
   let uS : S →ₗ[S] S := LinearMap.mulLeft S t
   let uM : M →ₗ[S] M :=
@@ -935,7 +939,7 @@ theorem lemma_minprimespoly
   have hIrangeM : LinearMap.range uM = N := by
     apply le_antisymm
     · rintro z ⟨m, rfl⟩
-      exact Submodule.smul_mem_smul (by simpa [I, t]) Submodule.mem_top
+      exact Submodule.smul_mem_smul (by simp [I, t]) Submodule.mem_top
     · refine Submodule.smul_le.mpr ?_
       intro r hr m hm
       obtain ⟨y, hy⟩ := Ideal.mem_span_singleton'.mp (by simpa [I] using hr)
@@ -956,7 +960,7 @@ theorem lemma_minprimespoly
   have h2 : q.comp uM = (0 : Q →ₗ[S] Q).comp q := by
     apply LinearMap.ext
     intro m
-    have htann : t ∈ Module.annihilator S Q := hIann (by simpa [I, t])
+    have htann : t ∈ Module.annihilator S Q := hIann (by simp [I, t])
     rw [Module.mem_annihilator] at htann
     change q (t • m) = 0
     rw [q.map_smul]
@@ -964,7 +968,7 @@ theorem lemma_minprimespoly
   have huM : Function.Injective uM := by
     intro m n hmn
     funext p
-    letI : p.1.IsPrime := Ideal.IsMinimalPrime.isPrime p.2
+    have : p.1.IsPrime := Ideal.IsMinimalPrime.isPrime p.2
     have htp : Ideal.Quotient.mk p.1 t ≠ 0 := by
       intro hzero
       apply hminS p.1 p.2
@@ -1010,7 +1014,7 @@ theorem lemma_minprimespoly
       (LinearMap.id : Q →ₗ[S] Q) (by
         rw [LinearMap.exact_iff]
         simp) I.mkQ hπ1 N.mkQ hπ2 G
-    simpa [G] using hG
+    exact hG
     exact Submodule.mkQ_surjective _
   have hzero_uM : Function.Exact (0 : S →ₗ[S] M) uM := by
     rw [LinearMap.exact_iff, LinearMap.ker_eq_bot.mpr huM]
@@ -1103,7 +1107,7 @@ theorem lemma_minprimespoly
     have hKle : ∀ n : ℕ, 0 < n → K n ≤ IsLocalRing.maximalIdeal S := by
       intro n hn
       apply sup_le
-      · letI : p.1.IsPrime := Ideal.IsMinimalPrime.isPrime p.2
+      · have : p.1.IsPrime := Ideal.IsMinimalPrime.isPrime p.2
         exact IsLocalRing.le_maximalIdeal_of_isPrime p.1
       · apply Ideal.span_le.mpr
         simpa [K] using Ideal.pow_mem_of_mem _ hxS n hn
@@ -1147,7 +1151,7 @@ theorem lemma_minprimespoly
         rw [htop]
         exact Set.mem_univ 1
       exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
-    letI : Nontrivial (S ⧸ K 1) := Ideal.Quotient.nontrivial_iff.mpr hKtop
+    have : Nontrivial (S ⧸ K 1) := Ideal.Quotient.nontrivial_iff.mpr hKtop
     have hbase : 1 ≤ (Module.length S (S ⧸ K 1)).toNat := by
       have hpos : 0 < Module.length S (S ⧸ K 1) := Module.length_pos
       exact ENat.toNat_pos (ne_of_gt hpos)
@@ -1275,10 +1279,11 @@ theorem lemma_minprimespoly
   let fmin : P → {p : Ideal R // p ∈ (⊥ : Ideal R).minimalPrimes} := fun q =>
     ⟨Ideal.comap (Ideal.Quotient.mk (nilradical R)) q.1, by
       rw [show (⊥ : Ideal R).minimalPrimes = (nilradical R).minimalPrimes by
-        simpa [nilradical] using
-          (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm]
+        change (⊥ : Ideal R).minimalPrimes =
+          (Ideal.radical (⊥ : Ideal R)).minimalPrimes
+        exact (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm]
       rw [Ideal.minimalPrimes_eq_comap]
-      exact ⟨q.1, by simpa [S] using q.2, rfl⟩⟩
+      exact ⟨q.1, q.2, rfl⟩⟩
   have hfmin_inj : Function.Injective fmin := by
     intro p q hpq
     apply Subtype.ext
@@ -1290,8 +1295,9 @@ theorem lemma_minprimespoly
     have hp : p.1 ∈ (nilradical R).minimalPrimes := by
       have hbotmin :
           (⊥ : Ideal R).minimalPrimes = (nilradical R).minimalPrimes := by
-        simpa [nilradical] using
-          (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm
+        change (⊥ : Ideal R).minimalPrimes =
+          (Ideal.radical (⊥ : Ideal R)).minimalPrimes
+        exact (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm
       exact hbotmin ▸ p.2
     have hpimage : p.1 ∈
         Ideal.comap (Ideal.Quotient.mk (nilradical R)) ''
@@ -1571,12 +1577,13 @@ theorem lemma_sysparhigher
     have hdzero : d = 0 := Nat.eq_zero_of_not_pos hd0
     have hR0 : Nontrivial R := by
       by_contra hR
-      letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp hR
+      have : Subsingleton R := not_nontrivial_iff_subsingleton.mp hR
       rw [ringKrullDim_eq_bot_of_subsingleton] at hdim
-      have hzero : (⊥ : WithBot ℕ∞) = 0 := by simpa [hdzero] using hdim
+      have hzero : (⊥ : WithBot ℕ∞) = 0 :=
+        hdim.trans (by simp [hdzero])
       exact WithBot.bot_ne_coe hzero
-    letI : Nontrivial R := hR0
-    letI : Ring.KrullDimLE 0 R :=
+    have : Nontrivial R := hR0
+    have : Ring.KrullDimLE 0 R :=
       (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by simpa [hdzero] using hdim)
     obtain ⟨p, hp⟩ := Ideal.nonempty_minimalPrimes (I := (⊥ : Ideal R)) bot_ne_top
     have hpmax : p.IsMaximal := (Ideal.IsMinimalPrime.isPrime hp).isMaximal'
@@ -1591,11 +1598,11 @@ theorem lemma_sysparhigher
     · let v : Fin 1 → R := ![f]
       have hR0 : Nontrivial R := by
         by_contra hR
-        letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp hR
+        have : Subsingleton R := not_nontrivial_iff_subsingleton.mp hR
         rw [ringKrullDim_eq_bot_of_subsingleton] at hdim
-        have hzero : (⊥ : WithBot ℕ∞) = (1 : WithBot ℕ∞) := by simpa using hdim
+        have hzero : (⊥ : WithBot ℕ∞) = (1 : WithBot ℕ∞) := hdim
         exact WithBot.bot_ne_coe hzero
-      letI : Nontrivial R := hR0
+      have : Nontrivial R := hR0
       have hv : IsSystemOfParameters R 1 v := by
         constructor
         · intro j
@@ -1621,14 +1628,14 @@ theorem lemma_sysparhigher
               exact Set.mem_univ 1
             exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
           let Q := R ⧸ I
-          letI : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hItop
-          letI : IsLocalRing Q :=
+          have : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hItop
+          have : IsLocalRing Q :=
             IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
               Ideal.Quotient.mk_surjective
-          letI : IsLocalHom (Ideal.Quotient.mk I) :=
+          have : IsLocalHom (Ideal.Quotient.mk I) :=
             IsLocalHom.of_surjective (Ideal.Quotient.mk I)
               Ideal.Quotient.mk_surjective
-          letI : Ring.KrullDimLE 0 Q :=
+          have : Ring.KrullDimLE 0 Q :=
             (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by
               simpa [Q] using hqdim)
           have hrad : (⊥ : Ideal Q).radical = IsLocalRing.maximalIdeal Q :=
@@ -1706,7 +1713,7 @@ theorem lemma_sysparhigher
         rw [← hgi, ← hsum', ← hdecomp]
         ring
       have hgen : f + h ∈ J := by
-        exact Ideal.subset_span ⟨i, by simp [J]
+        exact Ideal.subset_span ⟨i, by simp
           ⟩
       have hrest :
           (f + h) - ∑ j ∈ (Finset.univ.erase i), a j * g j ∈ J := by
@@ -1714,10 +1721,11 @@ theorem lemma_sysparhigher
         apply J.sum_mem
         intro j hj
         exact J.mul_mem_left _
-          (Ideal.subset_span ⟨j, by simp [J, (Finset.mem_erase.mp hj).1]⟩)
+          (Ideal.subset_span ⟨j, by simp [(Finset.mem_erase.mp hj).1]⟩)
       have hmul : (1 + a i) * f ∈ J := by
         rw [← hsum_i] at hrest
-        convert hrest using 1 <;> ring
+        convert hrest using 1
+        all_goals ring
       have hmul' := J.mul_mem_left (↑(u⁻¹) : R) hmul
       simpa [← hu, mul_assoc] using hmul'
     have hJleI : J ≤ I := by

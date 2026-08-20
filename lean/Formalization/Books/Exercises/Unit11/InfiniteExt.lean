@@ -270,7 +270,7 @@ private lemma sq_quotientFst_coordinate_term (k : Type u) [Field k]
   by_cases hji : j = i
   · subst j
     rw [sq_hom_basis]
-    simp [sq_quotientFst_smul, sq_quotientFst_inl]
+    simp [sq_quotientFst_smul]
   · rw [sq_hom_basis]
     simp [hji, sq_quotientFst_smul]
 
@@ -300,7 +300,7 @@ theorem infinite_square_zero_ext_one_not_finite (k : Type u) [Field k] :
   let A := infiniteSquareZeroRing k
   let M := infiniteSquareZeroResidueModule k
   intro hfin
-  letI : Module.Finite A (ExtGroup M M 1) := by
+  let : Module.Finite A (ExtGroup M M 1) := by
     simpa [A, M] using hfin
   let S : ShortComplex (ModuleCat A) := sqShortComplex k
   have hscalarH (a : A) (w : S.X₁ ⟶ M) :
@@ -317,7 +317,7 @@ theorem infinite_square_zero_ext_one_not_finite (k : Type u) [Field k] :
     exact finite_over_field_of_sq_scalar k (S.X₁ ⟶ M) hscalarH
   let v (n : ℕ) : S.X₁ ⟶ M := sqCoordinateHom k n
   have hvli : LinearIndependent k v := sq_coordinate_linearIndependent k
-  letI : Module.Finite k (S.X₁ ⟶ M) := hfiniteK
+  let : Module.Finite k (S.X₁ ⟶ M) := hfiniteK
   exact (Module.Finite.not_linearIndependent_of_infinite v) hvli
 
 /-! ## The Noetherian contrast -/

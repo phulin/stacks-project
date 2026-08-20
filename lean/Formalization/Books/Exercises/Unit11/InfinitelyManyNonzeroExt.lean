@@ -52,7 +52,7 @@ theorem dual_number_residue_ext_nonzero (k : Type u) [Field k] :
   let f₀ : R →ₗ[R] R := LinearMap.mulLeft R eps
   have heps : eps ∈ I := by
     apply Ideal.subset_span
-    simp [I, eps]
+    simp [eps]
   have hIker : I ≤ LinearMap.ker f₀ := by
     intro x hx
     have hx' : x ∈ (Ideal.span {DualNumber.eps} :
@@ -184,7 +184,7 @@ theorem dual_number_residue_ext_nonzero (k : Type u) [Field k] :
             change Ideal.Quotient.mk I (TrivSqZeroExt.inl z * (r * a)) =
               Ideal.Quotient.mk I (r * (TrivSqZeroExt.inl z * a))
             congr 1
-            simp [mul_assoc, mul_comm, mul_left_comm] }
+            simp [mul_assoc, mul_comm] }
       refine ⟨hlin, ?_⟩
       dsimp [evalOne, hlin]
       rw [map_mul, map_one]

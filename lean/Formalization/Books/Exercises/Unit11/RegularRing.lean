@@ -118,7 +118,7 @@ theorem origin_residue_ring_isomorphic_to_field (k : Type u) [Field k] :
     rw [Ideal.quotientEquiv_symm_mk]
     rfl
   rw [hq]
-  simpa [e₀] using (RingHom.quotientKerEquivOfSurjective_apply_mk hf p)
+  exact RingHom.quotientKerEquivOfSurjective_apply_mk hf p
 
 /-! ## The displayed Koszul complex -/
 
@@ -265,12 +265,12 @@ private theorem koszul_second_comp_first (k : Type u) [Field k] :
 private theorem koszul_x_mem (k : Type u) [Field k] :
     MvPolynomial.X (0 : Fin 2) ∈ originIdeal k := by
   apply Ideal.subset_span
-  simp [originIdeal]
+  simp
 
 private theorem koszul_y_mem (k : Type u) [Field k] :
     MvPolynomial.X (1 : Fin 2) ∈ originIdeal k := by
   apply Ideal.subset_span
-  simp [originIdeal]
+  simp
 
 private theorem koszul_second_mem_origin (k : Type u) [Field k]
     (a b : twoVariablePolynomialRing k) :
@@ -374,10 +374,10 @@ theorem koszulComplex_exact (k : Type u) [Field k] :
     intro i hi
     have hi' : i ≤ 3 := by omega
     interval_cases i
-    · convert hS₀ using 1 <;> rfl
-    · convert hS₁ using 1 <;> rfl
-    · convert hS₂ using 1 <;> rfl
-    · convert hS₃ using 1 <;> rfl
+    · convert hS₀ using 1; rfl
+    · convert hS₁ using 1; rfl
+    · convert hS₂ using 1; rfl
+    · convert hS₃ using 1; rfl
   refine ⟨hexact, ?_, ?_⟩
   · apply CategoryTheory.ConcreteCategory.mono_of_injective
     exact hfirst
@@ -406,11 +406,11 @@ theorem regular_ring_ext_computation (k : Type u) [Field k] :
   let f : P₀ ⟶ P₁ := ModuleCat.ofHom (koszulFirstDifferential k)
   let g : P₁ ⟶ P₂ := ModuleCat.ofHom (koszulSecondDifferential k)
   let a : P₂ ⟶ M := ModuleCat.ofHom (koszulAugmentation k)
-  letI : Projective P₀ :=
+  let : Projective P₀ :=
     ModuleCat.projective_of_free (Module.Free.chooseBasis R R)
-  letI : Projective P₁ :=
+  let : Projective P₁ :=
     ModuleCat.projective_of_free (Module.Free.chooseBasis R (R × R))
-  letI : Projective P₂ :=
+  let : Projective P₂ :=
     ModuleCat.projective_of_free (Module.Free.chooseBasis R R)
   obtain ⟨eQ, _⟩ := origin_residue_ring_isomorphic_to_field k
   let evalOne : ((M : Type u) →ₗ[R] (M : Type u)) →+ originResidueRing k :=
@@ -441,7 +441,7 @@ theorem regular_ring_ext_computation (k : Type u) [Field k] :
             change Ideal.Quotient.mk (originIdeal k) (r * p) * z =
               Ideal.Quotient.mk (originIdeal k) r *
                 (Ideal.Quotient.mk (originIdeal k) p * z)
-            simp [mul_assoc, mul_comm, mul_left_comm] }
+            simp [mul_comm, mul_left_comm] }
       refine ⟨hlin, ?_⟩
       dsimp [evalOne, hlin]
       simp
@@ -486,7 +486,7 @@ theorem regular_ring_ext_computation (k : Type u) [Field k] :
             intro x y
             change (x.1 + y.1) • z.1 + (x.2 + y.2) • z.2 =
               (x.1 • z.1 + x.2 • z.2) + (y.1 • z.1 + y.2 • z.2)
-            simp [add_smul, add_assoc, add_left_comm, add_comm]
+            simp [add_smul, add_assoc, add_left_comm]
           map_smul' := by
             intro r x
             change (r * x.1) • z.1 + (r * x.2) • z.2 =
@@ -539,7 +539,7 @@ theorem regular_ring_ext_computation (k : Type u) [Field k] :
       exact ⟨w, hw⟩
     · exact (ModuleCat.mono_iff_injective _).mpr (koszul_first_injective k)
     · exact (ModuleCat.epi_iff_surjective _).mpr hq_surj
-  letI : Epi q := hS₁.epi_g
+  let : Epi q := hS₁.epi_g
   have hga : g ≫ a = 0 := by
     apply ModuleCat.hom_ext
     apply LinearMap.ext

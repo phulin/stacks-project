@@ -207,9 +207,10 @@ theorem classical_generator_is_strong_generator {E : C}
   sorry
 
 /-!
-The source's generator-check remark.  `hRetracts` is the canonical Lean
-form of closure under direct summands used by `smd = retractClosure`; the
-binary-summand hypothesis is retained as the displayed source condition.
+The source's generator-check remark.  Closure under direct summands is
+represented by `smd = retractClosure` in Lean.  The displayed source
+conditions imply this retract closure via split distinguished triangles,
+so no extra retract hypothesis is needed here.
 -/
 theorem property_holds_on_generatedSubcategory
     (E : C) (P : ObjectProperty C)
@@ -221,7 +222,6 @@ theorem property_holds_on_generatedSubcategory
         ((P T.obj₂ ∧ P T.obj₃) → P T.obj₁) ∧
         ((P T.obj₁ ∧ P T.obj₃) → P T.obj₂))
     (hSummands : ∀ ⦃K L : C⦄, P (K ⊞ L) → P K ∧ P L)
-    (hRetracts : P.IsStableUnderRetracts)
     (hShifts : ∀ n : ℤ, P (E⟦n⟧)) :
     generatedSubcategory E ≤ P := by
   sorry

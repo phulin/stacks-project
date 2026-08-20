@@ -40,6 +40,23 @@ structure ExtendedAlternatingCechComplexData
     (R : Type u) [CommRing R] (f : List R) where
   complex : CochainComplex (ModuleCat.{u} R) ℕ
   is_extended_alternating : Prop
+  /-- The source's filtered-colimit comparison, expressed on homology until
+  the chain-level colimit construction is available in the project.  The
+  objects of `D` are the homology of the Koszul complexes on the powers of
+  `f`; its morphisms carry the source transition maps. -/
+  koszul_colimit_comparison :
+    ∀ i : ℕ, i < f.length →
+      ∃ D : ℕ ⥤ ModuleCat.{u} R,
+        (∀ n : ℕ,
+          D.obj n =
+            (koszulComplexOnListWithCoefficients R R
+              (f.map (fun x => x ^ (n + 1)))).homology (f.length - i)) ∧
+        Nonempty (complex.homology i ≅ colimit D)
+  /-- The extended alternating Čech complex has no terms above its top degree.
+  This boundedness is the part of the source interface needed for indices
+  greater than `f.length`. -/
+  vanishes_above_length :
+    ∀ i : ℕ, f.length < i → IsZero (complex.homology i)
 
 /-- A cochain complex has cohomology only in the indicated degree. -/
 def CohomologyOnlyInDegree

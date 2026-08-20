@@ -943,13 +943,307 @@ theorem canonicalPlusFunctor_isDeltaFunctor
 theorem canonicalMinusFunctor_isDeltaFunctor
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C] :
     Nonempty (DeltaFunctor (canonicalMinusFunctor C)) := by
-  sorry
+  let _ : Abelian (CochainComplex C ℤ) :=
+    Formalization.Books.Homology.Unit13.cochainComplex_abelian C
+  let _ : (boundedAboveProperty C).ContainsZero := boundedAbove_containsZero C
+  let _ : ObjectProperty.IsClosedUnderKernels (boundedAboveProperty C) :=
+    boundedAbove_isClosedUnderKernels C
+  let _ : ObjectProperty.IsClosedUnderCokernels (boundedAboveProperty C) :=
+    boundedAbove_isClosedUnderCokernels C
+  let _ : ObjectProperty.IsClosedUnderFiniteProducts (boundedAboveProperty C) :=
+    boundedAbove_isClosedUnderFiniteProducts C
+  have hlim : PreservesFiniteLimits ((boundedAboveProperty C).ι) := by
+    rw [((Functor.preservesFiniteLimits_tfae ((boundedAboveProperty C).ι)).out 3 2 :)]
+    intro X Y f
+    exact (boundedAboveProperty C).preservesKernels_ι f
+  have hcol : PreservesFiniteColimits ((boundedAboveProperty C).ι) := by
+    rw [((Functor.preservesFiniteColimits_tfae ((boundedAboveProperty C).ι)).out 3 2 :)]
+    intro X Y f
+    exact (boundedAboveProperty C).preservesCokernels_ι f
+  let _ : PreservesFiniteLimits ((boundedAboveProperty C).ι) := hlim
+  let _ : PreservesFiniteColimits ((boundedAboveProperty C).ι) := hcol
+  have hι : Formalization.Books.Categories.Unit23.IsExact ((boundedAboveProperty C).ι) :=
+    ⟨hlim, hcol⟩
+  obtain ⟨d⟩ := Formalization.Books.Derived.Unit04.exact_precomposition_deltaFunctor
+    (DerivedCategory.Q (C := C)) (canonicalDerivedDeltaFunctor C)
+    ((boundedAboveProperty C).ι) hι
+  let _ : (boundedAboveProperty C).IsStableUnderShift ℤ := by
+    constructor
+    intro n
+    refine { le_shift := ?_ }
+    rintro X ⟨i, hi⟩
+    letI : X.IsStrictlyLE i := hi
+    exact ⟨i - n, X.isStrictlyLE_shift i n _ (by omega)⟩
+  let e : canonicalMinusFunctor C ⋙ DerivedCategory.Minus.ι ≅
+      (boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C) :=
+    (derivedMinusProperty C).liftCompιIso
+      ((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C))
+      (canonicalMinusFunctor_obj_mem C)
+  let _ : (DerivedCategory.Minus.ι (C := C)).CommShift ℤ := by
+    dsimp [DerivedCategory.Minus.ι]
+    infer_instance
+  let _ : ((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).CommShift ℤ := by
+    infer_instance
+  let _ : (canonicalMinusFunctor C).CommShift ℤ :=
+    Functor.CommShift.ofComp e ℤ
+  let _ : NatTrans.CommShift e.hom ℤ :=
+    Functor.CommShift.ofComp_compatibility e ℤ
+  let delta : ∀ (S : ShortComplex (CompMinus C)) (_ : S.ShortExact),
+      (canonicalMinusFunctor C).obj S.X₃ ⟶
+        ((shiftFunctor (DMinus C) (1 : ℤ)).obj
+          ((canonicalMinusFunctor C).obj S.X₁)) :=
+    fun S hS =>
+      (DerivedCategory.TStructure.t (C := C)).minus.fullyFaithfulι.preimage
+        (e.hom.app S.X₃ ≫ d.delta S hS ≫
+          ((shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S.X₁)) ≫
+          ((DerivedCategory.Minus.ι (C := C)).commShiftIso (1 : ℤ)).inv.app
+            ((canonicalMinusFunctor C).obj S.X₁))
+  let G : DeltaFunctor (canonicalMinusFunctor C) := {
+    delta := delta
+    distinguished := by
+      intro S hS
+      apply (Functor.map_distinguished_iff (DerivedCategory.Minus.ι (C := C)) _).1
+      apply isomorphic_distinguished _ (d.distinguished S hS) _
+      refine Triangle.isoMk _ _ (e.app S.X₁) (e.app S.X₂) (e.app S.X₃) ?_ ?_ ?_
+      · exact e.hom.naturality S.f
+      · exact e.hom.naturality S.g
+      · change
+          ((DerivedCategory.Minus.ι (C := C)).map (delta S hS) ≫
+            ((DerivedCategory.Minus.ι (C := C)).commShiftIso (1 : ℤ)).hom.app
+              ((canonicalMinusFunctor C).obj S.X₁)) ≫
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.hom.app S.X₁) =
+          e.hom.app S.X₃ ≫ d.delta S hS
+        dsimp [delta]
+        simp only [Category.assoc, Iso.inv_hom_id_app_assoc]
+        rw [← Functor.map_comp, e.inv_hom_id_app]
+        have hmap :=
+          (shiftFunctor (DerivedCategory C) (1 : ℤ)).map_id
+            (((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj S.X₁)
+        rw [hmap]
+        simpa only [Category.assoc] using
+          (Category.comp_id (e.hom.app S.X₃ ≫ d.delta S hS))
+    naturality := by
+      intro S₁ S₂ φ h₁ h₂
+      apply (DerivedCategory.TStructure.t (C := C)).minus.fullyFaithfulι.map_injective
+      rw [← cancel_mono
+        (((DerivedCategory.Minus.ι (C := C)).commShiftIso (1 : ℤ)).hom.app
+          ((canonicalMinusFunctor C).obj S₂.X₁))]
+      dsimp [delta]
+      rw [show ((canonicalMinusFunctor C).map φ.τ₃).hom =
+        (DerivedCategory.Minus.ι (C := C)).map
+          ((canonicalMinusFunctor C).map φ.τ₃) by rfl]
+      rw [show ((shiftFunctor (DMinus C) (1 : ℤ)).map
+          ((canonicalMinusFunctor C).map φ.τ₁)).hom =
+        (DerivedCategory.Minus.ι (C := C)).map
+          ((shiftFunctor (DMinus C) (1 : ℤ)).map
+            ((canonicalMinusFunctor C).map φ.τ₁)) by rfl]
+      simp only [Category.assoc]
+      have hnat₃ :
+          (DerivedCategory.Minus.ι (C := C)).map ((canonicalMinusFunctor C).map φ.τ₃) ≫
+              e.hom.app S₂.X₃ =
+            e.hom.app S₁.X₃ ≫
+              ((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).map φ.τ₃ := by
+        exact e.hom.naturality φ.τ₃
+      rw [← Category.assoc, hnat₃]
+      have hshift :
+          (DerivedCategory.Minus.ι (C := C)).map
+              ((shiftFunctor (DMinus C) (1 : ℤ)).map
+                ((canonicalMinusFunctor C).map φ.τ₁)) =
+            ((shiftFunctor (DMinus C) (1 : ℤ) ⋙
+              DerivedCategory.Minus.ι (C := C)).map
+                ((canonicalMinusFunctor C).map φ.τ₁)) := by
+        rfl
+      rw [hshift]
+      rw [((DerivedCategory.Minus.ι (C := C)).commShiftIso (1 : ℤ)).hom.naturality
+        ((canonicalMinusFunctor C).map φ.τ₁)]
+      simp only [Category.assoc, Iso.inv_hom_id_app_assoc, Iso.inv_hom_id_app]
+      have hid :
+          (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) ≫
+              𝟙 ((DerivedCategory.Minus.ι (C := C) ⋙
+                shiftFunctor (DerivedCategory C) (1 : ℤ)).obj
+                ((canonicalMinusFunctor C).obj S₂.X₁)) =
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) := by
+        exact Category.comp_id _
+      rw [hid]
+      have hcomp :
+          ((DerivedCategory.Minus.ι (C := C) ⋙
+            shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+              ((canonicalMinusFunctor C).map φ.τ₁)) =
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+              ((DerivedCategory.Minus.ι (C := C)).map
+                ((canonicalMinusFunctor C).map φ.τ₁)) := by
+        rfl
+      rw [hcomp]
+      rw [← Functor.map_comp, ← Functor.comp_map, ← e.inv.naturality φ.τ₁]
+      rw [Functor.map_comp]
+      have hd :
+          e.hom.app S₁.X₃ ≫
+              (((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).map φ.τ₃ ≫
+                d.delta S₂ h₂) ≫
+              (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) =
+            e.hom.app S₁.X₃ ≫
+              (d.delta S₁ h₁ ≫
+                (shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+                  (((boundedAboveProperty C).ι ⋙ DerivedCategory.Q (C := C)).map φ.τ₁)) ≫
+              (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) := by
+        rw [d.naturality φ h₁ h₂]
+      simpa only [Category.assoc] using hd
+  }
+  exact ⟨G⟩
 
 /-- The canonical delta-functor structure on the bounded functor. -/
 theorem canonicalBoundedFunctor_isDeltaFunctor
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C] :
     Nonempty (DeltaFunctor (canonicalBoundedFunctor C)) := by
-  sorry
+  let _ : Abelian (CochainComplex C ℤ) :=
+    Formalization.Books.Homology.Unit13.cochainComplex_abelian C
+  let _ : (boundedProperty C).ContainsZero := bounded_containsZero C
+  let _ : ObjectProperty.IsClosedUnderKernels (boundedProperty C) :=
+    bounded_isClosedUnderKernels C
+  let _ : ObjectProperty.IsClosedUnderCokernels (boundedProperty C) :=
+    bounded_isClosedUnderCokernels C
+  let _ : ObjectProperty.IsClosedUnderFiniteProducts (boundedProperty C) :=
+    bounded_isClosedUnderFiniteProducts C
+  have hlim : PreservesFiniteLimits ((boundedProperty C).ι) := by
+    rw [((Functor.preservesFiniteLimits_tfae ((boundedProperty C).ι)).out 3 2 :)]
+    intro X Y f
+    exact (boundedProperty C).preservesKernels_ι f
+  have hcol : PreservesFiniteColimits ((boundedProperty C).ι) := by
+    rw [((Functor.preservesFiniteColimits_tfae ((boundedProperty C).ι)).out 3 2 :)]
+    intro X Y f
+    exact (boundedProperty C).preservesCokernels_ι f
+  let _ : PreservesFiniteLimits ((boundedProperty C).ι) := hlim
+  let _ : PreservesFiniteColimits ((boundedProperty C).ι) := hcol
+  have hι : Formalization.Books.Categories.Unit23.IsExact ((boundedProperty C).ι) :=
+    ⟨hlim, hcol⟩
+  obtain ⟨d⟩ := Formalization.Books.Derived.Unit04.exact_precomposition_deltaFunctor
+    (DerivedCategory.Q (C := C)) (canonicalDerivedDeltaFunctor C)
+    ((boundedProperty C).ι) hι
+  let _ : (boundedProperty C).IsStableUnderShift ℤ := by
+    constructor
+    intro n
+    refine { le_shift := ?_ }
+    rintro X ⟨p, q, hp, hq⟩
+    letI : X.IsStrictlyGE p := hp
+    letI : X.IsStrictlyLE q := hq
+    exact ⟨p - n, q - n, X.isStrictlyGE_shift p n _ (by omega),
+      X.isStrictlyLE_shift q n _ (by omega)⟩
+  let e : canonicalBoundedFunctor C ⋙ DerivedCategory.Bounded.ι ≅
+      (boundedProperty C).ι ⋙ DerivedCategory.Q (C := C) :=
+    (derivedBoundedProperty C).liftCompιIso
+      ((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C))
+      (canonicalBoundedFunctor_obj_mem C)
+  let _ : (DerivedCategory.Bounded.ι (C := C)).CommShift ℤ := by
+    dsimp [DerivedCategory.Bounded.ι]
+    infer_instance
+  let _ : ((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).CommShift ℤ := by
+    infer_instance
+  let _ : (canonicalBoundedFunctor C).CommShift ℤ :=
+    Functor.CommShift.ofComp e ℤ
+  let _ : NatTrans.CommShift e.hom ℤ :=
+    Functor.CommShift.ofComp_compatibility e ℤ
+  let delta : ∀ (S : ShortComplex (CompBounded C)) (_ : S.ShortExact),
+      (canonicalBoundedFunctor C).obj S.X₃ ⟶
+        ((shiftFunctor (DBounded C) (1 : ℤ)).obj
+          ((canonicalBoundedFunctor C).obj S.X₁)) :=
+    fun S hS =>
+      (DerivedCategory.TStructure.t (C := C)).bounded.fullyFaithfulι.preimage
+        (e.hom.app S.X₃ ≫ d.delta S hS ≫
+          ((shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S.X₁)) ≫
+          ((DerivedCategory.Bounded.ι (C := C)).commShiftIso (1 : ℤ)).inv.app
+            ((canonicalBoundedFunctor C).obj S.X₁))
+  let G : DeltaFunctor (canonicalBoundedFunctor C) := {
+    delta := delta
+    distinguished := by
+      intro S hS
+      apply (Functor.map_distinguished_iff (DerivedCategory.Bounded.ι (C := C)) _).1
+      apply isomorphic_distinguished _ (d.distinguished S hS) _
+      refine Triangle.isoMk _ _ (e.app S.X₁) (e.app S.X₂) (e.app S.X₃) ?_ ?_ ?_
+      · exact e.hom.naturality S.f
+      · exact e.hom.naturality S.g
+      · change
+          ((DerivedCategory.Bounded.ι (C := C)).map (delta S hS) ≫
+            ((DerivedCategory.Bounded.ι (C := C)).commShiftIso (1 : ℤ)).hom.app
+              ((canonicalBoundedFunctor C).obj S.X₁)) ≫
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.hom.app S.X₁) =
+          e.hom.app S.X₃ ≫ d.delta S hS
+        dsimp [delta]
+        simp only [Category.assoc, Iso.inv_hom_id_app_assoc]
+        rw [← Functor.map_comp, e.inv_hom_id_app]
+        have hmap :=
+          (shiftFunctor (DerivedCategory C) (1 : ℤ)).map_id
+            (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).obj S.X₁)
+        rw [hmap]
+        simpa only [Category.assoc] using
+          (Category.comp_id (e.hom.app S.X₃ ≫ d.delta S hS))
+    naturality := by
+      intro S₁ S₂ φ h₁ h₂
+      apply (DerivedCategory.TStructure.t (C := C)).bounded.fullyFaithfulι.map_injective
+      rw [← cancel_mono
+        (((DerivedCategory.Bounded.ι (C := C)).commShiftIso (1 : ℤ)).hom.app
+          ((canonicalBoundedFunctor C).obj S₂.X₁))]
+      dsimp [delta]
+      rw [show ((canonicalBoundedFunctor C).map φ.τ₃).hom =
+        (DerivedCategory.Bounded.ι (C := C)).map
+          ((canonicalBoundedFunctor C).map φ.τ₃) by rfl]
+      rw [show ((shiftFunctor (DBounded C) (1 : ℤ)).map
+          ((canonicalBoundedFunctor C).map φ.τ₁)).hom =
+        (DerivedCategory.Bounded.ι (C := C)).map
+          ((shiftFunctor (DBounded C) (1 : ℤ)).map
+            ((canonicalBoundedFunctor C).map φ.τ₁)) by rfl]
+      simp only [Category.assoc]
+      have hnat₃ :
+          (DerivedCategory.Bounded.ι (C := C)).map ((canonicalBoundedFunctor C).map φ.τ₃) ≫
+              e.hom.app S₂.X₃ =
+            e.hom.app S₁.X₃ ≫
+              ((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).map φ.τ₃ := by
+        exact e.hom.naturality φ.τ₃
+      rw [← Category.assoc, hnat₃]
+      have hshift :
+          (DerivedCategory.Bounded.ι (C := C)).map
+              ((shiftFunctor (DBounded C) (1 : ℤ)).map
+                ((canonicalBoundedFunctor C).map φ.τ₁)) =
+            ((shiftFunctor (DBounded C) (1 : ℤ) ⋙
+              DerivedCategory.Bounded.ι (C := C)).map
+                ((canonicalBoundedFunctor C).map φ.τ₁)) := by
+        rfl
+      rw [hshift]
+      rw [((DerivedCategory.Bounded.ι (C := C)).commShiftIso (1 : ℤ)).hom.naturality
+        ((canonicalBoundedFunctor C).map φ.τ₁)]
+      simp only [Category.assoc, Iso.inv_hom_id_app_assoc, Iso.inv_hom_id_app]
+      have hid :
+          (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) ≫
+              𝟙 ((DerivedCategory.Bounded.ι (C := C) ⋙
+                shiftFunctor (DerivedCategory C) (1 : ℤ)).obj
+                ((canonicalBoundedFunctor C).obj S₂.X₁)) =
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) := by
+        exact Category.comp_id _
+      rw [hid]
+      have hcomp :
+          ((DerivedCategory.Bounded.ι (C := C) ⋙
+            shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+              ((canonicalBoundedFunctor C).map φ.τ₁)) =
+            (shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+              ((DerivedCategory.Bounded.ι (C := C)).map
+                ((canonicalBoundedFunctor C).map φ.τ₁)) := by
+        rfl
+      rw [hcomp]
+      rw [← Functor.map_comp, ← Functor.comp_map, ← e.inv.naturality φ.τ₁]
+      rw [Functor.map_comp]
+      have hd :
+          e.hom.app S₁.X₃ ≫
+              (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).map φ.τ₃ ≫
+                d.delta S₂ h₂) ≫
+              (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) =
+            e.hom.app S₁.X₃ ≫
+              (d.delta S₁ h₁ ≫
+                (shiftFunctor (DerivedCategory C) (1 : ℤ)).map
+                  (((boundedProperty C).ι ⋙ DerivedCategory.Q (C := C)).map φ.τ₁)) ≫
+              (shiftFunctor (DerivedCategory C) (1 : ℤ)).map (e.inv.app S₂.X₁) := by
+        rw [d.naturality φ h₁ h₂]
+      simpa only [Category.assoc] using hd
+  }
+  exact ⟨G⟩
 
 noncomputable def canonicalPlusDeltaFunctor
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C] :
@@ -991,7 +1285,29 @@ theorem canonicalDerivedTriangleMap_isIso
     (h₁ : S₁.ShortExact) (h₂ : S₂.ShortExact) (φ : S₁ ⟶ S₂)
     (hφ₁ : QuasiIso φ.τ₁) (hφ₂ : QuasiIso φ.τ₂) (hφ₃ : QuasiIso φ.τ₃) :
     IsIso (canonicalDerivedTriangleMap h₁ h₂ φ) := by
-  sorry
+  let t : DerivedCategory.triangleOfSES h₁ ⟶
+      DerivedCategory.triangleOfSES h₂ :=
+    DerivedCategory.triangleOfSES.map h₁ h₂ φ
+  haveI : IsIso t.hom₂ := by
+    change IsIso (DerivedCategory.Q.map φ.τ₂)
+    rw [DerivedCategory.isIso_Q_map_iff_quasiIso]
+    exact hφ₂
+  haveI : IsIso t.hom₃ := by
+    change IsIso (DerivedCategory.Q.map φ.τ₃)
+    rw [DerivedCategory.isIso_Q_map_iff_quasiIso]
+    exact hφ₃
+  haveI : IsIso t.hom₁ := by
+    change IsIso (DerivedCategory.Q.map φ.τ₁)
+    rw [DerivedCategory.isIso_Q_map_iff_quasiIso]
+    exact hφ₁
+  dsimp [canonicalDerivedTriangleMap]
+  apply Triangle.isIso_of_isIsos
+  · change IsIso (_ ≫ _ ≫ _)
+    infer_instance
+  · change IsIso (_ ≫ _ ≫ _)
+    infer_instance
+  · change IsIso (_ ≫ _ ≫ _)
+    infer_instance
 
 noncomputable def canonicalDerivedTriangleMapIso
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -1014,7 +1330,19 @@ theorem canonicalDerivedTriangle_termwiseSplit_comparison
           (termwiseSplitShortComplex_shortExact C S) ≅
         (DerivedCategory.Q (C := C)).mapTriangle.obj
           (termwiseSplitTriangle S)) := by
-  sorry
+  obtain ⟨e, _, _⟩ := same_up_to_isomorphisms_of_termwise_split S
+  let q : Formalization.Books.Derived.Unit09.BookComplex C ⥤
+      Formalization.Books.Derived.Unit09.BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  let eq : (DerivedCategory.Q (C := C)).mapTriangle.obj
+      (CochainComplex.mappingCone.triangle S.f) ≅
+      (DerivedCategory.Q (C := C)).mapTriangle.obj (termwiseSplitTriangle S) :=
+    (Functor.mapTriangleIso (DerivedCategory.quotientCompQhIso C)).symm.app _ ≪≫
+      (Functor.mapTriangleCompIso q (DerivedCategory.Qh (C := C))).app _ ≪≫
+      (DerivedCategory.Qh (C := C)).mapTriangle.mapIso e ≪≫
+      (Functor.mapTriangleCompIso q (DerivedCategory.Qh (C := C))).symm.app _ ≪≫
+      (Functor.mapTriangleIso (DerivedCategory.quotientCompQhIso C)).app _
+  exact ⟨canonicalDerivedTriangleIsoCone (termwiseSplitShortComplex_shortExact C S) ≪≫ eq⟩
 
 /-- The same comparison stated with the termwise-split triangle in the
 homotopy category, followed by the derived localization. -/
@@ -1027,7 +1355,17 @@ theorem canonicalDerivedTriangle_termwiseSplit_K_comparison
           (termwiseSplitShortComplex_shortExact C S) ≅
         (DerivedCategory.Qh (C := C)).mapTriangle.obj
           (termwiseSplitTriangleh S)) := by
-  sorry
+  obtain ⟨e, _, _⟩ := same_up_to_isomorphisms_of_termwise_split S
+  let q : Formalization.Books.Derived.Unit09.BookComplex C ⥤
+      Formalization.Books.Derived.Unit09.BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  let eq : (DerivedCategory.Q (C := C)).mapTriangle.obj
+      (CochainComplex.mappingCone.triangle S.f) ≅
+      (DerivedCategory.Qh (C := C)).mapTriangle.obj (termwiseSplitTriangleh S) :=
+    (Functor.mapTriangleIso (DerivedCategory.quotientCompQhIso C)).symm.app _ ≪≫
+      (Functor.mapTriangleCompIso q (DerivedCategory.Qh (C := C))).app _ ≪≫
+      (DerivedCategory.Qh (C := C)).mapTriangle.mapIso e
+  exact ⟨canonicalDerivedTriangleIsoCone (termwiseSplitShortComplex_shortExact C S) ≪≫ eq⟩
 
 /-! ## Truncation triangles -/
 
@@ -1063,7 +1401,35 @@ theorem canonicalTruncationTriangle_distinguished
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     (K : CochainComplex C ℤ) (a : ℤ) :
     canonicalTruncationTriangle C K a ∈ distTriang (DerivedCategory C) := by
-  sorry
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+  exact (by
+    let h := K.shortComplexTruncLE_shortExact a
+    let e := K.shortComplexTruncLEX₃ToTruncGE a (a + 1) (by lia)
+    refine isomorphic_distinguished (DerivedCategory.triangleOfSES h)
+      (DerivedCategory.triangleOfSES_distinguished h)
+      (canonicalTruncationTriangle C K a) (Iso.symm ?_)
+    refine Triangle.isoMk _ _ (eqToIso rfl) (eqToIso rfl)
+      (asIso (DerivedCategory.Q.map e)) ?_ ?_ ?_
+    · dsimp [canonicalTruncationTriangle]
+      simp only [Category.comp_id, Category.id_comp]
+      rfl
+    · dsimp [canonicalTruncationTriangle]
+      simp only [Category.id_comp]
+      change DerivedCategory.Q.map ((K.shortComplexTruncLE a).g) ≫
+          DerivedCategory.Q.map e =
+        DerivedCategory.Q.map (K.πTruncGE (a + 1))
+      rw [← DerivedCategory.Q.map_comp]
+      have hg :
+          (K.shortComplexTruncLE a).g ≫ e = K.πTruncGE (a + 1) := by
+        apply CochainComplex.g_shortComplexTruncLEX₃ToTruncGE
+      rw [hg]
+    · dsimp [canonicalTruncationTriangle]
+      simp only [(shiftFunctor (DerivedCategory C) (1 : ℤ)).map_id,
+        Category.comp_id]
+      rw [← Category.assoc]
+      simp)
 
 /-- The direct short-exact construction agrees with the canonical t-structure
 truncation triangle. -/

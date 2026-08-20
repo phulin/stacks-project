@@ -282,497 +282,613 @@ fields to be algebraic over `ZMod p`, rather than algebraicity of `k' / k`.
   `IsOfFinOrder.exists_pow_eq_one`; coercing back gives `x ^ n = 1`, which is
   in `(algebraMap k k').range`.  Handle `x = 0` with exponent `1`.
 -/
+private theorem charZero_integral_closure_rep
+    {k : Type*} [Field k] [CharZero k]
+    (N : IntermediateField ℚ (AlgebraicClosure k)) [NumberField N]
+    (z : N) (hzint : IsIntegral ℤ z) :
+    ∃ v : NumberField.RingOfIntegers N,
+      algebraMap (NumberField.RingOfIntegers N) N v = z := by
+  exact (IsIntegralClosure.isIntegral_iff (R := ℤ)
+    (A := NumberField.RingOfIntegers N) (B := N)).mp hzint
+
+private theorem unit_of_pow_eq_one
+    {R : Type*} [CommRing R] (v : R) (n : ℕ) (hn : 0 < n)
+    (hvpow : v ^ n = 1) :
+    ∃ u : Rˣ, (u : R) = v ∧ (u : R) ^ n = 1 := by
+  let u : Rˣ := Units.mkOfMulEqOne v (v ^ (n - 1)) (by
+    rw [← pow_succ', Nat.sub_add_cancel hn, hvpow])
+  refine ⟨u, ?_, ?_⟩
+  · simp [u, Units.val_mkOfMulEqOne]
+  · rw [← Units.val_pow_eq_pow_val]
+    simp [u, Units.val_mkOfMulEqOne, hvpow]
+
+private theorem charZero_root_unit_of_integral
+    {k : Type*} [Field k] [CharZero k]
+    (N : IntermediateField ℚ (AlgebraicClosure k)) [NumberField N]
+    (z : N) (v : NumberField.RingOfIntegers N)
+    (hv : algebraMap (NumberField.RingOfIntegers N) N v = z)
+    (n : ℕ) (hn : 0 < n) (hzpow : z ^ n = 1) :
+    ∃ u : (NumberField.RingOfIntegers N)ˣ,
+      algebraMap (NumberField.RingOfIntegers N) N u = z ∧
+        (u : NumberField.RingOfIntegers N) ^ n = 1 := by
+  have hvpow : v ^ n = 1 := by
+    apply NumberField.RingOfIntegers.coe_injective
+    rw [map_pow, map_one, hv]
+    exact hzpow
+  obtain ⟨u, huv, hu_pow⟩ := unit_of_pow_eq_one v n hn hvpow
+  refine ⟨u, ?_, ?_⟩
+  · rw [huv, hv]
+  · exact hu_pow
+
+private theorem charZero_integral_root_unit
+    {k : Type*} [Field k] [CharZero k]
+    (N : IntermediateField ℚ (AlgebraicClosure k)) [NumberField N]
+    (z : N) (n : ℕ) (hn : 0 < n) (hzpow : z ^ n = 1) :
+    ∃ u : (NumberField.RingOfIntegers N)ˣ,
+      algebraMap (NumberField.RingOfIntegers N) N u = z ∧
+        (u : NumberField.RingOfIntegers N) ^ n = 1 := by
+  have hzint : IsIntegral ℤ z := by
+    apply IsIntegral.of_pow hn
+    rw [hzpow]
+    exact isIntegral_one
+  obtain ⟨v, hv⟩ := charZero_integral_closure_rep N z hzint
+  exact charZero_root_unit_of_integral N z v hv n hn hzpow
+
+private theorem charZero_root_of_unity_torsion
+    {k : Type*} [Field k] [CharZero k]
+    (N : IntermediateField ℚ (AlgebraicClosure k)) [NumberField N]
+    (z : N) (n : ℕ) (hn : 0 < n) (hzpow : z ^ n = 1) :
+    ∃ u : NumberField.Units.torsion N,
+      algebraMap N (AlgebraicClosure k)
+          (algebraMap (NumberField.RingOfIntegers N) N
+            (u : (NumberField.RingOfIntegers N)ˣ)) = z := by
+  obtain ⟨u, hu, hu_pow⟩ := charZero_integral_root_unit N z n hn hzpow
+  have hu_tors : u ∈ NumberField.Units.torsion N := by
+    rw [NumberField.Units.torsion, CommGroup.mem_torsion,
+      isOfFinOrder_iff_pow_eq_one]
+    refine ⟨n, hn, ?_⟩
+    apply Units.ext
+    exact hu_pow
+  refine ⟨⟨u, hu_tors⟩, ?_⟩
+  change algebraMap N (AlgebraicClosure k)
+      (algebraMap (NumberField.RingOfIntegers N) N
+        (u : (NumberField.RingOfIntegers N)ˣ)) = z
+  rw [hu]
+  rfl
+private theorem charZero_torsion_range_finite
+    {k : Type*} [Field k] [CharZero k]
+    (N : IntermediateField ℚ (AlgebraicClosure k)) [NumberField N]
+    (ζq : ℚ → AlgebraicClosure k)
+    (hζq_mem : ∀ q : ℚ, ζq q ∈ N)
+    (hζqpow : ∀ q : ℚ, ∃ n : ℕ, 0 < n ∧ (ζq q) ^ n = 1) :
+    (Set.range ζq).Finite := by
+  have hex (q : ℚ) :
+      ∃ u : NumberField.Units.torsion N,
+        algebraMap N (AlgebraicClosure k)
+            (algebraMap (NumberField.RingOfIntegers N) N
+              (u : (NumberField.RingOfIntegers N)ˣ)) = ζq q := by
+    obtain ⟨n, hn, hpow⟩ := hζqpow q
+    let zN : N := ⟨ζq q, hζq_mem q⟩
+    have hzpow : zN ^ n = 1 := by
+      apply Subtype.ext
+      exact hpow
+    obtain ⟨u, hu⟩ := charZero_root_of_unity_torsion N zN n hn hzpow
+    refine ⟨u, ?_⟩
+    calc
+      algebraMap N (AlgebraicClosure k)
+          (algebraMap (NumberField.RingOfIntegers N) N
+            (u : (NumberField.RingOfIntegers N)ˣ)) = zN := hu
+      _ = ζq q := rfl
+  let φ : NumberField.Units.torsion N → AlgebraicClosure k := fun u =>
+    algebraMap N (AlgebraicClosure k)
+      (algebraMap (NumberField.RingOfIntegers N) N
+        (u : (NumberField.RingOfIntegers N)ˣ))
+  let g : ℚ → NumberField.Units.torsion N := fun q => Classical.choose (hex q)
+  have hg (q : ℚ) : φ (g q) = ζq q := Classical.choose_spec (hex q)
+  have hfinite : (Set.range g).Finite := Set.toFinite _
+  have himage : (φ '' Set.range g).Finite := hfinite.image φ
+  have hζrange : Set.range ζq ⊆ φ '' Set.range g := by
+    rintro _ ⟨q, rfl⟩
+    exact ⟨g q, ⟨q, rfl⟩, hg q⟩
+  exact himage.subset hζrange
+
+private theorem rational_scalarTower_of_charZero
+    {k : Type*} [Field k] [CharZero k] :
+    IsScalarTower ℚ k (AlgebraicClosure k) := inferInstance
+
+private theorem charZero_ratio_contradiction
+    {k : Type*} [Field k] [CharZero k]
+    [IsScalarTower ℚ k (AlgebraicClosure k)]
+    (ζ : k → AlgebraicClosure k)
+    (s t : AlgebraicClosure k)
+    (hζpow : ∀ a : k, ∃ n : ℕ, 0 < n ∧ (ζ a) ^ n = 1)
+    (hζneone : ∀ a : k, ζ a ≠ 1)
+    (hrel : ∀ a : k,
+        s + algebraMap k (AlgebraicClosure k) a =
+          ζ a * (t + algebraMap k (AlgebraicClosure k) a))
+    (hden : ∀ a : k, t + algebraMap k (AlgebraicClosure k) a ≠ 0) :
+    False := by
+  let ζq : ℚ → AlgebraicClosure k := fun q => ζ (algebraMap ℚ k q)
+  have hζqpow (q : ℚ) : ∃ n : ℕ, 0 < n ∧ (ζq q) ^ n = 1 := by
+    exact hζpow (algebraMap ℚ k q)
+  have hζqneone (q : ℚ) : ζq q ≠ 1 := by
+    exact hζneone (algebraMap ℚ k q)
+  have hrelq (q : ℚ) :
+      s + algebraMap ℚ (AlgebraicClosure k) q =
+        ζq q * (t + algebraMap ℚ (AlgebraicClosure k) q) := by
+    simpa [ζq, IsScalarTower.algebraMap_apply ℚ k (AlgebraicClosure k)] using
+      hrel (algebraMap ℚ k q)
+  have hrelq0 : s = ζq 0 * t := by
+    simpa using hrelq 0
+  have hrelq1 : s + 1 = ζq 1 * (t + 1) := by
+    simpa using hrelq 1
+  have hτrelq : t * (ζq 1 - ζq 0) = 1 - ζq 1 := by
+    have h1 : ζq 1 * t = s + 1 - ζq 1 := by
+      have := (sub_eq_iff_eq_add.mpr (by simpa [mul_add] using hrelq1)).symm
+      simpa [add_assoc] using this
+    have h0 : ζq 0 * t = s := hrelq0.symm
+    calc
+      t * (ζq 1 - ζq 0) = ζq 1 * t - ζq 0 * t := by ring
+      _ = (s + 1 - ζq 1) - s := by rw [h1, h0]
+      _ = 1 - ζq 1 := by ring
+  have hζqdiff : ζq 1 - ζq 0 ≠ 0 := by
+    intro hdiff
+    have hone : 1 - ζq 1 = 0 := by
+      calc
+        1 - ζq 1 = t * (ζq 1 - ζq 0) := hτrelq.symm
+        _ = 0 := by rw [hdiff, mul_zero]
+    exact hζqneone 1 (sub_eq_zero.mp hone).symm
+  have hτformulaq : t = (1 - ζq 1) / (ζq 1 - ζq 0) := by
+    apply (eq_div_iff hζqdiff).2
+    exact hτrelq
+  have hζqint (q : ℚ) : IsIntegral ℚ (ζq q) := by
+    obtain ⟨n, hn, hpow⟩ := hζqpow q
+    apply IsIntegral.of_pow hn
+    rw [hpow]
+    exact isIntegral_one
+  let N : IntermediateField ℚ (AlgebraicClosure k) :=
+    IntermediateField.adjoin ℚ ({ζq 0, ζq 1} : Set (AlgebraicClosure k))
+  let inst_finiteDimensional_rat_N : FiniteDimensional ℚ N := by
+    simpa [N] using
+      (IntermediateField.finiteDimensional_adjoin_pair
+        (K := ℚ) (x := ζq 0) (y := ζq 1) (hζqint 0) (hζqint 1))
+  let inst_numberField_N : NumberField N := NumberField.of_module_finite ℚ N
+  have hζq0N : ζq 0 ∈ N := by
+    exact IntermediateField.subset_adjoin ℚ _ (by simp)
+  have hζq1N : ζq 1 ∈ N := by
+    exact IntermediateField.subset_adjoin ℚ _ (by simp)
+  have htN : t ∈ N := by
+    rw [hτformulaq]
+    exact N.div_mem (N.sub_mem N.one_mem hζq1N)
+      (N.sub_mem hζq1N hζq0N)
+  have hsN : s ∈ N := by
+    rw [hrelq0]
+    exact N.mul_mem hζq0N htN
+  have hζq_mem (q : ℚ) : ζq q ∈ N := by
+    have hformula : ζq q =
+        (s + algebraMap ℚ (AlgebraicClosure k) q) /
+          (t + algebraMap ℚ (AlgebraicClosure k) q) := by
+      apply (eq_div_iff (hden (algebraMap ℚ k q))).2
+      exact (hrelq q).symm
+    rw [hformula]
+    exact N.div_mem (N.add_mem hsN (by simp))
+      (N.add_mem htN (by simp))
+  have hζq_inj : Function.Injective ζq := by
+    intro a b hab
+    have hzero :
+        (1 - ζq a) *
+            (algebraMap ℚ (AlgebraicClosure k) a -
+              algebraMap ℚ (AlgebraicClosure k) b) = 0 := by
+      calc
+        (1 - ζq a) *
+              (algebraMap ℚ (AlgebraicClosure k) a -
+                algebraMap ℚ (AlgebraicClosure k) b) =
+            (s + algebraMap ℚ (AlgebraicClosure k) a -
+              (s + algebraMap ℚ (AlgebraicClosure k) b)) -
+              ζq a *
+                (t + algebraMap ℚ (AlgebraicClosure k) a -
+                  (t + algebraMap ℚ (AlgebraicClosure k) b)) := by ring
+        _ = 0 := by rw [hrelq a, hrelq b, hab]; ring
+    have hneq : 1 - ζq a ≠ 0 := sub_ne_zero.mpr (hζqneone a).symm
+    have heq : algebraMap ℚ (AlgebraicClosure k) a =
+        algebraMap ℚ (AlgebraicClosure k) b := by
+      exact sub_eq_zero.mp ((mul_eq_zero.mp hzero).resolve_left hneq)
+    exact (algebraMap ℚ (AlgebraicClosure k)).injective heq
+  exact (Set.infinite_range_of_injective hζq_inj)
+    (charZero_torsion_range_finite N ζq hζq_mem hζqpow)
+
+private theorem zmod_algebraic_to_prime
+    {K : Type*} [Field K] (p : ℕ) (hK : CharP K p)
+    (A : Algebra (ZMod p) K)
+    (h : @Algebra.IsAlgebraic (ZMod p) K _ _ A) :
+    isAlgebraicOverPrimeField p K hK := by
+  dsimp [isAlgebraicOverPrimeField]
+  exact (Subsingleton.elim A (ZMod.algebra K p)) ▸ h
+
+private theorem algebraic_isIntegral
+    {R A : Type*} [Field R] [Field A] [Algebra R A]
+    (h : Algebra.IsAlgebraic R A) (x : A) : IsIntegral R x := by
+  let inst_algebraic : Algebra.IsAlgebraic R A := h
+  exact (Algebra.IsAlgebraic.isIntegral (K := R) (A := A)).isIntegral x
+
+private theorem pure_inseparable_surjective_of_charZero
+    {k k' : Type*} [Field k] [Field k'] [Algebra k k']
+    (hchar : CharZero k) (hpi : IsPurelyInseparable k k') :
+    Function.Surjective (algebraMap k k') := by
+  let inst_charZero : CharZero k := hchar
+  let inst_purelyInseparable : IsPurelyInseparable k k' := hpi
+  exact IsPurelyInseparable.surjective_algebraMap_of_isSeparable k k'
+
+private theorem pure_inseparable_power_mem
+    {k k' : Type*} [Field k] [Field k'] [Algebra k k']
+    (p : ℕ) (hp : p.Prime) (hk : CharP k p) (hk' : CharP k' p)
+    (hpi : IsPurelyInseparable k k') (x : k') :
+    ∃ n : ℕ, ∃ y : k, algebraMap k k' y = x ^ (p ^ n) := by
+  let inst_charP_k : CharP k p := hk
+  let inst_charP_k' : CharP k' p := hk'
+  let inst_expChar : ExpChar k p := ExpChar.prime hp
+  let inst_purelyInseparable : IsPurelyInseparable k k' := hpi
+  obtain ⟨n, y, hy⟩ := IsPurelyInseparable.pow_mem k p x
+  exact ⟨n, y, hy⟩
+
+private theorem fieldPowerProperty_to_classification
+    {k k' : Type*} [Field k] [Field k'] [Algebra k k'] :
+    fieldPowerProperty (k := k) (k' := k') →
+      fieldPowerClassification (k := k) (k' := k') := by
+  classical
+  intro h
+  change ∀ x : k', ∃ n : ℕ, 0 < n ∧ x ^ n ∈ (algebraMap k k').range at h
+  have halg : Algebra.IsAlgebraic k k' := by
+    constructor
+    intro x
+    obtain ⟨n, hn, ⟨a, ha⟩⟩ := h x
+    apply IsAlgebraic.of_pow hn
+    rw [← ha]
+    exact isAlgebraic_algebraMap (R := k) (A := k') a
+  by_cases hsurj : Function.Surjective (algebraMap k k')
+  · exact Or.inl hsurj
+  by_cases hsep : separableClosure k k' = ⊥
+  · have hpi : IsPurelyInseparable k k' :=
+      (separableClosure.eq_bot_iff).mp hsep
+    obtain hchar | ⟨p, hpfact, hk⟩ := CharP.exists' k
+    · exact False.elim (hsurj
+        (pure_inseparable_surjective_of_charZero hchar hpi))
+    · have hp : p.Prime := hpfact.out
+      have hk' : CharP k' p := (Algebra.charP_iff k k' p).mp hk
+      exact Or.inr ⟨p, hp, hk, hk', Or.inl hpi⟩
+  · have hnotle : ¬ separableClosure k k' ≤ (⊥ : IntermediateField k k') := by
+      intro hle
+      exact hsep (le_antisymm hle bot_le)
+    have hnotforall : ¬ ∀ x : k', x ∈ separableClosure k k' →
+        x ∈ (⊥ : IntermediateField k k') := by
+      intro hle
+      exact hnotle hle
+    push Not at hnotforall
+    obtain ⟨x, hxsep, hxbot⟩ := hnotforall
+    have hxseparable : IsSeparable k x := mem_separableClosure_iff.mp hxsep
+    have hxinbase : x ∉ (algebraMap k k').range := by
+      intro hx
+      exact hxbot ((IntermediateField.mem_bot).2 hx)
+    have hxi : IsIntegral k x := algebraic_isIntegral halg x
+    have hmin : 2 ≤ (minpoly k x).natDegree :=
+      (minpoly.two_le_natDegree_iff hxi).2 hxinbase
+    have hcard : 2 ≤ Fintype.card ((minpoly k x).rootSet (AlgebraicClosure k)) := by
+      rw [Polynomial.card_rootSet_eq_natDegree hxseparable (IsAlgClosed.splits _)]
+      exact hmin
+    obtain ⟨y, z, hyz⟩ := Fintype.exists_pair_of_one_lt_card
+      (lt_of_lt_of_le Nat.one_lt_two hcard)
+    let yroot : { w // w ∈ (minpoly k x).aroots (AlgebraicClosure k) } :=
+      ⟨y, (Polynomial.mem_aroots).2
+        ⟨minpoly.ne_zero hxi, (Polynomial.mem_rootSet.mp y.property).2⟩⟩
+    let zroot : { w // w ∈ (minpoly k x).aroots (AlgebraicClosure k) } :=
+      ⟨z, (Polynomial.mem_aroots).2
+        ⟨minpoly.ne_zero hxi, (Polynomial.mem_rootSet.mp z.property).2⟩⟩
+    let Kx : IntermediateField k k' :=
+      IntermediateField.adjoin k ({x} : Set k')
+    let hxK : x ∈ Kx := IntermediateField.subset_adjoin k ({x} : Set k') (by simp)
+    let σ : Kx →ₐ[k] AlgebraicClosure k :=
+      (IntermediateField.algHomAdjoinIntegralEquiv k hxi).symm yroot
+    let τ : Kx →ₐ[k] AlgebraicClosure k :=
+      (IntermediateField.algHomAdjoinIntegralEquiv k hxi).symm zroot
+    have hgen : (⟨x, hxK⟩ : Kx) = IntermediateField.AdjoinSimple.gen k x := by
+      apply Subtype.ext
+      rfl
+    have hσ : σ ⟨x, hxK⟩ = y := by
+      rw [hgen]
+      simpa [σ, yroot] using
+        (IntermediateField.algHomAdjoinIntegralEquiv_symm_apply_gen k hxi yroot)
+    have hτ : τ ⟨x, hxK⟩ = z := by
+      rw [hgen]
+      simpa [τ, zroot] using
+        (IntermediateField.algHomAdjoinIntegralEquiv_symm_apply_gen k hxi zroot)
+    have hgen_ne : σ ⟨x, hxK⟩ ≠ τ ⟨x, hxK⟩ := by
+      intro heq
+      apply hyz
+      apply Subtype.ext
+      rw [hσ, hτ] at heq
+      exact heq
+    let u : k → Kx := fun a =>
+      ⟨x + algebraMap k k' a, Kx.add_mem hxK (Kx.algebraMap_mem a)⟩
+    have hu_eq (a : k) : u a = ⟨x, hxK⟩ + algebraMap k Kx a := by
+      apply Subtype.ext
+      simp [u]
+    let ζ : k → AlgebraicClosure k := fun a =>
+      σ (u a) / τ (u a)
+    have hζpow (a : k) : ∃ n : ℕ, 0 < n ∧ (ζ a) ^ n = 1 := by
+      obtain ⟨n, hn, ⟨b, hb⟩⟩ := h (x + algebraMap k k' a)
+      have hua : u a ≠ 0 := by
+        intro hua
+        have hzero : x + algebraMap k k' a = 0 :=
+          congrArg (fun z : Kx => (z : k')) hua
+        apply hxinbase
+        refine ⟨-a, ?_⟩
+        rw [map_neg]
+        exact (add_eq_zero_iff_eq_neg.mp hzero).symm
+      have hpowK : (u a) ^ n = algebraMap k Kx b := by
+        apply Subtype.ext
+        change (x + algebraMap k k' a) ^ n = algebraMap k k' b
+        exact hb.symm
+      have hτu : τ (u a) ≠ 0 := (map_ne_zero τ).2 hua
+      have hpowστ : (σ (u a)) ^ n = (τ (u a)) ^ n := by
+        calc
+          (σ (u a)) ^ n = σ ((u a) ^ n) := (map_pow σ (u a) n).symm
+          _ = σ (algebraMap k Kx b) := congrArg σ hpowK
+          _ = algebraMap k (AlgebraicClosure k) b := σ.commutes b
+          _ = τ (algebraMap k Kx b) := (τ.commutes b).symm
+          _ = τ ((u a) ^ n) := congrArg τ hpowK.symm
+          _ = (τ (u a)) ^ n := map_pow τ (u a) n
+      refine ⟨n, hn, ?_⟩
+      dsimp [ζ]
+      rw [div_pow, div_eq_one_iff_eq (pow_ne_zero n hτu)]
+      exact hpowστ
+    have hζneone (a : k) : ζ a ≠ 1 := by
+      intro hza
+      have hua : u a ≠ 0 := by
+        intro hua
+        have hzero : x + algebraMap k k' a = 0 :=
+          congrArg (fun z : Kx => (z : k')) hua
+        apply hxinbase
+        refine ⟨-a, ?_⟩
+        rw [map_neg]
+        exact (add_eq_zero_iff_eq_neg.mp hzero).symm
+      have heq : σ (u a) = τ (u a) := by
+        apply (div_eq_one_iff_eq ((map_ne_zero τ).2 hua)).mp
+        exact hza
+      apply hgen_ne
+      rw [hu_eq, map_add, map_add, σ.commutes, τ.commutes] at heq
+      exact add_right_cancel heq
+    have hrel (a : k) :
+        σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a =
+          ζ a * (τ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a) := by
+      have hua : u a ≠ 0 := by
+        intro hua
+        have hzero : x + algebraMap k k' a = 0 :=
+          congrArg (fun z : Kx => (z : k')) hua
+        apply hxinbase
+        refine ⟨-a, ?_⟩
+        rw [map_neg]
+        exact (add_eq_zero_iff_eq_neg.mp hzero).symm
+      have hτu : τ (u a) ≠ 0 := (map_ne_zero τ).2 hua
+      calc
+        σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a =
+            σ (⟨x, hxK⟩ + algebraMap k Kx a) := by
+              rw [map_add, σ.commutes]
+        _ = σ (u a) := by rw [← hu_eq a]
+        _ = (σ (u a) / τ (u a)) * τ (u a) := by
+              rw [div_mul_cancel₀ _ hτu]
+        _ = ζ a * τ (u a) := by rfl
+        _ = ζ a * τ (⟨x, hxK⟩ + algebraMap k Kx a) := by rw [hu_eq a]
+        _ = ζ a * (τ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a) := by
+              rw [map_add, τ.commutes]
+    obtain hchar | ⟨p, hpfact, hk⟩ := CharP.exists' k
+    ·
+      have hden (a : k) :
+          τ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a ≠ 0 := by
+        have hua : u a ≠ 0 := by
+          intro hua
+          have hzero : x + algebraMap k k' a = 0 :=
+            congrArg (fun z : Kx => (z : k')) hua
+          apply hxinbase
+          refine ⟨-a, ?_⟩
+          rw [map_neg]
+          exact (add_eq_zero_iff_eq_neg.mp hzero).symm
+        have hτu : τ (u a) ≠ 0 := (map_ne_zero τ).2 hua
+        rw [hu_eq, map_add, τ.commutes] at hτu
+        exact hτu
+      exact False.elim (@charZero_ratio_contradiction k _ hchar
+        (@rational_scalarTower_of_charZero k _ hchar) ζ
+        (σ ⟨x, hxK⟩) (τ ⟨x, hxK⟩) hζpow hζneone hrel hden)
+    · have hp : p.Prime := hpfact.out
+      have hk' : CharP k' p := (Algebra.charP_iff k k' p).mp hk
+      let inst_charP_k : CharP k p := hk
+      let inst_charP_k' : CharP k' p := hk'
+      let inst_fact_prime : Fact p.Prime := hpfact
+      let inst_neZero_p : NeZero p := ⟨hp.ne_zero⟩
+      let inst_alg_zmod_k : Algebra (ZMod p) k := ZMod.algebra k p
+      let inst_alg_zmod_k' : Algebra (ZMod p) k' := ZMod.algebra k' p
+      let inst_scalarTower_zmod_k_closure :
+          IsScalarTower (ZMod p) k (AlgebraicClosure k) := inferInstance
+      have hζalg (a : k) : IsAlgebraic (ZMod p) (ζ a) := by
+        obtain ⟨n, hn, hpow⟩ := hζpow a
+        apply IsAlgebraic.of_pow hn
+        rw [hpow]
+        exact isAlgebraic_one
+      have hrel0 :
+          σ ⟨x, hxK⟩ = ζ 0 * τ ⟨x, hxK⟩ := by
+        simpa using hrel 0
+      have hrel1 :
+          σ ⟨x, hxK⟩ + 1 = ζ 1 * (τ ⟨x, hxK⟩ + 1) := by
+        simpa using hrel 1
+      have hrel1' :
+          σ ⟨x, hxK⟩ + 1 = ζ 1 * τ ⟨x, hxK⟩ + ζ 1 := by
+        simpa [mul_add] using hrel1
+      have hrel0' : σ ⟨x, hxK⟩ = ζ 0 * τ ⟨x, hxK⟩ := hrel0
+      have hτrel :
+          τ ⟨x, hxK⟩ * (ζ 1 - ζ 0) = 1 - ζ 1 := by
+        have h1 : ζ 1 * τ ⟨x, hxK⟩ =
+            σ ⟨x, hxK⟩ + 1 - ζ 1 :=
+          (sub_eq_iff_eq_add.mpr hrel1').symm
+        have h0 : ζ 0 * τ ⟨x, hxK⟩ = σ ⟨x, hxK⟩ := hrel0'.symm
+        calc
+          τ ⟨x, hxK⟩ * (ζ 1 - ζ 0) =
+              ζ 1 * τ ⟨x, hxK⟩ - ζ 0 * τ ⟨x, hxK⟩ := by ring
+          _ = (σ ⟨x, hxK⟩ + 1 - ζ 1) - σ ⟨x, hxK⟩ := by rw [h1, h0]
+          _ = 1 - ζ 1 := by ring
+      have hζdiff : ζ 1 - ζ 0 ≠ 0 := by
+        intro hdiff
+        have hone : 1 - ζ 1 = 0 := by
+          calc
+            1 - ζ 1 = τ ⟨x, hxK⟩ * (ζ 1 - ζ 0) := hτrel.symm
+            _ = 0 := by rw [hdiff, mul_zero]
+        exact hζneone 1 (sub_eq_zero.mp hone).symm
+      have hτformula :
+          τ ⟨x, hxK⟩ = (1 - ζ 1) / (ζ 1 - ζ 0) := by
+        apply (eq_div_iff hζdiff).2
+        exact hτrel
+      have hnum : IsAlgebraic (ZMod p) (1 - ζ 1) := by
+        exact (isAlgebraic_one.isIntegral.sub (hζalg 1).isIntegral).isAlgebraic
+      have hden : IsAlgebraic (ZMod p) (ζ 1 - ζ 0) := by
+        exact ((hζalg 1).isIntegral.sub (hζalg 0).isIntegral).isAlgebraic
+      have hτalg : IsAlgebraic (ZMod p) (τ ⟨x, hxK⟩) := by
+        rw [hτformula]
+        simpa [div_eq_mul_inv] using
+          (hnum.isIntegral.mul hden.isIntegral.inv).isAlgebraic
+      have hK : Algebra.IsAlgebraic (ZMod p) k := by
+        constructor
+        intro a
+        have hrelA :
+            σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a =
+              ζ a * τ ⟨x, hxK⟩ + ζ a * algebraMap k (AlgebraicClosure k) a := by
+          simpa [mul_add] using hrel a
+        have hA : algebraMap k (AlgebraicClosure k) a =
+            (ζ a - ζ 0) * τ ⟨x, hxK⟩ +
+              ζ a * algebraMap k (AlgebraicClosure k) a := by
+          calc
+            algebraMap k (AlgebraicClosure k) a =
+                (σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a) -
+                  σ ⟨x, hxK⟩ := by ring
+            _ = (ζ a * τ ⟨x, hxK⟩ + ζ a * algebraMap k (AlgebraicClosure k) a) -
+                  ζ 0 * τ ⟨x, hxK⟩ := by rw [hrelA, hrel0']
+            _ = (ζ a - ζ 0) * τ ⟨x, hxK⟩ +
+                  ζ a * algebraMap k (AlgebraicClosure k) a := by ring
+        have hdiffrel :
+            (ζ a - 1) * algebraMap k (AlgebraicClosure k) a =
+              (ζ 0 - ζ a) * τ ⟨x, hxK⟩ := by
+          calc
+            (ζ a - 1) * algebraMap k (AlgebraicClosure k) a =
+                ζ a * algebraMap k (AlgebraicClosure k) a -
+                  algebraMap k (AlgebraicClosure k) a := by ring
+            _ = ζ a * algebraMap k (AlgebraicClosure k) a -
+                  ((ζ a - ζ 0) * τ ⟨x, hxK⟩ +
+                    ζ a * algebraMap k (AlgebraicClosure k) a) :=
+              congrArg (fun q => ζ a * algebraMap k (AlgebraicClosure k) a - q) hA
+            _ = (ζ 0 - ζ a) * τ ⟨x, hxK⟩ := by ring
+        have haeq : algebraMap k (AlgebraicClosure k) a =
+            ((ζ 0 - ζ a) * τ ⟨x, hxK⟩) / (ζ a - 1) := by
+          apply (eq_div_iff (sub_ne_zero.mpr (hζneone a))).2
+          calc
+            algebraMap k (AlgebraicClosure k) a * (ζ a - 1) =
+                (ζ a - 1) * algebraMap k (AlgebraicClosure k) a :=
+              mul_comm _ _
+            _ = (ζ 0 - ζ a) * τ ⟨x, hxK⟩ := hdiffrel
+        have hnuma : IsIntegral (ZMod p)
+            ((ζ 0 - ζ a) * τ ⟨x, hxK⟩) :=
+          (hζalg 0).isIntegral.sub (hζalg a).isIntegral
+            |>.mul hτalg.isIntegral
+        have hdena : IsIntegral (ZMod p) (ζ a - 1) :=
+          (hζalg a).isIntegral.sub isAlgebraic_one.isIntegral
+        have haalg : IsAlgebraic (ZMod p)
+            (algebraMap k (AlgebraicClosure k) a) := by
+          rw [haeq]
+          simpa [div_eq_mul_inv] using (hnuma.mul hdena.inv).isAlgebraic
+        let f : k →ₐ[ZMod p] AlgebraicClosure k :=
+          IsScalarTower.toAlgHom (ZMod p) k (AlgebraicClosure k)
+        have hf : IsAlgebraic (ZMod p) (f a) := by
+          change IsAlgebraic (ZMod p) (algebraMap k (AlgebraicClosure k) a)
+          exact haalg
+        exact (isAlgebraic_algHom_iff f f.injective).mp hf
+      let inst_scalarTower_zmod_k_k' : IsScalarTower (ZMod p) k k' := by
+        apply IsScalarTower.of_algebraMap_eq'
+        ext a
+        obtain ⟨n, rfl⟩ := ZMod.natCast_zmod_surjective a
+        simp
+      let inst_algebraic_zmod_k : Algebra.IsAlgebraic (ZMod p) k := hK
+      have hK' : Algebra.IsAlgebraic (ZMod p) k' :=
+        Algebra.IsAlgebraic.trans (ZMod p) k k'
+      have hKdef : isAlgebraicOverPrimeField p k hk :=
+        zmod_algebraic_to_prime p hk (inferInstance : Algebra (ZMod p) k) hK
+      have hK'def : isAlgebraicOverPrimeField p k' hk' :=
+        zmod_algebraic_to_prime p hk' (inferInstance : Algebra (ZMod p) k') hK'
+      exact Or.inr ⟨p, hp, hk, hk', Or.inr ⟨hKdef, hK'def⟩⟩
+
+private theorem fieldPowerClassification_to_fieldPowerProperty
+    {k k' : Type*} [Field k] [Field k'] [Algebra k k'] :
+    fieldPowerClassification (k := k) (k' := k') →
+      fieldPowerProperty (k := k) (k' := k') := by
+  classical
+  intro h
+  change
+    (Function.Surjective (algebraMap k k') ∨
+      ∃ p : ℕ, p.Prime ∧
+        ∃ hk : CharP k p, ∃ hk' : CharP k' p,
+          IsPurelyInseparable k k' ∨
+            (isAlgebraicOverPrimeField p k hk ∧
+              isAlgebraicOverPrimeField p k' hk')) at h
+  change ∀ x : k', ∃ n : ℕ, 0 < n ∧ x ^ n ∈ (algebraMap k k').range
+  rcases h with hsurj | ⟨p, hp, hk, hk', hcase⟩
+  · intro x
+    obtain ⟨y, rfl⟩ := hsurj x
+    exact ⟨1, Nat.zero_lt_one, by simp⟩
+  · rcases hcase with hpi | ⟨hK, hK'⟩
+    · intro x
+      obtain ⟨n, y, hy⟩ := pure_inseparable_power_mem p hp hk hk' hpi x
+      exact ⟨p ^ n, Nat.pow_pos hp.pos, ⟨y, hy⟩⟩
+    · let inst_charP_k : CharP k p := hk
+      let inst_charP_k' : CharP k' p := hk'
+      let inst_fact_prime : Fact p.Prime := ⟨hp⟩
+      let inst_neZero_p : NeZero p := ⟨hp.ne_zero⟩
+      let inst_alg_zmod_k' : Algebra (ZMod p) k' := ZMod.algebra k' p
+      have hK'alg : @Algebra.IsAlgebraic (ZMod p) k' _ _ (ZMod.algebra k' p) := by
+        dsimp [isAlgebraicOverPrimeField] at hK'
+        exact hK'
+      have hK'alg_current : @Algebra.IsAlgebraic (ZMod p) k' _ _
+          (inferInstance : Algebra (ZMod p) k') := by
+        exact (Subsingleton.elim (ZMod.algebra k' p)
+          (inferInstance : Algebra (ZMod p) k')) ▸ hK'alg
+      intro x
+      by_cases hx : x = 0
+      · subst x
+        exact ⟨1, Nat.zero_lt_one, ⟨0, by simp⟩⟩
+      · let E : IntermediateField (ZMod p) k' :=
+          IntermediateField.adjoin (ZMod p) ({x} : Set k')
+        let inst_finiteDimensional_zmod_E : FiniteDimensional (ZMod p) E :=
+          IntermediateField.finiteDimensional_adjoin (S := ({x} : Set k'))
+            (fun y hy => by
+              have : y = x := by simpa using hy
+              subst y
+              let inst_alg_is_algebraic_k' : Algebra.IsAlgebraic (ZMod p) k' :=
+                hK'alg_current
+              exact (Algebra.IsAlgebraic.isIntegral (K := ZMod p)
+                (A := k')).isIntegral x)
+        let inst_finite_E : Finite E := Module.finite_of_finite (ZMod p)
+        let ux : Eˣ := Units.mk0 ⟨x, IntermediateField.subset_adjoin (ZMod p)
+          ({x} : Set k') (by simp)⟩ (by
+            intro hzero
+            apply hx
+            exact congrArg (fun z : E => (z : k')) hzero)
+        obtain ⟨n, hn, hux⟩ := (isOfFinOrder_of_finite ux).exists_pow_eq_one
+        refine ⟨n, hn, ⟨1, ?_⟩⟩
+        have hux' := congrArg (fun z : Eˣ => (z : E)) hux
+        have hux'' := congrArg (fun z : E => (z : k')) hux'
+        simpa [ux] using hux''.symm
+
 theorem fieldPowerProperty_iff_classification
     {k k' : Type*} [Field k] [Field k'] [Algebra k k'] :
     fieldPowerProperty (k := k) (k' := k') ↔
       fieldPowerClassification (k := k) (k' := k') := by
-  classical
   constructor
-  · intro h
-    change ∀ x : k', ∃ n : ℕ, 0 < n ∧ x ^ n ∈ (algebraMap k k').range at h
-    have halg : Algebra.IsAlgebraic k k' := by
-      constructor
-      intro x
-      obtain ⟨n, hn, ⟨a, ha⟩⟩ := h x
-      apply IsAlgebraic.of_pow hn
-      rw [← ha]
-      exact isAlgebraic_algebraMap (R := k) (A := k') a
-    letI : Algebra.IsAlgebraic k k' := halg
-    by_cases hsurj : Function.Surjective (algebraMap k k')
-    · exact Or.inl hsurj
-    by_cases hsep : separableClosure k k' = ⊥
-    · have hpi : IsPurelyInseparable k k' :=
-        (separableClosure.eq_bot_iff).mp hsep
-      obtain hchar | ⟨p, hpfact, hk⟩ := CharP.exists' k
-      · letI : CharZero k := hchar
-        letI : IsPurelyInseparable k k' := hpi
-        exact False.elim (hsurj
-          (IsPurelyInseparable.surjective_algebraMap_of_isSeparable k k'))
-      · have hp : p.Prime := hpfact.out
-        have hk' : CharP k' p := (Algebra.charP_iff k k' p).mp hk
-        exact Or.inr ⟨p, hp, hk, hk', Or.inl hpi⟩
-    · have hnotle : ¬ separableClosure k k' ≤ (⊥ : IntermediateField k k') := by
-        intro hle
-        exact hsep (le_antisymm hle bot_le)
-      have hnotforall : ¬ ∀ x : k', x ∈ separableClosure k k' →
-          x ∈ (⊥ : IntermediateField k k') := by
-        intro hle
-        exact hnotle hle
-      push_neg at hnotforall
-      obtain ⟨x, hxsep, hxbot⟩ := hnotforall
-      have hxseparable : IsSeparable k x := mem_separableClosure_iff.mp hxsep
-      have hxinbase : x ∉ (algebraMap k k').range := by
-        intro hx
-        exact hxbot ((IntermediateField.mem_bot).2 hx)
-      have hxi : IsIntegral k x :=
-        (Algebra.IsAlgebraic.isIntegral (K := k) (A := k')).isIntegral x
-      have hmin : 2 ≤ (minpoly k x).natDegree :=
-        (minpoly.two_le_natDegree_iff hxi).2 hxinbase
-      have hcard : 2 ≤ Fintype.card ((minpoly k x).rootSet (AlgebraicClosure k)) := by
-        rw [Polynomial.card_rootSet_eq_natDegree hxseparable (IsAlgClosed.splits _)]
-        exact hmin
-      obtain ⟨y, z, hyz⟩ := Fintype.exists_pair_of_one_lt_card
-        (lt_of_lt_of_le Nat.one_lt_two hcard)
-      let yroot : { w // w ∈ (minpoly k x).aroots (AlgebraicClosure k) } :=
-        ⟨y, (Polynomial.mem_aroots).2
-          ⟨minpoly.ne_zero hxi, (Polynomial.mem_rootSet.mp y.property).2⟩⟩
-      let zroot : { w // w ∈ (minpoly k x).aroots (AlgebraicClosure k) } :=
-        ⟨z, (Polynomial.mem_aroots).2
-          ⟨minpoly.ne_zero hxi, (Polynomial.mem_rootSet.mp z.property).2⟩⟩
-      let Kx : IntermediateField k k' :=
-        IntermediateField.adjoin k ({x} : Set k')
-      let hxK : x ∈ Kx := IntermediateField.subset_adjoin k ({x} : Set k') (by simp)
-      let σ : Kx →ₐ[k] AlgebraicClosure k :=
-        (IntermediateField.algHomAdjoinIntegralEquiv k hxi).symm yroot
-      let τ : Kx →ₐ[k] AlgebraicClosure k :=
-        (IntermediateField.algHomAdjoinIntegralEquiv k hxi).symm zroot
-      have hgen : (⟨x, hxK⟩ : Kx) = IntermediateField.AdjoinSimple.gen k x := by
-        apply Subtype.ext
-        rfl
-      have hσ : σ ⟨x, hxK⟩ = y := by
-        rw [hgen]
-        simpa [σ, yroot] using
-          (IntermediateField.algHomAdjoinIntegralEquiv_symm_apply_gen k hxi yroot)
-      have hτ : τ ⟨x, hxK⟩ = z := by
-        rw [hgen]
-        simpa [τ, zroot] using
-          (IntermediateField.algHomAdjoinIntegralEquiv_symm_apply_gen k hxi zroot)
-      have hgen_ne : σ ⟨x, hxK⟩ ≠ τ ⟨x, hxK⟩ := by
-        intro heq
-        apply hyz
-        apply Subtype.ext
-        rw [hσ, hτ] at heq
-        exact heq
-      let u : k → Kx := fun a =>
-        ⟨x + algebraMap k k' a, Kx.add_mem hxK (Kx.algebraMap_mem a)⟩
-      have hu_eq (a : k) : u a = ⟨x, hxK⟩ + algebraMap k Kx a := by
-        apply Subtype.ext
-        simp [u]
-      let ζ : k → AlgebraicClosure k := fun a =>
-        σ (u a) / τ (u a)
-      have hζpow (a : k) : ∃ n : ℕ, 0 < n ∧ (ζ a) ^ n = 1 := by
-        obtain ⟨n, hn, ⟨b, hb⟩⟩ := h (x + algebraMap k k' a)
-        have hua : u a ≠ 0 := by
-          intro hua
-          have hzero : x + algebraMap k k' a = 0 :=
-            congrArg (fun z : Kx => (z : k')) hua
-          apply hxinbase
-          refine ⟨-a, ?_⟩
-          rw [map_neg]
-          exact (add_eq_zero_iff_eq_neg.mp hzero).symm
-        have hpowK : (u a) ^ n = algebraMap k Kx b := by
-          apply Subtype.ext
-          change (x + algebraMap k k' a) ^ n = algebraMap k k' b
-          exact hb.symm
-        have hτu : τ (u a) ≠ 0 := (map_ne_zero τ).2 hua
-        have hpowστ : (σ (u a)) ^ n = (τ (u a)) ^ n := by
-          calc
-            (σ (u a)) ^ n = σ ((u a) ^ n) := (map_pow σ (u a) n).symm
-            _ = σ (algebraMap k Kx b) := congrArg σ hpowK
-            _ = algebraMap k (AlgebraicClosure k) b := σ.commutes b
-            _ = τ (algebraMap k Kx b) := (τ.commutes b).symm
-            _ = τ ((u a) ^ n) := congrArg τ hpowK.symm
-            _ = (τ (u a)) ^ n := map_pow τ (u a) n
-        refine ⟨n, hn, ?_⟩
-        dsimp [ζ]
-        rw [div_pow, div_eq_one_iff_eq (pow_ne_zero n hτu)]
-        exact hpowστ
-      have hζneone (a : k) : ζ a ≠ 1 := by
-        intro hza
-        have hua : u a ≠ 0 := by
-          intro hua
-          have hzero : x + algebraMap k k' a = 0 :=
-            congrArg (fun z : Kx => (z : k')) hua
-          apply hxinbase
-          refine ⟨-a, ?_⟩
-          rw [map_neg]
-          exact (add_eq_zero_iff_eq_neg.mp hzero).symm
-        have heq : σ (u a) = τ (u a) := by
-          apply (div_eq_one_iff_eq ((map_ne_zero τ).2 hua)).mp
-          exact hza
-        apply hgen_ne
-        rw [hu_eq, map_add, map_add, σ.commutes, τ.commutes] at heq
-        exact add_right_cancel heq
-      have hrel (a : k) :
-          σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a =
-            ζ a * (τ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a) := by
-        have hua : u a ≠ 0 := by
-          intro hua
-          have hzero : x + algebraMap k k' a = 0 :=
-            congrArg (fun z : Kx => (z : k')) hua
-          apply hxinbase
-          refine ⟨-a, ?_⟩
-          rw [map_neg]
-          exact (add_eq_zero_iff_eq_neg.mp hzero).symm
-        have hτu : τ (u a) ≠ 0 := (map_ne_zero τ).2 hua
-        calc
-          σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a =
-              σ (⟨x, hxK⟩ + algebraMap k Kx a) := by
-                rw [map_add, σ.commutes]
-          _ = σ (u a) := by rw [← hu_eq a]
-          _ = (σ (u a) / τ (u a)) * τ (u a) := by
-                rw [div_mul_cancel₀ _ hτu]
-          _ = ζ a * τ (u a) := by rfl
-          _ = ζ a * τ (⟨x, hxK⟩ + algebraMap k Kx a) := by rw [hu_eq a]
-          _ = ζ a * (τ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a) := by
-                rw [map_add, τ.commutes]
-      obtain hchar | ⟨p, hpfact, hk⟩ := CharP.exists' k
-      · letI : CharZero k := hchar
-        letI : IsScalarTower ℚ k (AlgebraicClosure k) := inferInstance
-        let ζq : ℚ → AlgebraicClosure k := fun q => ζ (algebraMap ℚ k q)
-        have hζqpow (q : ℚ) : ∃ n : ℕ, 0 < n ∧ (ζq q) ^ n = 1 := by
-          exact hζpow (algebraMap ℚ k q)
-        have hζqneone (q : ℚ) : ζq q ≠ 1 := by
-          exact hζneone (algebraMap ℚ k q)
-        have hrelq (q : ℚ) :
-            σ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) q =
-              ζq q * (τ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) q) := by
-          simpa [ζq, IsScalarTower.algebraMap_apply ℚ k (AlgebraicClosure k)] using
-            hrel (algebraMap ℚ k q)
-        have hu_ne (a : k) : u a ≠ 0 := by
-          intro hua
-          have hzero : x + algebraMap k k' a = 0 :=
-            congrArg (fun z : Kx => (z : k')) hua
-          apply hxinbase
-          refine ⟨-a, ?_⟩
-          rw [map_neg]
-          exact (add_eq_zero_iff_eq_neg.mp hzero).symm
-        have hτu (a : k) : τ (u a) ≠ 0 := (map_ne_zero τ).2 (hu_ne a)
-        have hτueq (a : k) :
-            τ (u a) = τ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a := by
-          rw [hu_eq, map_add, τ.commutes]
-        have hrelq0 : σ ⟨x, hxK⟩ = ζq 0 * τ ⟨x, hxK⟩ := by
-          simpa using hrelq 0
-        have hrelq1 :
-            σ ⟨x, hxK⟩ + 1 = ζq 1 * (τ ⟨x, hxK⟩ + 1) := by
-          simpa using hrelq 1
-        have hτrelq :
-            τ ⟨x, hxK⟩ * (ζq 1 - ζq 0) = 1 - ζq 1 := by
-          have h1 : ζq 1 * τ ⟨x, hxK⟩ =
-              σ ⟨x, hxK⟩ + 1 - ζq 1 := by
-            have := (sub_eq_iff_eq_add.mpr (by simpa [mul_add] using hrelq1)).symm
-            simpa [add_assoc] using this
-          have h0 : ζq 0 * τ ⟨x, hxK⟩ = σ ⟨x, hxK⟩ := hrelq0.symm
-          calc
-            τ ⟨x, hxK⟩ * (ζq 1 - ζq 0) =
-                ζq 1 * τ ⟨x, hxK⟩ - ζq 0 * τ ⟨x, hxK⟩ := by ring
-            _ = (σ ⟨x, hxK⟩ + 1 - ζq 1) - σ ⟨x, hxK⟩ := by rw [h1, h0]
-            _ = 1 - ζq 1 := by ring
-        have hζqdiff : ζq 1 - ζq 0 ≠ 0 := by
-          intro hdiff
-          have hone : 1 - ζq 1 = 0 := by
-            calc
-              1 - ζq 1 = τ ⟨x, hxK⟩ * (ζq 1 - ζq 0) := hτrelq.symm
-              _ = 0 := by rw [hdiff, mul_zero]
-          exact hζqneone 1 (sub_eq_zero.mp hone).symm
-        have hτformulaq :
-            τ ⟨x, hxK⟩ = (1 - ζq 1) / (ζq 1 - ζq 0) := by
-          apply (eq_div_iff hζqdiff).2
-          exact hτrelq
-        have hζqint (q : ℚ) : IsIntegral ℚ (ζq q) := by
-          obtain ⟨n, hn, hpow⟩ := hζqpow q
-          apply IsIntegral.of_pow hn
-          rw [hpow]
-          exact isIntegral_one
-        let N : IntermediateField ℚ (AlgebraicClosure k) :=
-          IntermediateField.adjoin ℚ ({ζq 0, ζq 1} : Set (AlgebraicClosure k))
-        letI : FiniteDimensional ℚ N := by
-          simpa [N] using
-            (IntermediateField.finiteDimensional_adjoin_pair
-              (K := ℚ) (x := ζq 0) (y := ζq 1) (hζqint 0) (hζqint 1))
-        letI : NumberField N := NumberField.of_module_finite ℚ N
-        have hζq0N : ζq 0 ∈ N := by
-          exact IntermediateField.subset_adjoin ℚ _ (by simp [N])
-        have hζq1N : ζq 1 ∈ N := by
-          exact IntermediateField.subset_adjoin ℚ _ (by simp [N])
-        have htN : τ ⟨x, hxK⟩ ∈ N := by
-          rw [hτformulaq]
-          exact N.div_mem (N.sub_mem N.one_mem hζq1N)
-            (N.sub_mem hζq1N hζq0N)
-        have hsN : σ ⟨x, hxK⟩ ∈ N := by
-          rw [hrelq0]
-          exact N.mul_mem hζq0N htN
-        have hζq_mem (q : ℚ) : ζq q ∈ N := by
-          have hden : τ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) q ≠ 0 := by
-            have hne := hτu (algebraMap ℚ k q)
-            rw [hτueq] at hne
-            simpa [IsScalarTower.algebraMap_apply ℚ k (AlgebraicClosure k)] using hne
-          have hformula : ζq q =
-              (σ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) q) /
-                (τ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) q) := by
-            apply (eq_div_iff hden).2
-            exact (hrelq q).symm
-          rw [hformula]
-          exact N.div_mem (N.add_mem hsN (by simpa using N.algebraMap_mem q))
-            (N.add_mem htN (by simpa using N.algebraMap_mem q))
-        have hζq_inj : Function.Injective ζq := by
-          intro a b hab
-          have hzero :
-              (1 - ζq a) *
-                (algebraMap ℚ (AlgebraicClosure k) a -
-                  algebraMap ℚ (AlgebraicClosure k) b) = 0 := by
-            calc
-              (1 - ζq a) *
-                  (algebraMap ℚ (AlgebraicClosure k) a -
-                    algebraMap ℚ (AlgebraicClosure k) b) =
-                  (σ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) a -
-                    (σ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) b)) -
-                    ζq a *
-                      (τ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) a -
-                        (τ ⟨x, hxK⟩ + algebraMap ℚ (AlgebraicClosure k) b)) := by ring
-              _ = 0 := by rw [hrelq a, hrelq b, hab]; ring
-          have hneq : 1 - ζq a ≠ 0 := sub_ne_zero.mpr (hζqneone a).symm
-          have heq :
-              algebraMap ℚ (AlgebraicClosure k) a =
-                algebraMap ℚ (AlgebraicClosure k) b := by
-            exact sub_eq_zero.mp ((mul_eq_zero.mp hzero).resolve_left hneq)
-          exact (algebraMap ℚ (AlgebraicClosure k)).injective heq
-        have hex (q : ℚ) :
-            ∃ u : NumberField.Units.torsion N,
-              algebraMap N (AlgebraicClosure k)
-                  (algebraMap (NumberField.RingOfIntegers N) N
-                    (u : (NumberField.RingOfIntegers N)ˣ)) = ζq q := by
-          obtain ⟨n, hn, hpow⟩ := hζqpow q
-          let zN : N := ⟨ζq q, hζq_mem q⟩
-          have hzpow : zN ^ n = 1 := by
-            apply Subtype.ext
-            exact hpow
-          have hzint : IsIntegral ℤ zN := by
-            apply IsIntegral.of_pow hn
-            rw [hzpow]
-            exact isIntegral_one
-          let v : NumberField.RingOfIntegers N :=
-            IsIntegralClosure.mk' (NumberField.RingOfIntegers N) zN hzint
-          have hv : algebraMap (NumberField.RingOfIntegers N) N v = zN :=
-            IsIntegralClosure.algebraMap_mk' (NumberField.RingOfIntegers N) zN hzint
-          have hvpow : v ^ n = 1 := by
-            apply NumberField.RingOfIntegers.coe_injective
-            rw [map_pow, map_one, hv]
-            exact hzpow
-          let u : (NumberField.RingOfIntegers N)ˣ :=
-            Units.mkOfMulEqOne v (v ^ (n - 1)) (by
-              rw [← pow_succ', Nat.sub_add_cancel hn, hvpow])
-          have hu_tors : u ∈ NumberField.Units.torsion N := by
-            rw [NumberField.Units.torsion, CommGroup.mem_torsion,
-              isOfFinOrder_iff_pow_eq_one]
-            refine ⟨n, hn, ?_⟩
-            apply Units.ext
-            change (u : NumberField.RingOfIntegers N) ^ n = 1
-            rw [← Units.val_pow_eq_pow_val]
-            simp [u, Units.val_mkOfMulEqOne, hvpow]
-          refine ⟨⟨u, hu_tors⟩, ?_⟩
-          change algebraMap N (AlgebraicClosure k)
-              (algebraMap (NumberField.RingOfIntegers N) N
-                (u : (NumberField.RingOfIntegers N)ˣ)) = ζq q
-          rw [Units.val_mkOfMulEqOne, hv]
-          rfl
-        let φ : NumberField.Units.torsion N → AlgebraicClosure k := fun u =>
-          algebraMap N (AlgebraicClosure k)
-            (algebraMap (NumberField.RingOfIntegers N) N
-              (u : (NumberField.RingOfIntegers N)ˣ))
-        let g : ℚ → NumberField.Units.torsion N := fun q => Classical.choose (hex q)
-        have hg (q : ℚ) : φ (g q) = ζq q := Classical.choose_spec (hex q)
-        have hfinite : (Set.range g).Finite := Set.toFinite _
-        have himage : (φ '' Set.range g).Finite := hfinite.image φ
-        have hζrange : Set.range ζq ⊆ φ '' Set.range g := by
-          rintro _ ⟨q, rfl⟩
-          exact ⟨g q, ⟨q, rfl⟩, hg q⟩
-        have hζfinite : (Set.range ζq).Finite := himage.subset hζrange
-        exact False.elim ((Set.infinite_range_of_injective hζq_inj) hζfinite)
-      · have hp : p.Prime := hpfact.out
-        have hk' : CharP k' p := (Algebra.charP_iff k k' p).mp hk
-        letI : CharP k p := hk
-        letI : CharP k' p := hk'
-        letI : Fact p.Prime := hpfact
-        letI : NeZero p := ⟨hp.ne_zero⟩
-        letI : Algebra (ZMod p) k := ZMod.algebra k p
-        letI : Algebra (ZMod p) k' := ZMod.algebra k' p
-        letI : IsScalarTower (ZMod p) k (AlgebraicClosure k) := inferInstance
-        have hζalg (a : k) : IsAlgebraic (ZMod p) (ζ a) := by
-          obtain ⟨n, hn, hpow⟩ := hζpow a
-          apply IsAlgebraic.of_pow hn
-          rw [hpow]
-          exact isAlgebraic_one
-        have hrel0 :
-            σ ⟨x, hxK⟩ = ζ 0 * τ ⟨x, hxK⟩ := by
-          simpa using hrel 0
-        have hrel1 :
-            σ ⟨x, hxK⟩ + 1 = ζ 1 * (τ ⟨x, hxK⟩ + 1) := by
-          simpa using hrel 1
-        have hrel1' :
-            σ ⟨x, hxK⟩ + 1 = ζ 1 * τ ⟨x, hxK⟩ + ζ 1 := by
-          simpa [mul_add] using hrel1
-        have hrel0' : σ ⟨x, hxK⟩ = ζ 0 * τ ⟨x, hxK⟩ := hrel0
-        have hτrel :
-            τ ⟨x, hxK⟩ * (ζ 1 - ζ 0) = 1 - ζ 1 := by
-          have h1 : ζ 1 * τ ⟨x, hxK⟩ =
-              σ ⟨x, hxK⟩ + 1 - ζ 1 :=
-            (sub_eq_iff_eq_add.mpr hrel1').symm
-          have h0 : ζ 0 * τ ⟨x, hxK⟩ = σ ⟨x, hxK⟩ := hrel0'.symm
-          calc
-            τ ⟨x, hxK⟩ * (ζ 1 - ζ 0) =
-                ζ 1 * τ ⟨x, hxK⟩ - ζ 0 * τ ⟨x, hxK⟩ := by ring
-            _ = (σ ⟨x, hxK⟩ + 1 - ζ 1) - σ ⟨x, hxK⟩ := by rw [h1, h0]
-            _ = 1 - ζ 1 := by ring
-        have hζdiff : ζ 1 - ζ 0 ≠ 0 := by
-          intro hdiff
-          have hone : 1 - ζ 1 = 0 := by
-            calc
-              1 - ζ 1 = τ ⟨x, hxK⟩ * (ζ 1 - ζ 0) := hτrel.symm
-              _ = 0 := by rw [hdiff, mul_zero]
-          exact hζneone 1 (sub_eq_zero.mp hone).symm
-        have hτformula :
-            τ ⟨x, hxK⟩ = (1 - ζ 1) / (ζ 1 - ζ 0) := by
-          apply (eq_div_iff hζdiff).2
-          exact hτrel
-        have hnum : IsAlgebraic (ZMod p) (1 - ζ 1) := by
-          exact (isAlgebraic_one.isIntegral.sub (hζalg 1).isIntegral).isAlgebraic
-        have hden : IsAlgebraic (ZMod p) (ζ 1 - ζ 0) := by
-          exact ((hζalg 1).isIntegral.sub (hζalg 0).isIntegral).isAlgebraic
-        have hτalg : IsAlgebraic (ZMod p) (τ ⟨x, hxK⟩) := by
-          rw [hτformula]
-          simpa [div_eq_mul_inv] using
-            (hnum.isIntegral.mul hden.isIntegral.inv).isAlgebraic
-        have hK : Algebra.IsAlgebraic (ZMod p) k := by
-          constructor
-          intro a
-          have hrelA :
-              σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a =
-                ζ a * τ ⟨x, hxK⟩ + ζ a * algebraMap k (AlgebraicClosure k) a := by
-            simpa [mul_add] using hrel a
-          have hA : algebraMap k (AlgebraicClosure k) a =
-              (ζ a - ζ 0) * τ ⟨x, hxK⟩ +
-                ζ a * algebraMap k (AlgebraicClosure k) a := by
-            calc
-              algebraMap k (AlgebraicClosure k) a =
-                  (σ ⟨x, hxK⟩ + algebraMap k (AlgebraicClosure k) a) -
-                    σ ⟨x, hxK⟩ := by ring
-              _ = (ζ a * τ ⟨x, hxK⟩ + ζ a * algebraMap k (AlgebraicClosure k) a) -
-                    ζ 0 * τ ⟨x, hxK⟩ := by rw [hrelA, hrel0']
-              _ = (ζ a - ζ 0) * τ ⟨x, hxK⟩ +
-                    ζ a * algebraMap k (AlgebraicClosure k) a := by ring
-          have hdiffrel :
-              (ζ a - 1) * algebraMap k (AlgebraicClosure k) a =
-                (ζ 0 - ζ a) * τ ⟨x, hxK⟩ := by
-            calc
-              (ζ a - 1) * algebraMap k (AlgebraicClosure k) a =
-                  ζ a * algebraMap k (AlgebraicClosure k) a -
-                    algebraMap k (AlgebraicClosure k) a := by ring
-              _ = ζ a * algebraMap k (AlgebraicClosure k) a -
-                    ((ζ a - ζ 0) * τ ⟨x, hxK⟩ +
-                      ζ a * algebraMap k (AlgebraicClosure k) a) :=
-                congrArg (fun q => ζ a * algebraMap k (AlgebraicClosure k) a - q) hA
-              _ = (ζ 0 - ζ a) * τ ⟨x, hxK⟩ := by ring
-          have haeq : algebraMap k (AlgebraicClosure k) a =
-              ((ζ 0 - ζ a) * τ ⟨x, hxK⟩) / (ζ a - 1) := by
-            apply (eq_div_iff (sub_ne_zero.mpr (hζneone a))).2
-            calc
-              algebraMap k (AlgebraicClosure k) a * (ζ a - 1) =
-                  (ζ a - 1) * algebraMap k (AlgebraicClosure k) a :=
-                mul_comm _ _
-              _ = (ζ 0 - ζ a) * τ ⟨x, hxK⟩ := hdiffrel
-          have hnuma : IsIntegral (ZMod p)
-              ((ζ 0 - ζ a) * τ ⟨x, hxK⟩) :=
-            (hζalg 0).isIntegral.sub (hζalg a).isIntegral
-              |>.mul hτalg.isIntegral
-          have hdena : IsIntegral (ZMod p) (ζ a - 1) :=
-            (hζalg a).isIntegral.sub isAlgebraic_one.isIntegral
-          have haalg : IsAlgebraic (ZMod p)
-              (algebraMap k (AlgebraicClosure k) a) := by
-            rw [haeq]
-            simpa [div_eq_mul_inv] using (hnuma.mul hdena.inv).isAlgebraic
-          let f : k →ₐ[ZMod p] AlgebraicClosure k :=
-            IsScalarTower.toAlgHom (ZMod p) k (AlgebraicClosure k)
-          have hf : IsAlgebraic (ZMod p) (f a) := by
-            change IsAlgebraic (ZMod p) (algebraMap k (AlgebraicClosure k) a)
-            exact haalg
-          exact (isAlgebraic_algHom_iff f f.injective).mp hf
-        letI : IsScalarTower (ZMod p) k k' := by
-          apply IsScalarTower.of_algebraMap_eq'
-          ext a
-          obtain ⟨n, rfl⟩ := ZMod.natCast_zmod_surjective a
-          simp
-        letI : Algebra.IsAlgebraic (ZMod p) k := hK
-        have hK' : Algebra.IsAlgebraic (ZMod p) k' :=
-          Algebra.IsAlgebraic.trans (ZMod p) k k'
-        have hKdef : isAlgebraicOverPrimeField p k hk := by
-          dsimp [isAlgebraicOverPrimeField]
-          exact hK
-        have hK'def : isAlgebraicOverPrimeField p k' hk' := by
-          dsimp [isAlgebraicOverPrimeField]
-          exact hK'
-        exact Or.inr ⟨p, hp, hk, hk', Or.inr ⟨hKdef, hK'def⟩⟩
-  · intro h
-    change
-      (Function.Surjective (algebraMap k k') ∨
-        ∃ p : ℕ, p.Prime ∧
-          ∃ hk : CharP k p, ∃ hk' : CharP k' p,
-            IsPurelyInseparable k k' ∨
-              (isAlgebraicOverPrimeField p k hk ∧
-                isAlgebraicOverPrimeField p k' hk')) at h
-    change ∀ x : k', ∃ n : ℕ, 0 < n ∧ x ^ n ∈ (algebraMap k k').range
-    rcases h with hsurj | ⟨p, hp, hk, hk', hcase⟩
-    · intro x
-      obtain ⟨y, rfl⟩ := hsurj x
-      exact ⟨1, Nat.zero_lt_one, by simp⟩
-    · rcases hcase with hpi | ⟨hK, hK'⟩
-      · letI : CharP k p := hk
-        letI : CharP k' p := hk'
-        letI : ExpChar k p := ExpChar.prime hp
-        letI : IsPurelyInseparable k k' := hpi
-        intro x
-        obtain ⟨n, y, hy⟩ := IsPurelyInseparable.pow_mem k p x
-        exact ⟨p ^ n, Nat.pow_pos hp.pos, ⟨y, hy⟩⟩
-      · letI : CharP k p := hk
-        letI : CharP k' p := hk'
-        letI : Fact p.Prime := ⟨hp⟩
-        letI : NeZero p := ⟨hp.ne_zero⟩
-        letI : Algebra (ZMod p) k' := ZMod.algebra k' p
-        change Algebra.IsAlgebraic (ZMod p) k' at hK'
-        intro x
-        by_cases hx : x = 0
-        · subst x
-          exact ⟨1, Nat.zero_lt_one, ⟨0, by simp⟩⟩
-        · let E : IntermediateField (ZMod p) k' :=
-            IntermediateField.adjoin (ZMod p) ({x} : Set k')
-          letI : FiniteDimensional (ZMod p) E :=
-            IntermediateField.finiteDimensional_adjoin (S := ({x} : Set k'))
-              (fun y hy => by
-                have : y = x := by simpa using hy
-                subst y
-                exact (Algebra.IsAlgebraic.isIntegral (K := ZMod p)
-                  (A := k')).isIntegral x)
-          letI : Finite E := Module.finite_of_finite (ZMod p)
-          let ux : Eˣ := Units.mk0 ⟨x, IntermediateField.subset_adjoin (ZMod p)
-            ({x} : Set k') (by simp)⟩ (by
-              intro hzero
-              apply hx
-              exact congrArg (fun z : E => (z : k')) hzero)
-          obtain ⟨n, hn, hux⟩ := (isOfFinOrder_of_finite ux).exists_pow_eq_one
-          refine ⟨n, hn, ⟨1, ?_⟩⟩
-          have hux' := congrArg (fun z : Eˣ => (z : E)) hux
-          have hux'' := congrArg (fun z : E => (z : k')) hux'
-          simpa [ux] using hux''.symm
+  · exact fieldPowerProperty_to_classification
+  · exact fieldPowerClassification_to_fieldPowerProperty
 
 /-- A surjective map with locally nilpotent kernel is a homeomorphism on
     spectra, isomorphic on residue fields, and retains these kernel facts

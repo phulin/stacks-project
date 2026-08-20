@@ -48,7 +48,7 @@ theorem dimension_prime_polynomial_ring
         rw [hI]
         trivial
       exact hmem
-    simpa using hzero
+    simp at hzero
   obtain ⟨r, _, g, hg, hgf, hdim, _⟩ :=
     Formalization.Books.Algebra.Unit115.noether_normalization
       (RingHom.ker φ) hI
@@ -69,21 +69,21 @@ theorem dimension_prime_polynomial_ring
   have htrdegS : Algebra.trdeg k S = r := by
     have htrdegQ : Algebra.trdeg k
         (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) = r := by
-      letI : IsDomain (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
+      let : IsDomain (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
         e.toRingEquiv.isDomain_iff.mpr inferInstance
-      letI : Algebra (MvPolynomial (Fin r) k)
+      let : Algebra (MvPolynomial (Fin r) k)
           (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) := g.toAlgebra
-      letI : IsScalarTower k (MvPolynomial (Fin r) k)
+      let : IsScalarTower k (MvPolynomial (Fin r) k)
           (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
         IsScalarTower.of_algebraMap_eq fun x => (g.commutes x).symm
       have hfaith : FaithfulSMul (MvPolynomial (Fin r) k)
           (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
         (faithfulSMul_iff_algebraMap_injective _ _).mpr hg
-      letI : FaithfulSMul (MvPolynomial (Fin r) k)
+      let : FaithfulSMul (MvPolynomial (Fin r) k)
           (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) := hfaith
-      letI : Module.Finite (MvPolynomial (Fin r) k)
+      let : Module.Finite (MvPolynomial (Fin r) k)
           (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) := hgf
-      letI : Algebra.IsAlgebraic (MvPolynomial (Fin r) k)
+      let : Algebra.IsAlgebraic (MvPolynomial (Fin r) k)
           (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
         Algebra.IsAlgebraic.of_finite _ _
       rw [← trdeg_add_eq k (MvPolynomial (Fin r) k)]
@@ -93,10 +93,10 @@ theorem dimension_prime_polynomial_ring
       simp [MvPolynomial.trdeg_of_isDomain]
     simpa using e.trdeg_eq.symm.trans htrdegQ
   have htrdegK : Algebra.trdeg k K = r := by
-    letI : Algebra.IsAlgebraic S K := IsLocalization.isAlgebraic K (nonZeroDivisors S)
+    let : Algebra.IsAlgebraic S K := IsLocalization.isAlgebraic K (nonZeroDivisors S)
     have hfaith : FaithfulSMul S K :=
       (faithfulSMul_iff_algebraMap_injective _ _).mpr (IsFractionRing.injective S K)
-    letI : FaithfulSMul S K := hfaith
+    let : FaithfulSMul S K := hfaith
     have h := lift_trdeg_add_eq k S K
     rw [htrdegS, trdeg_eq_zero] at h
     simpa using h.symm
@@ -215,9 +215,9 @@ theorem dimension_preserved_field_extension
         MvPolynomial (Fin r) K :=
       MvPolynomial.algebraTensorAlgEquiv k K
     let hdimKData : TensorDimensionWitness (k := k) (S := S) (K := K) r := by
-      letI cKP : CommRing (K ⊗[k] MvPolynomial (Fin r) k) := inferInstance
-      letI cKA : CommRing (K ⊗[k] A) := inferInstance
-      letI cPK : CommRing (MvPolynomial (Fin r) k ⊗[k] K) := inferInstance
+      let cKP : CommRing (K ⊗[k] MvPolynomial (Fin r) k) := inferInstance
+      let cKA : CommRing (K ⊗[k] A) := inferInstance
+      let cPK : CommRing (MvPolynomial (Fin r) k ⊗[k] K) := inferInstance
       letI cAK : CommRing (A ⊗[k] K) := inferInstance
       let gT : (K ⊗[k] MvPolynomial (Fin r) k) →+*
           (K ⊗[k] A) :=

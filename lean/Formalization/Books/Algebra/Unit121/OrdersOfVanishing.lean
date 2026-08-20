@@ -923,9 +923,10 @@ theorem orderOfVanishing_det_comp
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
     (φ ψ : V ≃ₗ[K] V) :
     orderOfVanishing hnoetherian hdim (LinearEquiv.det (ψ.trans φ)) =
-      orderOfVanishing hnoetherian hdim (LinearEquiv.det φ) +
+    orderOfVanishing hnoetherian hdim (LinearEquiv.det φ) +
         orderOfVanishing hnoetherian hdim (LinearEquiv.det ψ) := by
-  sorry
+  simpa only [LinearEquiv.det_trans] using
+    orderOfVanishing_mul hnoetherian hdim (LinearEquiv.det φ) (LinearEquiv.det ψ)
 
 theorem latticeDistance_map_eq_orderOfVanishing
     {R : Type u} {K : Type v} {V : Type v}
@@ -951,7 +952,7 @@ theorem exists_fin_basis_equiv
     {K : Type v} {V : Type v} [Field K] [AddCommGroup V]
     [Module K V] [Module.Finite K V] :
     ∃ n : ℕ, Nonempty ((Fin n → K) ≃ₗ[K] V) := by
-  sorry
+  exact ⟨Module.finrank K V, ⟨(Module.finBasis K V).equivFun.symm⟩⟩
 
 theorem latticeDistance_transvection
     {R : Type u} {K : Type v} {V : Type v}

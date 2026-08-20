@@ -951,10 +951,18 @@ private def simplicialAddCommGroupKernel
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y) :
     SimplicialObject AddCommGrpCat.{u} where
   obj n := AddCommGrpCat.of ((f.app n).hom.ker)
-  map α := AddCommGrpCat.ofHom
-    { toFun := fun x => ⟨X.map α x, by /- old proof
-        have h := congrArg (fun g => g x) (f.naturality α)
-        simpa using h.symm.trans (by simp [x.property]) -/ sorry⟩
+  map {n m} α := AddCommGrpCat.ofHom
+    { toFun := fun x => ⟨X.map α x, by
+        have h := congrArg (fun g => g.hom x) (f.naturality α)
+        change (f.app m).hom (X.map α x) = 0
+        have h' : (f.app m).hom (X.map α x) = (Y.map α) ((f.app n).hom x) := by
+          change (f.app m).hom ((X.map α).hom x) =
+            (Y.map α).hom ((f.app n).hom x)
+          exact h
+        have hx : (f.app n).hom (↑x) = 0 := x.property
+        rw [h']
+        rw [hx]
+        simp⟩
       map_zero' := by
         ext
         simp
@@ -966,14 +974,12 @@ private def simplicialAddCommGroupKernel
     intro n
     apply AddCommGrpCat.ext
     intro x
-    /- old proof rfl -/
-    sorry
+    simp
   map_comp := by
     intro n m l α β
     apply AddCommGrpCat.ext
     intro x
-    /- old proof rfl -/
-    sorry
+    simp
 
 private def simplicialAddCommGroupKernelι
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y) :

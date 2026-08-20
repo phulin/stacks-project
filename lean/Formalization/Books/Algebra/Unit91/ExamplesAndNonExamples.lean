@@ -2081,7 +2081,7 @@ theorem powerSeriesTorsionDirectSumCompletion_not_mittagLeffler
   obtain ⟨Q, hQ, ξ', hξ'⟩ :=
     finite_annihilator_approximation_of_mittagLeffler_general
       (powerSeriesXIdeal k) η hML
-  letI : ∀ n : ℕ+, AddCommGroup (powerSeriesQuotientFamily k n : Type u) := fun n => by
+  let _ : ∀ n : ℕ+, AddCommGroup (powerSeriesQuotientFamily k n : Type u) := fun n => by
     change AddCommGroup
       (PowerSeries k ⧸ (powerSeriesXIdeal k) ^ (n : ℕ))
     infer_instance
@@ -2603,8 +2603,50 @@ private lemma artinianLocalExample_idempotent
       rw [map_add]
     have hfixed : e (σ (φ x)) + e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) =
         σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p := by
-      simpa only [htopfix x, hsocle p]
+      simp only [htopfix x, hsocle p]
     exact hxe.trans (hsum.trans (hfixed.trans hp.symm))
+
+private lemma moduleCat_isZero_of_biprod_projection_zero
+    {R : Type u} [CommRing R] {M Y Z : ModuleCat R} (a : M ≅ Y ⊞ Z)
+    (h : a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv = 0) : IsZero Y := by
+  rw [ModuleCat.isZero_iff_subsingleton]
+  constructor
+  intro y z
+  have h' := congrArg
+    (fun q : M ⟶ M =>
+      (biprod.inl : Y ⟶ Y ⊞ Z) ≫ a.inv ≫ q ≫ a.hom ≫
+        (biprod.fst : Y ⊞ Z ⟶ Y)) h
+  have h'' : (biprod.inl : Y ⟶ Y ⊞ Z) ≫
+      (biprod.fst : Y ⊞ Z ⟶ Y) = 0 := by
+    simpa [Category.assoc] using h'
+  have hid : (𝟙 Y : Y ⟶ Y) = 0 := by simpa using h''
+  have hy : y = 0 := by
+    simpa using congrArg (fun q : Y ⟶ Y => q y) hid
+  have hz : z = 0 := by
+    simpa using congrArg (fun q : Y ⟶ Y => q z) hid
+  exact hy.trans hz.symm
+
+private lemma moduleCat_isZero_of_biprod_projection_id
+    {R : Type u} [CommRing R] {M Y Z : ModuleCat R} (a : M ≅ Y ⊞ Z)
+    (h : a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv = 𝟙 M) : IsZero Z := by
+  rw [ModuleCat.isZero_iff_subsingleton]
+  constructor
+  intro y z
+  have h' := congrArg
+    (fun q : M ⟶ M =>
+      (biprod.inr : Z ⟶ Y ⊞ Z) ≫ a.inv ≫ q ≫ a.hom ≫
+        (biprod.snd : Y ⊞ Z ⟶ Z)) h
+  have h'' : (biprod.inr : Z ⟶ Y ⊞ Z) ≫
+      (biprod.snd : Y ⊞ Z ⟶ Z) = 0 := by
+    simpa only [Category.assoc, Iso.inv_hom_id_assoc, biprod.inr_fst,
+      Category.comp_id, Category.id_comp, zero_comp, biprod.inl_snd,
+      comp_zero] using h'.symm
+  have hid : (𝟙 Z : Z ⟶ Z) = 0 := by simpa using h''
+  have hy : y = 0 := by
+    simpa using congrArg (fun q : Z ⟶ Z => q y) hid
+  have hz : z = 0 := by
+    simpa using congrArg (fun q : Z ⟶ Z => q z) hid
+  exact hy.trans hz.symm
 
 /-- The displayed module is indecomposable. -/
 theorem artinianLocalExample_indecomposable
@@ -2647,12 +2689,12 @@ theorem artinianLocalExample_indecomposable
     change Ideal.Quotient.mk I
       (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (0 : Fin 2)) = 0
     rw [Ideal.Quotient.eq_zero_iff_mem]
-    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+    exact Ideal.subset_span (by simp [pow_two])
   have hAB : A * B = 0 := by
     change Ideal.Quotient.mk I
       (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
     rw [Ideal.Quotient.eq_zero_iff_mem]
-    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal])
+    exact Ideal.subset_span (by simp)
   have hφhf : Polynomial.eval₂ ρP Polynomial.X f = 0 := by
     simp [f, artinianLocalExamplePolynomialRelation, ρP, A, B, hρA, hρB]
   let φ : S →+* Polynomial k := AdjoinRoot.lift ρP Polynomial.X hφhf
@@ -2661,7 +2703,7 @@ theorem artinianLocalExample_indecomposable
     rw [AdjoinRoot.lift_mk]
     induction p using Polynomial.induction_on' with
     | add p q hp hq =>
-        simp [map_add, hp, hq]
+        simp [hp, hq]
     | monomial n a =>
         rw [← Polynomial.C_mul_X_pow_eq_monomial]
         simp [ρP]
@@ -2690,7 +2732,7 @@ theorem artinianLocalExample_indecomposable
     | mul_X p i hp =>
         fin_cases i
         · simp only [map_mul, A, artinianLocalExampleA,
-            I, R, S]
+            R, S]
           simp only [← AdjoinRoot.algebraMap_eq]
           have hA2S : (algebraMap R S A) * (algebraMap R S A) = 0 := by
             rw [← map_mul, hA2, map_zero]
@@ -2708,9 +2750,9 @@ theorem artinianLocalExample_indecomposable
                 ((algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
                   (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))))) := by ring
             _ = 0 := by rw [hA2S', mul_zero]
-            _ = _ := by simp [hρX0, A, I, artinianLocalExampleA, R, S]
+            _ = _ := by simp [hρX0, I, R, S]
         · simp only [map_mul, A, artinianLocalExampleA,
-            I, R, S]
+            R, S]
           simp only [← AdjoinRoot.algebraMap_eq]
           have hABS : (algebraMap R S A) * (algebraMap R S B) = 0 := by
             rw [← map_mul, hAB, map_zero]
@@ -2730,8 +2772,7 @@ theorem artinianLocalExample_indecomposable
                 ((algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
                   (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))))) := by ring
             _ = 0 := by rw [hABS', mul_zero]
-            _ = _ := by simp [hρX0, hρX1, A, B, I, artinianLocalExampleA,
-              artinianLocalExampleB, R, S]
+            _ = _ := by simp [hρX1, I, R, S]
   have hρalg (c : k) : ρ (algebraMap k R c) = c := by
     have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
       change Ideal.Quotient.mk I
@@ -2797,8 +2838,8 @@ theorem artinianLocalExample_indecomposable
     rw [artinianLocalExampleRelationIdeal, Ideal.span_le]
     intro p hp
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
-    rcases hp with rfl | rfl | rfl <;>
-      simp [χ₀, T₀, pow_two, TrivSqZeroExt.inr_mul_inr]
+    rcases hp with rfl | rfl | rfl
+    all_goals simp [χ₀, T₀, pow_two]
   let χ : R →+* T₀ :=
     Ideal.Quotient.lift I χ₀ (fun x hx => RingHom.mem_ker.mp (hχI hx))
   have hχA : χ A = TrivSqZeroExt.inr (1 : Polynomial k) := by
@@ -2822,8 +2863,7 @@ theorem artinianLocalExample_indecomposable
           (TrivSqZeroExt.inr Polynomial.X : T₀) := by
       rw [TrivSqZeroExt.inr_mul_inl]
       simp
-    simp [f, artinianLocalExamplePolynomialRelation, hχA', hχB', T₀, hmul,
-      TrivSqZeroExt.inl_mul_inr, TrivSqZeroExt.inr_mul_inl]
+    simp [f, artinianLocalExamplePolynomialRelation, hχA', hχB', T₀]
     change (TrivSqZeroExt.inr (1 : Polynomial k) : T₀) *
         (TrivSqZeroExt.inl Polynomial.X : T₀) -
           Polynomial.X • (TrivSqZeroExt.inr (1 : Polynomial k) : T₀) = 0
@@ -2884,9 +2924,9 @@ theorem artinianLocalExample_indecomposable
       AdjoinRoot.of (Polynomial.C A * Polynomial.X - Polynomial.C B) B
     rw [← sub_eq_zero]
     convert AdjoinRoot.eval₂_root
-      (Polynomial.C A * Polynomial.X - Polynomial.C B) using 1 <;>
-      simp only [Polynomial.eval₂_sub, Polynomial.eval₂_mul,
-        Polynomial.eval₂_C, Polynomial.eval₂_X]
+      (Polynomial.C A * Polynomial.X - Polynomial.C B) using 1
+    all_goals simp only [Polynomial.eval₂_sub, Polynomial.eval₂_mul,
+      Polynomial.eval₂_C, Polynomial.eval₂_X]
     rfl
   have hmap_smul (e : S →ₗ[R] S) (r : R) (x : S) :
       e (algebraMap R S r * x) = algebraMap R S r * e x := by
@@ -2982,7 +3022,7 @@ theorem artinianLocalExample_indecomposable
     change Ideal.Quotient.mk I
       (MvPolynomial.X (1 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
     rw [Ideal.Quotient.eq_zero_iff_mem]
-    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+    exact Ideal.subset_span (by simp [pow_two])
   have hRA (r : R) : A * r = algebraMap k R (ρ r) * A := by
     obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective r
     induction p using MvPolynomial.induction_on with
@@ -3084,8 +3124,7 @@ theorem artinianLocalExample_indecomposable
           algebraMap k S (ρ v) * AdjoinRoot.of f B := by
         simp only [map_add, map_mul]
         rw [← AdjoinRoot.algebraMap_eq]
-        simp only [IsScalarTower.algebraMap_apply k R (AdjoinRoot f),
-          IsScalarTower.algebraMap_apply k R S]
+        simp only [IsScalarTower.algebraMap_apply k R S]
         ring
   have hcoeff (r : R) :
       ∃ u v : R, r = algebraMap k R (ρ r) + A * u + B * v := by
@@ -3170,7 +3209,7 @@ theorem artinianLocalExample_indecomposable
                     algebraMap k S (ρ v) * AdjoinRoot.of f B := himage r u v hr
             rw [hmain, ← hrootrel]
             simp only [map_mul, map_add, map_pow]
-            simp only [hφalg, hφof, hρA, hρB, map_zero]
+            simp only [hφalg, hφof, hρA, map_zero]
             rw [show σ (Polynomial.C (ρ u)) = algebraMap k S (ρ u) by simp [σ],
               show σ (Polynomial.C (ρ v)) = algebraMap k S (ρ v) by simp [σ],
               show σ Polynomial.X = AdjoinRoot.root f by simp [σ]]
@@ -3189,7 +3228,8 @@ theorem artinianLocalExample_indecomposable
     have h10 : (1 : S) = 0 := @Subsingleton.elim S h 1 0
     have hφ10 : (1 : Polynomial k) = 0 := by
       have h := congrArg φ h10
-      simpa using h
+      rw [map_one, map_zero] at h
+      exact h
     exact (one_ne_zero : (1 : Polynomial k) ≠ 0) hφ10
   · intro Y Z a
     let e_cat : artinianLocalExampleModule k ⟶ artinianLocalExampleModule k :=
@@ -3205,45 +3245,20 @@ theorem artinianLocalExample_indecomposable
       have he_cat0 : e_cat = 0 := by
         apply ModuleCat.hom_ext
         simpa [e] using he0
-      have h_inl_fst :
-          (biprod.inl : Y ⟶ Y ⊞ Z) ≫ (biprod.fst : Y ⊞ Z ⟶ Y) = 0 := by
-        have h := congrArg
-          (fun q : artinianLocalExampleModule k ⟶ artinianLocalExampleModule k =>
-            biprod.inl ≫ a.inv ≫ q ≫ a.hom ≫ biprod.fst) he_cat0
-        simpa [e_cat, Category.assoc] using h
-      rw [ModuleCat.isZero_iff_subsingleton]
-      constructor
-      intro y z
-      have hid : (𝟙 Y : Y ⟶ Y) = 0 := by simpa using h_inl_fst
-      have hy : y = 0 := by
-        simpa using congrArg (fun q : Y ⟶ Y => q y) hid
-      have hz : z = 0 := by
-        simpa using congrArg (fun q : Y ⟶ Y => q z) hid
-      exact hy.trans hz.symm
+      have hproj0 :
+          a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv = 0 := by
+        change a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv = 0 at he_cat0
+        exact he_cat0
+      exact moduleCat_isZero_of_biprod_projection_zero a hproj0
     · right
       have he_cat1 : e_cat = 𝟙 _ := by
         apply ModuleCat.hom_ext
         simpa [e] using he1
-      have h_inr_snd :
-          (biprod.inr : Z ⟶ Y ⊞ Z) ≫ (biprod.snd : Y ⊞ Z ⟶ Z) = 0 := by
-        have h := congrArg
-          (fun q : artinianLocalExampleModule k ⟶ artinianLocalExampleModule k =>
-            biprod.inr ≫ a.inv ≫ q ≫ a.hom ≫ biprod.snd) he_cat1
-        simpa only [e_cat, Category.assoc, Iso.inv_hom_id_assoc,
-          Iso.hom_inv_id_assoc, biprod.inl_fst, biprod.inr_fst,
-          biprod.inl_snd, biprod.inr_snd, Category.comp_id, Category.id_comp,
-          zero_comp, comp_zero] using h.symm
-      rw [ModuleCat.isZero_iff_subsingleton]
-      constructor
-      intro y z
-      have hid : (𝟙 Z : Z ⟶ Z) = 0 := by
-        symm
-        simpa using h_inr_snd
-      have hy : y = 0 := by
-        simpa using congrArg (fun q : Z ⟶ Z => q y) hid
-      have hz : z = 0 := by
-        simpa using congrArg (fun q : Z ⟶ Z => q z) hid
-      exact hy.trans hz.symm
+      have hproj1 :
+          a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv = 𝟙 _ := by
+        change a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv = 𝟙 _ at he_cat1
+        exact he_cat1
+      exact moduleCat_isZero_of_biprod_projection_id a hproj1
 
 /-- The displayed module is not finitely generated.  This implicit fact is
 needed to turn the direct-sum conclusion into the source's non-example. -/
@@ -3324,26 +3339,26 @@ theorem artinianLocalExample_baseRing_isArtinian
     change Ideal.Quotient.mk I
       (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (0 : Fin 2)) = 0
     rw [Ideal.Quotient.eq_zero_iff_mem]
-    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+    exact Ideal.subset_span (by simp [pow_two])
   have hAB : A * B = 0 := by
     change Ideal.Quotient.mk I
       (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
     rw [Ideal.Quotient.eq_zero_iff_mem]
-    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal])
+    exact Ideal.subset_span (by simp)
   have hB2 : B * B = 0 := by
     change Ideal.Quotient.mk I
       (MvPolynomial.X (1 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
     rw [Ideal.Quotient.eq_zero_iff_mem]
-    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+    exact Ideal.subset_span (by simp [pow_two])
   have hmulA : ∀ z : R, z ∈ Q → z * A ∈ Q := by
     intro z hz
     induction hz using Submodule.span_induction with
     | mem z hz =>
         simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
         rcases hz with rfl | rfl | rfl
-        · exact Submodule.subset_span (by simp [Q])
-        · simpa [hA2] using Q.zero_mem
-        · simpa [mul_comm, hAB] using Q.zero_mem
+        · exact Submodule.subset_span (by simp)
+        · simp [hA2]
+        · simp [mul_comm, hAB]
     | zero => simp
     | add x y _ _ hx hy =>
         rw [add_mul]
@@ -3357,9 +3372,9 @@ theorem artinianLocalExample_baseRing_isArtinian
     | mem z hz =>
         simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
         rcases hz with rfl | rfl | rfl
-        · exact Submodule.subset_span (by simp [Q])
-        · simpa [mul_comm, hAB] using Q.zero_mem
-        · simpa [hB2] using Q.zero_mem
+        · exact Submodule.subset_span (by simp)
+        · simp [hAB]
+        · simp [hB2]
     | zero => simp
     | add x y _ _ hx hy =>
         rw [add_mul]

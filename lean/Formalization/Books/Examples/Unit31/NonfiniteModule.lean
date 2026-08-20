@@ -82,7 +82,7 @@ theorem exampleModule_not_finite :
                   (algebraMap exampleBaseRing exampleFractionRing q₁ * x) +
               algebraMap exampleBaseRing exampleFractionRing q₁ *
                   (algebraMap exampleBaseRing exampleFractionRing q₂ * y) := by
-                    simp [map_mul, mul_add, mul_assoc, mul_comm, mul_left_comm]
+                    simp [map_mul, mul_comm, mul_left_comm]
                     ring
           _ = algebraMap exampleBaseRing exampleFractionRing q₂ *
                   algebraMap exampleBaseRing exampleFractionRing r₁ +
@@ -105,7 +105,7 @@ theorem exampleModule_not_finite :
           _ = algebraMap exampleBaseRing exampleFractionRing (a * r) := by
                 rw [map_mul]
   intro hfinite
-  letI : Module.Finite exampleBaseRing ExampleModule := hfinite
+  let : Module.Finite exampleBaseRing ExampleModule := hfinite
   obtain ⟨N, s, hs⟩ := Module.Finite.exists_fin
     (R := exampleBaseRing) (M := ExampleModule)
   choose q r hq hr using fun i : Fin N => hcommon (s i).1 (s i).2
@@ -285,7 +285,7 @@ theorem exampleModule_localized_equiv
                   (t₁ : exampleBaseRing) • ((t₂ : exampleBaseRing) • y) := by
                     change ((t₁ : exampleBaseRing) * (t₂ : exampleBaseRing)) • (x + y) = _
                     rw [smul_add, mul_smul, mul_smul]
-                    congr 1 <;> rw [smul_comm]
+                    (congr 1; rw [smul_comm])
             _ = (t₂ : exampleBaseRing) • (h r₁).1 +
                   (t₁ : exampleBaseRing) • (h r₂).1 := by
               rw [ht₁, ht₂]

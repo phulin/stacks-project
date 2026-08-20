@@ -1,6 +1,6 @@
 import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.CategoryTheory.Bicategory.Functor.LocallyDiscrete
-import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
+import Mathlib.CategoryTheory.Bicategory.Grothendieck
 import Mathlib.CategoryTheory.Groupoid.Basic
 import Mathlib.CategoryTheory.IsomorphismClasses
 import Mathlib.CategoryTheory.Limits.Indization.Category
@@ -199,7 +199,9 @@ def baseCategoryToCompletion
     (Λ k : Type u) [CommRing Λ] [Field k]
     (coefficientMap : Λ →+* k) :
     BaseCategory Λ k coefficientMap ⥤ CompletionCategory Λ k coefficientMap :=
-  by sorry
+  ObjectProperty.ιOfLE (by
+    intro A hA
+    sorry)
 
 /-- The base category is strictly full in its completion category. -/
 theorem baseCategory_strictlyFull_in_completion
@@ -207,7 +209,11 @@ theorem baseCategory_strictlyFull_in_completion
     (coefficientMap : Λ →+* k) :
     Nonempty (baseCategoryToCompletion Λ k coefficientMap).FullyFaithful ∧
       ObjectProperty.IsClosedUnderIsomorphisms
-        (artinianLocalAlgebraProperty Λ k coefficientMap) := by
+        (artinianLocalAlgebraProperty Λ k coefficientMap) ∧
+      ∀ X : CompletionCategory Λ k coefficientMap,
+        (artinianLocalAlgebraProperty Λ k coefficientMap X.obj ↔
+          ∃ Y : BaseCategory Λ k coefficientMap,
+            Nonempty ((baseCategoryToCompletion Λ k coefficientMap).obj Y ≅ X)) := by
   sorry
 
 /-- The pro-category of a category, using Mathlib's canonical ind/op
@@ -223,10 +229,9 @@ structure CompletionProObjectEmbedding
     (P : ObjectProperty (ProObjects (BaseCategory Λ k coefficientMap))) where
   inclusion : CompletionCategory Λ k coefficientMap ⥤
     ProObjects (BaseCategory Λ k coefficientMap)
-  fullyFaithful : Nonempty inclusion.FullyFaithful
-  image : ∀ X, P (inclusion.obj X)
-  essentiallySurjective : ∀ Y, P Y →
-    ∃ X, Nonempty (inclusion.obj X ≅ Y)
+  fullyFaithful : inclusion.FullyFaithful
+  image_iff : ∀ Y,
+    P Y ↔ ∃ X, Nonempty (inclusion.obj X ≅ Y)
 theorem completion_strictlyFull_in_proObjects
     (Λ k : Type u) [CommRing Λ] [Field k]
     (coefficientMap : Λ →+* k) :
@@ -242,13 +247,12 @@ def covariantRepresentable {D : Type u} [Category.{u, u} D] (R : D) :
     D ⥤ Type u :=
   coyoneda.obj (op R)
 
-/-- A functor on a full base category is prorepresentable along an inclusion
+/-- A functor on the base category is prorepresentable along an inclusion
 `ι : C ⥤ D` when it is naturally isomorphic to the restriction of the
 covariant representable attached to an object of `D`. -/
 def IsProrepresentable {C D : Type u} [Category.{u, u} C]
     [Category.{u, u} D] (ι : C ⥤ D) (F : C ⥤ Type u) : Prop :=
-  Nonempty ι.FullyFaithful ∧
-    ∃ R : D, Nonempty (F ≅ ι ⋙ covariantRepresentable R)
+  ∃ R : D, Nonempty (F ≅ ι ⋙ covariantRepresentable R)
 
 /-! ## Cofibered categories, groupoids, and trivial fibers -/
 
@@ -268,11 +272,49 @@ def IsCofiberedInGroupoids {C : Type u} [Category.{u, u} C]
     (F : CofiberedCategory C) : Prop :=
   ∀ A : C, IsGroupoid (F.obj (.mk A))
 
-/-- A groupoid in functors on `C`, presented in the equivalent cofibered
-groupoid convention. -/
+def cofiberedFiberObjects {C : Type u} [Category.{u, u} C]
+    (F : CofiberedCategory C) (A : C) : Type u :=
+  F.obj (.mk A)
+
+def cofiberedFiberArrows {C : Type u} [Category.{u, u} C]
+    (F : CofiberedCategory C) (A : C) : Type u :=
+  Σ X Y : (F.obj (.mk A) : Type u), (X ⟶ Y)
+
+def cofiberedFiberArrowMap {C : Type u} [Category.{u, u} C]
+    {F : CofiberedCategory C} {A B : C} (q : A ⟶ B) :
+    cofiberedFiberArrows F A → cofiberedFiberArrows F B := by
+  intro a
+  exact ⟨(F.map q.toLoc).toFunctor.obj a.1,
+    (F.map q.toLoc).toFunctor.obj a.2.1,
+    (F.map q.toLoc).toFunctor.map a.2.2⟩
+
+/-- A groupoid in functors on `C`, recorded together with the cofibered
+groupoid that it presents.  The object and arrow functors are the source's
+`U` and `R`; the displayed equivalences and their naturality keep them tied
+to the fiberwise objects and arrows of the cofibered groupoid. -/
 structure GroupoidInFunctors (C : Type u) [Category.{u, u} C] where
   cofibered : CofiberedCategory C
   groupoid : IsCofiberedInGroupoids cofibered
+  objectFunctor : C ⥤ Type u
+  arrowFunctor : C ⥤ Type u
+  source : arrowFunctor ⟶ objectFunctor
+  target : arrowFunctor ⟶ objectFunctor
+  objectIdentification : ∀ A,
+    objectFunctor.obj A ≃ cofiberedFiberObjects cofibered A
+  arrowIdentification : ∀ A,
+    arrowFunctor.obj A ≃ cofiberedFiberArrows cofibered A
+  sourceIdentification : ∀ {A : C} (r : arrowFunctor.obj A),
+    objectIdentification A (source.app A r) = (arrowIdentification A r).1
+  targetIdentification : ∀ {A : C} (r : arrowFunctor.obj A),
+    objectIdentification A (target.app A r) = (arrowIdentification A r).2.1
+  objectIdentificationNaturality : ∀ {A B : C} (q : A ⟶ B)
+      (x : objectFunctor.obj A),
+    objectIdentification B (objectFunctor.map q x) =
+      (cofibered.map q.toLoc).toFunctor.obj (objectIdentification A x)
+  arrowIdentificationNaturality : ∀ {A B : C} (q : A ⟶ B)
+      (x : arrowFunctor.obj A),
+    arrowIdentification B (arrowFunctor.map q x) =
+      cofiberedFiberArrowMap q (arrowIdentification A x)
 
 /-- Morphisms of cofibered categories are pseudonatural transformations. -/
 abbrev CofiberedMorphism {C : Type u} [Category.{u, u} C]
@@ -403,6 +445,8 @@ structure CofiberedRestrictionEquivalence {C D : Type u}
     [Category.{u, u} C] [Category.{u, u} D]
     (ι : C ⥤ D) (Fhat : CofiberedCategory D) (F : CofiberedCategory C) where
   map : restrictCofiberedCategory ι Fhat ⟶ F
+  sourceGroupoid : IsCofiberedInGroupoids Fhat
+  targetGroupoid : IsCofiberedInGroupoids F
   fiberwiseEquivalence : ∀ A : C,
     Functor.IsEquivalence (map.app (.mk A)).toFunctor
 
@@ -573,7 +617,7 @@ def rimSchlessinger_implies_S1_S2 {C : Type u}
     [Category.{u, u} C] {F : CofiberedCategory C} {k₀ : C}
     {k : Type u} [Field k] {T Inf : TangentSpace k}
     (S : GroupoidSchlessingerConditions F k₀ k T Inf) : Prop :=
-  IsPredeformationCategory F k₀ → S.RS → SatisfiesS1S2 S
+  S.RS → SatisfiesS1S2 S
 
 def rimSchlessinger_implies_associated_functor_H1_H2 {C : Type u}
     [Category.{u, u} C] {F : CofiberedCategory C} {k₀ : C}
@@ -589,7 +633,7 @@ def associated_functor_H4_iff_automorphism_extension {C : Type u}
     (S : GroupoidSchlessingerConditions F k₀ k T Inf)
     (A : AssociatedIsomorphismClassFunctor F)
     (D : AssociatedFunctorSchlessingerData S A) : Prop :=
-  IsPredeformationCategory F k₀ → S.RS →
+  S.RS →
     (D.conditions.H4 ↔ D.automorphismExtension)
 
 /- The three alternatives in the miniversal theorem are recorded with
@@ -662,11 +706,11 @@ def miniversal_formal_object_characterization {C D : Type u}
 /- The object and arrow types of the fibers of a groupoid in functors. -/
 def groupoidFiberObjects {C : Type u} [Category.{u, u} C]
     (G : GroupoidInFunctors C) (A : C) : Type u :=
-  G.cofibered.obj (.mk A)
+  G.objectFunctor.obj A
 
 def groupoidFiberArrows {C : Type u} [Category.{u, u} C]
     (G : GroupoidInFunctors C) (A : C) : Type u :=
-  Σ X Y : (G.cofibered.obj (.mk A) : Type u), (X ⟶ Y)
+  G.arrowFunctor.obj A
 
 /-- A prorepresentability certificate for the object and arrow functors of a
 groupoid in functors, together with the cofibered groupoid obtained from its
@@ -675,27 +719,23 @@ quotient construction.  The source/target and composition laws remain in
 structure ProrepresentableGroupoidInFunctors {C D : Type u}
     [Category.{u, u} C] [Category.{u, u} D] (ι : C ⥤ D) where
   groupoid : GroupoidInFunctors C
-  objectFunctor : C ⥤ Type u
-  arrowFunctor : C ⥤ Type u
-  objectIdentification : ∀ A,
-    Nonempty (objectFunctor.obj A ≃ groupoidFiberObjects groupoid A)
-  arrowIdentification : ∀ A,
-    Nonempty (arrowFunctor.obj A ≃ groupoidFiberArrows groupoid A)
-  objectProrepresentable : IsProrepresentable ι objectFunctor
-  arrowProrepresentable : IsProrepresentable ι arrowFunctor
-  quotient : CofiberedCategory C
-  quotientIsGroupoid : IsCofiberedInGroupoids quotient
+  objectProrepresentable : IsProrepresentable ι groupoid.objectFunctor
+  arrowProrepresentable : IsProrepresentable ι groupoid.arrowFunctor
 
 /-- A smooth prorepresentable groupoid presentation of a cofibered groupoid.
-The equivalence is expressed on Grothendieck total categories, while
-`smooth` uses the infinitesimal lifting predicate already defined above. -/
+Smoothness is imposed on the source and target maps of the groupoid in
+functors, while the presentation itself is an equivalence of cofibered
+groupoids. -/
 structure SmoothProrepresentableGroupoidPresentation {C D : Type u}
     [Category.{u, u} C] [Category.{u, u} D]
     (Surjective : ∀ {B A : C}, (B ⟶ A) → Prop)
     (F : CofiberedCategory C) (ι : C ⥤ D) where
   presentation : ProrepresentableGroupoidInFunctors ι
-  map : presentation.quotient ⟶ F
-  smooth : IsSmoothCofiberedMorphism Surjective map
+  map : presentation.groupoid.cofibered ⟶ F
+  sourceSmooth :
+    IsSmoothSetValuedMorphism Surjective presentation.groupoid.source
+  targetSmooth :
+    IsSmoothSetValuedMorphism Surjective presentation.groupoid.target
   equivalence :
     Functor.IsEquivalence (Pseudofunctor.Grothendieck.map map)
 

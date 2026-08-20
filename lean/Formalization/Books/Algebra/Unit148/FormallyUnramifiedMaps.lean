@@ -50,16 +50,6 @@ theorem formallyUnramified_iff_differentials
 
 /-! ## Local and localized forms -/
 
-/-- The canonical algebra structure on the two localizations at a prime and its
-contraction. -/
-@[instance_reducible]
-noncomputable def localizedAtPrimeAlgebra
-    {R : Type v} {S : Type u} [CommRing R] [CommRing S] [Algebra R S]
-    (q : PrimeSpectrum S) :
-    Algebra (Localization.AtPrime (q.asIdeal.comap (algebraMap R S)))
-      (Localization.AtPrime q.asIdeal) :=
-  (Localization.localRingHom _ _ _ rfl).toAlgebra
-
 /-- The three local characterizations of a formally unramified map. -/
 theorem formallyUnramified_iff_local
     {R : Type v} {S : Type u} [CommRing R] [CommRing S] [Algebra R S] :
@@ -70,7 +60,7 @@ theorem formallyUnramified_iff_local
           letI : Algebra
               (Localization.AtPrime (q.asIdeal.comap (algebraMap R S)))
               (Localization.AtPrime q.asIdeal) :=
-            localizedAtPrimeAlgebra q
+            (Localization.localRingHom _ _ _ rfl).toAlgebra
           Algebra.FormallyUnramified
             (Localization.AtPrime (q.asIdeal.comap (algebraMap R S)))
             (Localization.AtPrime q.asIdeal) ] := by

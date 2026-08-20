@@ -173,8 +173,7 @@ private theorem koszulAlgebraDifferential_mul_generator_aux (R E : Type u) [Comm
     rw [AlternatingMap.alternatizeUncurryFin_apply, Fin.sum_univ_succ]
     cases n with
     | zero =>
-        simp [koszulAlgebraDifferential_on_generator_aux,
-          koszulContractionPreAlgebra, Int.cast_smul_eq_zsmul,
+        simp [koszulContractionPreAlgebra,
           AlternatingMap.alternatizeUncurryFin_apply]
     | succ n =>
         have hremove (i : Fin (n + 1)) :
@@ -184,11 +183,9 @@ private theorem koszulAlgebraDifferential_mul_generator_aux (R E : Type u) [Comm
           simpa [Matrix.vecCons, Fin.removeNth, Function.comp_apply] using
             congrFun (Fin.cons_comp_succ_succAbove e v i) j
         rw [ExteriorAlgebra.liftAlternating_apply_ιMulti]
-        simp [koszulAlgebraDifferential_on_generator_aux,
-          koszulAlgebraDifferential_apply_ιMulti, koszulContractionPreAlgebra,
-          Int.cast_smul_eq_zsmul, AlternatingMap.alternatizeUncurryFin_apply,
-          hremove, Finset.mul_sum, pow_succ, smul_eq_mul, mul_assoc, mul_comm,
-          mul_left_comm]
+        simp [koszulContractionPreAlgebra,
+          AlternatingMap.alternatizeUncurryFin_apply, hremove, Finset.mul_sum,
+          pow_succ, mul_comm]
         apply Finset.sum_congr rfl
         intro i hi
         congr 1
@@ -223,7 +220,7 @@ private theorem koszulAlgebraDifferential_mul_homogeneous_aux (R E : Type u)
           koszulAlgebraDifferential_mul_generator_aux,
           koszulAlgebraDifferential_mul_generator_aux, ih]
         rw [pow_succ]
-        simp only [smul_add, smul_smul, mul_add, add_mul, neg_add, neg_mul,
+        simp only [smul_add, smul_smul, mul_add, add_mul, neg_mul,
           mul_neg, neg_smul, one_smul, Algebra.mul_smul_comm, mul_one, one_mul]
         simp only [mul_assoc]
         abel
@@ -244,7 +241,7 @@ private theorem koszulAlgebraDifferential_mul_homogeneous_aux (R E : Type u)
           (-1 : R) ^ n •
             (((z₁ : ExteriorAlgebra R E) + (z₂ : ExteriorAlgebra R E)) *
               koszulAlgebraDifferential R E φ y)
-      simp only [map_add, add_mul, mul_add, add_smul, smul_add]
+      simp only [map_add, add_mul, smul_add]
       rw [ih₁, ih₂]
       abel
   | smul r z hz ih =>
@@ -255,7 +252,7 @@ private theorem koszulAlgebraDifferential_mul_homogeneous_aux (R E : Type u)
             (((r : R) • (z : ExteriorAlgebra R E)) * koszulAlgebraDifferential R E φ y)
       rw [smul_mul_assoc, map_smul, smul_mul_assoc, map_smul]
       rw [ih]
-      simp only [smul_mul_assoc, smul_smul, mul_assoc, smul_add]
+      simp only [smul_mul_assoc, smul_smul, smul_add]
       rw [mul_comm]
 
 private theorem koszulAlgebraDifferential_comp_self_aux (R E : Type u) [CommRing R]
@@ -276,7 +273,7 @@ private theorem koszulAlgebraDifferential_comp_self_aux (R E : Type u) [CommRing
         map_add, map_smul, koszulAlgebraDifferential_mul_generator_aux,
         koszulAlgebraDifferential_on_generator_aux]
       rw [← Algebra.smul_def, map_smul, hx]
-      simp [smul_mul_assoc, smul_smul, mul_assoc, Algebra.mul_smul_comm]
+      simp
       rw [Algebra.smul_def]
       exact add_neg_cancel _
 

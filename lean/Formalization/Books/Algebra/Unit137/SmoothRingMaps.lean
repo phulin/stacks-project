@@ -950,6 +950,24 @@ def SmoothLocus
     (R S : Type*) [CommRing R] [CommRing S] [Algebra R S] :
     Set (PrimeSpectrum S) := {q | IsSmoothAt R S q}
 
+/-- A globally smooth map is smooth at every prime. -/
+theorem isSmoothAt_of_smooth
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.Smooth R S] (q : PrimeSpectrum S) :
+    IsSmoothAt R S q := by
+  refine ⟨1, ?_, smooth_localization (R := R) (S := S) 1⟩
+  intro h1
+  exact q.2.ne_top (q.asIdeal.eq_top_iff_one.mpr h1)
+
+/-- The smooth locus of a smooth algebra is the whole prime spectrum. -/
+theorem smoothLocus_eq_univ_of_smooth
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.Smooth R S] :
+    SmoothLocus R S = Set.univ := by
+  ext q
+  simp only [SmoothLocus, Set.mem_ofPred_eq, Set.mem_univ, iff_true]
+  exact isSmoothAt_of_smooth q
+
 def H1VanishingAt
     (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) : Prop :=

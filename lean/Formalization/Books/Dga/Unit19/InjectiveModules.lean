@@ -178,7 +178,8 @@ structure DgmLeftEvaluationSpec
     (dgmCharacterDualOfRight (dgmCharacterDualOfLeft M))
   formula : ∀ (n : ℤ) (x : M.complex.X n),
     HEq ((map.underlying.f n).hom x)
-      (Formalization.Books.Dga.Unit17.characterEvaluationAt x)
+      ((n.negOnePow : ℤ) •
+        Formalization.Books.Dga.Unit17.characterEvaluationAt x)
 
 structure DgmRightEvaluationSpec
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
@@ -187,7 +188,8 @@ structure DgmRightEvaluationSpec
     (dgmCharacterDualOfLeft (dgmCharacterDualOfRight M))
   formula : ∀ (n : ℤ) (x : M.complex.X n),
     HEq ((map.underlying.f n).hom x)
-      (Formalization.Books.Dga.Unit17.characterEvaluationAt x)
+      ((n.negOnePow : ℤ) •
+        Formalization.Books.Dga.Unit17.characterEvaluationAt x)
 
 theorem dgm_left_evaluation_exists
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}

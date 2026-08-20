@@ -3,7 +3,6 @@ import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.CategoryTheory.Sites.Sheaf
-import Formalization.Books.Derived.Unit20.InjectiveResolutions
 import Formalization.Books.Derived.Unit23.ResolutionFunctors
 import Formalization.Books.Homology.Unit25.DoubleComplexes
 import Formalization.Books.Homology.Unit27.Injectives
@@ -11,7 +10,8 @@ import Formalization.Books.Sheaves.Unit10.SheavesOfModules
 import Formalization.Books.Sheaves.Unit25.Infrastructure
 
 /-!
-# Derived Categories, Chapter 24: functorial injective embeddings
+# Derived Categories, Chapter 24: functorial injective embeddings and
+# resolution functors
 
 This file formalizes the source's category of bounded-below injective
 resolutions and the functorial construction from a functorial injective
@@ -26,8 +26,6 @@ open CategoryTheory
 open CategoryTheory.Limits
 open CategoryTheory.Preadditive
 open Formalization.Books.Derived.Unit08
-open Formalization.Books.Derived.Unit11
-open Formalization.Books.Derived.Unit20
 open Formalization.Books.Homology.Unit18
 open Formalization.Books.Homology.Unit25
 open Formalization.Books.Homology.Unit27
@@ -63,20 +61,11 @@ abbrev InjectiveSubcategory
     (A : Type u) [Category.{v} A] [Abelian A] :=
   Formalization.Books.Derived.Unit23.InjectiveSubcategory A
 
-/- The source writes `K⁺(I)` for complexes of injective objects.  We use the
-   canonical full subcategory of `K⁺(A)` consisting of objects represented by
-   bounded-below termwise-injective complexes. -/
-def injectiveHomotopyProperty
-    {A : Type u} [Category.{v} A] [Abelian A] :
-    ObjectProperty (KPlus A) :=
-  fun X =>
-    ∃ I : CompPlus A, IsTermwiseInjectiveComplex I ∧
-      Nonempty ((HomotopyCategory.Plus.quotient A).obj I ≅ X)
-
-/-- The source's `K⁺(I)`, represented as a full subcategory of `K⁺(A)`. -/
+/- The source's `K⁺(I)` is the bounded-below homotopy category of the
+   canonical full subcategory of injective objects from Chapter 23. -/
 abbrev KPlusInjective
     (A : Type u) [Category.{v} A] [Abelian A] :=
-  (injectiveHomotopyProperty (A := A)).FullSubcategory
+  KPlus (InjectiveSubcategory A)
 
 /-- The source functor `s : InjRes(A) ⥤ Comp⁺(A)`. -/
 def injResSourceFunctor
@@ -93,16 +82,32 @@ noncomputable def injResTargetComplexFunctor
     ((injResObjectProperty (A := A)).ι ⋙ Arrow.rightFunc)
     (fun R => R.property.2.1)
 
-/-- The source functor `t : InjRes(A) ⥤ K⁺(I)`. -/
-def injResTargetFunctor
+/- The source functor `t : InjRes(A) ⥤ K⁺(I)`.  Its object map lifts the
+   termwise-injective right complex into the canonical injective-object
+   subcategory; the corresponding morphism map is induced by the arrow
+   category. -/
+noncomputable def injResTargetFunctor
     {A : Type u} [Category.{v} A] [Abelian A] :
-    InjRes A ⥤ KPlusInjective A :=
-  ObjectProperty.lift (injectiveHomotopyProperty (A := A))
-    (injResTargetComplexFunctor (A := A) ⋙
-      HomotopyCategory.Plus.quotient A)
-    (fun R =>
-      let I : CompPlus A := ⟨R.obj.right, R.property.2.1⟩
-      ⟨I, R.property.2.2.1, ⟨Iso.refl _⟩⟩)
+    InjRes A ⥤ KPlusInjective A := by
+  let F : InjRes A ⥤ Comp A :=
+    injResTargetComplexFunctor (A := A) ⋙ (boundedBelowProperty A).ι
+  have hF : ∀ R : InjRes A, ∀ n : ℤ, isInjective A ((F.obj R).X n) := by
+    intro R n
+    change Injective (R.obj.right.X n)
+    exact R.property.2.2.1 n
+  let G : InjRes A ⥤ Comp (InjectiveSubcategory A) :=
+    HomologicalComplex.liftFunctorObjectProperty (isInjective A) F hF
+  have hG : ∀ R : InjRes A,
+      boundedBelowProperty (InjectiveSubcategory A) (G.obj R) := by
+    intro R
+    obtain ⟨B, hB⟩ := R.property.2.1
+    refine ⟨B, ?_⟩
+    rw [← CochainComplex.isStrictlyGE_mapHomologicalComplex_obj_iff _
+      (CategoryTheory.InjectiveObject.ι A)]
+    exact hB
+  let Gplus : InjRes A ⥤ CompPlus (InjectiveSubcategory A) :=
+    ObjectProperty.lift (boundedBelowProperty (InjectiveSubcategory A)) G hG
+  exact Gplus ⋙ HomotopyCategory.Plus.quotient (InjectiveSubcategory A)
 
 /-! ## Resolution-functor data -/
 
@@ -154,6 +159,16 @@ structure FunctorialInjectiveDoubleComplex
   /-- The first row is the chosen injective embedding of each term. -/
   degreeZeroObject : ∀ p : ℤ,
     doubleComplex.obj p 0 = (J.obj (K.obj.X p)).right
+  /-- The source term is identified with the left endpoint of the chosen
+      embedding. -/
+  degreeZeroSource : ∀ p : ℤ,
+    K.obj.X p = (J.obj (K.obj.X p)).left
+  /-- After identifying the first row with the chosen target, the
+      augmentation is the chosen embedding. -/
+  degreeZeroMap : ∀ p : ℤ,
+    resolution.augmentation.f p ≫
+        eqToHom (degreeZeroObject p) =
+      eqToHom (degreeZeroSource p) ≫ (J.obj (K.obj.X p)).hom
   /-- The first-row augmentation is monomorphic, as is the chosen embedding. -/
   degreeZeroMapMono : ∀ p : ℤ, Mono (resolution.augmentation.f p)
   /-- The first successive row is the injective target of the cokernel of the
@@ -245,7 +260,8 @@ theorem functorial_double_complex_totalization_is_resolution
     (D : FunctorialInjectiveDoubleComplex K J)
     (T : TotalComplexPresentation D.doubleComplex) :
     IsBoundedBelow T.complex ∧
-      (∀ n : ℤ, Injective (T.complex.X n)) := by
+      (∀ n : ℤ, Injective (T.complex.X n)) ∧
+      QuasiIso (doubleComplexResolutionMap T D.resolution) := by
   sorry
 
 /-! ## The functorial-resolution lemma -/
@@ -316,13 +332,6 @@ theorem resolutionFunctorCompatibility_exists
   sorry
 
 /-! ## Big abelian categories and the stated examples -/
-
-theorem functorial_resolution_exists_of_construction_support
-    {A : Type u} [Category.{v} A] [Abelian A]
-    (hA : HasFunctorialInjectiveEmbeddings (C := A)) :
-    ∃ inj : CompPlus A ⥤ InjRes A,
-      inj ⋙ injResSourceFunctor = 𝟭 (CompPlus A) :=
-  functorial_injective_resolution_exists hA
 
 /- The concrete module and sheaf examples are already provided by the
    earlier injective-development chapters; these statements expose the

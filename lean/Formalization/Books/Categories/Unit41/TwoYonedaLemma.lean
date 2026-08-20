@@ -823,16 +823,472 @@ def twoYonedaEvaluation
     twoYonedaFibredMorphismCategory p U ⥤ Functor.Fiber p U :=
   (twoYonedaPreservesCartesian p U).ι ⋙ twoYonedaEvaluationCore p U
 
+private theorem twoYonedaOver_identity_isStronglyCartesian
+    {C : Type uC} [Category.{vC} C]
+    {U : C} (f : Over U) :
+    (Over.forget U).IsStronglyCartesian f.hom
+      (Over.homMk (X := U) (U := f) (V := Over.mk (𝟙 U)) f.hom (by simp)) := by
+  let k : f ⟶ Over.mk (𝟙 U) := Over.homMk f.hom (by simp)
+  change (Over.forget U).IsStronglyCartesian f.hom k
+  refine { toIsHomLift := ?_, universal_property' := ?_ }
+  · change (Over.forget U).IsHomLift ((Over.forget U).map k) k
+    exact Functor.IsHomLift.map _
+  · intro a' g φ' hφ'
+    have hEq : g ≫ f.hom = φ'.left := by
+      exact @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _ _ _ _ _ _ hφ'
+    have hχ : g ≫ f.hom = a'.hom := by
+      rw [hEq]
+      simpa using Over.w φ'
+    let χ : a' ⟶ f := Over.homMk g hχ
+    have hχlift : (Over.forget U).IsHomLift g χ := by
+      change (Over.forget U).IsHomLift ((Over.forget U).map χ) χ
+      exact Functor.IsHomLift.map _
+    refine ⟨χ, ⟨hχlift, ?_⟩, ?_⟩
+    · apply Over.OverMorphism.ext
+      change g ≫ f.hom = φ'.left
+      exact hEq
+    · intro χ' hχ'
+      have hleft : g = χ'.left := by
+        exact @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _ _ _ _ _ _ hχ'.1
+      apply Over.OverMorphism.ext
+      change χ'.left = g
+      exact hleft.symm
+
+private theorem twoYonedaOver_map_isHomLift
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C) (G : twoYonedaOverCategory p U)
+    {f g : Over U} (k : f ⟶ g) :
+    p.IsHomLift k.left (G.1.map k) := by
+  have hGf : p.obj (G.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) G.2
+  have hGg : p.obj (G.1.obj g) = g.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj g) G.2
+  apply IsHomLift.of_fac' p k.left (G.1.map k) hGf hGg
+  have hfac := Functor.congr_hom G.2 k
+  have hGf' : Functor.congr_obj G.2 f = hGf := by
+    apply Subsingleton.elim
+  have hGg' : Functor.congr_obj G.2 g = hGg := by
+    apply Subsingleton.elim
+  rw [hGf', hGg'] at hfac
+  simpa [twoYonedaPostcompositionGeneral,
+    Formalization.Books.Categories.Unit28.postcompositionFunctor,
+    Functor.comp_map, Over.forget_map] using hfac
+
+private theorem twoYonedaOver_map_fac
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C) (G : twoYonedaOverCategory p U)
+    {f g : Over U} (k : f ⟶ g) :
+    p.map (G.1.map k) =
+      eqToHom (congrArg (fun F : Over U ⥤ C => F.obj f) G.2) ≫
+        k.left ≫
+        eqToHom (congrArg (fun F : Over U ⥤ C => F.obj g) G.2).symm := by
+  exact @CategoryTheory.IsHomLift.fac' _ _ _ _ p _ _ _ _ k.left
+    (G.1.map k) (twoYonedaOver_map_isHomLift p U G k)
+
+private noncomputable def twoYonedaEvaluationPreimageApp
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) (f : Over U) :
+  G.1.1.obj f ⟶ H.1.1.obj f := by
+  let k : f ⟶ Over.mk (𝟙 U) := Over.homMk f.hom (by simp)
+  let η' : G.1.1.obj (Over.mk (𝟙 U)) ⟶ H.1.1.obj (Over.mk (𝟙 U)) :=
+    (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η
+  let τ : G.1.1.obj f ⟶ H.1.1.obj (Over.mk (𝟙 U)) := G.1.1.map k ≫ η'
+  have hGf : p.obj (G.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) G.1.2
+  have hGid : p.obj (G.1.1.obj (Over.mk (𝟙 U))) = U :=
+    congrArg (fun F : Over U ⥤ C => F.obj (Over.mk (𝟙 U))) G.1.2
+  have hHf : p.obj (H.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) H.1.2
+  have hHid : p.obj (H.1.1.obj (Over.mk (𝟙 U))) = U :=
+    congrArg (fun F : Over U ⥤ C => F.obj (Over.mk (𝟙 U))) H.1.2
+  have hGmap : p.IsHomLift k.left (G.1.1.map k) :=
+    twoYonedaOver_map_isHomLift p U G.1 k
+  have hHmap : p.IsHomLift k.left (H.1.1.map k) :=
+    twoYonedaOver_map_isHomLift p U H.1 k
+  have hηmap : p.IsHomLift (𝟙 U) η' := by
+    change p.IsHomLift (𝟙 U)
+      ((Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η)
+    exact η.2
+  have hGfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+    _ _ _ _ k.left (G.1.1.map k) hGmap
+  have hHfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+    _ _ _ _ k.left (H.1.1.map k) hHmap
+  have hηfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+    _ _ _ _ (𝟙 U) η' hηmap
+  have hGfac' : p.map (G.1.1.map k) =
+      eqToHom hGf ≫ k.left ≫ eqToHom hGid.symm := by
+    simpa using hGfac
+  have hHfac' : p.map (H.1.1.map k) =
+      eqToHom hHf ≫ k.left ≫ eqToHom hHid.symm := by
+    simpa using hHfac
+  have hηfac' : p.map η' =
+      eqToHom hGid ≫ 𝟙 U ≫ eqToHom hHid.symm := by
+    simpa using hηfac
+  have hHstrong : p.IsStronglyCartesian (p.map (H.1.1.map k))
+      (H.1.1.map k) := by
+    have hHprop : twoYonedaPreservesCartesian p U H.1 := H.2
+    exact hHprop k (twoYonedaOver_identity_isStronglyCartesian f)
+  let gbase : p.obj (G.1.1.obj f) ⟶ p.obj (H.1.1.obj f) :=
+    eqToHom hGf ≫ 𝟙 f.left ≫ eqToHom hHf.symm
+  have hτfac : p.map τ = gbase ≫ p.map (H.1.1.map k) := by
+    dsimp [τ, gbase]
+    change p.map (G.1.1.map k ≫ η') = _
+    rw [p.map_comp]
+    rw [hGfac', hηfac', hHfac']
+    simp [Category.assoc]
+  letI : p.IsStronglyCartesian (p.map (H.1.1.map k))
+      (H.1.1.map k) := hHstrong
+  let hτ : p.IsHomLift (p.map τ) τ := Functor.IsHomLift.map _
+  rw [hτfac] at hτ
+  letI : p.IsHomLift (gbase ≫ p.map (H.1.1.map k))
+      (G.1.1.map k ≫ η') := by
+    exact hτ
+  exact Functor.IsStronglyCartesian.map p (p.map (H.1.1.map k))
+    (H.1.1.map k) (f' := gbase ≫ p.map (H.1.1.map k))
+      (g := gbase) (by simp) (G.1.1.map k ≫ η')
+
+private theorem twoYonedaEvaluationPreimageApp_isHomLift
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) (f : Over U) :
+    p.IsHomLift (𝟙 f.left)
+      (twoYonedaEvaluationPreimageApp p U η f) := by
+  have hGf : p.obj (G.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) G.1.2
+  have hHf : p.obj (H.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) H.1.2
+  have hmap : p.IsHomLift
+      (eqToHom hGf ≫ 𝟙 f.left ≫ eqToHom hHf.symm)
+      (twoYonedaEvaluationPreimageApp p U η f) := by
+    simp only [twoYonedaEvaluationPreimageApp]
+    infer_instance
+  apply IsHomLift.of_fac' p (𝟙 f.left)
+    (twoYonedaEvaluationPreimageApp p U η f) hGf hHf
+  have hbase : eqToHom hGf ≫ 𝟙 f.left ≫ eqToHom hHf.symm =
+      p.map (twoYonedaEvaluationPreimageApp p U η f) := by
+    exact @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _ _ _ _ _ _ hmap
+  rw [← hbase]
+
+private theorem twoYonedaEvaluationPreimageApp_fac
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) (f : Over U) :
+    twoYonedaEvaluationPreimageApp p U η f ≫
+        H.1.1.map (Over.homMk f.hom (by simp)) =
+      G.1.1.map (Over.homMk f.hom (by simp)) ≫
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η := by
+  simp [twoYonedaEvaluationPreimageApp, Functor.IsStronglyCartesian.fac]
+  congr 2 <;> apply Subsingleton.elim
+
+private theorem twoYonedaEvaluationPreimageApp_naturality
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) {f g : Over U} (k : f ⟶ g) :
+    twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k =
+      G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g := by
+  let kf : f ⟶ Over.mk (𝟙 U) := Over.homMk f.hom (by simp)
+  let kg : g ⟶ Over.mk (𝟙 U) := Over.homMk g.hom (by simp)
+  have hcomp : k ≫ kg = kf := by
+    apply Over.OverMorphism.ext
+    simp [kf, kg]
+  have hGf : p.obj (G.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) G.1.2
+  have hHg : p.obj (H.1.1.obj g) = g.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj g) H.1.2
+  have hAppF := twoYonedaEvaluationPreimageApp_isHomLift p U η f
+  have hAppG := twoYonedaEvaluationPreimageApp_isHomLift p U η g
+  have hGmap := twoYonedaOver_map_isHomLift p U G.1 k
+  have hHmap := twoYonedaOver_map_isHomLift p U H.1 k
+  letI : p.IsHomLift (𝟙 f.left)
+      (twoYonedaEvaluationPreimageApp p U η f) := hAppF
+  letI : p.IsHomLift (𝟙 g.left)
+      (twoYonedaEvaluationPreimageApp p U η g) := hAppG
+  letI : p.IsHomLift k.left (G.1.1.map k) := hGmap
+  letI : p.IsHomLift k.left (H.1.1.map k) := hHmap
+  have hL : p.IsHomLift k.left
+      (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k) := by
+    exact IsHomLift.comp_lift_id_left' p f.left
+      (twoYonedaEvaluationPreimageApp p U η f) k.left (H.1.1.map k)
+  have hR : p.IsHomLift k.left
+      (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g) := by
+    exact IsHomLift.comp_lift_id_right' p k.left (G.1.1.map k)
+      g.left (twoYonedaEvaluationPreimageApp p U η g)
+  have hHstrong : p.IsStronglyCartesian (p.map (H.1.1.map kg))
+      (H.1.1.map kg) := by
+    have hHprop : twoYonedaPreservesCartesian p U H.1 := H.2
+    exact hHprop kg (twoYonedaOver_identity_isStronglyCartesian g)
+  let gbase : p.obj (G.1.1.obj f) ⟶ p.obj (H.1.1.obj g) :=
+    eqToHom hGf ≫ k.left ≫ eqToHom hHg.symm
+  have hL' : p.IsHomLift gbase
+      (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k) := by
+    apply IsHomLift.of_fac' p gbase
+      (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k) rfl rfl
+    have hLfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+      _ _ _ _ k.left
+      (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k) hL
+    simpa [gbase] using hLfac
+  have hR' : p.IsHomLift gbase
+      (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g) := by
+    apply IsHomLift.of_fac' p gbase
+      (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g) rfl rfl
+    have hRfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+      _ _ _ _ k.left
+      (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g) hR
+    simpa [gbase] using hRfac
+  have hEq :
+      (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k) ≫
+          H.1.1.map kg =
+        (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g) ≫
+          H.1.1.map kg := by
+    have hfacf := twoYonedaEvaluationPreimageApp_fac p U η f
+    have hfacg := twoYonedaEvaluationPreimageApp_fac p U η g
+    have hfacf' : twoYonedaEvaluationPreimageApp p U η f ≫
+          H.1.1.map kf = G.1.1.map kf ≫
+            (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η := by
+      simpa [kf] using hfacf
+    have hfacg' : twoYonedaEvaluationPreimageApp p U η g ≫
+          H.1.1.map kg = G.1.1.map kg ≫
+            (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η := by
+      simpa [kg] using hfacg
+    have h₁ :
+        (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k) ≫
+            H.1.1.map kg =
+          twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map kf := by
+      rw [Category.assoc, ← H.1.1.map_comp, hcomp]
+    have h₂ : G.1.1.map kf ≫
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η =
+      G.1.1.map (k ≫ kg) ≫
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η := by
+      rw [hcomp]
+    have h₃ : G.1.1.map (k ≫ kg) ≫
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η =
+      G.1.1.map k ≫
+        (G.1.1.map kg ≫
+          (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η) := by
+      rw [G.1.1.map_comp]
+      exact Category.assoc _ _ _
+    have h₄ : G.1.1.map k ≫
+        (G.1.1.map kg ≫
+          (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η) =
+      G.1.1.map k ≫
+        (twoYonedaEvaluationPreimageApp p U η g ≫ H.1.1.map kg) := by
+      exact congrArg (fun z => G.1.1.map k ≫ z) hfacg'.symm
+    have h₅ : G.1.1.map k ≫
+        (twoYonedaEvaluationPreimageApp p U η g ≫ H.1.1.map kg) =
+      (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g) ≫
+        H.1.1.map kg := by
+      exact (Category.assoc _ _ _).symm
+    exact h₁.trans (hfacf'.trans (h₂.trans (h₃.trans (h₄.trans h₅))))
+  exact @Functor.IsStronglyCartesian.ext _ _ _ _ p
+    (p.obj (H.1.1.obj g)) (p.obj (H.1.1.obj (Over.mk (𝟙 U))))
+    (H.1.1.obj g) (H.1.1.obj (Over.mk (𝟙 U)))
+    (p.map (H.1.1.map kg)) (H.1.1.map kg) hHstrong
+    (p.obj (G.1.1.obj f)) (G.1.1.obj f) gbase
+    (twoYonedaEvaluationPreimageApp p U η f ≫ H.1.1.map k)
+    (G.1.1.map k ≫ twoYonedaEvaluationPreimageApp p U η g)
+    hL' hR' hEq
+
+private noncomputable def twoYonedaEvaluationPreimageNatTrans
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) : G.1.1 ⟶ H.1.1 where
+  app f := twoYonedaEvaluationPreimageApp p U η f
+  naturality := by
+    intro f g k
+    exact (twoYonedaEvaluationPreimageApp_naturality p U η k).symm
+
+private theorem twoYonedaEvaluationPreimageNatTrans_isOver
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) :
+    (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
+      (twoYonedaEvaluationPreimageNatTrans p U η) := by
+  have hG := G.1.2
+  have hH := H.1.2
+  apply IsHomLift.of_fac' (twoYonedaPostcomposition p U)
+    (𝟙 (Over.forget U)) (twoYonedaEvaluationPreimageNatTrans p U η) hG hH
+  ext f
+  change p.map (twoYonedaEvaluationPreimageApp p U η f) =
+    (eqToHom hG).app f ≫ 𝟙 f.left ≫ (eqToHom hH.symm).app f
+  have hGf : p.obj (G.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) hG
+  have hHf : p.obj (H.1.1.obj f) = f.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj f) hH
+  have hfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+    _ _ _ _ (𝟙 f.left) (twoYonedaEvaluationPreimageApp p U η f)
+    (twoYonedaEvaluationPreimageApp_isHomLift p U η f)
+  have hfac' : p.map (twoYonedaEvaluationPreimageApp p U η f) =
+      eqToHom hGf ≫ 𝟙 f.left ≫ eqToHom hHf.symm := by
+    simpa using hfac
+  have hGapp : (eqToHom hG).app f = eqToHom hGf := by
+    rw [CategoryTheory.eqToHom_app]
+    congr 1
+  have hHapp : (eqToHom hH.symm).app f = eqToHom hHf.symm := by
+    rw [CategoryTheory.eqToHom_app]
+    congr 1
+  rw [hGapp, hHapp]
+  exact hfac'
+
+private noncomputable def twoYonedaEvaluationPreimage
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) : G ⟶ H :=
+  ObjectProperty.homMk
+    ⟨twoYonedaEvaluationPreimageNatTrans p U η,
+      twoYonedaEvaluationPreimageNatTrans_isOver p U η⟩
+
+private theorem twoYonedaEvaluationPreimage_map
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaFibredMorphismCategory p U}
+    (η : (twoYonedaEvaluation p U).obj G ⟶
+      (twoYonedaEvaluation p U).obj H) :
+    (twoYonedaEvaluation p U).map (twoYonedaEvaluationPreimage p U η) = η := by
+  let i : Over U := Over.mk (𝟙 U)
+  have hi : (Over.homMk i.hom (by dsimp [i]; simp) : i ⟶ i) = 𝟙 i := by
+    apply Over.OverMorphism.ext
+    change i.hom = 𝟙 i.left
+    dsimp [i]
+  have hfac := twoYonedaEvaluationPreimageApp_fac p U η i
+  have happ : twoYonedaEvaluationPreimageApp p U η i =
+      (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η := by
+    rw [hi] at hfac
+    rw [H.1.1.map_id, G.1.1.map_id] at hfac
+    change twoYonedaEvaluationPreimageApp p U η i ≫ 𝟙 (H.1.1.obj i) =
+      𝟙 (G.1.1.obj i) ≫
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η at hfac
+    rw [Category.comp_id] at hfac
+    simpa [twoYonedaEvaluation, twoYonedaEvaluationCore,
+      twoYonedaEvaluationCoreObj, Functor.Fiber.fiberInclusion] using hfac
+  apply Functor.Fiber.hom_ext
+  change twoYonedaEvaluationPreimageApp p U η i =
+    (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).map η
+  exact happ
+
+private theorem twoYonedaEvaluation_faithful
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C) :
+    (twoYonedaEvaluation p U).Faithful := by
+  constructor
+  intro G H f g h
+  apply ObjectProperty.hom_ext
+  apply Functor.Fiber.hom_ext
+  let i : Over U := Over.mk (𝟙 U)
+  have h_id : f.1.1.app i = g.1.1.app i := by
+    have h' := congrArg
+      (fun z : (twoYonedaEvaluation p U).obj G ⟶
+        (twoYonedaEvaluation p U).obj H => z.1) h
+    change f.1.1.app i = g.1.1.app i at h'
+    exact h'
+  ext x
+  change f.1.1.app x = g.1.1.app x
+  let kx : x ⟶ i := Over.homMk x.hom (by dsimp [i]; simp)
+  have hEq :
+      f.1.1.app x ≫ H.1.1.map kx = g.1.1.app x ≫ H.1.1.map kx := by
+    have hnatf := f.1.1.naturality kx
+    have hnatg := g.1.1.naturality kx
+    calc
+      f.1.1.app x ≫ H.1.1.map kx = G.1.1.map kx ≫ f.1.1.app i :=
+        hnatf.symm
+      _ = G.1.1.map kx ≫ g.1.1.app i :=
+        congrArg (fun z => G.1.1.map kx ≫ z) h_id
+      _ = g.1.1.app x ≫ H.1.1.map kx := hnatg
+  have hfapp := twoYonedaMorphismCategory_map_isHomLift
+    (Over.forget U) p f.1 x
+  have hgapp := twoYonedaMorphismCategory_map_isHomLift
+    (Over.forget U) p g.1 x
+  have hGx : p.obj (G.1.1.obj x) = x.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj x) G.1.2
+  have hHx : p.obj (H.1.1.obj x) = x.left :=
+    congrArg (fun F : Over U ⥤ C => F.obj x) H.1.2
+  have hHstrong : p.IsStronglyCartesian (p.map (H.1.1.map kx))
+      (H.1.1.map kx) := by
+    have hHprop : twoYonedaPreservesCartesian p U H.1 := H.2
+    exact hHprop kx (twoYonedaOver_identity_isStronglyCartesian x)
+  let gbase : p.obj (G.1.1.obj x) ⟶ p.obj (H.1.1.obj x) :=
+    eqToHom hGx ≫ 𝟙 x.left ≫ eqToHom hHx.symm
+  have hf' : p.IsHomLift gbase (f.1.1.app x) := by
+    apply IsHomLift.of_fac' p gbase (f.1.1.app x) rfl rfl
+    have hfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+      _ _ _ _ (𝟙 x.left) (f.1.1.app x) hfapp
+    simpa [gbase] using hfac
+  have hg' : p.IsHomLift gbase (g.1.1.app x) := by
+    apply IsHomLift.of_fac' p gbase (g.1.1.app x) rfl rfl
+    have hfac := @CategoryTheory.IsHomLift.fac' _ _ _ _ p
+      _ _ _ _ (𝟙 x.left) (g.1.1.app x) hgapp
+    simpa [gbase] using hfac
+  exact @Functor.IsStronglyCartesian.ext _ _ _ _ p
+    (p.obj (H.1.1.obj x)) (p.obj (H.1.1.obj i))
+    (H.1.1.obj x) (H.1.1.obj i)
+    (p.map (H.1.1.map kx)) (H.1.1.map kx) hHstrong
+    (p.obj (G.1.1.obj x)) (G.1.1.obj x) gbase
+    (f.1.1.app x) (g.1.1.app x) hf' hg' hEq
+
+private theorem twoYonedaEvaluation_essSurj
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (U : C) :
+    (twoYonedaEvaluation p U).EssSurj := by
+  let P := PullbackChoice.default p
+  let α := Classical.choose (pullback_identity_iso p P U)
+  constructor
+  intro x
+  have hobj :
+      (twoYonedaEvaluation p U).obj ((twoYonedaPullback p P U).obj x) =
+        (P.pullbackFunctor (𝟙 U)).obj x := by
+    apply Subtype.ext
+    rfl
+  let e :
+      (twoYonedaEvaluation p U).obj ((twoYonedaPullback p P U).obj x) ≅ x :=
+    eqToIso hobj ≪≫ (α.app x).symm
+  exact ⟨(twoYonedaPullback p P U).obj x, ⟨e⟩⟩
+
 /-- Evaluation at `id_U` gives the fibred 2-Yoneda equivalence. -/
 theorem twoYoneda_fibred_equivalence
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibered] (U : C) :
     (twoYonedaEvaluation p U).IsEquivalence := by
-  /- Proof plan: use `twoYonedaPullback` as a quasi-inverse; cartesian
-  uniqueness along `f ⟶ Over.mk (𝟙 U)` proves evaluation full and faithful,
-  and `pullback_identity_iso` proves essential surjectivity. -/
-  sorry
+  let hFF : (twoYonedaEvaluation p U).FullyFaithful :=
+    { preimage := fun η => twoYonedaEvaluationPreimage p U η
+      map_preimage := by
+        intro G H η
+        exact twoYonedaEvaluationPreimage_map p U η
+      preimage_map := by
+        intro G H f
+        apply (twoYonedaEvaluation_faithful p U).map_injective
+        exact twoYonedaEvaluationPreimage_map p U
+          ((twoYonedaEvaluation p U).map f) }
+  exact
+    { faithful := hFF.faithful
+      full := hFF.full
+      essSurj := twoYonedaEvaluation_essSurj p U }
 
 /- The source's `Cat / C` morphism categories are groupoids when the target
    projection is fibred in groupoids.  This is the general form of the

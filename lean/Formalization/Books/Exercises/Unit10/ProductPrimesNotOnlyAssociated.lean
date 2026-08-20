@@ -217,9 +217,9 @@ private theorem product_example_span_first_succ_prime (k : Type u) [Field k]
     hJ ▸ ((Polynomial.quotientSpanCXSubCAlgEquiv (MvPolynomial.X j) 0).restrictScalars k)
   let es : (A ⧸ I) ≃ₐ[k] (B ⧸ J) :=
     Ideal.quotientEquivAlg I J e hmap.symm
-  letI : IsDomain (C ⧸ K) :=
+  let : IsDomain (C ⧸ K) :=
     (Ideal.Quotient.isDomain_iff_prime K).mpr hKprime
-  letI : IsDomain (A ⧸ I) :=
+  let : IsDomain (A ⧸ I) :=
     (es.toRingEquiv.trans ep.toRingEquiv).toMulEquiv.isDomain (C ⧸ K)
   exact (Ideal.Quotient.isDomain_iff_prime I).mp inferInstance
 

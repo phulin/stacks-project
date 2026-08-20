@@ -691,7 +691,7 @@ private lemma space_colonX_backward (k : Type u) [Field k] (q : spacePolynomialR
     simp [spaceE0, spaceE2, addRightEmbedding_apply, add_comm] at hi ⊢; omega
   · simp [spaceE0, spaceE2, addRightEmbedding_apply]
   · have hi := hde (2 : Fin 3)
-    simpa [spaceE0, spaceE2, addRightEmbedding_apply] using hi
+    simp [spaceE0, spaceE2, addRightEmbedding_apply] at hi ⊢
 
 private lemma space_colonP_forward (k : Type u) [Field k] (q : spacePolynomialRing k)
     (hq : ∀ n ∈ (q * (spaceX k * spaceY k)).support,

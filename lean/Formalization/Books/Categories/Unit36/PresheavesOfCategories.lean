@@ -1727,41 +1727,56 @@ private theorem strictificationPullbackChoice_isStrict
     apply Subtype.ext
     rcases x with ⟨A, rfl⟩
     exact (strictificationReindexObject_comp g A f).symm
-  have hpb {R : C} (A : StrictificationObject p P) (k : R ⟶ A.V) :
-      Q.pullback k ⟨A, rfl⟩ =
-        (⟨strictificationReindexObject A k, rfl⟩ :
-          Functor.Fiber (strictificationProjection P) R) := by
-    apply Subtype.ext
-    change strictificationReindexObject A k = strictificationReindexObject A k
-    rfl
-  have qmap {R : C} (A : StrictificationObject p P) (k : R ⟶ A.V)
-      (hp : Q.pullback k ⟨A, rfl⟩ =
-        (⟨strictificationReindexObject A k, rfl⟩ :
-          Functor.Fiber (strictificationProjection P) R)) :
-      Q.pullbackMap k ⟨A, rfl⟩ =
+  have qmap {R V : C} (A : StrictificationObject p P) (k : R ⟶ V)
+      (hX : (strictificationProjection P).obj A = V) (hA : A.V = V) :
+      ∃ hp : Q.pullback k ⟨A, hX⟩ =
+          (⟨strictificationReindexObject A
+              (k ≫ eqToHom hA.symm), rfl⟩ :
+            Functor.Fiber (strictificationProjection P) R),
+        Q.pullbackMap k ⟨A, hX⟩ =
           Functor.Fiber.fiberInclusion.map (eqToHom hp) ≫
-          strictificationReindexHom A k := by
+            strictificationReindexHom A
+              (k ≫ eqToHom hA.symm) := by
+    let k' : R ⟶ A.V := k ≫ eqToHom hA.symm
+    have hp : Q.pullback k ⟨A, hX⟩ =
+        (⟨strictificationReindexObject A k', rfl⟩ :
+          Functor.Fiber (strictificationProjection P) R) := by
+      apply Subtype.ext
+      change strictificationReindexObject A k' = _
+      rfl
     have hmap := eqToHom_map
       (Functor.Fiber.fiberInclusion :
         Functor.Fiber (strictificationProjection P) R ⥤
           StrictificationCategory p P) hp
-    rw [hmap]
-    cases hp
-    cases A
+    have hobjS := congrArg
+      (fun z : Functor.Fiber (strictificationProjection P) R =>
+        (strictificationPullback z.1).1) hp
+    have hcast :
+        (Q.pullbackMap k ⟨A, hX⟩).hom =
+          cast (congrArg
+            (fun Z : S => Z ⟶ (strictificationPullback A).1)
+            hobjS.symm) (strictificationReindexHom A k').hom := by
+      rfl
+    refine ⟨hp, ?_⟩
     apply StrictificationHom.ext
-    simp [Q, strictificationPullbackChoice, strictificationReindexHom,
-      strictificationReindexObject]
+    change (Q.pullbackMap k ⟨A, hX⟩).hom = _
+    rw [hcast, hmap]
+    exact congrArg_cast_hom_left hobjS (strictificationReindexHom A k').hom
   have component_fac (x : Functor.Fiber (strictificationProjection P) U) :
       Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) ≫
           Q.pullbackMap g (Q.pullback f x) ≫ Q.pullbackMap f x =
         Q.pullbackMap (g ≫ f) x := by
     rcases x with ⟨A, hA⟩
-    change A.V = U at hA
-    subst U
-    rw [hpb A f]
-    rw [qmap (strictificationReindexObject A f) g
-          (hpb (strictificationReindexObject A f) g),
-      qmap A f (hpb A f), qmap A (g ≫ f) (hpb A (g ≫ f))]
+    have hA' : A.V = U := by
+      simpa [strictificationProjection] using hA
+    obtain ⟨hgf, hqgf⟩ := qmap A (g ≫ f) hA hA'
+    obtain ⟨hf, hqf⟩ := qmap A f hA hA'
+    let Xf := Q.pullback f ⟨A, hA⟩
+    have hXf : (strictificationProjection P).obj Xf.1 = V := Xf.2
+    have hXf' : Xf.1.V = V := by
+      simpa [strictificationProjection] using hXf
+    obtain ⟨hg, hqg⟩ := qmap Xf.1 g hXf hXf'
+    rw [hqg, hqf, hqgf]
     simp only [Q, strictificationPullbackChoice]
     change eqToHom (strictificationReindexObject_comp g A f).symm ≫
         strictificationReindexHom (strictificationReindexObject A f) g ≫

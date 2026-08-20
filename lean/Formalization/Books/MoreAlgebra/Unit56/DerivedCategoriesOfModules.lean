@@ -6,6 +6,7 @@ import Formalization.Books.Derived.Unit34.DerivedLimits
 import Formalization.Books.Categories.Unit23.ExactFunctors
 import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.Descent
 import Mathlib.Algebra.Category.Ring.Epi
 import Mathlib.Algebra.Homology.DerivedCategory.TStructure
 import Mathlib.Algebra.Homology.HomotopyCategory.Plus
@@ -189,7 +190,24 @@ theorem isKInjective_of_flat_ring_map
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : RingHom.Flat f) {I : Comp S} (hI : I.IsKInjective) :
     (restrictScalarsComplex f I).IsKInjective := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : (ModuleCat.extendScalars f).Additive := by
+    constructor
+    intro X Y g h
+    change ModuleCat.ofHom (LinearMap.baseChange S (g.hom + h.hom)) =
+      ModuleCat.ofHom (LinearMap.baseChange S g.hom) +
+        ModuleCat.ofHom (LinearMap.baseChange S h.hom)
+    rw [LinearMap.baseChange_add]
+    rfl
+  let _ : PreservesFiniteLimits (ModuleCat.extendScalars f) :=
+    ModuleCat.preservesFiniteLimits_extendScalars_of_flat hf
+  have hExact : IsExact (ModuleCat.extendScalars f) := by
+    change PreservesFiniteLimits (ModuleCat.extendScalars f) ∧
+      PreservesFiniteColimits (ModuleCat.extendScalars f)
+    exact ⟨inferInstance, inferInstance⟩
+  exact additive_right_adjoint_preserves_isKInjective
+    (ModuleCat.restrictScalars f) (ModuleCat.extendScalars f)
+    (ModuleCat.extendRestrictScalarsAdj f) hExact hI
 
 /-- Along an epimorphism of rings, K-injectivity of an `S`-complex after
 restriction to `R` implies K-injectivity over `S`. -/
@@ -198,7 +216,134 @@ theorem isKInjective_of_ring_epimorphism
     [Epi (CommRingCat.ofHom f)] {I : Comp S}
     (hI : (restrictScalarsComplex f I).IsKInjective) :
     I.IsKInjective := by
-  sorry
+  let adj := ModuleCat.restrictCoextendScalarsAdj f
+  let one : (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) := (1 : S)
+  let k (M : ModuleCat S) (y : M) :
+      (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) →ₗ[R]
+        (ModuleCat.restrictScalars f).obj M :=
+    { toFun := fun s => (show S from s) • y
+      map_add' := by
+        intro s t
+        change ((show S from s) + (show S from t)) • y =
+          (show S from s) • y + (show S from t) • y
+        rw [add_smul]
+      map_smul' := by
+        intro r s
+        change (f r * (show S from s)) • y =
+          f r • ((show S from s) • y)
+        rw [mul_smul] }
+  have hk (M : ModuleCat S) (y : M) :
+      (adj.unit.app M) y =
+        (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M)).symm
+          (k M y) := by
+    apply ModuleCat.CoextendScalars.ext
+    apply LinearMap.ext
+    intro s
+    rfl
+  have hunit_eval (M : ModuleCat S) (y : M) :
+      (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M)
+        ((adj.unit.app M) y)) one = y := by
+    rw [hk, LinearEquiv.apply_symm_apply]
+    change (1 : S) • y = y
+    simp
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.IsEpi R S :=
+    CommRingCat.epi_iff_epi.mp (inferInstance : Epi (CommRingCat.ofHom f))
+  let _ : Module R S := Module.compHom S f
+  have h_eval (M : ModuleCat S)
+      (g : (ModuleCat.coextendScalars f).obj ((ModuleCat.restrictScalars f).obj M))
+      (s : S) :
+      (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g)
+          (show (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) from s) =
+        s • (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g) one := by
+    let _ : Module R M := Module.compHom M f
+    let _ : IsScalarTower R S M := IsScalarTower.of_compHom R S M
+    let g' : S →ₗ[R] M :=
+      ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g
+    have hs := (Algebra.isEpi_iff_forall_one_tmul_eq R S).mp
+      (inferInstance : Algebra.IsEpi R S) s
+    have hs' := congrArg (g'.liftBaseChange S) hs
+    calc
+      g' s = (g'.liftBaseChange S) ((1 : S) ⊗ₜ[R] s) :=
+        (LinearMap.liftBaseChange_one_tmul S g' s).symm
+      _ = (g'.liftBaseChange S) (s ⊗ₜ[R] (1 : S)) := hs'
+      _ = s • g' (1 : S) := LinearMap.liftBaseChange_tmul S g' s (1 : S)
+  have hsurj (M : ModuleCat S)
+      (g : (ModuleCat.coextendScalars f).obj ((ModuleCat.restrictScalars f).obj M)) :
+      (adj.unit.app M) (show M from
+        (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g) one) = g := by
+    apply ModuleCat.CoextendScalars.ext
+    apply LinearMap.ext
+    intro s
+    rw [hk, LinearEquiv.apply_symm_apply]
+    change (show S from s) •
+        ((ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g) one) =
+      (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g) s
+    exact (h_eval M g (show S from s)).symm
+  have hunit (M : ModuleCat S) :
+      Function.Bijective (adj.unit.app M) := by
+    constructor
+    · intro y y' h
+      exact (hunit_eval M y).symm.trans
+        ((congrArg (fun z => (ModuleCat.CoextendScalars.equiv f
+          ((ModuleCat.restrictScalars f).obj M) z) one) h).trans (hunit_eval M y'))
+    · intro g
+      exact ⟨show M from
+        (ModuleCat.CoextendScalars.equiv f ((ModuleCat.restrictScalars f).obj M) g) one,
+        hsurj M g⟩
+  let appIso (M : ModuleCat S) : M ≅
+      (ModuleCat.restrictScalars f ⋙ ModuleCat.coextendScalars f).obj M := by
+    let _ : IsIso (adj.unit.app M) :=
+      (ConcreteCategory.isIso_iff_bijective (adj.unit.app M)).2 (hunit M)
+    exact asIso (adj.unit.app M)
+  let unitIso : (𝟭 (ModuleCat S)) ≅
+      ModuleCat.restrictScalars f ⋙ ModuleCat.coextendScalars f :=
+    { hom := adj.unit
+      inv :=
+        { app := fun M => (appIso M).inv
+          naturality := by
+            intro X Y g
+            let _ : IsIso (adj.unit.app X) :=
+              (ConcreteCategory.isIso_iff_bijective (adj.unit.app X)).2 (hunit X)
+            let _ : IsIso (adj.unit.app Y) :=
+              (ConcreteCategory.isIso_iff_bijective (adj.unit.app Y)).2 (hunit Y)
+            apply (cancel_mono (adj.unit.app Y)).1
+            simp only [Category.assoc, Functor.id_map]
+            have hn : g ≫ adj.unit.app Y =
+                adj.unit.app X ≫
+                  (ModuleCat.restrictScalars f ⋙ ModuleCat.coextendScalars f).map g := by
+              simpa only [Functor.id_map] using adj.unit.naturality g
+            rw [hn]
+            simp [appIso] }
+      hom_inv_id := by
+        apply NatTrans.ext
+        funext M
+        exact (appIso M).hom_inv_id
+      inv_hom_id := by
+        apply NatTrans.ext
+        funext M
+        exact (appIso M).inv_hom_id }
+  let _ : (ModuleCat.coextendScalars f).Additive := by
+    constructor
+    intro X Y g h
+    ext x s
+    rfl
+  have hExact : IsExact (ModuleCat.restrictScalars f) := by
+    change PreservesFiniteLimits (ModuleCat.restrictScalars f) ∧
+      PreservesFiniteColimits (ModuleCat.restrictScalars f)
+    exact ⟨inferInstance, inferInstance⟩
+  have hco := additive_right_adjoint_preserves_isKInjective
+    (ModuleCat.coextendScalars f) (ModuleCat.restrictScalars f)
+    adj hExact hI
+  let _ : CochainComplex.IsKInjective
+      (((ModuleCat.restrictScalars f).mapHomologicalComplex (.up ℤ) ⋙
+          (ModuleCat.coextendScalars f).mapHomologicalComplex (.up ℤ)).obj I) := hco
+  let ecomp := Functor.mapHomologicalComplexCompIso
+    (Iso.refl (ModuleCat.restrictScalars f ⋙ ModuleCat.coextendScalars f)) (.up ℤ)
+  let e :=
+    (NatIso.mapHomologicalComplex unitIso (.up ℤ)).app I ≪≫
+      (ecomp.app I).symm
+  exact CochainComplex.isKInjective_of_iso e.symm
 
 /-- Coextension of scalars computes `Hom_A(B, I^•)` and preserves
 K-injectivity. -/
@@ -206,6 +351,17 @@ theorem homOfScalarsComplex_isKInjective
     {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B)
     {I : Comp A} (hI : I.IsKInjective) :
     (homOfScalarsComplex f I).IsKInjective := by
-  sorry
+  let _ : (ModuleCat.coextendScalars f).Additive := by
+    constructor
+    intro X Y g h
+    ext x s
+    rfl
+  have hExact : IsExact (ModuleCat.restrictScalars f) := by
+    change PreservesFiniteLimits (ModuleCat.restrictScalars f) ∧
+      PreservesFiniteColimits (ModuleCat.restrictScalars f)
+    exact ⟨inferInstance, inferInstance⟩
+  exact additive_right_adjoint_preserves_isKInjective
+    (ModuleCat.coextendScalars f) (ModuleCat.restrictScalars f)
+    (ModuleCat.restrictCoextendScalarsAdj f) hExact hI
 
 end Formalization.Books.MoreAlgebra.Unit56

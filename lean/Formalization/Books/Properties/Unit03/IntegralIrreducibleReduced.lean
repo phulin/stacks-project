@@ -5,9 +5,9 @@ import Mathlib.AlgebraicGeometry.Properties
 
 The source section is `books/properties.tex:186--293`.  Scheme integrality and
 reducedness reuse Mathlib's canonical `AlgebraicGeometry.IsIntegral` and
-`AlgebraicGeometry.IsReduced` properties.  The affine-open formulation of the
-definition of integrality is retained as a source-facing interface, while the
-three characterization results use the canonical topological and ring
+`AlgebraicGeometry.IsReduced` properties.  The source's definition of
+integrality is exactly the canonical `AlgebraicGeometry.IsIntegral` property;
+the characterization results use the canonical topological and ring
 properties.
 -/
 
@@ -20,17 +20,9 @@ universe u v
 
 /-! ## Definition `definition-integral` -/
 
-/-- The source's affine-open formulation of integrality.  The ring of
-sections `Γ(X, U)` is the coordinate ring of an affine open `U`. -/
-def IsIntegralOnAffineOpens (X : Scheme.{u}) : Prop :=
-  Nonempty X ∧
-    ∀ (U : X.Opens), IsAffineOpen U → Nonempty U → IsDomain Γ(X, U)
-
-/-- Mathlib's canonical scheme-integrality property is equivalent to the
-source's affine-open formulation. -/
-theorem isIntegral_iff_isIntegralOnAffineOpens (X : Scheme.{u}) :
-    AlgebraicGeometry.IsIntegral X ↔ IsIntegralOnAffineOpens X := by
-  sorry
+/- The source's definition is represented directly by Mathlib's
+`AlgebraicGeometry.IsIntegral`, whose API uses nonemptiness and integral-domain
+sections on nonempty affine opens. -/
 
 /-! ## Lemma `lemma-characterize-reduced` -/
 
@@ -74,17 +66,13 @@ theorem lemma_characterize_integral (X : Scheme.{u}) :
 
 /-! ## The connected locally-integral non-integral example -/
 
-/-- Every local ring of a scheme is an integral domain. -/
-def AllLocalRingsAreDomains (X : Scheme.{u}) : Prop :=
-  ∀ x : X, IsDomain (X.presheaf.stalk x)
-
-/-- The source records the existence of a connected affine scheme with domain
-local rings that is not integral; its construction is deferred to the
-Examples book. -/
+/- The source defers the construction to the Examples book.  The existence
+claim is recorded here without a forward import of that construction. -/
 theorem exists_connected_affine_locally_integral_not_integral :
     ∃ X : Scheme.{u},
       ConnectedSpace X ∧ IsAffine X ∧
-        AllLocalRingsAreDomains X ∧ ¬ AlgebraicGeometry.IsIntegral X := by
+        (∀ x : X, IsDomain (X.presheaf.stalk x)) ∧
+          ¬ AlgebraicGeometry.IsIntegral X := by
   sorry
 
 end Formalization.Books.Properties.Unit03

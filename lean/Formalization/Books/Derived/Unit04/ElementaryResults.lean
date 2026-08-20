@@ -1,6 +1,7 @@
 import Mathlib.CategoryTheory.Triangulated.Triangulated
 import Mathlib.CategoryTheory.Triangulated.Subcategory
 import Mathlib.CategoryTheory.Triangulated.Yoneda
+import Mathlib.CategoryTheory.Triangulated.Opposite.Pretriangulated
 import Mathlib.CategoryTheory.Abelian.DiagramLemmas.Four
 import Mathlib.Algebra.Homology.ShortComplex.Ab
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Products
@@ -2160,15 +2161,140 @@ theorem coproduct_of_distinguished_triangles
 
 /-- Countable products imply that the preadditive triangulated category is
 Karoubian. -/
+private theorem hasKernel_of_split_epi
+    {X Y : C} (f : X ⟶ Y) [IsSplitEpi f] : HasKernel f := by
+  rcases ‹IsSplitEpi f› with ⟨s, hs⟩
+  obtain ⟨Z, g, h, hT⟩ := distinguished_cocone_triangle f
+  have hfg : f ≫ g = 0 := by
+    exact comp_distTriang_mor_zero₁₂ (Triangle.mk f g h) hT
+  have hg : g = 0 := by
+    calc
+      g = (s ≫ f) ≫ g := by simp [hs]
+      _ = s ≫ (f ≫ g) := by simp [Category.assoc]
+      _ = 0 := by simp [hfg]
+  let T : Triangle C := Triangle.mk f g h
+  let U : Triangle C := T.invRotate
+  have hU : U ∈ distTriang C := inv_rot_of_distTriang T hT
+  have hcomp : U.mor₁ ≫ f = 0 := by
+    change U.mor₁ ≫ U.mor₂ = 0
+    exact comp_distTriang_mor_zero₁₂ U hU
+  have hU3 : U.mor₃ = 0 := by
+    simp only [U, T, Triangle.invRotate_mor₃, Triangle.mk_mor₂, hg]
+    apply CategoryTheory.Limits.zero_comp
+  have hmono : Mono U.mor₁ :=
+    (U.mor₃_eq_zero_iff_mono₁ hU).mp hU3
+  let kfork : KernelFork f := KernelFork.ofι U.mor₁ hcomp
+  let klimit : IsLimit kfork := by
+    refine KernelFork.IsLimit.ofι U.mor₁ hcomp ?_ ?_ ?_
+    · intro W a ha
+      have ha' : a ≫ U.mor₂ = 0 := by
+        change a ≫ f = 0
+        exact ha
+      let hfac := U.coyoneda_exact₂ hU a ha'
+      exact Classical.choose hfac
+    · intro W a ha
+      have ha' : a ≫ U.mor₂ = 0 := by
+        change a ≫ f = 0
+        exact ha
+      let hfac := U.coyoneda_exact₂ hU a ha'
+      let m := Classical.choose hfac
+      change m ≫ U.mor₁ = a
+      exact (Classical.choose_spec hfac).symm
+    · intro W a ha m hm
+      have ha' : a ≫ U.mor₂ = 0 := by
+        change a ≫ f = 0
+        exact ha
+      let hfac := U.coyoneda_exact₂ hU a ha'
+      let m' := Classical.choose hfac
+      have hm' : a = m' ≫ U.mor₁ := Classical.choose_spec hfac
+      apply hmono.right_cancellation
+      rw [hm, hm'.symm]
+  exact ⟨⟨{ cone := kfork, isLimit := klimit }⟩⟩
+
 theorem karoubian_of_countable_products
     [HasCountableProducts C] : IsIdempotentComplete C := by
-  sorry
+  apply Formalization.Books.Homology.Unit04.karoubian_of_countable_products_of_kernels_of_split_epimorphisms (C := C)
+  intro X Y f hf
+  exact hasKernel_of_split_epi f
 
 /-- Countable coproducts imply that the preadditive triangulated category is
 Karoubian. -/
+private theorem hasKernel_of_split_epi_op
+    {X Y : Cᵒᵖ} (f : X ⟶ Y)
+    [hShiftAdd : ∀ n : ℤ, (shiftFunctor Cᵒᵖ n).Additive]
+    [IsSplitEpi f] : HasKernel f := by
+  rcases ‹IsSplitEpi f› with ⟨s, hs⟩
+  obtain ⟨Z, g, h, hT⟩ := distinguished_cocone_triangle f
+  have hfg : f ≫ g = 0 := by
+    exact comp_distTriang_mor_zero₁₂ (Triangle.mk f g h) hT
+  have hg : g = 0 := by
+    calc
+      g = (s ≫ f) ≫ g := by simp [hs]
+      _ = s ≫ (f ≫ g) := by simp [Category.assoc]
+      _ = 0 := by simp [hfg]
+  let T : Triangle Cᵒᵖ := Triangle.mk f g h
+  let U : Triangle Cᵒᵖ := T.invRotate
+  have hU : U ∈ distTriang Cᵒᵖ := inv_rot_of_distTriang T hT
+  have hcomp : U.mor₁ ≫ f = 0 := by
+    change U.mor₁ ≫ U.mor₂ = 0
+    exact comp_distTriang_mor_zero₁₂ U hU
+  have hU3 : U.mor₃ = 0 := by
+    simp only [U, T, Triangle.invRotate_mor₃, Triangle.mk_mor₂, hg]
+    apply CategoryTheory.Limits.zero_comp
+  have hmono : Mono U.mor₁ :=
+    (U.mor₃_eq_zero_iff_mono₁ hU).mp hU3
+  let kfork : KernelFork f := KernelFork.ofι U.mor₁ hcomp
+  let klimit : IsLimit kfork := by
+    refine KernelFork.IsLimit.ofι U.mor₁ hcomp ?_ ?_ ?_
+    · intro W a ha
+      have ha' : a ≫ U.mor₂ = 0 := by
+        change a ≫ f = 0
+        exact ha
+      let hfac := U.coyoneda_exact₂ hU a ha'
+      exact Classical.choose hfac
+    · intro W a ha
+      have ha' : a ≫ U.mor₂ = 0 := by
+        change a ≫ f = 0
+        exact ha
+      let hfac := U.coyoneda_exact₂ hU a ha'
+      let m := Classical.choose hfac
+      change m ≫ U.mor₁ = a
+      exact (Classical.choose_spec hfac).symm
+    · intro W a ha m hm
+      have ha' : a ≫ U.mor₂ = 0 := by
+        change a ≫ f = 0
+        exact ha
+      let hfac := U.coyoneda_exact₂ hU a ha'
+      let m' := Classical.choose hfac
+      have hm' : a = m' ≫ U.mor₁ := Classical.choose_spec hfac
+      apply hmono.right_cancellation
+      rw [hm, hm'.symm]
+  exact ⟨⟨{ cone := kfork, isLimit := klimit }⟩⟩
+
+omit [HasShift C ℤ] hAdditive hPretriangulated in
+private theorem hasLimit_parallelPair_op
+    {X Y : C} (f : X ⟶ Y)
+    [hK : HasKernel f.op] : HasLimit (parallelPair f 0).op := by
+  let hComp : HasLimit (walkingParallelPairOpEquiv.functor ⋙ (parallelPair f 0).op) := by
+    exact CategoryTheory.Limits.hasLimit_of_iso (parallelPairOpIso f 0)
+  exact @CategoryTheory.Limits.hasLimit_of_equivalence_comp _ _ _ _ _ _ _
+    walkingParallelPairOpEquiv hComp
+
+omit [HasShift C ℤ] hAdditive hPretriangulated in
+private theorem hasCokernel_of_parallelPair_op
+    {X Y : C} (f : X ⟶ Y)
+    [hF : HasLimit (parallelPair f 0).op] : HasCokernel f := by
+  exact CategoryTheory.Limits.hasColimit_of_hasLimit_op (parallelPair f 0)
+
 theorem karoubian_of_countable_coproducts
     [HasCountableCoproducts C] : IsIdempotentComplete C := by
-  sorry
+  apply Formalization.Books.Homology.Unit04.karoubian_of_countable_coproducts_of_cokernels_of_split_monomorphisms (C := C)
+  intro X Y f hf
+  exact hasCokernel_of_parallelPair_op f
+    (hF := hasLimit_parallelPair_op f
+      (hK := hasKernel_of_split_epi_op f.op
+        (hShiftAdd := fun n =>
+          CategoryTheory.Pretriangulated.Opposite.instAdditiveOppositeShiftFunctorInt C n)))
 
 /-! ## The octahedral axiom and full subcategories -/
 
@@ -2189,7 +2315,35 @@ theorem easier_axiom_four_iff :
               (h₂₃ : Triangle.mk (eY.hom ≫ g ≫ eZ.inv) pthree dthree ∈
                 distTriang C),
               Nonempty (Triangulated.Octahedron (C := C) (by rfl) h₁₂ h₂₃ h₁₃) := by
-  sorry
+  constructor
+  · intro h X Y Z f g
+    obtain ⟨Qone, pone, done, h12⟩ := distinguished_cocone_triangle f
+    obtain ⟨Qtwo, ptwo, dtwo, h13⟩ := distinguished_cocone_triangle (f ≫ g)
+    obtain ⟨Qthree, pthree, dthree, h23⟩ := distinguished_cocone_triangle g
+    refine ⟨X, Y, Z, Iso.refl _, Iso.refl _, Iso.refl _, Qone, Qtwo, Qthree,
+      pone, done, ptwo, dtwo, pthree, dthree, ?_⟩
+    have h12' : Triangle.mk ((Iso.refl X).hom ≫ f ≫ (Iso.refl Y).inv) pone done ∈
+        distTriang C := by simpa using h12
+    have h13' : Triangle.mk
+        (((Iso.refl X).hom ≫ f ≫ (Iso.refl Y).inv) ≫
+          ((Iso.refl Y).hom ≫ g ≫ (Iso.refl Z).inv)) ptwo dtwo ∈ distTriang C := by
+      simpa using h13
+    have h23' : Triangle.mk ((Iso.refl Y).hom ≫ g ≫ (Iso.refl Z).inv) pthree dthree ∈
+        distTriang C := by simpa using h23
+    refine ⟨h12', h13', h23', ?_⟩
+    simpa using h.octahedron_axiom (by simp) h12 h23 h13
+  · intro h
+    apply CategoryTheory.IsTriangulated.mk'
+    intro X Y Z f g
+    obtain ⟨X', Y', Z', eX, eY, eZ, Qone, Qtwo, Qthree, pone, done,
+      ptwo, dtwo, pthree, dthree, h12, h13, h23, ho⟩ := h f g
+    let u12 := eX.hom ≫ f ≫ eY.inv
+    let u23 := eY.hom ≫ g ≫ eZ.inv
+    refine ⟨X', Y', Z', Qone, Qthree, Qtwo, u12, u23, eX.symm, eY.symm, eZ.symm, ?_, ?_,
+      pone, done, h12, pthree, dthree, h23, ptwo, dtwo, ?_, ho⟩
+    · simp [u12]
+    · simp [u23]
+    · simpa [u12, u23] using h13
 
 /-- The source-facing closure condition for a full triangulated subcategory:
 it contains shifted objects and contains a cone, up to the property's
@@ -2205,7 +2359,49 @@ the canonical `ObjectProperty.IsTriangulated` class. -/
 theorem full_subcategory_isTriangulated_iff
     (P : ObjectProperty C) [P.ContainsZero] :
     P.IsTriangulated ↔ FullTriangulatedSubcategoryCondition P := by
-  sorry
+  constructor
+  · intro hP
+    refine ⟨hP.toIsStableUnderShift, ?_⟩
+    intro X Y f hX hY
+    obtain ⟨Z, g, h, hT⟩ := distinguished_cocone_triangle f
+    refine ⟨Z, g, h, hT, ?_⟩
+    exact hP.toIsTriangulatedClosed₂.ext₂' _ (rot_of_distTriang _ hT) hY
+      ((hP.toIsStableUnderShift.isStableUnderShiftBy (1 : ℤ)).le_shift _ hX)
+  · rintro ⟨hShift, hCone⟩
+    let hClosed₃ : P.IsTriangulatedClosed₃ := by
+      refine { ext₃' := ?_ }
+      intro T hT h₁ h₂
+      obtain ⟨Z, g, h, hU, hZ⟩ := hCone T.mor₁ h₁ h₂
+      let U : Triangle C :=
+        { obj₁ := T.obj₁
+          obj₂ := T.obj₂
+          obj₃ := Z
+          mor₁ := T.mor₁
+          mor₂ := g
+          mor₃ := h }
+      have hU' : U ∈ distTriang C := by
+        exact hU
+      obtain ⟨W, hW, ⟨e⟩⟩ := hZ
+      let e₁ : T.obj₁ ≅ U.obj₁ := by
+        dsimp [U]
+        exact Iso.refl _
+      let e₂ : T.obj₂ ≅ U.obj₂ := by
+        dsimp [U]
+        exact Iso.refl _
+      let eT := isoTriangleOfIso₁₂ T U hT hU' e₁ e₂
+        (by
+          dsimp [e₁, e₂, U]
+          simp)
+      exact ⟨W, hW, ⟨(asIso eT.hom.hom₃).trans e⟩⟩
+    let hClosed₂ : P.IsTriangulatedClosed₂ := by
+      refine { ext₂' := ?_ }
+      intro T hT h₁ h₃
+      exact hClosed₃.ext₃' _ (inv_rot_of_distTriang _ hT)
+        ((hShift.isStableUnderShiftBy (-1 : ℤ)).le_shift _ h₃) h₁
+    exact
+      { toContainsZero := inferInstance
+        toIsStableUnderShift := hShift
+        toIsTriangulatedClosed₂ := hClosed₂ }
 
 /-- The distinguished triangles of the full subcategory are exactly the
 ambient distinguished triangles whose three objects lie in the property. -/
@@ -2257,6 +2453,17 @@ theorem exact_precomposition_preserves_homological
     (F ⋙ H).IsHomological := by
   infer_instance
 
+private theorem exact_postcomposition_preserves_homological_aux
+    {A B : Type u'} [Category.{v'} A] [Category.{v'} B]
+    [Abelian A] [Abelian B]
+    (H : D ⥤ A) [H.IsHomological] (G : A ⥤ B)
+    [hlim : PreservesFiniteLimits G] [hcol : PreservesFiniteColimits G] :
+    (H ⋙ G).IsHomological := by
+  apply Functor.IsHomological.mk'
+  intro T hT
+  refine ⟨T, Iso.refl _, ?_⟩
+  exact (H.map_distinguished_exact T hT).map G
+
 /-- Exact postcomposition in an abelian target preserves homological functors. -/
 theorem exact_postcomposition_preserves_homological
     {A B : Type u'} [Category.{v'} A] [Category.{v'} B]
@@ -2264,7 +2471,8 @@ theorem exact_postcomposition_preserves_homological
     (H : D ⥤ A) [H.IsHomological] (G : A ⥤ B)
     (hG : IsExact G) :
     (H ⋙ G).IsHomological := by
-  sorry
+  exact exact_postcomposition_preserves_homological_aux (H := H) (G := G)
+    (hlim := hG.1) (hcol := hG.2)
 
 end ExactFunctors
 
@@ -2287,7 +2495,27 @@ theorem exact_postcomposition_deltaFunctor
     (F : A ⥤ D) (δ : DeltaFunctor F) (K : D ⥤ E)
     [K.CommShift ℤ] [K.IsTriangulated] :
     Nonempty (DeltaFunctor (F ⋙ K)) := by
-  sorry
+  let delta' : ∀ (S : ShortComplex A), S.ShortExact →
+      @Quiver.Hom E (inferInstance : Quiver E) ((F ⋙ K).obj S.X₃)
+        ((shiftFunctor E (1 : ℤ)).obj ((F ⋙ K).obj S.X₁)) :=
+    fun S hS => (K.mapTriangle.obj (δ.imageTriangle F S hS)).mor₃
+  refine ⟨⟨delta', ?_, ?_⟩⟩
+  · intro S hS
+    change Triangle.mk (K.map (F.map S.f)) (K.map (F.map S.g))
+        (K.map (δ.delta S hS) ≫ (K.commShiftIso (1 : ℤ)).hom.app (F.obj S.X₁)) ∈
+      distTriang E
+    exact K.map_distinguished (δ.imageTriangle F S hS)
+      (δ.imageTriangle_distinguished F S hS)
+  · intro S₁ S₂ φ h₁ h₂
+    change K.map (F.map φ.τ₃) ≫
+        (K.map (δ.delta S₂ h₂) ≫
+          (K.commShiftIso (1 : ℤ)).hom.app (F.obj S₂.X₁)) =
+      (K.map (δ.delta S₁ h₁) ≫
+          (K.commShiftIso (1 : ℤ)).hom.app (F.obj S₁.X₁)) ≫
+        (shiftFunctor E (1 : ℤ)).map (K.map (F.map φ.τ₁))
+    simp only [Category.assoc]
+    rw [← Category.assoc, ← K.map_comp, δ.delta_naturality F φ h₁ h₂, K.map_comp]
+    rw [Category.assoc, Functor.commShiftIso_hom_naturality]
 
 /-- Exact precomposition carries a δ-functor to a δ-functor. -/
 theorem exact_precomposition_deltaFunctor

@@ -208,7 +208,7 @@ theorem hasLimits : HasLimits (DividedPowerRing.{u}) := by
       ext x
       funext j
       exact congrArg (fun q ↦ q.hom x) (hm j)
-  letI : HasProducts (DividedPowerRing.{u}) :=
+  let : HasProducts (DividedPowerRing.{u}) :=
     hasProducts_of_limit_fans
       (fun {J} A ↦ productFan J A)
       (fun {J} A ↦ productFanIsLimit J A)
@@ -316,11 +316,11 @@ theorem hasLimits : HasLimits (DividedPowerRing.{u}) := by
       change (RingHom.eqLocus f.hom g.hom).subtype (m.hom x) = s.ι.hom x at h
       change (RingHom.eqLocus f.hom g.hom).subtype (m.hom x) = s.ι.hom x
       exact h
-  letI : ∀ {A B : DividedPowerRing.{u}} (f g : A ⟶ B),
+  let : ∀ {A B : DividedPowerRing.{u}} (f g : A ⟶ B),
       HasLimit (parallelPair f g) := by
     intro A B f g
     exact HasLimit.mk ⟨equalizerFork A B f g, equalizerForkIsLimit A B f g⟩
-  letI : HasEqualizers (DividedPowerRing.{u}) :=
+  let : HasEqualizers (DividedPowerRing.{u}) :=
     hasEqualizers_of_hasLimit_parallelPair (C := DividedPowerRing.{u})
   exact has_limits_of_hasEqualizers_and_products
 

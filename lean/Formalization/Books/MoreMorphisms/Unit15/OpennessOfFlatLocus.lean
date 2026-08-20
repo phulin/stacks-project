@@ -23,14 +23,10 @@ namespace Scheme.Hom
 
 variable {X Y : Scheme.{u}}
 
-/-
-The local-ring formulation is the canonical stalkwise meaning of a morphism
-being flat at a point.  `Flat.stalkMap` supplies the corresponding result for
-a globally flat morphism.
--/
+/- The local-ring formulation is the canonical stalkwise meaning of a
+   morphism being flat at a point. -/
 def FlatAt (f : X ⟶ Y) (x : X) : Prop :=
-  letI := Module.compHom (X.presheaf.stalk x) (f.stalkMap x).hom
-  Module.Flat (Y.presheaf.stalk (f x)) (X.presheaf.stalk x)
+  (f.stalkMap x).hom.Flat
 
 end Scheme.Hom
 
@@ -80,12 +76,14 @@ with `IsPullback g' f' f g` expressing its cartesian square and
 `Scheme.Modules.pullback g'` expressing `(g')^*`.
 -/
 
-lemma flatAt_pullback (h : IsPullback g' f' f g) (M : X.Modules) (x' : X')
+lemma flatAt_pullback (h : IsPullback g' f' f g) (M : X.Modules) [M.IsQuasicoherent]
+    (x' : X')
     (hx : M.FlatAt f (g' x')) :
     ((Scheme.Modules.pullback g').obj M).FlatAt f' x' := by
   sorry
 
-lemma flatAt_of_flatAt_pullback (h : IsPullback g' f' f g) (M : X.Modules) (x' : X')
+lemma flatAt_of_flatAt_pullback (h : IsPullback g' f' f g) (M : X.Modules) [M.IsQuasicoherent]
+    (x' : X')
     (hg : g.FlatAt (f' x'))
     (hx' : ((Scheme.Modules.pullback g').obj M).FlatAt f' x') :
     M.FlatAt f (g' x') := by

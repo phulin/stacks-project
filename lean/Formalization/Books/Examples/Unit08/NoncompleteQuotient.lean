@@ -174,18 +174,35 @@ Proof roadmap (statement review completed):
   `Mathlib/Algebra/Group/Finsupp.lean` to split off the `x` exponent.  The
   positive index must stay `j : ℕ+`, with external degree `(j : ℕ)`.
 
-* Extend this monomial operation k-linearly to a private
-  `normalForm : NoncompleteQuotientPolynomial k →ₗ[k]
-    NoncompleteQuotientPolynomial k`, sending the `none` case to zero.  The
-  useful API in `Mathlib/Algebra/MvPolynomial/Basic.lean` is
+* Extend this monomial operation k-linearly to the **file-level** private map
+  `noncompleteQuotientNormalForm (k : Type u) [Field k] :
+    NoncompleteQuotientPolynomial k →ₗ[k] NoncompleteQuotientPolynomial k`,
+  sending the `none` case to zero.  Do not make this map or its monomial
+  normalizer local to this proof: `mem_noncompleteQuotientXIdealPow_iff` below
+  needs their support-filtration API.  The useful API in
+  `Mathlib/Algebra/MvPolynomial/Basic.lean` is
   `MvPolynomial.as_sum`, `MvPolynomial.sum_def`,
   `MvPolynomial.monomial_mul`, `MvPolynomial.monomial_add_single`,
   `MvPolynomial.X_pow_eq_monomial`, and `MvPolynomial.coeff_monomial`.
-  Establish the three normal-form lemmas needed below:
-  (1) `p - normalForm p ∈ noncompleteQuotientRelationIdeal k`;
-  (2) every element of `noncompleteQuotientRelationIdeal k` has normal form
-  zero; and (3) a polynomial supported on canonical global monomials is fixed
-  by `normalForm`.
+  Give the resulting file-level lemmas in this file, before this theorem, the
+  names (1) `sub_noncompleteQuotientNormalForm_mem_relationIdeal` for
+  `p - noncompleteQuotientNormalForm k p ∈
+    noncompleteQuotientRelationIdeal k`,
+  (2) `noncompleteQuotientNormalForm_eq_zero_of_mem_relationIdeal` for the
+  fact that every element of the relation ideal has normal form zero, and
+  (3) `noncompleteQuotientNormalForm_finiteExpansionPolynomial` for
+  `noncompleteQuotientNormalForm k
+      (noncompleteQuotientFiniteExpansionPolynomial coeff s) =
+    noncompleteQuotientFiniteExpansionPolynomial coeff s` under
+  `∀ i, IsCanonicalNoncompleteQuotientCoefficient i (coeff i)` (declare the
+  raw-polynomial definition described below before this lemma).  Also expose
+  (4) `noncompleteQuotientNormalForm_X_pow_mul_support`: for
+  `q : NoncompleteQuotientPolynomial k`, `n : ℕ`, and
+  `m ∈ (noncompleteQuotientNormalForm k
+    (MvPolynomial.X .x ^ n * q)).support`, it states `n ≤ m .x`.
+  The last lemma follows monomial-by-monomial from the normalizer case lemma
+  that its nonzero output never decreases the `.x` exponent; it is the
+  coefficient-cancellation interface needed by the next theorem.
 
 * For (1), use `MvPolynomial.as_sum` and prove the claim one monomial at a
   time.  Each nontrivial case is either a polynomial multiple of
@@ -196,16 +213,30 @@ Proof roadmap (statement review completed):
   `noncompleteQuotientRelationSet k` is zero.  Then apply
   `Submodule.span_induction` from `Mathlib/LinearAlgebra/Span/Defs.lean` to the
   underlying `NoncompleteQuotientPolynomial k`-submodule of the ideal, using
-  the strengthened predicate `fun q _ => ∀ a, normalForm (a * q) = 0`; this
-  strengthened predicate makes the scalar step valid.  Reduce the arbitrary
-  multiplier `a` with `MvPolynomial.induction_on'`.  Do not try to make
-  `normalForm` a ring homomorphism.
+  the strengthened predicate `fun q _ => ∀ a,
+    noncompleteQuotientNormalForm k (a * q) = 0`; this strengthened predicate
+  makes the scalar step valid.  Reduce the arbitrary multiplier `a` with
+  `MvPolynomial.induction_on'`.  Do not try to make the normal form a ring
+  homomorphism.
 
-* Package and unpackage the external `x` degree.  For a finite family define
-  its raw polynomial as
+* Package and unpackage the external `x` degree.  Use the file-level private
+  definition `noncompleteQuotientFiniteExpansionPolynomial` for the raw
+  polynomial
   `∑ i ∈ s, coeff i * MvPolynomial.X .x ^ i`; `map_sum`, `map_mul`, and the
   definition of `noncompleteQuotientFiniteExpansionValue` identify its quotient
-  class with the displayed expansion.  Conversely, for a canonical global
+  class with the displayed expansion; record that equality as
+  `quotientOfPolynomial_noncompleteQuotientFiniteExpansionPolynomial`.  Prove
+  the reusable extraction lemma
+  `coeff_noncompleteQuotientFiniteExpansionPolynomial`: under canonicality and
+  the exact-support iff, if `m .x = 0`, the coefficient of
+  `m + Finsupp.single .x i` in the raw polynomial is exactly
+  `MvPolynomial.coeff m (coeff i)`.  Expand the finite sum with
+  `MvPolynomial.coeff_sum`; use `MvPolynomial.X_pow_eq_monomial` and
+  `MvPolynomial.coeff_mul_monomial'` (all in
+  `Mathlib/Algebra/MvPolynomial/Basic.lean`).  For summands of degree below
+  `i`, canonicality makes the residual positive-`.x` coefficient zero; for
+  degrees above `i`, the monomial exponent is not bounded by the target; only
+  degree `i` remains.  Conversely, for a canonical global
   polynomial `q`, set
   `coeff i := ∑ m ∈ q.support.filter (fun m => m .x = i),
     MvPolynomial.monomial (m.erase .x) (MvPolynomial.coeff m q)`
@@ -227,10 +258,9 @@ Proof roadmap (statement review completed):
   by `Ideal.Quotient.mk_eq_mk_iff_sub_mem`; (2), linearity, and (3) give
   `P = Q`.  For every `i : ℕ` and every
   `m : NoncompleteQuotientVariable →₀ ℕ` with `m .x = 0`, compare the
-  coefficient of `m + Finsupp.single .x i` in this equality.  The exact-support
-  iff disposes of indices outside `s`, while `MvPolynomial.coeff_mul_monomial`
-  and `MvPolynomial.coeff_monomial` identify the two sides with
-  `MvPolynomial.coeff m (coeff i)`.  If instead `m .x ≠ 0`, canonicality and
+  coefficient of `m + Finsupp.single .x i` in this equality, using
+  `coeff_noncompleteQuotientFiniteExpansionPolynomial` on both sides.  If
+  instead `m .x ≠ 0`, canonicality and
   `MvPolynomial.mem_support_iff` show directly that both raw coefficient
   polynomials have coefficient zero at `m`.  Apply `MvPolynomial.ext` for each
   `i`, then `funext`, to finish the `ExistsUnique` uniqueness field.
@@ -261,6 +291,77 @@ theorem mem_noncompleteQuotientXIdealPow_iff
     {coeff : ℕ → NoncompleteQuotientPolynomial k}
     (hcoeff : HasCanonicalNoncompleteQuotientFiniteExpansion f coeff) (n : ℕ) :
     f ∈ noncompleteQuotientXIdealPow k n ↔ ∀ i < n, coeff i = 0 := by
+  /- PROOF ROADMAP (Luna; statement and reduction checked).
+
+  The statement is sound even though `xElement k` is a zerodivisor.  The
+  normal form orients `z_j * t` toward `x ^ (j : ℕ) * w_j` and kills the
+  forbidden `z*w` and high-degree nonsingleton `w` monomials, so normalization
+  never lowers the external `x` degree.  The missing interface is the
+  file-level `noncompleteQuotientNormalForm_X_pow_mul_support` lemma specified
+  in the roadmap for
+  `existsUnique_canonicalNoncompleteQuotientFiniteExpansion` above.
+
+  Stage 1 -- reduce ideal membership.  Rewrite with
+  `noncompleteQuotientXIdealPow`, `noncompleteQuotientXIdeal`,
+  `Ideal.span_singleton_pow` from
+  `Mathlib/RingTheory/Ideal/Operations.lean`, and
+  `Ideal.mem_span_singleton` from
+  `Mathlib/RingTheory/Ideal/Span.lean`.  This has been checked to leave exactly
+  `xElement k ^ n ∣ f ↔ ∀ i < n, coeff i = 0` for
+  `{k : Type u} [Field k]`.
+
+  Stage 2 -- divisibility forces the low coefficients to vanish.  Unpack
+  `hcoeff` as `⟨hcanonical, s, hs, hf⟩` (with the nesting required by the
+  definition), and put
+  `P := noncompleteQuotientFiniteExpansionPolynomial coeff s`.  From
+  `xElement k ^ n ∣ f`, choose `g` with `f = xElement k ^ n * g`, then use
+  `Ideal.Quotient.mk_surjective` from
+  `Mathlib/RingTheory/Ideal/Quotient/Defs.lean` to write
+  `g = Ideal.Quotient.mk (noncompleteQuotientRelationIdeal k) q`, where
+  `q : NoncompleteQuotientPolynomial k`.  The raw-polynomial quotient-value
+  lemma
+  `quotientOfPolynomial_noncompleteQuotientFiniteExpansionPolynomial`, `hf`,
+  `map_pow`, and `map_mul` give
+  `Ideal.Quotient.mk _ P = Ideal.Quotient.mk _
+    (MvPolynomial.X .x ^ n * q)`.  Apply
+  `Ideal.Quotient.mk_eq_mk_iff_sub_mem` (the same `Defs.lean` file), then
+  `noncompleteQuotientNormalForm_eq_zero_of_mem_relationIdeal`, linearity, and
+  `noncompleteQuotientNormalForm_finiteExpansionPolynomial hcanonical` to
+  obtain
+  `P = noncompleteQuotientNormalForm k
+    (MvPolynomial.X .x ^ n * q)`.
+
+  Fix `i < n` and argue that `coeff i = 0`.  If it is nonzero,
+  `MvPolynomial.support_eq_empty` and `MvPolynomial.mem_support_iff` from
+  `Mathlib/Algebra/MvPolynomial/Basic.lean` supply
+  `m : NoncompleteQuotientVariable →₀ ℕ` in `(coeff i).support`.
+  Canonicality gives `m .x = 0`.  Since `hs` puts `i` in `s`,
+  `coeff_noncompleteQuotientFiniteExpansionPolynomial` says that the
+  coefficient of `m + Finsupp.single .x i` in `P` is the nonzero coefficient
+  of `m` in `coeff i`.  Transport support membership across the displayed
+  equality for `P` and apply
+  `noncompleteQuotientNormalForm_X_pow_mul_support`; it yields
+  `n ≤ (m + Finsupp.single .x i) .x`.  Simplifying with `m .x = 0` yields
+  `n ≤ i`, contradicting `i < n`.
+
+  Stage 3 -- factor an expansion whose low coefficients vanish.  For the
+  converse, unpack `hcoeff` again and use the divisibility witness
+  `∑ i ∈ s, quotientOfPolynomial (coeff i) * xElement k ^ (i - n)`.
+  Rewrite `f` with its expansion value and distribute `xElement k ^ n` with
+  `Finset.mul_sum` from `Mathlib/Algebra/BigOperators/Ring/Finset.lean`.
+  Apply `Finset.sum_congr`.  For `i < n`, rewrite `coeff i` to zero using the
+  hypothesis.  Otherwise obtain `n ≤ i`, rewrite
+  `i = n + (i - n)` (use `Nat.sub_add_cancel` or `omega`), apply `pow_add`,
+  and finish the summand identity by commutativity/associativity.  This
+  constructs `xElement k ^ n ∣ f` and completes the reduced iff.
+
+  Dead end to avoid: do not shift the canonical expansion of an arbitrary
+  quotient witness by `n` and appeal directly to uniqueness.  A coefficient
+  canonical at degree `i` need not be canonical at degree `i+n`: for example,
+  a nonsingleton `w`-monomial can become zero after multiplication by the new
+  `x` power.  Also do not use cancellation by `xElement k`; the following
+  theorem proves that it is not regular.
+  -/
   sorry
 
 private theorem canonicalNoncompleteQuotientFiniteExpansion_sub

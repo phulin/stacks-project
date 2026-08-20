@@ -380,6 +380,18 @@ theorem internalHom_stalk_isIso_of_finitePresentation
     IsIso (internalHomStalkMap O F G x) := by
   sorry
 
+/- The introductory stalk comparison is not an isomorphism without a
+   finiteness hypothesis.  We retain this as an existential warning, in the
+   same form used for the other non-uniformity warnings in this project. -/
+def InternalHomStalkMapNeedNotBeIso : Prop :=
+  ∃ (X : TopCat.{v}) (O : CommRingSheaf X)
+    (F G : CommRingSheafModule O) (x : X),
+    ¬ IsIso (internalHomStalkMap O F G x)
+
+theorem internalHomStalkMap_needNotBeIso :
+    InternalHomStalkMapNeedNotBeIso := by
+  sorry
+
 /-! ## Pullback and coherence -/
 
 def IsFlatMorphism {X Y : TopCat.{v}} {OX : CommRingSheaf X}
@@ -558,6 +570,14 @@ theorem globalHom_internalHom_equiv
       (SheafOfModules.unit (commRingSheafToRingSheaf O) ⟶
         internalHom O F G)) := by
   sorry
+
+noncomputable def globalHomInternalHomEquiv
+    {X : TopCat.{v}} (O : CommRingSheaf X)
+    (F G : CommRingSheafModule O) :
+    (F ⟶ G) ≃
+      (SheafOfModules.unit (commRingSheafToRingSheaf O) ⟶
+        internalHom O F G) :=
+  Classical.choice (globalHom_internalHom_equiv O F G)
 
 /- The final source remark is retained as a precise warning predicate: there
    are quasi-compact spaces for which the stronger cofinal-cover hypothesis

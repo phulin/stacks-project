@@ -247,11 +247,10 @@ def HasLengthTwoPostnikovExtensionFailure : Prop :=
 def HasPostnikovExistenceFailure (n : ℕ) : Prop :=
   ∃ K : FinitePostnikovComplex C n, ¬ Nonempty (PostnikovSystem K)
 
-/-- The source's warning that existence can fail for some length greater than
-two. -/
+/-- The source's warning that, for every length greater than two, existence
+can fail for some complex. -/
 def HasPostnikovExistenceFailureBeyondTwo : Prop :=
-  ∃ n : ℕ, 2 < n ∧
-    ∃ K : FinitePostnikovComplex C n, ¬ Nonempty (PostnikovSystem K)
+  ∀ n : ℕ, 2 < n → HasPostnikovExistenceFailure (C := C) n
 
 /-! ## Vanishing hypotheses for maps of Postnikov systems -/
 
@@ -444,20 +443,24 @@ finite truncation description and its derived homotopy-colimit identity. -/
 structure AbelianPostnikovExample
     {A : Type u} [Category.{v} A] [Abelian A]
     [HasDerivedCategory.{w} A]
-    [HasCountableCoproducts A] [CountableAB4 A]
+    [HasColimitsOfShape ℕ A] [HasExactColimitsOfShape ℕ A]
     (K : ChainComplex A ℕ) where
   system : InfinitePostnikovSystem (derivedChainComplex K)
   Y_spec : ∀ n, Nonempty (system.Y n ≅ abelianPostnikovTerm K n)
-  hocolim_spec : ∃ T : DerivedCategory A,
-    IsDerivedColimit system.totalizationSystem T ∧
-      Nonempty
-        (T ≅ (DerivedCategory.Q (C := A)).obj (chainComplexTotalization K))
+  hocolim_spec :
+    ∃ (hA : HasCountableCoproducts A) (hAB4 : @CountableAB4 A _ hA),
+      letI : HasCountableCoproducts A := hA
+      letI : CountableAB4 A := hAB4
+      ∃ T : DerivedCategory A,
+        IsDerivedColimit system.totalizationSystem T ∧
+          Nonempty
+            (T ≅ (DerivedCategory.Q (C := A)).obj (chainComplexTotalization K))
 
 /-- The abelian chain-complex example from the source. -/
 theorem exists_abelian_postnikov_example
     {A : Type u} [Category.{v} A] [Abelian A]
     [HasDerivedCategory.{w} A]
-    [HasCountableCoproducts A] [CountableAB4 A]
+    [HasColimitsOfShape ℕ A] [HasExactColimitsOfShape ℕ A]
     (K : ChainComplex A ℕ) :
     Nonempty (AbelianPostnikovExample K) := by
   sorry

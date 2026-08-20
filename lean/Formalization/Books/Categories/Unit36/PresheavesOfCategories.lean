@@ -740,7 +740,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
       simp only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
         Functor.id_map] at hFGstep
       rw [hFGstep]
-      congr 1 <;> apply Subsingleton.elim
+      congr 1
     have factorization {R V : C} (f : R ⟶ V) :
         P.pullbackFunctor f =
           forwardFunctor V ⋙ Q.choice.pullbackFunctor f ⋙

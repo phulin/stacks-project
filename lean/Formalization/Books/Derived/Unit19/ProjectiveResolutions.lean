@@ -121,7 +121,7 @@ theorem object_projective_resolution_cochain_exists
       exact R.quasiIso
     dsimp [f]
     exact quasiIso_comp _ _
-  letI : QuasiIso f := hf
+  let _ : QuasiIso f := hf
   refine ⟨P, f, ?_⟩
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro n hn
@@ -135,7 +135,7 @@ theorem object_projective_resolution_cochain_exists
         (by omega)
     have hI : IsIso (HomologicalComplex.homologyMap f n) :=
       (quasiIsoAt_iff_isIso_homologyMap f n).1 (hf.quasiIsoAt n)
-    letI : IsIso (HomologicalComplex.homologyMap f n) := hI
+    let _ : IsIso (HomologicalComplex.homologyMap f n) := hI
     exact IsZero.of_iso hL (asIso (HomologicalComplex.homologyMap f n))
 
 theorem object_projective_resolution_termwise_projective
@@ -182,7 +182,7 @@ theorem cohomology_bounded_above_of_projective_resolution
   have hsource : IsZero (R.source.homology n) := R.source.isZero_of_isLE a n hn
   have hI : IsIso (HomologicalComplex.homologyMap R.map n) :=
     (quasiIsoAt_iff_isIso_homologyMap R.map n).1 (R.quasiIso.quasiIsoAt n)
-  letI : IsIso (HomologicalComplex.homologyMap R.map n) := hI
+  let _ : IsIso (HomologicalComplex.homologyMap R.map n) := hI
   exact IsZero.of_iso hsource (asIso (HomologicalComplex.homologyMap R.map n)).symm
 
 theorem projective_resolution_of_cohomology_bounded_above

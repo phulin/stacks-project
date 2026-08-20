@@ -711,9 +711,9 @@ private theorem quasiIso_middle_of_shortExact_map
   rw [quasiIso_iff]
   intro n
   rw [quasiIsoAt_iff_isIso_homologyMap]
-  haveI hτ₁ (i : ℤ) : IsIso (HomologicalComplex.homologyMap φ.τ₁ i) :=
+  have hτ₁ (i : ℤ) : IsIso (HomologicalComplex.homologyMap φ.τ₁ i) :=
     (quasiIsoAt_iff_isIso_homologyMap φ.τ₁ i).mp inferInstance
-  haveI hτ₃ (i : ℤ) : IsIso (HomologicalComplex.homologyMap φ.τ₃ i) :=
+  have hτ₃ (i : ℤ) : IsIso (HomologicalComplex.homologyMap φ.τ₃ i) :=
     (quasiIsoAt_iff_isIso_homologyMap φ.τ₃ i).mp inferInstance
   have hmono : Mono (HomologicalComplex.homologyMap φ.τ₂ n) := by
     apply Abelian.mono_of_epi_of_mono_of_mono
@@ -908,8 +908,7 @@ theorem injective_resolution_short_exact
     rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
       (CochainComplex.mappingCocone.snd δ') 0 (by omega) n n (by omega)
       (n - 1) (by omega)]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    simp only [Linear.units_smul_comp, Preadditive.comp_neg, Category.assoc]
     have hzero :
         (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) ≫
             (CochainComplex.mappingCocone.snd δ').v n (n - 1) (by omega) = 𝟙 _ := by
@@ -940,14 +939,11 @@ theorem injective_resolution_short_exact
     rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
       (CochainComplex.mappingCocone.inr δ').1 0 (by omega) n n (by omega)
       (n - 1) (by omega)]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    simp only [Linear.comp_units_smul, Preadditive.neg_comp, Category.assoc]
     have hsign : (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
       norm_num [Int.negOnePow_def]
     rw [hsign]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
-      Iso.hom_inv_id_assoc]
+    simp only [Iso.hom_inv_id_assoc]
     simp
     rw [add_comm]
     exact CochainComplex.mappingCocone.id_X δ' n (n - 1) (by omega)
@@ -1015,8 +1011,7 @@ theorem injective_resolution_short_exact
       dB p ≫ rS (p + 1) - rS p ≫
         (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d p (p + 1)
     rw [← Category.assoc, hgs]
-    simp only [Preadditive.sub_comp, Preadditive.comp_sub,
-      Category.assoc, Category.id_comp]
+    simp only [Preadditive.sub_comp, Category.assoc, Category.id_comp]
     have hcomp : rS p ≫ fS p ≫ dB p ≫ rS (p + 1) =
         rS p ≫
             (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d
@@ -1028,7 +1023,7 @@ theorem injective_resolution_short_exact
   have hαβ : CochainComplex.HomComplex.δ (-1) 0 β +
       CochainComplex.HomComplex.Cochain.ofHom (αT ≫ δ') = 0 := by
     rw [hαδ]
-    ext p q hpq
+    ext p
     dsimp [β]
     rw [CochainComplex.HomComplex.Cochain.δ_rightShift
       (-(CochainComplex.HomComplex.Cochain.ofHoms rT))
@@ -1042,23 +1037,19 @@ theorem injective_resolution_short_exact
       CochainComplex.HomComplex.Cochain.neg_v,
       CochainComplex.HomComplex.Cochain.ofHoms_v,
       CochainComplex.HomComplex.Cochain.ofHom_v]
-    simp only [CochainComplex.shiftFunctor_obj_X,
-      CochainComplex.shiftFunctorObjXIso, HomologicalComplex.XIsoOfEq]
-    simp only [eqToIso_refl, Iso.refl_hom, Iso.refl_inv,
-      Category.comp_id, Category.id_comp]
+    simp only [CochainComplex.shiftFunctorObjXIso, HomologicalComplex.XIsoOfEq]
+    simp only [eqToIso_refl, Iso.refl_inv]
     rw [show (1 : ℤ).negOnePow = -1 by
       rw [Int.negOnePow_one]]
     simp only [Units.neg_smul, one_smul, Preadditive.neg_comp,
-      Preadditive.comp_neg, Preadditive.sub_comp, Category.assoc]
+      Preadditive.comp_neg]
     rw [hconnect p]
     change
       -((-rT p ≫ I₁.obj.d p (p + 1)) -
         (-(T.X₂.obj.d p (p + 1) ≫ rT (p + 1)))) ≫ 𝟙 _ +
         (T.X₂.obj.d p (p + 1) ≫ rT (p + 1) -
           rT p ≫ I₁.obj.d p (p + 1)) = 0
-    simp only [Category.comp_id, Category.id_comp, Units.neg_smul,
-      one_smul, Preadditive.neg_comp, Preadditive.comp_neg,
-      Preadditive.sub_comp, Preadditive.comp_sub]
+    simp only [Category.comp_id]
     abel
   let bT₀ : T.X₂.obj ⟶ B := CochainComplex.mappingCocone.lift δ' αT β hαβ
   let bT : T.X₂ ⟶ I₂ := ObjectProperty.homMk bT₀
@@ -1067,7 +1058,7 @@ theorem injective_resolution_short_exact
     rw [HomologicalComplex.comp_f]
     rw [← Category.comp_id (bT₀.f n)]
     rw [← CochainComplex.mappingCocone.id_X δ' n (n - 1) (by omega)]
-    simp only [Category.assoc, Preadditive.comp_add]
+    simp only [Preadditive.comp_add]
     dsimp [bT₀]
     simp only [CochainComplex.mappingCocone.lift_f_fst_f_assoc]
     have hlift := CochainComplex.mappingCocone.lift_f_snd_v δ' αT β hαβ
@@ -1119,8 +1110,7 @@ theorem injective_resolution_short_exact
           rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
             (CochainComplex.mappingCocone.inr δ').1 0 (by omega)
             n n (by omega) (n - 1) (by omega)]
-          simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-            Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+          simp only [Linear.comp_units_smul, Preadditive.neg_comp, Category.assoc]
           have hsign : (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
             norm_num [Int.negOnePow_def]
           rw [hsign]
@@ -1154,7 +1144,7 @@ theorem injective_resolution_short_exact
             exact (Ssplit.splitting n).f_r
           rw [← Category.assoc (Ssplit.f.f n) (rT n) (u₀.f n), hfrT]
           simp
-        convert hfinal using 1 <;> simp only [Category.assoc] <;> rfl
+        convert hfinal using 1; simp only [Category.assoc]; rfl
   have hTbg : bT₀ ≫ v₀ = Ssplit.g ≫ c.hom := by
     simpa only [bT₀, v₀, αT] using
       (CochainComplex.mappingCocone.lift_fst δ' αT β hαβ)
@@ -1214,7 +1204,7 @@ theorem injective_resolution_short_exact
   let hzero :
       (preadditiveHasZeroMorphisms : HasZeroMorphisms (BookComplex A)) =
         HomologicalComplex.instHasZeroMorphisms := Subsingleton.elim _ _
-  letI : HasZeroMorphisms (BookComplex A) := preadditiveHasZeroMorphisms
+  let : HasZeroMorphisms (BookComplex A) := preadditiveHasZeroMorphisms
   have huv₀pre : u₀ ≫ v₀ = 0 := by
     simpa only [hzero] using huv₀
   let S₂pre : ShortComplex (BookComplex A) := ShortComplex.mk u₀ v₀ huv₀pre
@@ -1225,9 +1215,8 @@ theorem injective_resolution_short_exact
       Formalization.Books.Derived.Unit09.termwiseSplitShortComplex] using hS₂
   have hS₂Comp : (ShortComplex.mk u v huv).ShortExact := by
     apply ShortExact.reflects_shortExact_of_faithful ι
-    convert hS₂pre using 1 <;>
-      simp [u, v, S₂pre, ObjectProperty.ι_map,
-        ObjectProperty.FullSubcategory.comp_hom] <;> rfl
+    convert hS₂pre using 1;
+      simp [u, v, S₂pre] ; rfl
   have hleft : a ≫ u = S.f ≫ (b₀ ≫ bT) := by
     apply ObjectProperty.hom_ext
     change a.hom ≫ u₀ = S.f.hom ≫ b₀.hom ≫ bT₀
@@ -1407,8 +1396,7 @@ private theorem injective_resolution_short_exact_with_left_aux
     rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
       (CochainComplex.mappingCocone.snd δ') 0 (by omega) n n (by omega)
       (n - 1) (by omega)]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    simp only [Linear.units_smul_comp, Preadditive.comp_neg, Category.assoc]
     have hzero :
         (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) ≫
             (CochainComplex.mappingCocone.snd δ').v n (n - 1) (by omega) = 𝟙 _ := by
@@ -1439,14 +1427,11 @@ private theorem injective_resolution_short_exact_with_left_aux
     rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
       (CochainComplex.mappingCocone.inr δ').1 0 (by omega) n n (by omega)
       (n - 1) (by omega)]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    simp only [Linear.comp_units_smul, Preadditive.neg_comp, Category.assoc]
     have hsign : (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
       norm_num [Int.negOnePow_def]
     rw [hsign]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
-      Iso.hom_inv_id_assoc]
+    simp only [Iso.hom_inv_id_assoc]
     simp
     rw [add_comm]
     exact CochainComplex.mappingCocone.id_X δ' n (n - 1) (by omega)
@@ -1514,8 +1499,7 @@ private theorem injective_resolution_short_exact_with_left_aux
       dB p ≫ rS (p + 1) - rS p ≫
         (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d p (p + 1)
     rw [← Category.assoc, hgs]
-    simp only [Preadditive.sub_comp, Preadditive.comp_sub,
-      Category.assoc, Category.id_comp]
+    simp only [Preadditive.sub_comp, Category.assoc, Category.id_comp]
     have hcomp : rS p ≫ fS p ≫ dB p ≫ rS (p + 1) =
         rS p ≫
             (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d
@@ -1527,7 +1511,7 @@ private theorem injective_resolution_short_exact_with_left_aux
   have hαβ : CochainComplex.HomComplex.δ (-1) 0 β +
       CochainComplex.HomComplex.Cochain.ofHom (αT ≫ δ') = 0 := by
     rw [hαδ]
-    ext p q hpq
+    ext p
     dsimp [β]
     rw [CochainComplex.HomComplex.Cochain.δ_rightShift
       (-(CochainComplex.HomComplex.Cochain.ofHoms rT))
@@ -1541,23 +1525,19 @@ private theorem injective_resolution_short_exact_with_left_aux
       CochainComplex.HomComplex.Cochain.neg_v,
       CochainComplex.HomComplex.Cochain.ofHoms_v,
       CochainComplex.HomComplex.Cochain.ofHom_v]
-    simp only [CochainComplex.shiftFunctor_obj_X,
-      CochainComplex.shiftFunctorObjXIso, HomologicalComplex.XIsoOfEq]
-    simp only [eqToIso_refl, Iso.refl_hom, Iso.refl_inv,
-      Category.comp_id, Category.id_comp]
+    simp only [CochainComplex.shiftFunctorObjXIso, HomologicalComplex.XIsoOfEq]
+    simp only [eqToIso_refl, Iso.refl_inv]
     rw [show (1 : ℤ).negOnePow = -1 by
       rw [Int.negOnePow_one]]
     simp only [Units.neg_smul, one_smul, Preadditive.neg_comp,
-      Preadditive.comp_neg, Preadditive.sub_comp, Category.assoc]
+      Preadditive.comp_neg]
     rw [hconnect p]
     change
       -((-rT p ≫ I₁.obj.d p (p + 1)) -
         (-(T.X₂.obj.d p (p + 1) ≫ rT (p + 1)))) ≫ 𝟙 _ +
         (T.X₂.obj.d p (p + 1) ≫ rT (p + 1) -
           rT p ≫ I₁.obj.d p (p + 1)) = 0
-    simp only [Category.comp_id, Category.id_comp, Units.neg_smul,
-      one_smul, Preadditive.neg_comp, Preadditive.comp_neg,
-      Preadditive.sub_comp, Preadditive.comp_sub]
+    simp only [Category.comp_id]
     abel
   let bT₀ : T.X₂.obj ⟶ B := CochainComplex.mappingCocone.lift δ' αT β hαβ
   let bT : T.X₂ ⟶ I₂ := ObjectProperty.homMk bT₀
@@ -1566,7 +1546,7 @@ private theorem injective_resolution_short_exact_with_left_aux
     rw [HomologicalComplex.comp_f]
     rw [← Category.comp_id (bT₀.f n)]
     rw [← CochainComplex.mappingCocone.id_X δ' n (n - 1) (by omega)]
-    simp only [Category.assoc, Preadditive.comp_add]
+    simp only [Preadditive.comp_add]
     dsimp [bT₀]
     simp only [CochainComplex.mappingCocone.lift_f_fst_f_assoc]
     have hlift := CochainComplex.mappingCocone.lift_f_snd_v δ' αT β hαβ
@@ -1618,8 +1598,7 @@ private theorem injective_resolution_short_exact_with_left_aux
           rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
             (CochainComplex.mappingCocone.inr δ').1 0 (by omega)
             n n (by omega) (n - 1) (by omega)]
-          simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-            Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+          simp only [Linear.comp_units_smul, Preadditive.neg_comp, Category.assoc]
           have hsign : (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
             norm_num [Int.negOnePow_def]
           rw [hsign]
@@ -1653,7 +1632,7 @@ private theorem injective_resolution_short_exact_with_left_aux
             exact (Ssplit.splitting n).f_r
           rw [← Category.assoc (Ssplit.f.f n) (rT n) (u₀.f n), hfrT]
           simp
-        convert hfinal using 1 <;> simp only [Category.assoc] <;> rfl
+        convert hfinal using 1; simp only [Category.assoc]; rfl
   have hTbg : bT₀ ≫ v₀ = Ssplit.g ≫ c.hom := by
     simpa only [bT₀, v₀, αT] using
       (CochainComplex.mappingCocone.lift_fst δ' αT β hαβ)
@@ -1710,7 +1689,7 @@ private theorem injective_resolution_short_exact_with_left_aux
   let hzero :
       (preadditiveHasZeroMorphisms : HasZeroMorphisms (BookComplex A)) =
         HomologicalComplex.instHasZeroMorphisms := Subsingleton.elim _ _
-  letI : HasZeroMorphisms (BookComplex A) := preadditiveHasZeroMorphisms
+  let : HasZeroMorphisms (BookComplex A) := preadditiveHasZeroMorphisms
   have huv₀pre : u₀ ≫ v₀ = 0 := by
     simpa only [hzero] using huv₀
   let S₂pre : ShortComplex (BookComplex A) := ShortComplex.mk u₀ v₀ huv₀pre
@@ -1721,9 +1700,8 @@ private theorem injective_resolution_short_exact_with_left_aux
       Formalization.Books.Derived.Unit09.termwiseSplitShortComplex] using hS₂
   have hS₂Comp : (ShortComplex.mk u v huv).ShortExact := by
     apply ShortExact.reflects_shortExact_of_faithful ι
-    convert hS₂pre using 1 <;>
-      simp [u, v, S₂pre, ObjectProperty.ι_map,
-        ObjectProperty.FullSubcategory.comp_hom] <;> rfl
+    convert hS₂pre using 1;
+      simp [u, v, S₂pre] ; rfl
   have hleft : a ≫ u = S.f ≫ (b₀ ≫ bT) := by
     apply ObjectProperty.hom_ext
     change a.hom ≫ u₀ = S.f.hom ≫ b₀.hom ≫ bT₀

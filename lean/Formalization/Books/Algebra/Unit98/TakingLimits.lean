@@ -74,7 +74,45 @@ structure LimitQuotientPresentation {A : Type u} [CommRing A] (I : Ideal A)
             (⊤ : Submodule A (inverseLimitModule F))))) =
       limit.π F (Opposite.op n)
 
-private theorem power_smul_top_eq_bot_of_torsion
+theorem LimitQuotientPresentation.projection_surjective
+    {A : Type u} [CommRing A] (I : Ideal A)
+    (F : NaturalInverseSystem.{u, w} A) (n : ℕ+)
+    (h : LimitQuotientPresentation I F n) :
+    Function.Surjective (limit.π F (Opposite.op n)).hom := by
+  intro y
+  obtain ⟨q, hq⟩ := h.equivalence.surjective y
+  obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective
+    (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))) q
+  refine ⟨x, ?_⟩
+  have heq := congrArg ModuleCat.Hom.hom h.projection_eq
+  exact congrArg (fun f => f x) heq ▸ hq
+
+theorem LimitQuotientPresentation.projection_ker
+    {A : Type u} [CommRing A] (I : Ideal A)
+    (F : NaturalInverseSystem.{u, w} A) (n : ℕ+)
+    (h : LimitQuotientPresentation I F n) :
+    LinearMap.ker (limit.π F (Opposite.op n)).hom =
+      I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) := by
+  ext x
+  have heq := congrArg ModuleCat.Hom.hom h.projection_eq
+  have happ := congrArg (fun f => f x) heq
+  constructor
+  · intro hx
+    rw [LinearMap.mem_ker] at hx
+    have hzero : h.equivalence
+        (Submodule.Quotient.mk x) = 0 := by
+      simpa [LinearMap.comp_apply] using happ.trans hx
+    have hmk : Submodule.Quotient.mk x = 0 := h.equivalence.injective
+      (by simpa using hzero)
+    exact (Submodule.Quotient.mk_eq_zero _).mp hmk
+  · intro hx
+    rw [LinearMap.mem_ker]
+    have hmk : Submodule.Quotient.mk x = 0 :=
+      (Submodule.Quotient.mk_eq_zero _).mpr hx
+    simpa [LinearMap.comp_apply, hmk] using happ.symm
+
+/-- A uniform torsion bound annihilates the whole module. -/
+theorem power_smul_top_eq_bot_of_torsion
     {A : Type u} [CommRing A] (I : Ideal A)
     {M : Type w} [AddCommGroup M] [Module A M] (n : ℕ)
     (hM : Module.IsTorsionBySet A M ((I ^ n : Ideal A) : Set A)) :
@@ -85,7 +123,9 @@ private theorem power_smul_top_eq_bot_of_torsion
     exact @hM x ⟨a, show a ∈ (I ^ n : Ideal A) from ha⟩
   · exact bot_le
 
-private theorem isAdicComplete_of_completion_retraction
+/-- A linear retraction of the completion map makes the original module
+adically complete. -/
+theorem isAdicComplete_of_completion_retraction
     {A : Type u} [CommRing A] (I : Ideal A)
     {M : Type w} [AddCommGroup M] [Module A M]
     (hI : I.FG)

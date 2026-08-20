@@ -128,7 +128,7 @@ def IsQuasiFiniteAt
 
 def IsQuasiFinite
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
-  RingHom.FiniteType f ∧ ∀ q : PrimeSpectrum S, IsQuasiFiniteAt f q
+  RingHom.FiniteType f ∧ ∀ q : PrimeSpectrum S, RingHom.QuasiFiniteAt f q.asIdeal
 
 theorem quasiFiniteAt_above_prime_criteria
     {R S : Type u} [CommRing R] [CommRing S]

@@ -1501,6 +1501,34 @@ private theorem principalParts_sequence_K_higher
       simp only [TensorProduct.smul_tmul']
       abel
 
+private theorem principalParts_sequence_K_relation
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M)
+    (hK_single : ∀ m s, K (Finsupp.single m s) =
+      -(universalDifferential R S s ⊗ₜ[S] m))
+    (hK_single_smul : ∀ c m,
+      K (c • Finsupp.single m (1 : S)) =
+        -(universalDifferential R S c ⊗ₜ[S] m))
+    (F : M →₀ S)
+    (hF : F ∈ principalPartsRelationSet (R := R) (S := S) (M := M) 1) :
+    K F = 0 := by
+  rcases hF with hF | ⟨⟨g, m⟩, rfl⟩
+  · rcases hF with ⟨⟨m, n⟩, rfl⟩ | ⟨⟨r, m⟩, rfl⟩
+    · change K (principalPartsAddRelation m n) = 0
+      rw [principalPartsAddRelation, map_sub, map_sub,
+        hK_single, hK_single, hK_single]
+      simp
+    · change K (principalPartsScalarRelation r m) = 0
+      have hs : (algebraMap R S r) • (Finsupp.single m (1 : S)) =
+          (r • (Finsupp.single m (1 : S)) : M →₀ S) := by
+        ext x
+        by_cases hx : x = m <;> simp [hx, IsScalarTower.algebraMap_smul S r]
+      rw [principalPartsScalarRelation, hs, map_sub, map_smul,
+        hK_single, hK_single]
+      simp
+  · exact principalParts_sequence_K_higher K hK_single hK_single_smul g m
+
 private theorem principalParts_sequence_formula
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
@@ -1918,34 +1946,20 @@ theorem principalParts_sequence_left_exists :
       by_cases hx : x = m <;> simp [hx]]
     rw [hK_single]
     simp [coeff]
-  have hK_relation_set (F : M →₀ S)
-      (hF : F ∈ principalPartsRelationSet (R := R) (S := S) (M := M) 1) :
-      K F = 0 := by
-    rcases hF with hF | ⟨⟨g, m⟩, rfl⟩
-    · rcases hF with ⟨⟨m, n⟩, rfl⟩ | ⟨⟨r, m⟩, rfl⟩
-      · change K (principalPartsAddRelation m n) = 0
-        rw [principalPartsAddRelation, map_sub, map_sub,
-          hK_single, hK_single, hK_single]
-        simp [coeff]
-      · change K (principalPartsScalarRelation r m) = 0
-        have hs : (algebraMap R S r) • (Finsupp.single m (1 : S)) =
-            (r • (Finsupp.single m (1 : S)) : M →₀ S) := by
-          ext x
-          by_cases hx : x = m <;> simp [hx, IsScalarTower.algebraMap_smul S r]
-        rw [principalPartsScalarRelation, hs, map_sub, map_smul,
-          hK_single, hK_single]
-        simp [coeff]
-    · exact principalParts_sequence_K_higher K hK_single hK_single_smul g m
-  have hugen (m : M) :
-      Submodule.mkQ (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
-          (Finsupp.single m (1 : S)) = u m := by
-    change principalPartsGenerator (R := R) (S := S) (M := M) 1 m = u m
-    rw [← principalPartsUniversalLinearMap_apply]
   have hsingle (m : M) (s : S) :
       K (Finsupp.single m s) =
         -(universalDifferential R S s ⊗ₜ[S] m) := by
     rw [hK_single]
     rfl
+  have hK_relation_set (F : M →₀ S)
+      (hF : F ∈ principalPartsRelationSet (R := R) (S := S) (M := M) 1) :
+      K F = 0 := by
+    exact principalParts_sequence_K_relation K hsingle hK_single_smul F hF
+  have hugen (m : M) :
+      Submodule.mkQ (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+          (Finsupp.single m (1 : S)) = u m := by
+    change principalPartsGenerator (R := R) (S := S) (M := M) 1 m = u m
+    rw [← principalPartsUniversalLinearMap_apply]
   have heval_single (m : M) (s : S) : eval (Finsupp.single m s) = s • m := by
     change principalPartsFreeEvaluation (S := S) (M := M)
       (Finsupp.single m s) = s • m

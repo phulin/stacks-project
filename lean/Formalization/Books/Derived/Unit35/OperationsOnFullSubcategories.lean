@@ -306,7 +306,11 @@ variable {T : Type u} [Category.{v} T] [AdditiveCategory T]
   [Pretriangulated T] [CategoryTheory.IsTriangulated T]
   {A : Type u'} [Category.{v'} A] [Abelian A]
 
-/-! The source's forward cone estimate for a homological functor. -/
+/-!
+The printed source bound incorrectly multiplies the support endpoints by the
+number of extension factors.  Homological exactness preserves a common
+support interval under extensions, so the correct interval is `[-m + a, m + b]`.
+-/
 theorem homological_forward_conePower
     (H : T ⥤ A) [H.IsHomological]
     (a b : ℤ) (hab : a ≤ b) (E : ObjectProperty T)
@@ -316,8 +320,8 @@ theorem homological_forward_conePower
     (hX : conePower (shiftWindow E (((-(m : ℤ)) : ℤ) : EInt)
       (((m : ℤ) : ℤ) : EInt)) n X) :
     ∀ i : ℤ,
-      i < -(m : ℤ) + (n : ℤ) * a ∨
-        (m : ℤ) + (n : ℤ) * b < i →
+      i < -(m : ℤ) + a ∨
+        (m : ℤ) + b < i →
       IsZero ((homologicalDegree H i).obj X) := by
   sorry
 

@@ -68,6 +68,27 @@ noncomputable def exampleCosimplicialModule (A : CosimplicialRing.{u}) :
     rw [A.map_comp]
     rfl
 
+/-- The monotone map `α_j^n : [n] ⟶ [1]` from the source example. -/
+def exampleIntervalSimplex (n : ℕ) (j : Fin (n + 2)) :
+    SimplexCategory.mk n ⟶ SimplexCategory.mk 1 :=
+    SimplexCategory.Hom.mk
+    ⟨fun i => if i.val < j.val then 0 else 1, by
+      intro i k hik
+      change (if i.val < j.val then 0 else 1) ≤
+        (if k.val < j.val then 0 else 1)
+      split_ifs with hi hk
+      · simp
+      · simp
+      · exfalso
+        omega
+      · simp⟩
+
+/-- Every simplex of `Δ[1]` is one of the threshold maps `α_j^n`. -/
+theorem exampleIntervalSimplex_unique (n : ℕ)
+    (α : SimplexCategory.mk n ⟶ SimplexCategory.mk 1) :
+    ∃! j : Fin (n + 2), α = exampleIntervalSimplex n j := by
+  sorry
+
 /-- The zero homomorphism between two cosimplicial modules over the same ring. -/
 def cosimplicialModuleHomZero {A : CosimplicialRing.{u}}
     (M N : CosimplicialModule.{u} A) : CosimplicialModuleHom M N where
@@ -292,46 +313,6 @@ abbrev completedExteriorPower {D : CosimplicialRing.{u}}
     (Ω : CosimplicialModule D) (i : ℕ) :=
   completion.obj (W.obj i Ω)
 
-/-- A tensoring operation in the second variable.  Chapter 16 exposes the
-corresponding operation in the first variable; this small bridge records the
-book's `M_* ⊗ Ω^i` order without choosing a symmetry isomorphism. -/
-structure CosimplicialRightTensorOperation (D : CosimplicialRing.{u}) where
-  obj : CosimplicialModule.{u} D → CosimplicialModule.{u} D →
-    CosimplicialModule.{u} D
-  map : ∀ {M N L : CosimplicialModule.{u} D},
-    CosimplicialModuleHom M N →
-      CosimplicialModuleHom (obj L M) (obj L N)
-  degreeIso : ∀ (M L : CosimplicialModule.{u} D) (n : ℕ),
-    (obj L M).obj n ≃ₗ[D.obj (SimplexCategory.mk n)]
-      TensorProduct (D.obj (SimplexCategory.mk n)) (L.obj n) (M.obj n)
-  map_component : ∀ {M N L : CosimplicialModule.{u} D}
-    (φ : CosimplicialModuleHom M N) (n : ℕ),
-    (map φ).app n =
-      (degreeIso N L n).symm.toLinearMap.comp
-        ((TensorProduct.map LinearMap.id (φ.app n)).comp
-          (degreeIso M L n).toLinearMap)
-  degreewise_naturality : ∀ {M N L : CosimplicialModule.{u} D}
-    {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
-    (u : M.obj n →ₗ[D.obj (SimplexCategory.mk n)] N.obj n)
-    (v : M.obj m →ₗ[D.obj (SimplexCategory.mk m)] N.obj m),
-    CosimplicialModuleDegreeSquare f u v →
-      ∀ x, (degreeIso N L m).symm
-          (TensorProduct.map LinearMap.id v
-            (degreeIso M L m ((obj L M).map f x))) =
-        (obj L N).map f ((degreeIso N L n).symm
-          (TensorProduct.map LinearMap.id u (degreeIso M L n x)))
-
-/-- The source's functoriality assertion for tensoring a homotopy in the
-second variable. -/
-theorem homotopy_right_tensor
-    {D : CosimplicialRing.{u}}
-    {M N L : CosimplicialModule.{u} D}
-    {φ ψ : CosimplicialModuleHom M N}
-    (h : CosimplicialModuleHomotopic φ ψ)
-    (T : CosimplicialRightTensorOperation D) :
-    CosimplicialModuleHomotopic (T.map (L := L) φ) (T.map (L := L) ψ) := by
-  sorry
-
 /-- The source's second vanishing lemma: tensoring an arbitrary cosimplicial
 module with a completed positive exterior power of the differential module is
 homotopic to zero. -/
@@ -344,7 +325,7 @@ theorem vanishing_tensor_completed_exterior
     (hΩ : CosimplicialModuleHomotopic
       (cosimplicialModuleHomId Ω) (cosimplicialModuleHomZero Ω Ω))
     (M : CosimplicialModule D)
-    (T : CosimplicialRightTensorOperation D)
+    (T : CosimplicialTensorProductOperation D)
     {i : ℕ} (_hi : 0 < i)
     (exterior_map_id :
       W.map i (cosimplicialModuleHomId Ω) =
@@ -365,24 +346,24 @@ theorem vanishing_tensor_completed_exterior
           (cosimplicialModuleHomId
             (completedExteriorPower ideal completion W Ω i)) =
         cosimplicialModuleHomId
-          (T.obj M (completedExteriorPower ideal completion W Ω i)))
+          (T.obj (completedExteriorPower ideal completion W Ω i) M))
     (tensor_map_zero :
       T.map (L := M)
           (cosimplicialModuleHomZero
             (completedExteriorPower ideal completion W Ω i)
             (completedExteriorPower ideal completion W Ω i)) =
         cosimplicialModuleHomZero
-          (T.obj M (completedExteriorPower ideal completion W Ω i))
-          (T.obj M (completedExteriorPower ideal completion W Ω i))) :
+          (T.obj (completedExteriorPower ideal completion W Ω i) M)
+          (T.obj (completedExteriorPower ideal completion W Ω i) M)) :
     CosimplicialModuleHomotopic
       (cosimplicialModuleHomId
-        (T.obj M (completedExteriorPower ideal completion W Ω i)))
+        (T.obj (completedExteriorPower ideal completion W Ω i) M))
       (cosimplicialModuleHomZero
-        (T.obj M (completedExteriorPower ideal completion W Ω i))
-        (T.obj M (completedExteriorPower ideal completion W Ω i))) := by
+        (T.obj (completedExteriorPower ideal completion W Ω i) M)
+        (T.obj (completedExteriorPower ideal completion W Ω i) M)) := by
   have hW := homotopy_exterior_power hΩ W i
   have hC := homotopy_completion ideal hW completion
-  have hT := homotopy_right_tensor (L := M) hC T
+  have hT := homotopy_tensor hC M T
   simpa [exterior_map_id, exterior_map_zero, completion_map_id,
     completion_map_zero, tensor_map_id, tensor_map_zero] using hT
 

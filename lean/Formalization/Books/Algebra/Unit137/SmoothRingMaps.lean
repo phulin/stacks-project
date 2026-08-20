@@ -70,6 +70,36 @@ noncomputable def hypersurfacePresentation
     (Ideal.Quotient.mkₐ R (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R))))
     (Ideal.Quotient.mkₐ_surjective R (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R))))
 
+noncomputable def hypersurfaceRelation
+    {R : Type u} [CommRing R] (f : MvPolynomial (Fin 2) R) :
+    (hypersurfacePresentation (R := R) f).toExtension.ker :=
+  ⟨f, by
+    change f ∈ (hypersurfacePresentation (R := R) f).ker
+    simp [hypersurfacePresentation, Algebra.Generators.ker_ofAlgHom]⟩
+
+theorem hypersurface_differential_formula
+    {R : Type u} [CommRing R] (f : MvPolynomial (Fin 2) R) (i : Fin 2) :
+    (hypersurfacePresentation (R := R) f).cotangentSpaceBasis.repr
+        ((hypersurfacePresentation (R := R) f).toExtension.cotangentComplex
+          (Algebra.Extension.Cotangent.mk (hypersurfaceRelation (R := R) f))) i =
+      hypersurfacePartial (f := f) i := by
+  let P := hypersurfacePresentation (R := R) f
+  change P.cotangentSpaceBasis.repr
+      (P.toExtension.cotangentComplex
+        (Algebra.Extension.Cotangent.mk (hypersurfaceRelation (R := R) f))) i =
+    hypersurfacePartial (f := f) i
+  have heval :
+      MvPolynomial.aeval P.val =
+        Ideal.Quotient.mkₐ R (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R))) := by
+    change MvPolynomial.aeval
+        (fun d : Fin 2 =>
+          Ideal.Quotient.mk (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R)))
+            (MvPolynomial.X d)) = _
+    exact (MvPolynomial.mkₐ_eq_aeval
+      (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R)))).symm
+  have hx := Algebra.Generators.cotangentSpaceBasis_repr_one_tmul P f i
+  simpa [hypersurfaceRelation, hypersurfacePartial, heval] using hx
+
 private theorem hypersurface_quotient_aeval_eq
     {R : Type u} [CommRing R] (f : MvPolynomial (Fin 2) R)
     (A : Algebra R (Hypersurface R f))

@@ -1558,7 +1558,12 @@ theorem isMaximalCohenMacaulay_of_support_eq_univ
     [Module.Finite R M] (hM : IsCohenMacaulay R M)
     (hsupp : Module.support R M = Set.univ) :
     IsMaximalCohenMacaulay R M := by
-  sorry
+  apply (isMaximalCohenMacaulay_iff (R := R) (M := M)).2
+  refine ⟨hM, ?_⟩
+  unfold Module.supportDim
+  rw [hsupp]
+  exact Order.krullDim_eq_of_orderIso
+    (OrderIso.Set.univ (α := PrimeSpectrum R))
 
 /-! ## Maximal prime chains -/
 
@@ -1611,15 +1616,61 @@ theorem support_localizedModuleAtPrime_eq_univ_of_support_eq_univ
     (hsupp : Module.support R M = Set.univ) (p : PrimeSpectrum R) :
     Module.support (Localization.AtPrime p.asIdeal)
       (LocalizedModule.AtPrime p.asIdeal M) = Set.univ := by
-  /-
-  Roadmap.  A prime of `R_p` corresponds to a prime `q ⊆ p` of `R`.
-  Membership of `q` in `support R M` is equivalent to nonvanishing of
-  `M_q`; transitivity of localization identifies this with the localization
-  at the corresponding prime of `R_p` of `M_p`.  Package that equivalence as
-  a general `Module.mem_support_localizedModule_iff` lemma near the existing
-  support/localization API, then this theorem is `simpa [hsupp]`.
-  -/
-  sorry
+  rw [Set.eq_univ_iff_forall]
+  intro q
+  let hq' :=
+    (IsLocalization.isPrime_iff_isPrime_disjoint p.asIdeal.primeCompl
+      (Localization.AtPrime p.asIdeal) q.asIdeal).mp q.isPrime
+  let q' : PrimeSpectrum R := ⟨q.asIdeal.under R, hq'.1⟩
+  have hq'le : q'.asIdeal ≤ p.asIdeal := by
+    change q.asIdeal.under R ≤ p.asIdeal
+    intro x hx
+    by_contra hxp
+    exact Set.disjoint_left.mp hq'.2 hxp hx
+  have hq'supp : q' ∈ Module.support R M := by
+    rw [hsupp]
+    exact mem_univ q'
+  rw [Module.mem_support_iff'] at hq'supp
+  rw [Module.mem_support_iff']
+  obtain ⟨m, hm⟩ := hq'supp
+  refine ⟨LocalizedModule.mk m (1 : p.asIdeal.primeCompl), ?_⟩
+  intro s hs
+  let a := (IsLocalization.sec p.asIdeal.primeCompl s).1
+  let b := (IsLocalization.sec p.asIdeal.primeCompl s).2
+  have ha : a ∉ q'.asIdeal := by
+    intro ha
+    apply hs
+    rw [← IsLocalization.mk'_sec (M := p.asIdeal.primeCompl)
+      (Localization.AtPrime p.asIdeal) s]
+    apply IsLocalization.mk'_mem_iff.mpr
+    exact ha
+  have hba : (b : R) ∉ q'.asIdeal := by
+    intro hb
+    exact b.2 (hq'le hb)
+  have hua : ∀ u : p.asIdeal.primeCompl, (u : R) ∉ q'.asIdeal := by
+    intro u hu
+    exact u.2 (hq'le hu)
+  intro hzero
+  have hmkzero : LocalizedModule.mk (a • m) b = 0 := by
+    rw [← IsLocalization.mk'_sec (M := p.asIdeal.primeCompl)
+      (Localization.AtPrime p.asIdeal) s] at hzero
+    rw [IsLocalizedModule.mk_eq_mk'] at hzero
+    rw [IsLocalizedModule.mk'_smul_mk' (A := Localization.AtPrime p.asIdeal)
+      (f := LocalizedModule.mkLinearMap p.asIdeal.primeCompl M)
+      a m b (1 : p.asIdeal.primeCompl)] at hzero
+    rw [IsLocalizedModule.mk_eq_mk']
+    simpa only [mul_one] using hzero
+  rw [← LocalizedModule.zero_mk (S := p.asIdeal.primeCompl) b] at hmkzero
+  obtain ⟨u, hu⟩ := (LocalizedModule.mk_eq (S := p.asIdeal.primeCompl) (M := M)).mp hmkzero
+  have hprod : (u : R) * (b : R) * a ∉ q'.asIdeal := by
+    intro h
+    rcases q'.isPrime.mem_or_mem h with hab | ha'
+    · rcases q'.isPrime.mem_or_mem hab with hu' | hb'
+      · exact hua u hu'
+      · exact hba hb'
+    · exact ha ha'
+  apply hm ((u : R) * (b : R) * a) hprod
+  simpa only [Submonoid.smul_def, mul_smul, zero_smul, smul_zero] using hu
 
 def IsCohenMacaulayModule
     (R : Type u) (M : Type v) [CommRing R]

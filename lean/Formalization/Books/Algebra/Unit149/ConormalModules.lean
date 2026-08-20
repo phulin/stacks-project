@@ -1,7 +1,8 @@
 import Mathlib.RingTheory.Extension.Cotangent.Basic
+import Mathlib.RingTheory.Extension.Cotangent.BaseChange
 import Mathlib.RingTheory.Extension.ExtendScalars
 import Mathlib.RingTheory.Ideal.Quotient.Operations
-import Mathlib.RingTheory.Ideal.Quotient.PowTransition
+import Mathlib.RingTheory.Flat.Localization
 import Mathlib.RingTheory.Localization.Basic
 import Mathlib.RingTheory.Unramified.Basic
 
@@ -202,8 +203,8 @@ theorem universal_first_order_thickening_localize_target
 
 /-- Localization of the base preserves the universal first-order property.
 
-The explicit localization algebra hypotheses allow either the standard
-`Localization` types or any equivalent chosen models of those localizations.
+The base and target localization rings may be arbitrary chosen models; the
+extension ring in the conclusion is the canonical localization of `P.Ring`.
 -/
 theorem universal_first_order_thickening_localize_base
     {A B Aₘ Bₘ : Type u} [CommRing A] [CommRing B] [CommRing Aₘ] [CommRing Bₘ]
@@ -214,7 +215,14 @@ theorem universal_first_order_thickening_localize_base
     [IsLocalization (M.map (algebraMap A B)) Bₘ]
     (P : Algebra.Extension.{u} A B)
     (hP : IsUniversalFirstOrderThickening P)
-    [Algebra Aₘ (Localization (M.map (algebraMap A P.Ring)))] :
+    :
+    letI : IsLocalization (Algebra.algebraMapSubmonoid P.Ring M)
+        (Localization (M.map (algebraMap A P.Ring))) := by
+      simpa only [Algebra.algebraMapSubmonoid] using
+        (inferInstance : IsLocalization (M.map (algebraMap A P.Ring))
+          (Localization (M.map (algebraMap A P.Ring))))
+    letI : Algebra Aₘ (Localization (M.map (algebraMap A P.Ring))) :=
+      localizationAlgebra M P.Ring
     ∃ Q : Algebra.Extension.{u} Aₘ Bₘ,
       IsUniversalFirstOrderThickening Q ∧
         Nonempty (Bₘ ⊗[B] P.Cotangent ≃ₗ[Bₘ] Q.Cotangent) ∧
@@ -274,9 +282,11 @@ noncomputable def differentialComparisonEquiv
   LinearEquiv.ofBijective (differentialComparisonMap (R := R) (A := A) (B := B) P)
     (differentialComparisonMap_bijective (R := R) (A := A) (B := B) hAB P hP)
 
-/-- The universal thickening remains formally unramified over the base. -/
+/-- If `A → B` is formally unramified, its universal thickening remains
+formally unramified over `A`. -/
 theorem universal_first_order_thickening_formallyUnramified
     {A B : Type u} [CommRing A] [CommRing B] [Algebra A B]
+    (hAB : Algebra.FormallyUnramified A B)
     (P : Algebra.Extension.{u} A B)
     (hP : IsUniversalFirstOrderThickening P) :
     Algebra.FormallyUnramified A P.Ring := by
@@ -298,7 +308,7 @@ theorem differentials_universal_first_order_thickening
       Nonempty
         (B ⊗[A] KaehlerDifferential R A ≃ₗ[B]
           B ⊗[P.Ring] KaehlerDifferential R P.Ring) := by
-  exact ⟨universal_first_order_thickening_formallyUnramified P hP,
+  exact ⟨universal_first_order_thickening_formallyUnramified hAB P hP,
     ⟨differentialComparisonEquiv hAB P hP⟩⟩
 
 end

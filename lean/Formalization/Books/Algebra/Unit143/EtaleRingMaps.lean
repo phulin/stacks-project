@@ -5,10 +5,13 @@ import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Etale.Field
 import Mathlib.RingTheory.Etale.Locus
 import Mathlib.RingTheory.Etale.Pi
+import Mathlib.RingTheory.Etale.StandardEtale
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.Smooth.StandardSmooth
 import Mathlib.RingTheory.Smooth.StandardSmoothOfFree
+import Mathlib.Algebra.Polynomial.Lifts
+import Mathlib.FieldTheory.PrimitiveElement
 import Mathlib.RingTheory.Polynomial.Resultant.Basic
 
 /-!
@@ -24,6 +27,7 @@ uses explicitly.
 namespace Formalization.Books.Algebra.Unit143
 
 open Set
+open Polynomial
 open Formalization.Books.Algebra.Unit136
 open scoped TensorProduct
 
@@ -246,11 +250,11 @@ theorem etale_finite_type_approximation
   obtain ⟨R₀, S₀, _, _, hfg, hEtale, hbase⟩ :=
     Algebra.Etale.exists_subalgebra_fg (R := ℤ) (A := R) (B := S)
   obtain ⟨hbase⟩ := hbase
-  letI : Algebra.FiniteType ℤ R₀ := ⟨R₀.fg_top.mpr hfg⟩
+  let hfiniteType : Algebra.FiniteType ℤ R₀ := ⟨R₀.fg_top.mpr hfg⟩
   exact ⟨{
     R₀ := R₀
     S₀ := S₀
-    finiteTypeOverInt := inferInstance
+    finiteTypeOverInt := hfiniteType
     etale := hEtale
     baseChange := ⟨hbase.symm⟩
   }⟩
@@ -660,6 +664,200 @@ theorem factor_mod_prime_lift_etale
     (hcoprime : IsCoprime gbar hbar) :
     Nonempty (FactorModLiftData f p gbar hbar) := by
   sorry
+
+/-! ## Finite separable residue-field extensions -/
+
+/-- An étale algebra together with a presentation of a finite separable
+extension as a quotient of it.  The compatibility field keeps the interface
+independent of a chosen `Algebra A L` instance. -/
+structure EtaleSurjectiveExtensionData
+    (A k : Type u) (L : Type v)
+    [CommRing A] [Field k] [Field L]
+    (r : A →+* k) [Algebra k L] where
+  S : Type u
+  [commRingS : CommRing S]
+  [algebraAS : Algebra A S]
+  etale : Algebra.Etale A S
+  map : S →+* L
+  commutes : map.comp (algebraMap A S) = (algebraMap k L).comp r
+  surjective : Function.Surjective map
+
+/-- The prime cut out by the quotient map in
+`EtaleSurjectiveExtensionData`. -/
+def EtaleSurjectiveExtensionData.prime
+    {A k : Type u} {L : Type v}
+    [CommRing A] [Field k] [Field L]
+    {r : A →+* k} [Algebra k L]
+    (D : EtaleSurjectiveExtensionData A k L r) :
+      @PrimeSpectrum D.S D.commRingS.toCommSemiring :=
+  letI := D.commRingS
+  letI := D.algebraAS
+  ⟨RingHom.ker D.map, RingHom.ker_isPrime D.map⟩
+
+/-- The quotient map induces the canonical residue-field ring equivalence. -/
+theorem EtaleSurjectiveExtensionData.residueFieldEquiv
+    {A k : Type u} {L : Type v}
+    [CommRing A] [Field k] [Field L]
+    {r : A →+* k} [Algebra k L]
+    (D : EtaleSurjectiveExtensionData A k L r) :
+    let _ : CommRing D.S := D.commRingS
+    let _ : Algebra A D.S := D.algebraAS
+    Nonempty (D.prime.asIdeal.ResidueField ≃+* L) := by
+  let _ := D.commRingS
+  let _ := D.algebraAS
+  let q := D.prime
+  have hq : q.asIdeal = (⊥ : Ideal L).comap D.map := by
+    rfl
+  have hbij : Function.Bijective
+      (Ideal.ResidueField.map q.asIdeal (⊥ : Ideal L) D.map hq) :=
+    RingHom.SurjectiveOnStalks.residueFieldMap_bijective
+      (RingHom.surjectiveOnStalks_of_surjective D.surjective)
+      q.asIdeal (⊥ : Ideal L) hq
+  let e₁ : q.asIdeal.ResidueField ≃+*
+      (⊥ : Ideal L).ResidueField :=
+    RingEquiv.ofBijective
+      (Ideal.ResidueField.map q.asIdeal (⊥ : Ideal L) D.map hq) hbij
+  let e₂ : L ≃+* (⊥ : Ideal L).ResidueField :=
+    Ideal.algEquivResidueFieldOfField (⊥ : Ideal L)
+  exact ⟨e₁.trans e₂.symm⟩
+
+/-- The induced residue-field equivalence agrees with the original quotient
+map on the base algebra. -/
+theorem EtaleSurjectiveExtensionData.residueFieldEquiv_with_algebraMap
+    {A : Type u} {L : Type v}
+    [CommRing A] [IsLocalRing A] [Field L]
+    {r : A →+* (IsLocalRing.ResidueField A)}
+    [Algebra (IsLocalRing.ResidueField A) L]
+    (D : EtaleSurjectiveExtensionData A (IsLocalRing.ResidueField A) L r) :
+    let _ : CommRing D.S := D.commRingS
+    let _ : Algebra A D.S := D.algebraAS
+    ∃ e : D.prime.asIdeal.ResidueField ≃+* L,
+      ∀ a : A, e (algebraMap A D.prime.asIdeal.ResidueField a) =
+        D.map (algebraMap A D.S a) := by
+  let _ := D.commRingS
+  let _ := D.algebraAS
+  let q := D.prime
+  have hq : q.asIdeal = (⊥ : Ideal L).comap D.map := by
+    rfl
+  have hbij : Function.Bijective
+      (Ideal.ResidueField.map q.asIdeal (⊥ : Ideal L) D.map hq) :=
+    RingHom.SurjectiveOnStalks.residueFieldMap_bijective
+      (RingHom.surjectiveOnStalks_of_surjective D.surjective)
+      q.asIdeal (⊥ : Ideal L) hq
+  let e₁ : q.asIdeal.ResidueField ≃+*
+      (⊥ : Ideal L).ResidueField :=
+    RingEquiv.ofBijective
+      (Ideal.ResidueField.map q.asIdeal (⊥ : Ideal L) D.map hq) hbij
+  let e₂ : L ≃+* (⊥ : Ideal L).ResidueField :=
+    Ideal.algEquivResidueFieldOfField (⊥ : Ideal L)
+  refine ⟨e₁.trans e₂.symm, ?_⟩
+  intro a
+  change e₂.symm (e₁ (algebraMap A q.asIdeal.ResidueField a)) = _
+  rw [IsScalarTower.algebraMap_apply A D.S q.asIdeal.ResidueField]
+  rw [show e₁ (algebraMap D.S q.asIdeal.ResidueField
+      (algebraMap A D.S a)) =
+      Ideal.ResidueField.map q.asIdeal (⊥ : Ideal L) D.map hq
+        (algebraMap D.S q.asIdeal.ResidueField
+          (algebraMap A D.S a)) by rfl]
+  rw [Ideal.ResidueField.map_algebraMap]
+  rw [← Ideal.algEquivResidueFieldOfField_apply]
+  exact (Ideal.algEquivResidueFieldOfField (⊥ : Ideal L)).symm_apply_apply _
+
+/-- A finite separable extension of a residue field is a quotient of an
+étale algebra over the local ring. -/
+theorem exists_etale_surjective_extension
+    {A k : Type u} {L : Type v}
+    [CommRing A] [Field k] [Field L]
+    (r : A →+* k) (hr : Function.Surjective r)
+    [Algebra k L] [Module.Finite k L]
+    [Algebra.IsSeparable k L] :
+    let _ : Algebra A L := ((algebraMap k L).comp r).toAlgebra
+    Nonempty (EtaleSurjectiveExtensionData A k L r) := by
+  let _ : Algebra A L := ((algebraMap k L).comp r).toAlgebra
+  obtain ⟨α, hα⟩ := Field.exists_primitive_element k L
+  let _ : Algebra.IsAlgebraic k L := Algebra.IsAlgebraic.of_finite k L
+  have hgen : Algebra.adjoin k ({α} : Set L) = ⊤ := by
+    rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic
+      (Algebra.IsAlgebraic.isAlgebraic α), hα,
+      IntermediateField.top_toSubalgebra]
+  rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at hgen
+  have hmin_monic : (minpoly k α).Monic :=
+    minpoly.monic (Algebra.IsIntegral.isIntegral α)
+  obtain ⟨f, hfmap, _, hfmonic⟩ :=
+    Polynomial.lifts_and_natDegree_eq_and_monic
+      (Polynomial.mem_lifts_of_surjective hr (minpoly k α)) hmin_monic
+  let P : StandardEtalePair A :=
+    ⟨f, hfmonic, f.derivative, 1, 0, 1, by simp⟩
+  have hroot : aeval α f = 0 := by
+    rw [aeval_eq_aeval_map (R := A) (T := k) (S := L) rfl, hfmap]
+    exact minpoly.aeval k α
+  have hderiv : IsUnit (aeval α f.derivative) := by
+    apply isUnit_iff_ne_zero.mpr
+    rw [aeval_eq_aeval_map (R := A) (T := k) (S := L) rfl,
+      ← derivative_map, hfmap]
+    exact (Algebra.IsSeparable.isSeparable k α).aeval_derivative_ne_zero
+      (minpoly.aeval k α)
+  let φ : P.Ring →ₐ[A] L := P.lift α ⟨hroot, hderiv⟩
+  have hφ_surjective : Function.Surjective φ := by
+    intro y
+    obtain ⟨q, hq⟩ := hgen y
+    obtain ⟨qA, hqA⟩ := Polynomial.map_surjective r hr q
+    have hφ_aeval (z : Polynomial A) :
+        φ (aeval P.X z) = aeval α z := by
+      change φ.toRingHom (aeval P.X z) = aeval α z
+      rw [map_aeval_eq_aeval_map (R := A) (S := P.Ring) (T := A)
+        (ψ := φ.toRingHom) (φ := RingHom.id A) ?_]
+      · have hX : φ.toRingHom P.X = α := by
+          exact P.lift_X α ⟨hroot, hderiv⟩
+        rw [hX]
+        simp
+      · ext a
+        simp [φ]
+    refine ⟨aeval P.X qA, ?_⟩
+    calc
+      φ (aeval P.X qA) = aeval α qA := hφ_aeval qA
+      _ = aeval α (qA.map r) := by
+        exact aeval_eq_aeval_map (R := A) (T := k) (S := L) rfl qA α
+      _ = aeval α q := by rw [hqA]
+      _ = y := hq
+  refine ⟨{
+    S := P.Ring
+    etale := inferInstance
+    map := φ.toRingHom
+    commutes := ?_
+    surjective := hφ_surjective
+  }⟩
+  ext a
+  exact φ.commutes a
+
+/-- The preceding construction specializes to the residue map of any local
+ring. -/
+theorem exists_etale_surjective_extension_over_local_ring
+    {A : Type u} [CommRing A] [IsLocalRing A]
+    (L : Type v) [Field L] [Algebra (IsLocalRing.ResidueField A) L]
+    [Module.Finite (IsLocalRing.ResidueField A) L]
+    [Algebra.IsSeparable (IsLocalRing.ResidueField A) L] :
+    Nonempty (EtaleSurjectiveExtensionData A (IsLocalRing.ResidueField A) L
+      (algebraMap A (IsLocalRing.ResidueField A))) := by
+  simpa using
+    (exists_etale_surjective_extension
+      (A := A) (k := IsLocalRing.ResidueField A) (L := L)
+      (algebraMap A (IsLocalRing.ResidueField A))
+      IsLocalRing.residue_surjective)
+
+/-- The construction over the local ring at a prime, in the notation used for
+residue fields of the original ring. -/
+theorem exists_etale_surjective_extension_over_atPrime
+    {R : Type u} [CommRing R] (p : PrimeSpectrum R)
+    (L : Type v) [Field L] [Algebra p.asIdeal.ResidueField L]
+    [Module.Finite p.asIdeal.ResidueField L]
+    [Algebra.IsSeparable p.asIdeal.ResidueField L] :
+    Nonempty (EtaleSurjectiveExtensionData
+      (Localization.AtPrime p.asIdeal) p.asIdeal.ResidueField L
+      (algebraMap (Localization.AtPrime p.asIdeal) p.asIdeal.ResidueField)) := by
+  simpa using
+    (exists_etale_surjective_extension_over_local_ring
+      (A := Localization.AtPrime p.asIdeal) L)
 
 end
 

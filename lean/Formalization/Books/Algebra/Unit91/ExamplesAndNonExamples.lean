@@ -1391,7 +1391,7 @@ theorem finite_module_annihilator_eventually_principal
             ((powerSeriesXIdeal k) ^ l) ξ' =
           Ideal.span {((PowerSeries.X : PowerSeries k) ^ (l - a))}) := by
   classical
-  letI : Module.Finite (PowerSeries k) (Q : Type u) := hQ
+  let : Module.Finite (PowerSeries k) (Q : Type u) := hQ
   let N : Submodule (PowerSeries k) (Q : Type u) :=
     Submodule.span (PowerSeries k) ({ξ'} : Set (Q : Type u))
   have hmem : ∀ (l : ℕ) (r : PowerSeries k),
@@ -1463,7 +1463,7 @@ theorem finite_module_annihilator_eventually_principal
       ((PowerSeries.X : PowerSeries k) ^ n) ≠ 0 := by
     intro hz
     have := congrArg (PowerSeries.coeff n) hz
-    simpa using this
+    simp at this
   have hpow_le (m n : ℕ) (hmn : n ≤ m) :
       Ideal.span {((PowerSeries.X : PowerSeries k) ^ m)} ≤
         Ideal.span {((PowerSeries.X : PowerSeries k) ^ n)} := by
@@ -1478,7 +1478,7 @@ theorem finite_module_annihilator_eventually_principal
     by_contra hnm
     have hlt : m < n := Nat.lt_of_not_ge hnm
     have hz := (PowerSeries.X_pow_dvd_iff.mp hdvd) m hlt
-    simpa using hz
+    simp at hz
   have hAnonbot : A ≠ (⊥ : Ideal (PowerSeries k)) := by
     intro hA
     have : (powerSeriesXIdeal k) ^ c = (⊥ : Ideal (PowerSeries k)) :=
@@ -1578,7 +1578,7 @@ theorem powerSeriesTorsionProduct_not_mittagLeffler
         by_contra hnot
         have hlt : p < q := by omega
         have hc := (PowerSeries.X_pow_dvd_iff.mp hp) p hlt
-        simpa using hc
+        simp at hc
       have hq : (PowerSeries.X : PowerSeries k) ^ p ∣
           (PowerSeries.X : PowerSeries k) ^ q := by
         rcases Ideal.mem_span_singleton.mp
@@ -1588,7 +1588,7 @@ theorem powerSeriesTorsionProduct_not_mittagLeffler
         by_contra hnot
         have hlt : q < p := by omega
         have hc := (PowerSeries.X_pow_dvd_iff.mp hq) q hlt
-        simpa using hc
+        simp at hc
       omega
     have hEq1 :
         Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)))} =
@@ -1677,7 +1677,7 @@ theorem powerSeriesTorsionProduct_not_mittagLeffler
         by_contra hnot
         have hlt : p < q := by omega
         have hc := (PowerSeries.X_pow_dvd_iff.mp hp) p hlt
-        simpa using hc
+        simp at hc
       have hq : (PowerSeries.X : PowerSeries k) ^ p ∣
           (PowerSeries.X : PowerSeries k) ^ q := by
         rcases Ideal.mem_span_singleton.mp
@@ -1687,7 +1687,7 @@ theorem powerSeriesTorsionProduct_not_mittagLeffler
         by_contra hnot
         have hlt : q < p := by omega
         have hc := (PowerSeries.X_pow_dvd_iff.mp hq) q hlt
-        simpa using hc
+        simp at hc
       omega
     have heq1 := hspan_pow_eq hEq1
     have heq2 := hspan_pow_eq hEq2
@@ -1755,7 +1755,7 @@ theorem powerSeriesXi_lies_in_directSum_adicCompletion
         exact (smul_assoc x c z).symm
       · rcases ha with ⟨a, rfl⟩
         rcases hb with ⟨b, rfl⟩
-        exact ⟨a + b, by simp [add_smul]⟩
+        exact ⟨a + b, by simp⟩
     · rintro ⟨z, rfl⟩
       exact Submodule.smul_mem_smul (Submodule.subset_span (Set.mem_singleton x))
         Submodule.mem_top
@@ -1920,7 +1920,6 @@ theorem powerSeriesXi_lies_in_directSum_adicCompletion
           apply Subtype.ext
           change 2 ^ (m - 1 + 1) = (i : ℕ)
           rw [Nat.sub_add_cancel hm, him]
-        simp only [DirectSum.of_apply, dif_pos heq]
         rw [heq]
         rw [DirectSum.coeFnLinearMap_apply, DirectSum.of_eq_same]
         exact hxi

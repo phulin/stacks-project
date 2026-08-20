@@ -803,6 +803,206 @@ private theorem localDepth_eq_min_ext_universe
   intro j hj
   exact not_nontrivial_iff_subsingleton.mpr (hvanish j hj)
 
+/-- The short-exact depth inequalities with the ring and module universes
+independent.  The Ext characterization used here is the universe-polymorphic
+version above; the original `localDepth_shortExact` remains the compact
+same-universe interface. -/
+theorem localDepth_shortExact_universe
+    {R : Type u} {N₁ N₂ N₃ : Type (max u v)} [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R]
+    [AddCommGroup N₁] [Module R N₁] [Module.Finite R N₁] [Nontrivial N₁]
+    [AddCommGroup N₂] [Module R N₂] [Module.Finite R N₂] [Nontrivial N₂]
+    [AddCommGroup N₃] [Module R N₃] [Module.Finite R N₃] [Nontrivial N₃]
+    (f : N₁ →ₗ[R] N₂) (g : N₂ →ₗ[R] N₃)
+    (hf : Function.Injective f) (hfg : Function.Exact f g)
+    (hg : Function.Surjective g) :
+    localDepth R N₂ ≥ min (localDepth R N₁) (localDepth R N₃) ∧
+      localDepth R N₃ ≥ min (localDepth R N₂) (localDepth R N₁ - 1) ∧
+      localDepth R N₁ ≥ min (localDepth R N₂) (localDepth R N₃ + 1) := by
+  classical
+  let K := ModuleCat.of R
+    (Shrink.{max u v} (R ⧸ IsLocalRing.maximalIdeal R))
+  let S := CategoryTheory.ShortComplex.moduleCatMk f g hfg.linearMap_comp_eq_zero
+  have hS : S.ShortExact := ModuleCat.shortComplex_shortExact S hfg hf hg
+  obtain ⟨i₁, hi₁, h₁, h₁'⟩ :=
+    localDepth_eq_min_ext_universe (R := R) (M := N₁)
+  obtain ⟨i₂, hi₂, h₂, h₂'⟩ :=
+    localDepth_eq_min_ext_universe (R := R) (M := N₂)
+  obtain ⟨i₃, hi₃, h₃, h₃'⟩ :=
+    localDepth_eq_min_ext_universe (R := R) (M := N₃)
+  have hzero_of_not_nontrivial {G : Type (max u v)} [AddCommGroup G]
+      (hG : ¬ Nontrivial G) : ∀ z : G, z = 0 := by
+    have hsub : Subsingleton G := not_nontrivial_iff_subsingleton.mp hG
+    intro z
+    exact @Subsingleton.elim G hsub z 0
+  have exists_ne_zero_of_nontrivial {G : Type (max u v)} [AddCommGroup G]
+      (hG : Nontrivial G) : ∃ z : G, z ≠ 0 := by
+    rcases hG.exists_pair_ne with ⟨a, b, hab⟩
+    by_cases ha : a = 0
+    · refine ⟨b, ?_⟩
+      intro hb
+      apply hab
+      simp [ha, hb]
+    · exact ⟨a, ha⟩
+  have h₁i (i : ℕ) (hi : i < i₁) :
+      ¬ Nontrivial
+        (CategoryTheory.Abelian.Ext K (ModuleCat.of R N₁) i) :=
+    h₁' i hi
+  have h₂i (i : ℕ) (hi : i < i₂) :
+      ¬ Nontrivial
+        (CategoryTheory.Abelian.Ext K (ModuleCat.of R N₂) i) :=
+    h₂' i hi
+  have h₃i (i : ℕ) (hi : i < i₃) :
+      ¬ Nontrivial
+        (CategoryTheory.Abelian.Ext K (ModuleCat.of R N₃) i) :=
+    h₃' i hi
+  have h₁eq : localDepth R N₁ = (i₁ : ℕ∞) := hi₁
+  have h₂eq : localDepth R N₂ = (i₂ : ℕ∞) := hi₂
+  have h₃eq : localDepth R N₃ = (i₃ : ℕ∞) := hi₃
+  constructor
+  · by_contra h
+    have hlt : localDepth R N₂ < min (localDepth R N₁) (localDepth R N₃) :=
+      lt_of_not_ge h
+    have hlt₁ : i₂ < i₁ := by
+      have hlt' : (i₂ : ℕ∞) < (i₁ : ℕ∞) := by
+        simpa [h₂eq, h₁eq] using
+          hlt.trans_le (min_le_left (localDepth R N₁) (localDepth R N₃))
+      exact_mod_cast hlt'
+    have hlt₃ : i₂ < i₃ := by
+      have hlt' : (i₂ : ℕ∞) < (i₃ : ℕ∞) := by
+        simpa [h₂eq, h₃eq] using
+          hlt.trans_le (min_le_right (localDepth R N₁) (localDepth R N₃))
+      exact_mod_cast hlt'
+    have hN₁sub : Subsingleton (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₁) i₂) :=
+      not_nontrivial_iff_subsingleton.mp (h₁i i₂ hlt₁)
+    have hN₃sub : Subsingleton (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₃) i₂) :=
+      not_nontrivial_iff_subsingleton.mp (h₃i i₂ hlt₃)
+    have hX₃sub : Subsingleton (CategoryTheory.Abelian.Ext K S.X₃ i₂) := by
+      change Subsingleton (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₃) i₂)
+      exact hN₃sub
+    have hX₂non : Nontrivial (CategoryTheory.Abelian.Ext K S.X₂ i₂) := by
+      change Nontrivial (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₂) i₂)
+      exact h₂
+    obtain ⟨z, hz⟩ : ∃ z : CategoryTheory.Abelian.Ext K S.X₂ i₂, z ≠ 0 :=
+      exists_ne_zero_of_nontrivial hX₂non
+    have hzmap : z.comp (CategoryTheory.Abelian.Ext.mk₀ S.g)
+        (Nat.add_zero i₂) = 0 := by
+      exact @Subsingleton.elim _ hX₃sub _ _
+    obtain ⟨y, hy⟩ := CategoryTheory.Abelian.Ext.covariant_sequence_exact₂
+      K hS z hzmap
+    have hyzero : y = 0 := hzero_of_not_nontrivial (h₁i i₂ hlt₁) y
+    apply hz
+    simpa [hyzero] using hy.symm
+  constructor
+  · by_contra h
+    have hlt : localDepth R N₃ < min (localDepth R N₂) (localDepth R N₁ - 1) :=
+      lt_of_not_ge h
+    have hlt₂ : i₃ < i₂ := by
+      have hlt' : (i₃ : ℕ∞) < (i₂ : ℕ∞) := by
+        simpa [h₃eq, h₂eq] using
+          hlt.trans_le (min_le_left (localDepth R N₂) (localDepth R N₁ - 1))
+      exact_mod_cast hlt'
+    have hlt₁sub : i₃ < i₁ - 1 := by
+      have hlt' : (i₃ : ℕ∞) < (i₁ : ℕ∞) - 1 := by
+        simpa [h₃eq, h₁eq] using
+          hlt.trans_le (min_le_right (localDepth R N₂) (localDepth R N₁ - 1))
+      exact_mod_cast hlt'
+    have hlt₁ : i₃ + 1 < i₁ := by omega
+    have hN₂sub : Subsingleton (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₂) i₃) :=
+      not_nontrivial_iff_subsingleton.mp (h₂i i₃ hlt₂)
+    have hN₁sub : Subsingleton (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₁) (i₃ + 1)) :=
+      not_nontrivial_iff_subsingleton.mp (h₁i (i₃ + 1) hlt₁)
+    have hX₃non : Nontrivial (CategoryTheory.Abelian.Ext K S.X₃ i₃) := by
+      change Nontrivial (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₃) i₃)
+      exact h₃
+    have hX₁sub : Subsingleton (CategoryTheory.Abelian.Ext K S.X₁ (i₃ + 1)) := by
+      change Subsingleton (CategoryTheory.Abelian.Ext
+        K (ModuleCat.of R N₁) (i₃ + 1))
+      exact hN₁sub
+    obtain ⟨z, hz⟩ : ∃ z : CategoryTheory.Abelian.Ext K S.X₃ i₃, z ≠ 0 :=
+      exists_ne_zero_of_nontrivial hX₃non
+    have hzmap : z.comp hS.extClass rfl = 0 :=
+      @Subsingleton.elim _ hX₁sub _ _
+    obtain ⟨y, hy⟩ := CategoryTheory.Abelian.Ext.covariant_sequence_exact₃
+      K hS z rfl hzmap
+    have hyzero : y = 0 := hzero_of_not_nontrivial (h₂i i₃ hlt₂) y
+    apply hz
+    simpa [hyzero] using hy.symm
+  · by_contra h
+    have hlt : localDepth R N₁ < min (localDepth R N₂) (localDepth R N₃ + 1) :=
+      lt_of_not_ge h
+    have hlt₂ : i₁ < i₂ := by
+      have hlt' : (i₁ : ℕ∞) < (i₂ : ℕ∞) := by
+        simpa [h₁eq, h₂eq] using
+          hlt.trans_le (min_le_left (localDepth R N₂) (localDepth R N₃ + 1))
+      exact_mod_cast hlt'
+    have hle₃ : i₁ ≤ i₃ := by
+      have hlt' : (i₁ : ℕ∞) < (i₃ : ℕ∞) + 1 := by
+        simpa [h₁eq, h₃eq] using
+          hlt.trans_le (min_le_right (localDepth R N₂) (localDepth R N₃ + 1))
+      have hle' : (i₁ : ℕ∞) ≤ (i₃ : ℕ∞) :=
+        ENat.natCast_lt_add_one_iff.mp hlt'
+      exact_mod_cast hle'
+    cases i₁ with
+    | zero =>
+        have hN₂sub : Subsingleton (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₂) 0) :=
+          not_nontrivial_iff_subsingleton.mp (h₂i 0 hlt₂)
+        have hX₂sub : Subsingleton (CategoryTheory.Abelian.Ext K S.X₂ 0) := by
+          change Subsingleton (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₂) 0)
+          exact hN₂sub
+        have hX₁non : Nontrivial (CategoryTheory.Abelian.Ext K S.X₁ 0) := by
+          change Nontrivial (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₁) 0)
+          exact h₁
+        obtain ⟨z, hz⟩ : ∃ z : CategoryTheory.Abelian.Ext K S.X₁ 0, z ≠ 0 :=
+          exists_ne_zero_of_nontrivial hX₁non
+        have hzmap :
+            (CategoryTheory.Abelian.Ext.mk₀ S.f).postcomp K (Nat.add_zero 0) z = 0 :=
+          @Subsingleton.elim _ hX₂sub _ _
+        apply hz
+        apply CategoryTheory.Abelian.Ext.postcomp_mk₀_injective_of_mono
+          (hf := hS.mono_f) K S.f
+        simpa using hzmap
+    | succ n =>
+        have hn₃ : n < i₃ := by omega
+        have hN₂sub : Subsingleton (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₂) (n + 1)) :=
+          not_nontrivial_iff_subsingleton.mp (h₂i (n + 1) hlt₂)
+        have hN₃sub : Subsingleton (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₃) n) :=
+          not_nontrivial_iff_subsingleton.mp (h₃i n hn₃)
+        have hX₂sub : Subsingleton (CategoryTheory.Abelian.Ext K S.X₂ (n + 1)) := by
+          change Subsingleton (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₂) (n + 1))
+          exact hN₂sub
+        have hX₃sub : Subsingleton (CategoryTheory.Abelian.Ext K S.X₃ n) := by
+          change Subsingleton (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₃) n)
+          exact hN₃sub
+        have hX₁non : Nontrivial (CategoryTheory.Abelian.Ext K S.X₁ (n + 1)) := by
+          change Nontrivial (CategoryTheory.Abelian.Ext
+            K (ModuleCat.of R N₁) (n + 1))
+          exact h₁
+        obtain ⟨z, hz⟩ :
+            ∃ z : CategoryTheory.Abelian.Ext K S.X₁ (n + 1), z ≠ 0 :=
+          exists_ne_zero_of_nontrivial hX₁non
+        have hzmap : z.comp (CategoryTheory.Abelian.Ext.mk₀ S.f) rfl = 0 :=
+          @Subsingleton.elim _ hX₂sub _ _
+        obtain ⟨y, hy⟩ := CategoryTheory.Abelian.Ext.covariant_sequence_exact₁
+          K hS z hzmap rfl
+        have hyzero : y = 0 := hzero_of_not_nontrivial (h₃i n hn₃) y
+        apply hz
+        simpa [hyzero] using hy.symm
+
 private theorem localDepth_quotient_ge_sub_one
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]

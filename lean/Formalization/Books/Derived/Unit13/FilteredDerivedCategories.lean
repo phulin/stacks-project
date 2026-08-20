@@ -322,6 +322,18 @@ abbrev filteredLocalizationFunctor
     FilteredHomotopyCategory C ⥤ FilteredDerivedCategory C :=
   (filteredQuasiIso C).Q
 
+theorem filteredDerivedCategory_additiveCategory_exists
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    Nonempty (AdditiveCategory (FilteredDerivedCategory C)) := by
+  sorry
+
+noncomputable instance filteredDerivedCategory_additiveCategory
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    AdditiveCategory (FilteredDerivedCategory C) :=
+  { toPreadditive := inferInstance
+    toHasFiniteProducts :=
+      (Classical.choice (filteredDerivedCategory_additiveCategory_exists C)).toHasFiniteProducts }
+
 noncomputable instance filteredDerivedCategory_isTriangulated
     (C : Type u) [Category.{v} C] [Abelian C] :
     CategoryTheory.IsTriangulated (FilteredDerivedCategory C) := by
@@ -331,6 +343,28 @@ theorem filteredLocalizationFunctor_is_localization
     (C : Type u) [Category.{v} C] [Abelian C] :
     (filteredLocalizationFunctor C).IsLocalization (filteredQuasiIso C) := by
   infer_instance
+
+/- The source also records the factorization of the degree-zero homology of
+   the associated graded complex through the filtered localization.  Keep
+   this interface independent of the optional derived-category construction. -/
+theorem filteredGradedHomologyZero_inverts
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    (filteredQuasiIso C).IsInvertedBy (filteredGradedHomologyZeroFunctor C) := by
+  sorry
+
+noncomputable def filteredGradedHomologyZeroLocalizationFunctor
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    FilteredDerivedCategory C ⥤ GradedObject ℤ C :=
+  Localization.lift (filteredGradedHomologyZeroFunctor C)
+    (filteredGradedHomologyZero_inverts C) (filteredLocalizationFunctor C)
+
+noncomputable def filteredGradedHomologyZeroLocalizationFunctor_fac
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    filteredLocalizationFunctor C ⋙
+        filteredGradedHomologyZeroLocalizationFunctor C ≅
+      filteredGradedHomologyZeroFunctor C :=
+  Localization.fac (filteredGradedHomologyZeroFunctor C)
+    (filteredGradedHomologyZero_inverts C) (filteredLocalizationFunctor C)
 
 theorem filteredDerivedLocalization_kernel
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -405,26 +439,26 @@ noncomputable def filteredDerivedForgetfulFunctor
         (filteredQuasiIso_forgetful C f hf))
     (filteredLocalizationFunctor C)
 
-theorem filteredDerivedGradedFunctor_fac
+noncomputable def filteredDerivedGradedFunctor_fac
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} (GradedObject ℤ C)] :
-    filteredLocalizationFunctor C ⋙ filteredDerivedGradedFunctor C =
+    filteredLocalizationFunctor C ⋙ filteredDerivedGradedFunctor C ≅
       filteredAssociatedGradedHomotopyFunctor C ⋙
         DerivedCategory.Qh (C := GradedObject ℤ C) := by
   sorry
 
-theorem filteredDerivedGradedPieceFunctor_fac
+noncomputable def filteredDerivedGradedPieceFunctor_fac
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ)
     [HasDerivedCategory.{w} C] :
-    filteredLocalizationFunctor C ⋙ filteredDerivedGradedPieceFunctor C p =
+    filteredLocalizationFunctor C ⋙ filteredDerivedGradedPieceFunctor C p ≅
       filteredGradedPieceHomotopyFunctor C p ⋙
         DerivedCategory.Qh (C := C) := by
   sorry
 
-theorem filteredDerivedForgetfulFunctor_fac
+noncomputable def filteredDerivedForgetfulFunctor_fac
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} C] :
-    filteredLocalizationFunctor C ⋙ filteredDerivedForgetfulFunctor C =
+    filteredLocalizationFunctor C ⋙ filteredDerivedForgetfulFunctor C ≅
       filteredForgetfulHomotopyFunctor C ⋙ DerivedCategory.Qh (C := C) := by
   sorry
 
@@ -513,69 +547,89 @@ abbrev FilteredDerivedBounded
     [HasDerivedCategory.{w} (GradedObject ℤ C)] :=
   (filteredDerivedBoundedProperty C).FullSubcategory
 
-/-! ## Boundedness replacements in the filtered homotopy category -/
+theorem filteredDerivedBoundedSubcategory_properties
+    (C : Type u) [Category.{v} C] [Abelian C]
+    [HasDerivedCategory.{w} (GradedObject ℤ C)] :
+    IsStrictlyFullSaturatedPretriangulated (filteredDerivedPlusProperty C) ∧
+      IsStrictlyFullSaturatedPretriangulated (filteredDerivedMinusProperty C) ∧
+      IsStrictlyFullSaturatedPretriangulated (filteredDerivedBoundedProperty C) := by
+  sorry
+
+/-! ## Boundedness replacements for filtered complexes -/
+
+/- A complex-level filtered quasi-isomorphism is the source's notion applied
+   to the induced morphism in the homotopy category. -/
+def filteredComplexQuasiIso
+    (C : Type u) [Category.{v} C] [Abelian C]
+    {K L : FilteredComplex C} (f : K ⟶ L) : Prop :=
+  filteredQuasiIso C
+    ((HomotopyCategory.quotient (FiniteFilteredObject C) (ComplexShape.up ℤ)).map f)
+
+noncomputable abbrev filteredComplexGradedHomology
+    (C : Type u) [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (n : ℤ) : GradedObject ℤ C :=
+  (filteredGradedHomologyFunctor C n).obj
+    ((HomotopyCategory.quotient (FiniteFilteredObject C) (ComplexShape.up ℤ)).obj K)
 
 def filteredComplexGradedHomologyVanishesBelow
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) : Prop :=
+    (K : FilteredComplex C) : Prop :=
   ∃ a : ℤ, ∀ n : ℤ, n < a →
-    IsZero ((filteredGradedHomologyFunctor C n).obj K)
+    IsZero (filteredComplexGradedHomology C K n)
 
 def filteredComplexGradedHomologyVanishesAbove
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) : Prop :=
+    (K : FilteredComplex C) : Prop :=
   ∃ b : ℤ, ∀ n : ℤ, b < n →
-    IsZero ((filteredGradedHomologyFunctor C n).obj K)
+    IsZero (filteredComplexGradedHomology C K n)
 
 def filteredComplexGradedHomologyVanishesBounded
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) : Prop :=
+    (K : FilteredComplex C) : Prop :=
   filteredComplexGradedHomologyVanishesBelow C K ∧
     filteredComplexGradedHomologyVanishesAbove C K
 
 def filteredComplexIsZeroBelow
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) (a : ℤ) : Prop :=
-  ∀ n : ℤ, n < a → IsZero (K.as.X n)
+    (K : FilteredComplex C) (a : ℤ) : Prop :=
+  ∀ n : ℤ, n < a → IsZero (K.X n)
 
 def filteredComplexIsZeroAbove
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) (b : ℤ) : Prop :=
-  ∀ n : ℤ, b < n → IsZero (K.as.X n)
+    (K : FilteredComplex C) (b : ℤ) : Prop :=
+  ∀ n : ℤ, b < n → IsZero (K.X n)
 
 def filteredComplexIsBounded
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) : Prop :=
+    (K : FilteredComplex C) : Prop :=
   ∃ a b : ℤ, filteredComplexIsZeroBelow C K a ∧
     filteredComplexIsZeroAbove C K b
 
 theorem filteredComplex_cohomology_bounded_below
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) (a : ℤ)
-    (hK : ∀ n : ℤ, n < a →
-      IsZero ((filteredGradedHomologyFunctor C n).obj K)) :
-    ∃ (L : FilteredHomotopyCategory C) (f : K ⟶ L),
-      filteredQuasiIso C f ∧ filteredComplexIsZeroBelow C L a := by
+    (K : FilteredComplex C) (a : ℤ)
+    (hK : ∀ n : ℤ, n < a → IsZero (filteredComplexGradedHomology C K n)) :
+    ∃ (L : FilteredComplex C) (f : K ⟶ L),
+      filteredComplexQuasiIso C f ∧ filteredComplexIsZeroBelow C L a := by
   sorry
 
 theorem filteredComplex_cohomology_bounded_above
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C) (b : ℤ)
-    (hK : ∀ n : ℤ, b < n →
-      IsZero ((filteredGradedHomologyFunctor C n).obj K)) :
-    ∃ (M : FilteredHomotopyCategory C) (f : M ⟶ K),
-      filteredQuasiIso C f ∧ filteredComplexIsZeroAbove C M b := by
+    (K : FilteredComplex C) (b : ℤ)
+    (hK : ∀ n : ℤ, b < n → IsZero (filteredComplexGradedHomology C K n)) :
+    ∃ (M : FilteredComplex C) (f : M ⟶ K),
+      filteredComplexQuasiIso C f ∧ filteredComplexIsZeroAbove C M b := by
   sorry
 
 theorem filteredComplex_cohomology_bounded
     (C : Type u) [Category.{v} C] [Abelian C]
-    (K : FilteredHomotopyCategory C)
+    (K : FilteredComplex C)
     (hK : filteredComplexGradedHomologyVanishesBounded C K) :
-    ∃ (L M N : FilteredHomotopyCategory C)
+    ∃ (L M N : FilteredComplex C)
       (f : K ⟶ L) (g : M ⟶ K) (u : M ⟶ N) (v : N ⟶ L),
       g ≫ f = u ≫ v ∧
-      filteredQuasiIso C f ∧ filteredQuasiIso C g ∧
-      filteredQuasiIso C u ∧ filteredQuasiIso C v ∧
+      filteredComplexQuasiIso C f ∧ filteredComplexQuasiIso C g ∧
+      filteredComplexQuasiIso C u ∧ filteredComplexQuasiIso C v ∧
       (∃ a : ℤ, filteredComplexIsZeroBelow C L a) ∧
       (∃ b : ℤ, filteredComplexIsZeroAbove C M b) ∧
       filteredComplexIsBounded C N := by

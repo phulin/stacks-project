@@ -199,6 +199,25 @@ theorem map_uniformizer_isUniformizer
     IsUniformizer Λ (E.hom π) := by
   sorry
 
+/-- A uniformizer maps into the center of the Néron blowup. -/
+theorem NeronSituation.uniformizer_mem_p
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    (S : NeronSituation R A Λ) {π : R} (hπ : IsUniformizer R π) :
+    algebraMap R A π ∈ S.p := by
+  change S.mapToLambda (algebraMap R A π) ∈ IsLocalRing.maximalIdeal Λ
+  have hfactor := DFunLike.congr_fun S.factorization π
+  have hfactor' : S.mapToLambda (algebraMap R A π) = algebraMap R Λ π := by
+    simpa [RingHom.comp_apply] using hfactor
+  rw [hfactor', ← S.extension_eq_algebraMap]
+  have hmem : S.extension.hom π ∈
+      Ideal.span ({S.extension.hom π} : Set Λ) :=
+    Ideal.subset_span (Set.mem_singleton _)
+  rw [map_uniformizer_isUniformizer S.extension S.weaklyUnramified hπ] at hmem
+  exact hmem
+
 /-- The affine chart carries the induced map to `Λ` whenever the denominator
 belongs to the prime pulled back from `Λ`. -/
 theorem exists_neronBlowupData
@@ -210,6 +229,17 @@ theorem exists_neronBlowupData
     (hπ : algebraMap R A π ∈ S.p) :
     Nonempty (NeronBlowupData S π) := by
   sorry
+
+/-- The affine Néron chart and its induced map exist for a uniformizer. -/
+theorem exists_neronBlowupData_of_uniformizer
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    (S : NeronSituation R A Λ) (π : R)
+    (hπ : IsUniformizer R π) :
+    Nonempty (NeronBlowupData S π) := by
+  exact exists_neronBlowupData S π (S.uniformizer_mem_p hπ)
 
 /-- The isomorphism class of the chart is independent of the chosen
 uniformizer; the two chart maps are compared over `A`. -/
@@ -320,14 +350,33 @@ abbrev neronPiQuotient
     Ideal.span ({algebraMap R (neronBlowupAlgebra S π) π} :
       Set (neronBlowupAlgebra S π))
 
-abbrev neronPiLocalizedRing
+def neronPiLocalizedRing
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
     [IsDomain R] [IsDomain Λ]
     [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
     [Algebra R A] [Algebra R Λ]
     {S : NeronSituation R A Λ} {π : R}
     (qbar : PrimeSpectrum (neronPiQuotient (S := S) (π := π))) : Type u :=
+  letI : CommSemiring (neronPiQuotient (S := S) (π := π)) :=
+    (Ideal.Quotient.commRing
+      (Ideal.span ({algebraMap R (neronBlowupAlgebra S π) π} :
+        Set (neronBlowupAlgebra S π)))).toCommSemiring
   Localization.AtPrime qbar.asIdeal
+
+instance neronPiLocalizedRing.commRing
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    {S : NeronSituation R A Λ} {π : R}
+    (qbar : PrimeSpectrum (neronPiQuotient (S := S) (π := π))) :
+    CommRing (neronPiLocalizedRing (S := S) (π := π) qbar) := by
+  letI : CommSemiring (neronPiQuotient (S := S) (π := π)) :=
+    (Ideal.Quotient.commRing
+      (Ideal.span ({algebraMap R (neronBlowupAlgebra S π) π} :
+        Set (neronBlowupAlgebra S π)))).toCommSemiring
+  change CommRing (Localization.AtPrime qbar.asIdeal)
+  infer_instance
 
 structure NeronBlowupDifferentialSequence
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]

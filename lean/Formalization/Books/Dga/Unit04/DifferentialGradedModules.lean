@@ -381,8 +381,18 @@ instance differentialGradedModulePreadditive
     {R : Type u} [CommRing R] (A : DifferentialGradedAlgebra R) :
     Preadditive (DifferentialGradedModuleCategory A) where
   homGroup M N := differentialGradedModuleHomAddCommGroup M N
-  add_comp := by sorry
-  comp_add := by sorry
+  add_comp := by
+    intro P Q R f g h
+    apply Subtype.ext
+    change (f.underlying + g.underlying) ≫ h.underlying =
+      f.underlying ≫ h.underlying + g.underlying ≫ h.underlying
+    rw [Preadditive.add_comp]
+  comp_add := by
+    intro P Q R f g h
+    apply Subtype.ext
+    change f.underlying ≫ (g.underlying + h.underlying) =
+      f.underlying ≫ g.underlying + f.underlying ≫ h.underlying
+    rw [Preadditive.comp_add]
 
 /-- The category of differential graded modules is abelian. -/
 noncomputable instance differentialGradedModuleAbelian

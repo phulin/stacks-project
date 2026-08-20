@@ -4,6 +4,7 @@ import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.FieldTheory.IsSepClosed
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
 import Mathlib.RingTheory.Spectrum.Prime.Chevalley
+import Mathlib.RingTheory.Spectrum.Prime.Homeomorph
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.Topology.Maps.Basic
 
@@ -296,12 +297,211 @@ theorem IsGeometricallyIrreducible.isIrreducibleAfterFiniteSeparableBaseChange
   intro k'
   exact hS.irreducibleSpace_tensorProduct
 
+private theorem finiteSeparableBaseChange_iff_separableClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsIrreducibleAfterFiniteSeparableBaseChange k S ↔
+      IrreducibleSpace
+        (PrimeSpectrum (SeparableClosure k ⊗[k] S)) := by
+  constructor
+  · intro hS
+    rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+    let L := SeparableClosure k
+    have hne : nilradical (L ⊗[k] S) ≠ ⊤ := by
+      intro htop
+      letI : Module.Free k S := Module.Free.of_divisionRing k S
+      letI : Module.Flat k S := Module.Flat.of_free
+      let m : k ⊗[k] S →ₐ[k] L ⊗[k] S :=
+        Algebra.TensorProduct.map (IsScalarTower.toAlgHom k k L) (AlgHom.id k S)
+      have hm : Function.Injective m := by
+        change Function.Injective
+          (TensorProduct.map (IsScalarTower.toAlgHom k k L).toLinearMap
+            (AlgHom.id k S).toLinearMap)
+        exact TensorProduct.map_injective_of_flat_flat
+          (R := k) (M := L) (N := S) (P := k) (Q := S) _ _
+          (IsScalarTower.toAlgHom k k L).injective (fun _ _ h => h)
+      have hprime : (nilradical (k ⊗[k] S)).IsPrime :=
+        PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS k)
+      have hnil : IsNilpotent (1 : L ⊗[k] S) := by
+        have hmem : (1 : L ⊗[k] S) ∈ nilradical (L ⊗[k] S) := by
+          rw [htop]
+          simp
+        exact mem_nilradical.mp hmem
+      have hnil' : IsNilpotent (m (1 : k ⊗[k] S)) := by
+        have hmone : m (1 : k ⊗[k] S) = (1 : L ⊗[k] S) := by
+          simp [m, Algebra.TensorProduct.one_def]
+        rw [hmone]
+        exact hnil
+      exact hprime.ne_top ((Ideal.eq_top_iff_one _).mpr
+        ((mem_nilradical).mpr
+          ((IsNilpotent.map_iff (f := m.toRingHom) hm).mp hnil')))
+    refine ⟨hne, ?_⟩
+    intro x y hxy
+    obtain ⟨n, c, d, hcd⟩ := TensorProduct.exists_sum_tmul_eq x
+    obtain ⟨m, e, f, hef⟩ := TensorProduct.exists_sum_tmul_eq y
+    let T : Set L := Set.range c ∪ Set.range e
+    let A : IntermediateField k L := IntermediateField.adjoin k T
+    have hT : T.Finite :=
+      (Set.finite_range c).union (Set.finite_range e)
+    letI : Fintype T := hT.fintype
+    letI : Module.Free k S := Module.Free.of_divisionRing k S
+    letI : Module.Flat k S := Module.Flat.of_free
+    letI : FiniteDimensional k A := by
+      apply IntermediateField.finiteDimensional_adjoin
+      intro z hz
+      exact (Algebra.IsAlgebraic.isAlgebraic (R := k) z).isIntegral
+    letI : Algebra.IsSeparable k A :=
+      (IntermediateField.isSeparable_adjoin_iff_isSeparable k L).2 (by
+        intro z hz
+        exact Algebra.IsSeparable.isSeparable k z)
+    have hcA : ∀ i, c i ∈ A := by
+      intro i
+      exact IntermediateField.subset_adjoin k T (Or.inl ⟨i, rfl⟩)
+    have heA : ∀ i, e i ∈ A := by
+      intro i
+      exact IntermediateField.subset_adjoin k T (Or.inr ⟨i, rfl⟩)
+    let mA : A ⊗[k] S →ₐ[k] L ⊗[k] S :=
+      Algebra.TensorProduct.map A.val (AlgHom.id k S)
+    have hmA : Function.Injective mA := by
+      change Function.Injective
+        (TensorProduct.map A.val.toLinearMap (AlgHom.id k S).toLinearMap)
+      exact TensorProduct.map_injective_of_flat_flat
+        (R := k) (M := L) (N := S) (P := A) (Q := S) _ _ A.val.injective
+        (fun _ _ h => h)
+    let xA : A ⊗[k] S := ∑ i, (⟨c i, hcA i⟩ : A) ⊗ₜ[k] d i
+    let yA : A ⊗[k] S := ∑ i, (⟨e i, heA i⟩ : A) ⊗ₜ[k] f i
+    have hxA : mA xA = x := by
+      simp only [xA, map_sum, mA, Algebra.TensorProduct.map_tmul,
+        AlgHom.coe_toRingHom, AlgHom.coe_toRingHom, AlgHom.id_apply]
+      exact hcd.symm
+    have hyA : mA yA = y := by
+      simp only [yA, map_sum, mA, Algebra.TensorProduct.map_tmul,
+        AlgHom.coe_toRingHom, AlgHom.coe_toRingHom, AlgHom.id_apply]
+      exact hef.symm
+    have hxyA : IsNilpotent (xA * yA) := by
+      apply (IsNilpotent.map_iff (f := mA.toRingHom) hmA).mp
+      change IsNilpotent (mA.toRingHom (xA * yA))
+      have hmapmul : mA.toRingHom (xA * yA) = mA xA * mA yA := by
+        exact mA.map_mul xA yA
+      rw [hmapmul, hxA, hyA]
+      exact hxy
+    have hprime : (nilradical (A ⊗[k] S)).IsPrime :=
+      PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS A)
+    rcases hprime.2 hxyA with hxnil | hynil
+    · left
+      have hnil := (IsNilpotent.map_iff (f := mA.toRingHom) hmA).mpr hxnil
+      change IsNilpotent (mA xA) at hnil
+      rw [hxA] at hnil
+      exact mem_nilradical.mpr hnil
+    · right
+      have hnil := (IsNilpotent.map_iff (f := mA.toRingHom) hmA).mpr hynil
+      change IsNilpotent (mA yA) at hnil
+      rw [hyA] at hnil
+      exact mem_nilradical.mpr hnil
+  · intro hL k' _ _ _ _
+    letI : Module.Free k S := Module.Free.of_divisionRing k S
+    letI : Module.Flat k S := Module.Flat.of_free
+    let i : k' →ₐ[k] SeparableClosure k := IsSepClosed.lift
+    let m : k' ⊗[k] S →ₐ[k] SeparableClosure k ⊗[k] S :=
+      Algebra.TensorProduct.map i (AlgHom.id k S)
+    have hm : Function.Injective m := by
+      change Function.Injective
+        (TensorProduct.map i.toLinearMap (AlgHom.id k S).toLinearMap)
+      exact TensorProduct.map_injective_of_flat_flat
+        (R := k) (M := SeparableClosure k) (N := S) (P := k') (Q := S) _ _ i.injective
+        (fun _ _ h => h)
+    have htarget :
+        (nilradical (SeparableClosure k ⊗[k] S)).IsPrime :=
+      PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp hL
+    have hcomap : Ideal.comap m.toRingHom
+        (nilradical (SeparableClosure k ⊗[k] S)) = nilradical (k' ⊗[k] S) := by
+      ext x
+      rw [Ideal.mem_comap, mem_nilradical, mem_nilradical]
+      exact IsNilpotent.map_iff (f := m.toRingHom) hm
+    have hcomapprime :
+        (Ideal.comap m.toRingHom
+          (nilradical (SeparableClosure k ⊗[k] S))).IsPrime := by
+      refine ⟨Ideal.comap_ne_top m.toRingHom htarget.1, ?_⟩
+      intro x y hxy
+      have hxy' : m x * m y ∈ nilradical (SeparableClosure k ⊗[k] S) := by
+        change m (x * y) ∈ nilradical (SeparableClosure k ⊗[k] S) at hxy
+        rwa [map_mul] at hxy
+      rcases htarget.2 hxy' with hx | hy
+      · left
+        change m x ∈ nilradical (SeparableClosure k ⊗[k] S)
+        exact hx
+      · right
+        change m y ∈ nilradical (SeparableClosure k ⊗[k] S)
+        exact hy
+    rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+    rw [← hcomap]
+    exact hcomapprime
+
 /-- Finite separable base changes detect geometric irreducibility. -/
 theorem isGeometricallyIrreducible_of_isIrreducibleAfterFiniteSeparableBaseChange
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
     (hS : IsIrreducibleAfterFiniteSeparableBaseChange k S) :
     IsGeometricallyIrreducible.{u, v, u} k S := by
-  sorry
+  intro K _ _
+  let L := SeparableClosure k
+  have hL : IrreducibleSpace (PrimeSpectrum (L ⊗[k] S)) :=
+    (finiteSeparableBaseChange_iff_separableClosure (k := k) (S := S)).mp hS
+  let Ω := AlgebraicClosure K
+  let i : L →ₐ[k] Ω := IsSepClosed.lift
+  letI : Algebra L Ω := i.toRingHom.toAlgebra
+  letI : IsScalarTower k L Ω :=
+    IsScalarTower.of_algebraMap_eq' (R := k) (S := L) (A := Ω) (by
+      ext x
+      exact (i.commutes x).symm)
+  letI : IsScalarTower L Ω Ω := IsScalarTower.right
+  letI : SMulCommClass L Ω Ω := IsScalarTower.to_smulCommClass
+  letI : Algebra L (L ⊗[k] S) := Algebra.TensorProduct.leftAlgebra
+  letI : CommSemiring (Ω ⊗[L] (L ⊗[k] S)) :=
+    Algebra.TensorProduct.instCommSemiring (R := L) (A := Ω) (B := L ⊗[k] S)
+  have hΩfield : IrreducibleSpace (PrimeSpectrum Ω) := by
+    rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+    simpa using (Ideal.isPrime_bot : (⊥ : Ideal Ω).IsPrime)
+  have hΩ : IrreducibleSpace
+      (PrimeSpectrum (Ω ⊗[L] (L ⊗[k] S))) :=
+    separablyClosed_tensorProduct_irreducible (k := L) (R := Ω)
+      (S := L ⊗[k] S) hΩfield hL
+  have hΩbase : IrreducibleSpace (PrimeSpectrum (Ω ⊗[k] S)) := by
+    exact (PrimeSpectrum.homeomorphOfRingEquiv
+      (Algebra.TensorProduct.cancelBaseChange k L Ω Ω S).toRingEquiv).irreducibleSpace_iff.mp hΩ
+  let j : K →ₐ[k] Ω := IsScalarTower.toAlgHom k K Ω
+  let m : K ⊗[k] S →ₐ[k] Ω ⊗[k] S :=
+    Algebra.TensorProduct.map j (AlgHom.id k S)
+  letI : Module.Free k S := Module.Free.of_divisionRing k S
+  letI : Module.Flat k S := Module.Flat.of_free
+  have hm : Function.Injective m := by
+    change Function.Injective
+      (TensorProduct.map j.toLinearMap (AlgHom.id k S).toLinearMap)
+    exact TensorProduct.map_injective_of_flat_flat
+      (R := k) (M := Ω) (N := S) (P := K) (Q := S) _ _ j.injective
+      (fun _ _ h => h)
+  have htarget : (nilradical (Ω ⊗[k] S)).IsPrime :=
+    PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp hΩbase
+  have hcomap : Ideal.comap m.toRingHom (nilradical (Ω ⊗[k] S)) =
+      nilradical (K ⊗[k] S) := by
+    ext x
+    rw [Ideal.mem_comap, mem_nilradical, mem_nilradical]
+    exact IsNilpotent.map_iff (f := m.toRingHom) hm
+  have hcomapprime :
+      (Ideal.comap m.toRingHom (nilradical (Ω ⊗[k] S))).IsPrime := by
+    refine ⟨Ideal.comap_ne_top m.toRingHom htarget.1, ?_⟩
+    intro x y hxy
+    have hxy' : m x * m y ∈ nilradical (Ω ⊗[k] S) := by
+      change m (x * y) ∈ nilradical (Ω ⊗[k] S) at hxy
+      rwa [map_mul] at hxy
+    rcases htarget.2 hxy' with hx | hy
+    · left
+      change m x ∈ nilradical (Ω ⊗[k] S)
+      exact hx
+    · right
+      change m y ∈ nilradical (Ω ⊗[k] S)
+      exact hy
+  rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+  rw [← hcomap]
+  exact hcomapprime
 
 theorem isGeometricallyIrreducible_iff_finiteSeparable
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
@@ -317,7 +517,139 @@ theorem isIrreducibleAfterFiniteSeparableBaseChange_iff_separableClosure
     IsIrreducibleAfterFiniteSeparableBaseChange k S ↔
       IrreducibleSpace
         (PrimeSpectrum (SeparableClosure k ⊗[k] S)) := by
-  sorry
+  constructor
+  · intro hS
+    rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+    let L := SeparableClosure k
+    have hne : nilradical (L ⊗[k] S) ≠ ⊤ := by
+      intro htop
+      letI : Module.Free k S := Module.Free.of_divisionRing k S
+      letI : Module.Flat k S := Module.Flat.of_free
+      let m : k ⊗[k] S →ₐ[k] L ⊗[k] S :=
+        Algebra.TensorProduct.map (IsScalarTower.toAlgHom k k L) (AlgHom.id k S)
+      have hm : Function.Injective m := by
+        change Function.Injective
+          (TensorProduct.map (IsScalarTower.toAlgHom k k L).toLinearMap
+            (AlgHom.id k S).toLinearMap)
+        exact TensorProduct.map_injective_of_flat_flat
+          (R := k) (M := L) (N := S) (P := k) (Q := S) _ _
+          (IsScalarTower.toAlgHom k k L).injective (fun _ _ h => h)
+      have hprime : (nilradical (k ⊗[k] S)).IsPrime :=
+        PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS k)
+      have hnil : IsNilpotent (1 : L ⊗[k] S) := by
+        have hmem : (1 : L ⊗[k] S) ∈ nilradical (L ⊗[k] S) := by
+          rw [htop]
+          simp
+        exact mem_nilradical.mp hmem
+      have hnil' : IsNilpotent (m (1 : k ⊗[k] S)) := by
+        have hmone : m (1 : k ⊗[k] S) = (1 : L ⊗[k] S) := by
+          simp [m, Algebra.TensorProduct.one_def]
+        rw [hmone]
+        exact hnil
+      exact hprime.ne_top ((Ideal.eq_top_iff_one _).mpr
+        ((mem_nilradical).mpr
+          ((IsNilpotent.map_iff (f := m.toRingHom) hm).mp hnil')))
+    refine ⟨hne, ?_⟩
+    intro x y hxy
+    obtain ⟨n, c, d, hcd⟩ := TensorProduct.exists_sum_tmul_eq x
+    obtain ⟨m, e, f, hef⟩ := TensorProduct.exists_sum_tmul_eq y
+    let T : Set L := Set.range c ∪ Set.range e
+    let A : IntermediateField k L := IntermediateField.adjoin k T
+    have hT : T.Finite :=
+      (Set.finite_range c).union (Set.finite_range e)
+    letI : Fintype T := hT.fintype
+    letI : Module.Free k S := Module.Free.of_divisionRing k S
+    letI : Module.Flat k S := Module.Flat.of_free
+    letI : FiniteDimensional k A := by
+      apply IntermediateField.finiteDimensional_adjoin
+      intro z hz
+      exact (Algebra.IsAlgebraic.isAlgebraic (R := k) z).isIntegral
+    letI : Algebra.IsSeparable k A :=
+      (IntermediateField.isSeparable_adjoin_iff_isSeparable k L).2 (by
+        intro z hz
+        exact Algebra.IsSeparable.isSeparable k z)
+    have hcA : ∀ i, c i ∈ A := by
+      intro i
+      exact IntermediateField.subset_adjoin k T (Or.inl ⟨i, rfl⟩)
+    have heA : ∀ i, e i ∈ A := by
+      intro i
+      exact IntermediateField.subset_adjoin k T (Or.inr ⟨i, rfl⟩)
+    let mA : A ⊗[k] S →ₐ[k] L ⊗[k] S :=
+      Algebra.TensorProduct.map A.val (AlgHom.id k S)
+    have hmA : Function.Injective mA := by
+      change Function.Injective
+        (TensorProduct.map A.val.toLinearMap (AlgHom.id k S).toLinearMap)
+      exact TensorProduct.map_injective_of_flat_flat
+        (R := k) (M := L) (N := S) (P := A) (Q := S) _ _ A.val.injective
+        (fun _ _ h => h)
+    let xA : A ⊗[k] S := ∑ i, (⟨c i, hcA i⟩ : A) ⊗ₜ[k] d i
+    let yA : A ⊗[k] S := ∑ i, (⟨e i, heA i⟩ : A) ⊗ₜ[k] f i
+    have hxA : mA xA = x := by
+      simp only [xA, map_sum, mA, Algebra.TensorProduct.map_tmul,
+        AlgHom.coe_toRingHom, AlgHom.coe_toRingHom, AlgHom.id_apply]
+      exact hcd.symm
+    have hyA : mA yA = y := by
+      simp only [yA, map_sum, mA, Algebra.TensorProduct.map_tmul,
+        AlgHom.coe_toRingHom, AlgHom.coe_toRingHom, AlgHom.id_apply]
+      exact hef.symm
+    have hxyA : IsNilpotent (xA * yA) := by
+      apply (IsNilpotent.map_iff (f := mA.toRingHom) hmA).mp
+      change IsNilpotent (mA.toRingHom (xA * yA))
+      have hmapmul : mA.toRingHom (xA * yA) = mA xA * mA yA := by
+        exact mA.map_mul xA yA
+      rw [hmapmul, hxA, hyA]
+      exact hxy
+    have hprime : (nilradical (A ⊗[k] S)).IsPrime :=
+      PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS A)
+    rcases hprime.2 hxyA with hxnil | hynil
+    · left
+      have hnil := (IsNilpotent.map_iff (f := mA.toRingHom) hmA).mpr hxnil
+      change IsNilpotent (mA xA) at hnil
+      rw [hxA] at hnil
+      exact mem_nilradical.mpr hnil
+    · right
+      have hnil := (IsNilpotent.map_iff (f := mA.toRingHom) hmA).mpr hynil
+      change IsNilpotent (mA yA) at hnil
+      rw [hyA] at hnil
+      exact mem_nilradical.mpr hnil
+  · intro hL k' _ _ _ _
+    letI : Module.Free k S := Module.Free.of_divisionRing k S
+    letI : Module.Flat k S := Module.Flat.of_free
+    let i : k' →ₐ[k] SeparableClosure k := IsSepClosed.lift
+    let m : k' ⊗[k] S →ₐ[k] SeparableClosure k ⊗[k] S :=
+      Algebra.TensorProduct.map i (AlgHom.id k S)
+    have hm : Function.Injective m := by
+      change Function.Injective
+        (TensorProduct.map i.toLinearMap (AlgHom.id k S).toLinearMap)
+      exact TensorProduct.map_injective_of_flat_flat
+        (R := k) (M := SeparableClosure k) (N := S) (P := k') (Q := S) _ _ i.injective
+        (fun _ _ h => h)
+    have htarget :
+        (nilradical (SeparableClosure k ⊗[k] S)).IsPrime :=
+      PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp hL
+    have hcomap : Ideal.comap m.toRingHom
+        (nilradical (SeparableClosure k ⊗[k] S)) = nilradical (k' ⊗[k] S) := by
+      ext x
+      rw [Ideal.mem_comap, mem_nilradical, mem_nilradical]
+      exact IsNilpotent.map_iff (f := m.toRingHom) hm
+    have hcomapprime :
+        (Ideal.comap m.toRingHom
+          (nilradical (SeparableClosure k ⊗[k] S))).IsPrime := by
+      refine ⟨Ideal.comap_ne_top m.toRingHom htarget.1, ?_⟩
+      intro x y hxy
+      have hxy' : m x * m y ∈ nilradical (SeparableClosure k ⊗[k] S) := by
+        change m (x * y) ∈ nilradical (SeparableClosure k ⊗[k] S) at hxy
+        rwa [map_mul] at hxy
+      rcases htarget.2 hxy' with hx | hy
+      · left
+        change m x ∈ nilradical (SeparableClosure k ⊗[k] S)
+        exact hx
+      · right
+        change m y ∈ nilradical (SeparableClosure k ⊗[k] S)
+        exact hy
+    rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+    rw [← hcomap]
+    exact hcomapprime
 
 /-- The separable-closure and algebraic-closure tests for geometric
 irreducibility agree. -/
@@ -326,7 +658,23 @@ theorem irreducibleSpace_separableClosure_iff_algebraicClosure
     IrreducibleSpace (PrimeSpectrum (SeparableClosure k ⊗[k] S)) ↔
       IrreducibleSpace
         (PrimeSpectrum (AlgebraicClosure k ⊗[k] S)) := by
-  sorry
+  letI : Algebra (SeparableClosure k) (AlgebraicClosure k) :=
+    (separableClosure k (AlgebraicClosure k)).val.toRingHom.toAlgebra
+  letI : IsScalarTower k (SeparableClosure k) (AlgebraicClosure k) :=
+    IsScalarTower.of_algebraMap_eq' (R := k) (S := SeparableClosure k)
+      (A := AlgebraicClosure k) (by
+      ext x
+      exact ((separableClosure k (AlgebraicClosure k)).val.commutes x).symm)
+  letI : Algebra.IsAlgebraic (SeparableClosure k) (AlgebraicClosure k) :=
+    Algebra.IsAlgebraic.tower_top (K := k) (L := SeparableClosure k)
+      (A := AlgebraicClosure k)
+  let hhome : IsHomeomorph (PrimeSpectrum.comap
+      (Algebra.TensorProduct.map
+        (Algebra.ofId (SeparableClosure k) (AlgebraicClosure k))
+        (AlgHom.id k S)).toRingHom) :=
+    PrimeSpectrum.isHomeomorph_comap_tensorProductMap_of_isPurelyInseparable
+      (R := k) (K := SeparableClosure k) (S := S) (AlgebraicClosure k)
+  exact hhome.homeomorph.irreducibleSpace_iff.symm
 
 /-- The four equivalent tests for geometric irreducibility: arbitrary field
 extensions, finite separable extensions, a separable closure, and an
@@ -893,7 +1241,57 @@ theorem geometricallyIrreducible_transitive
   `PrimeSpectrum.homeomorphOfRingEquiv ... .irreducibleSpace_iff` for the
   final assembly.
   -/
-  sorry
+  intro F _ _
+  let B := F ⊗[k] K
+  letI : Algebra K B := Algebra.TensorProduct.rightAlgebra
+  have hB : IrreducibleSpace (PrimeSpectrum B) := hK F
+  let C := B ⊗[K] S
+  have hcomponents :=
+    geometricallyIrreducible_baseChange_components (k := K) (R := B) (S := S) hS
+  rcases hcomponents with ⟨e, he⟩
+  letI : IrreducibleSpace (PrimeSpectrum B) := hB
+  have hBcomponents : irreducibleComponents (PrimeSpectrum B) = {Set.univ} :=
+    irreducibleComponents_eq_singleton
+  let C₀ : irreducibleComponents (PrimeSpectrum C) :=
+    e.symm ⟨Set.univ, by simpa [hBcomponents]⟩
+  have hCcomponents : irreducibleComponents (PrimeSpectrum C) = {C₀.1} := by
+    ext D
+    constructor
+    · intro hD
+      have heD : e ⟨D, hD⟩ = e C₀ := by
+        apply Subtype.ext
+        have h₁ : (e ⟨D, hD⟩).1 = Set.univ := by
+          have hm : (e ⟨D, hD⟩).1 ∈ ({Set.univ} : Set (Set (PrimeSpectrum B))) :=
+            hBcomponents ▸ (e ⟨D, hD⟩).2
+          exact Set.mem_singleton_iff.mp hm
+        have h₂ : (e C₀).1 = Set.univ := by
+          have hm : (e C₀).1 ∈ ({Set.univ} : Set (Set (PrimeSpectrum B))) :=
+            hBcomponents ▸ (e C₀).2
+          exact Set.mem_singleton_iff.mp hm
+        exact h₁.trans h₂.symm
+      exact Set.mem_singleton_iff.mpr (congrArg Subtype.val (e.injective heD))
+    · intro hD
+      have hDC : D = C₀.1 := Set.mem_singleton_iff.mp hD
+      simpa [hDC] using C₀.2
+  have hC₀ : C₀.1 = Set.univ := by
+    have h := sUnion_irreducibleComponents (X := PrimeSpectrum C)
+    rw [hCcomponents] at h
+    simpa using h
+  have hC : IrreducibleSpace (PrimeSpectrum C) := by
+    rw [irreducibleSpace_def]
+    simpa [hC₀] using C₀.2.1
+  let e₁ : (F ⊗[k] K) ⊗[K] S ≃ₐ[K] S ⊗[K] (F ⊗[k] K) :=
+    Algebra.TensorProduct.comm K (F ⊗[k] K) S
+  let e₂ : S ⊗[K] (F ⊗[k] K) ≃ₐ[K] S ⊗[K] (K ⊗[k] F) :=
+    Algebra.TensorProduct.congr (AlgEquiv.refl : S ≃ₐ[K] S)
+      (Algebra.TensorProduct.commRight k K F).symm
+  let e₃ : S ⊗[K] (K ⊗[k] F) ≃ₐ[K] S ⊗[k] F :=
+    Algebra.TensorProduct.cancelBaseChange k K K S F
+  let e₄ : S ⊗[k] F ≃ₐ[k] F ⊗[k] S :=
+    Algebra.TensorProduct.comm k S F
+  let e : (F ⊗[k] K) ⊗[K] S ≃ₐ[k] F ⊗[k] S :=
+    ((e₁.trans (e₂.trans e₃)).restrictScalars k).trans e₄
+  exact (PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv).irreducibleSpace_iff.mp hC
 
 /-- Geometric irreducibility of a field extension is equivalent to that of
 the corresponding one-variable rational-function extension. -/

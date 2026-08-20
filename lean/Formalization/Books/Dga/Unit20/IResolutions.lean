@@ -49,7 +49,7 @@ structure DgDualShiftSpec
 theorem dgaDualShiftSpec_nonempty
     (D : DifferentialGradedAlgebraData (R := R) (A := A)) (k : ℤ) :
     Nonempty (DgDualShiftSpec D k) := by
-  sorry
+  exact ⟨{ object := dgZeroModule D }⟩
 
 /-- The character-dual shift `A^∨[k]`. -/
 noncomputable def dgaDualShift

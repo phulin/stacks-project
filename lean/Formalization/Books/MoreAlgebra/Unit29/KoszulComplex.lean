@@ -550,7 +550,32 @@ theorem koszul_finiteLocallyFree_local
     (hE : Formalization.Books.Algebra.Unit78.FiniteLocallyFree R E) :
     ∃ s : Set R, Ideal.span s = ⊤ ∧
       ∀ a ∈ s, Nonempty (KoszulLocalSequencePresentation R E φ a) := by
-  sorry
+  rcases hE with ⟨s, hs, h⟩
+  refine ⟨s, hs, ?_⟩
+  intro a ha
+  have hfree : Module.Free (Localization.Away a) (LocalizedModule.Away a E) :=
+    h a ha |>.2
+  have hfinite : Module.Finite (Localization.Away a) (LocalizedModule.Away a E) :=
+    h a ha |>.1
+  let ι := @Module.Free.ChooseBasisIndex (Localization.Away a)
+    (LocalizedModule.Away a E) _ _ _ hfree
+  let b : Module.Basis ι (Localization.Away a) (LocalizedModule.Away a E) :=
+    @Module.Free.chooseBasis (Localization.Away a) (LocalizedModule.Away a E) _ _ _ hfree
+  let fintype : Fintype ι :=
+    @Module.Free.ChooseBasisIndex.fintype (Localization.Away a)
+      (LocalizedModule.Away a E) _ _ _ hfree hfinite
+  let e : ι ≃ Fin (@Fintype.card ι fintype) := @Fintype.equivFin ι fintype
+  let b' := b.reindex e
+  let basis : LocalizedModule.Away a E ≃ₗ[Localization.Away a]
+      (Fin (@Fintype.card ι fintype) →₀ Localization.Away a) := b'.repr
+  let sequence : Fin (@Fintype.card ι fintype) → LocalizedModule.Away a R :=
+    fun i => localizedKoszulMap R E φ a (basis.symm (Finsupp.single i 1))
+  exact ⟨{
+    rank := @Fintype.card ι fintype
+    basis := basis
+    sequence := sequence
+    map_on_basis := by intro i; rfl
+  }⟩
 
 /-- The exterior-algebra map induced by a linear map of generators. -/
 def koszulAlgebraMap (R E E' : Type u) [CommRing R] [AddCommGroup E]
@@ -573,7 +598,43 @@ theorem koszul_functorial
     [Module R E] [Module R E'] (φ : E →ₗ[R] R) (φ' : E' →ₗ[R] R)
     (ψ : E →ₗ[R] E') (h : φ'.comp ψ = φ) :
     Nonempty (KoszulDGAHom R E E' φ φ' ψ) := by
-  sorry
+  refine ⟨{
+    algebraMap := koszulAlgebraMap R E E' ψ
+    algebraMap_eq_induced := rfl
+    differential_commutes := ?_
+  }⟩
+  apply LinearMap.ext
+  intro x
+  induction x using CliffordAlgebra.left_induction with
+  | algebraMap =>
+      simp [koszulAlgebraMap, koszulAlgebraDifferential]
+  | add x y hx hy =>
+      simp only [LinearMap.comp_apply, map_add] at hx hy ⊢
+      simpa using congrArg₂ (· + ·) hx hy
+  | ι_mul e x hx =>
+      simp only [LinearMap.comp_apply]
+      change (koszulAlgebraMap R E E' ψ)
+          (koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R x * e)) =
+        koszulAlgebraDifferential R E' φ'
+          ((koszulAlgebraMap R E E' ψ) (ExteriorAlgebra.ι R x * e))
+      rw [koszulAlgebraDifferential_mul_generator_aux]
+      rw [map_add, map_smul, map_mul, map_mul, map_mul]
+      simp only [koszulAlgebraMap, ExteriorAlgebra.map_apply_ι]
+      rw [koszulAlgebraDifferential_mul_generator_aux]
+      rw [koszulAlgebraDifferential_on_generator_aux,
+        koszulAlgebraDifferential_on_generator_aux]
+      have hx' :
+          (koszulAlgebraMap R E E' ψ) (koszulAlgebraDifferential R E φ e) =
+            koszulAlgebraDifferential R E' φ'
+              ((koszulAlgebraMap R E E' ψ) e) := by
+        simpa [koszulAlgebraMap] using hx
+      have hx'' :
+          (ExteriorAlgebra.map ψ) (koszulAlgebraDifferential R E φ e) =
+            koszulAlgebraDifferential R E' φ' ((ExteriorAlgebra.map ψ) e) := by
+        simpa [koszulAlgebraMap] using hx'
+      rw [hx'']
+      have hxe : φ' (ψ x) = φ x := LinearMap.congr_fun h x
+      simp [hxe, Algebra.smul_def]
 
 /-- Data of an isomorphism between two Koszul DGAs. -/
 structure KoszulDGAIso (R E E' : Type u) [CommRing R] [AddCommGroup E]
@@ -592,6 +653,55 @@ noncomputable def matrixChangeSequence (R : Type u) [CommRing R] (r : ℕ)
     (X : Matrix (Fin r) (Fin r) R) (f : Fin r → R) : Fin r → R :=
   fun i => ∑ j, X i j * f j
 
+private theorem koszulDifferential_map_change_basis
+    (R : Type u) [CommRing R] (r : ℕ) (f g : Fin r → R)
+    (e : (Fin r → R) ≃ₗ[R] (Fin r → R))
+    (h : (sequenceLinearMap R r g) =
+      (sequenceLinearMap R r f).comp e.toLinearMap) (n : ℕ) :
+    (koszulDifferential R (Fin r → R) (sequenceLinearMap R r g) n).comp
+        (exteriorPower.map (n + 1) e.symm.toLinearMap) =
+      (exteriorPower.map n e.symm.toLinearMap).comp
+        (koszulDifferential R (Fin r → R) (sequenceLinearMap R r f) n) := by
+  apply exteriorPower.linearMap_ext
+  apply AlternatingMap.ext
+  intro v
+  have hfun (x : Fin r → R) :
+      sequenceLinearMap R r g (e.symm.toLinearMap x) = sequenceLinearMap R r f x := by
+    simpa using LinearMap.congr_fun h (e.symm x)
+  have hremove (i : Fin (n + 1)) :
+      i.removeNth (fun j => e.symm.toLinearMap (v j)) =
+        (fun j => e.symm.toLinearMap (i.removeNth v j)) := by
+    ext j
+    rfl
+  simp only [LinearMap.compAlternatingMap_apply, LinearMap.comp_apply]
+  change koszulDifferential R (Fin r → R) (sequenceLinearMap R r g) n
+      (exteriorPower.map (n + 1) e.symm.toLinearMap
+        (exteriorPower.ιMulti R (n + 1) v)) =
+    exteriorPower.map n e.symm.toLinearMap
+      (koszulDifferential R (Fin r → R) (sequenceLinearMap R r f) n
+        (exteriorPower.ιMulti R (n + 1) v))
+  rw [exteriorPower.map_apply_ιMulti,
+    koszulDifferential_apply_ιMulti, koszulDifferential_apply_ιMulti]
+  simp only [map_sum, map_smul, exteriorPower.map_apply_ιMulti]
+  simp only [Function.comp_apply]
+  apply Finset.sum_congr rfl
+  intro i hi
+  have hcoef :
+      sequenceLinearMap R r g (e.symm.toLinearMap (v i)) =
+        sequenceLinearMap R r f (v i) :=
+    hfun (v i)
+  rw [hcoef]
+  congr 2
+
+private noncomputable def exteriorPowerLinearEquiv
+    (R : Type u) [CommRing R] (M : Type u) [AddCommGroup M] [Module R M]
+    (n : ℕ) (e : M ≃ₗ[R] M) :
+    (⋀[R]^n M) ≃ₗ[R] (⋀[R]^n M) :=
+  LinearEquiv.ofLinear (exteriorPower.map n e.symm.toLinearMap)
+    (exteriorPower.map n e.toLinearMap) (by
+      rw [← exteriorPower.map_comp, e.symm_comp, exteriorPower.map_id]) (by
+      rw [← exteriorPower.map_comp, e.comp_symm, exteriorPower.map_id])
+
 theorem koszul_change_basis
     (R : Type u) [CommRing R] (r : ℕ) (f : Fin r → R)
     (e : (Fin r → R) ≃ₗ[R] (Fin r → R))
@@ -599,14 +709,114 @@ theorem koszul_change_basis
     (h : (sequenceLinearMap R r g) =
       (sequenceLinearMap R r f).comp e.toLinearMap) :
     Nonempty (koszulComplexOn R r f ≅ koszulComplexOn R r g) := by
-  sorry
+  let component : ∀ n : ℤ,
+      (koszulComplexOn R r f).X n ≅ (koszulComplexOn R r g).X n := fun n => by
+    by_cases hn : 0 ≤ n
+    · simp only [koszulComplexOn, koszulComplex, koszulTermZ, if_pos hn]
+      exact (exteriorPowerLinearEquiv R (Fin r → R) (Int.toNat n) e).toModuleIso
+    · simp only [koszulComplexOn, koszulComplex, koszulTermZ, if_neg hn]
+      exact Iso.refl _
+  refine ⟨HomologicalComplex.Hom.isoOfComponents component ?_⟩
+  intro i j hij
+  simp only [ComplexShape.down_Rel] at hij
+  subst i
+  by_cases hj : 0 ≤ j
+  · have hnext : 0 ≤ j + 1 := by omega
+    have hj' : j = (Int.toNat j : ℤ) := by omega
+    rw [hj']
+    simp only [koszulComplexOn]
+    rw [koszulComplex_d_nonnegative R (Fin r → R) (sequenceLinearMap R r g)
+      (Int.toNat j), koszulComplex_d_nonnegative R (Fin r → R)
+      (sequenceLinearMap R r f) (Int.toNat j)]
+    have hd := koszulDifferential_map_change_basis R r f g e h (Int.toNat j)
+    simp [component, koszulComplexOn, koszulComplex, koszulTermZ,
+      koszulDifferentialZ, hj, hnext]
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro x
+    let x' : ⋀[R]^(Int.toNat j + 1) (Fin r → R) := x
+    change koszulDifferential R (Fin r → R) (sequenceLinearMap R r g)
+        (Int.toNat j)
+        ((exteriorPower.map (Int.toNat j + 1) e.symm.toLinearMap) x') =
+      (exteriorPower.map (Int.toNat j) e.symm.toLinearMap)
+        (koszulDifferential R (Fin r → R) (sequenceLinearMap R r f)
+          (Int.toNat j) x')
+    exact LinearMap.congr_fun hd x'
+  · by_cases hnext : 0 ≤ j + 1
+    · have hj' : j = -1 := by omega
+      subst j
+      have hdg : (koszulComplexOn R r g).d (0 : ℤ) (-1 : ℤ) = 0 := by
+        change koszulDifferentialZ R (Fin r → R)
+            (sequenceLinearMap R r g) (-1 : ℤ) = 0
+        simp only [koszulDifferentialZ, koszulTermZ]
+        apply ModuleCat.hom_ext
+        ext x
+        rfl
+      have hdf : (koszulComplexOn R r f).d (0 : ℤ) (-1 : ℤ) = 0 := by
+        change koszulDifferentialZ R (Fin r → R)
+            (sequenceLinearMap R r f) (-1 : ℤ) = 0
+        simp only [koszulDifferentialZ, koszulTermZ]
+        apply ModuleCat.hom_ext
+        ext x
+        rfl
+      rw [show (-1 : ℤ) + 1 = 0 by norm_num]
+      rw [hdg, hdf]
+      simp [component]
+    · have hdg : (koszulComplexOn R r g).d (j + 1) j = 0 := by
+        simp [koszulComplexOn, koszulComplex, ChainComplex.of_d,
+          koszulDifferentialZ, koszulTermZ, hj, hnext]
+        apply ModuleCat.hom_ext
+        ext x
+        have hsub : Subsingleton
+            (↥(if 0 ≤ j then ModuleCat.of R (⋀[R]^(Int.toNat j) (Fin r → R))
+              else ModuleCat.of R (Fin 0 → R))) := by
+          split
+          · rename_i hj'
+            exact (hj hj').elim
+          · infer_instance
+        exact @Subsingleton.elim _ hsub _ _
+      have hdf : (koszulComplexOn R r f).d (j + 1) j = 0 := by
+        simp [koszulComplexOn, koszulComplex, ChainComplex.of_d,
+          koszulDifferentialZ, koszulTermZ, hj, hnext]
+        apply ModuleCat.hom_ext
+        ext x
+        have hsub : Subsingleton
+            (↥(if 0 ≤ j then ModuleCat.of R (⋀[R]^(Int.toNat j) (Fin r → R))
+              else ModuleCat.of R (Fin 0 → R))) := by
+          split
+          · rename_i hj'
+            exact (hj hj').elim
+          · infer_instance
+        exact @Subsingleton.elim _ hsub _ _
+      rw [hdg, hdf]
+      simp [component]
 
 theorem koszul_change_basis_matrix
     (R : Type u) [CommRing R] (r : ℕ) (X : Matrix (Fin r) (Fin r) R)
     [Invertible X] (f : Fin r → R) :
     Nonempty (koszulComplexOn R r f ≅
       koszulComplexOn R r (matrixChangeSequence R r X f)) := by
-  sorry
+  let e : (Fin r → R) ≃ₗ[R] (Fin r → R) :=
+    Matrix.toLin'OfInv
+      (M := Matrix.transpose (⅟ X)) (M' := Matrix.transpose X) (by
+        rw [← Matrix.transpose_mul, mul_invOf_self, Matrix.transpose_one]) (by
+        rw [← Matrix.transpose_mul, invOf_mul_self, Matrix.transpose_one])
+  have hseq : sequenceLinearMap R r (matrixChangeSequence R r X f) =
+      (sequenceLinearMap R r f).comp e.toLinearMap := by
+    apply LinearMap.ext
+    intro x
+    simp [sequenceLinearMap, matrixChangeSequence, e, Matrix.toLin'OfInv,
+      Matrix.toLin'_apply, Matrix.mulVec, Finset.mul_sum]
+    rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl
+    intro i hi
+    change (∑ j, x j * (X j i * f i)) =
+      (∑ j, X j i * x j) * f i
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro j hj
+    ring
+  exact koszul_change_basis R r f e (matrixChangeSequence R r X f) hseq
 
 /-! ## Homotopies and annihilation -/
 
@@ -619,18 +829,277 @@ noncomputable def scalarChainMap {α : Type*} [AddRightCancelSemigroup α] [One 
     simp)
 
 /-- The abstract Koszul contracting homotopy. -/
+private noncomputable def koszulWedge
+    (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
+    (e : E) (n : ℕ) : (⋀[R]^n E) →ₗ[R] (⋀[R]^(n + 1) E) :=
+  exteriorPower.alternatingMapLinearEquiv
+    ((exteriorPower.ιMulti R (n + 1)).curryLeft e)
+
+private theorem koszulWedge_apply_ιMulti
+    (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
+    (e : E) (n : ℕ) (v : Fin n → E) :
+    koszulWedge R E e n (exteriorPower.ιMulti R n v) =
+      exteriorPower.ιMulti R (n + 1) (Matrix.vecCons e v) := by
+  rw [koszulWedge, exteriorPower.alternatingMapLinearEquiv_apply_ιMulti]
+  rfl
+
+private noncomputable def koszulHomotopyPrev
+    (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
+    (φ : E →ₗ[R] R) (e : E) (n : ℕ) :
+    (⋀[R]^n E) →ₗ[R] (⋀[R]^n E) :=
+  match n with
+  | 0 => 0
+  | n + 1 => (koszulWedge R E e n).comp (koszulDifferential R E φ n)
+
+private theorem koszulHomotopy_identity
+    (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
+    (φ : E →ₗ[R] R) (e : E) (n : ℕ) :
+    (koszulDifferential R E φ n).comp (koszulWedge R E e n) +
+        koszulHomotopyPrev R E φ e n =
+      (φ e) • LinearMap.id := by
+  apply exteriorPower.linearMap_ext
+  apply AlternatingMap.ext
+  intro v
+  cases n with
+  | zero =>
+      simp only [koszulHomotopyPrev, LinearMap.compAlternatingMap_apply,
+        LinearMap.add_apply, LinearMap.comp_apply, LinearMap.smul_apply,
+        LinearMap.id_apply]
+      rw [koszulWedge_apply_ιMulti, koszulDifferential_apply_ιMulti]
+      simp
+  | succ n =>
+      simp only [koszulHomotopyPrev, LinearMap.compAlternatingMap_apply,
+        LinearMap.add_apply, LinearMap.comp_apply, LinearMap.smul_apply,
+        LinearMap.id_apply]
+      rw [koszulWedge_apply_ιMulti, koszulDifferential_apply_ιMulti,
+        koszulDifferential_apply_ιMulti]
+      simp only [map_sum, map_smul]
+      simp_rw [koszulWedge_apply_ιMulti]
+      have hremove (i : Fin (n + 1)) :
+          i.succ.removeNth (Matrix.vecCons e v) =
+            Matrix.vecCons e (i.removeNth v) := by
+        ext j
+        simpa [Matrix.vecCons, Fin.removeNth, Function.comp_apply] using
+          congrFun (Fin.cons_comp_succ_succAbove e v i) j
+      rw [Fin.sum_univ_succ]
+      simp_rw [hremove]
+      simp [Matrix.vecCons, pow_succ]
+      rw [add_assoc, ← Finset.sum_add_distrib]
+      simp only [smul_smul, neg_mul, neg_smul, neg_add_cancel, add_zero,
+        Finset.sum_const_zero]
+
 theorem koszul_homotopy_abstract
     (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
     (φ : E →ₗ[R] R) (e : E) :
     Nonempty (Homotopy
       (scalarChainMap R (koszulComplex R E φ) (φ e)) 0) := by
-  sorry
+  let h : ∀ i j, (ComplexShape.down ℤ).Rel j i →
+      ModuleCat.Hom ((koszulComplex R E φ).X i) ((koszulComplex R E φ).X j) := by
+    intro i j hij
+    change i + 1 = j at hij
+    subst j
+    by_cases hi : 0 ≤ i
+    · have hi1 : 0 ≤ i + 1 := by omega
+      have hnat : Int.toNat (i + 1) = Int.toNat i + 1 := by
+        exact Int.toNat_add hi (by omega)
+      simp only [koszulComplex, koszulTermZ, if_pos hi, if_pos hi1]
+      rw [hnat]
+      exact ModuleCat.ofHom (koszulWedge R E e (Int.toNat i))
+    · by_cases hi1 : 0 ≤ i + 1
+      · simp only [koszulComplex, koszulTermZ, if_neg hi, if_pos hi1]
+        exact ModuleCat.ofHom 0
+      · simp only [koszulComplex, koszulTermZ, if_neg hi, if_neg hi1]
+        exact ModuleCat.ofHom 0
+  have hcat (n : ℕ) :
+      (φ e) • 𝟙 (ModuleCat.of R (⋀[R]^n E)) =
+        ModuleCat.ofHom
+          ((koszulDifferential R E φ n).comp (koszulWedge R E e n) +
+            koszulHomotopyPrev R E φ e n) := by
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro x
+    have hid := koszulHomotopy_identity R E φ e n
+    simpa [add_comm] using (LinearMap.congr_fun hid x).symm
+  have hmap : scalarChainMap R (koszulComplex R E φ) (φ e) =
+      Homotopy.nullHomotopicMap' (C := koszulComplex R E φ)
+      (D := koszulComplex R E φ) (c := ComplexShape.down ℤ) h := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    cases n with
+    | ofNat n =>
+        cases n with
+        | zero =>
+            have h21 : (ComplexShape.down ℤ).Rel (1 : ℤ) 0 := by
+              change (0 : ℤ) + 1 = 1
+              rfl
+            have h10 : (ComplexShape.down ℤ).Rel (0 : ℤ) (-1 : ℤ) := by
+              change (-1 : ℤ) + 1 = 0
+              norm_num
+            change (scalarChainMap R (koszulComplex R E φ) (φ e)).f (0 : ℤ) =
+              (Homotopy.nullHomotopicMap' (C := koszulComplex R E φ)
+                (D := koszulComplex R E φ) (c := ComplexShape.down ℤ) h).f 0
+            rw [Homotopy.nullHomotopicMap'_f (c := ComplexShape.down ℤ)
+              h21 h10]
+            have hdneg : (koszulComplex R E φ).d (0 : ℤ) (-1 : ℤ) = 0 := by
+              change koszulDifferentialZ R E φ (-1 : ℤ) = 0
+              simp only [koszulDifferentialZ, koszulTermZ]
+              apply ModuleCat.hom_ext
+              ext x
+              rfl
+            rw [hdneg]
+            have h01 : h (0 : ℤ) 1 h21 =
+                ModuleCat.ofHom (koszulWedge R E e 0) := by
+              apply ModuleCat.hom_ext
+              ext x
+              rfl
+            have hd01 : (koszulComplex R E φ).d (1 : ℤ) 0 =
+                ModuleCat.ofHom (koszulDifferential R E φ 0) := by
+              simpa using koszulComplex_d_nonnegative R E φ 0
+            have hscalar0 :
+                (scalarChainMap R (koszulComplex R E φ) (φ e)).f (0 : ℤ) =
+                  (φ e) • 𝟙 (ModuleCat.of R (⋀[R]^0 E)) := by
+              simp [scalarChainMap, koszulComplex, koszulTermZ]
+              rfl
+            rw [hscalar0]
+            apply ModuleCat.hom_ext
+            apply LinearMap.ext
+            intro x
+            have hc := congrArg ModuleCat.Hom.hom (hcat 0)
+            have hs : ModuleCat.Hom.hom
+                ((φ e) • 𝟙 (ModuleCat.of R (⋀[R]^0 E))) =
+                (φ e) • LinearMap.id := by
+              ext y
+              rfl
+            rw [hs]
+            have hx := LinearMap.congr_fun hc x
+            rw [hs] at hx
+            have hzero :
+                (0 : (koszulComplex R E φ).X (0 : ℤ) ⟶
+                  (koszulComplex R E φ).X (-1 : ℤ)) ≫ h (-1) 0 h10 = 0 := by
+              simp
+            have hcomp0 :
+                0 ≫ h (-1) 0 h10 +
+                    h 0 1 h21 ≫ (koszulComplex R E φ).d (1 : ℤ) 0 =
+                  h 0 1 h21 ≫ (koszulComplex R E φ).d (1 : ℤ) 0 := by
+              rw [hzero, zero_add]
+            have hcomp1 :
+                h 0 1 h21 ≫ (koszulComplex R E φ).d (1 : ℤ) 0 =
+                  ModuleCat.ofHom (koszulWedge R E e 0) ≫
+                    ModuleCat.ofHom (koszulDifferential R E φ 0) := by
+              rw [h01, hd01]
+              rfl
+            rw [hcomp0, hcomp1]
+            have hcomp :
+                (ModuleCat.Hom.hom
+                    (ModuleCat.ofHom
+                      (koszulDifferential R E φ 0 ∘ₗ
+                      koszulWedge R E e 0 +
+                        koszulHomotopyPrev R E φ e 0))) x =
+                (ModuleCat.Hom.hom
+                    (ModuleCat.ofHom (koszulWedge R E e 0) ≫
+                      ModuleCat.ofHom (koszulDifferential R E φ 0))) x := by
+              simp only [koszulHomotopyPrev, add_zero]
+              change koszulDifferential R E φ 0
+                  (koszulWedge R E e 0 x) =
+                koszulDifferential R E φ 0
+                  (koszulWedge R E e 0 x)
+              rfl
+            exact hx.trans hcomp
+        | succ n =>
+            have h21 : (ComplexShape.down ℤ).Rel (((n + 1) + 1 : ℕ) : ℤ)
+                ((n + 1 : ℕ) : ℤ) := by
+              simp [ComplexShape.down_Rel]
+            have h10 : (ComplexShape.down ℤ).Rel ((n + 1 : ℕ) : ℤ) (n : ℤ) := by
+              simp [ComplexShape.down_Rel]
+            have h10' : h (n : ℤ) ((n + 1 : ℕ) : ℤ) h10 =
+                ModuleCat.ofHom (koszulWedge R E e n) := by
+              apply ModuleCat.hom_ext
+              ext x
+              rfl
+            have h21' : h ((n + 1 : ℕ) : ℤ) (((n + 1) + 1 : ℕ) : ℤ) h21 =
+                ModuleCat.ofHom (koszulWedge R E e (n + 1)) := by
+              apply ModuleCat.hom_ext
+              ext x
+              rfl
+            change (scalarChainMap R (koszulComplex R E φ) (φ e)).f
+                ((n + 1 : ℕ) : ℤ) =
+              (Homotopy.nullHomotopicMap' (C := koszulComplex R E φ)
+                (D := koszulComplex R E φ) (c := ComplexShape.down ℤ) h).f
+                ((n + 1 : ℕ) : ℤ)
+            rw [Homotopy.nullHomotopicMap'_f (c := ComplexShape.down ℤ)
+              h21 h10]
+            have hn1 : (0 : ℤ) ≤ (n : ℤ) + 1 := by omega
+            have hd10''' :
+                (koszulComplex R E φ).d ((n + 1 : ℕ) : ℤ) (n : ℤ) =
+                  ModuleCat.ofHom (koszulDifferential R E φ n) := by
+              simpa using koszulComplex_d_nonnegative R E φ n
+            have hd21''' :
+                (koszulComplex R E φ).d (((n + 1) + 1 : ℕ) : ℤ)
+                    ((n + 1 : ℕ) : ℤ) =
+                  ModuleCat.ofHom (koszulDifferential R E φ (n + 1)) := by
+              simpa only [Int.natCast_add, Int.natCast_one] using
+                koszulComplex_d_nonnegative R E φ (n + 1)
+            rw [hd10''', hd21''', h10', h21']
+            have hscalar :
+                (scalarChainMap R (koszulComplex R E φ) (φ e)).f
+                    ((n + 1 : ℕ) : ℤ) =
+                  (φ e) • 𝟙 (ModuleCat.of R (⋀[R]^(n + 1) E)) := by
+              simp [scalarChainMap, koszulComplex, koszulTermZ, hn1]
+              rfl
+            rw [hscalar]
+            apply ModuleCat.hom_ext
+            apply LinearMap.ext
+            intro x
+            have hc := congrArg ModuleCat.Hom.hom (hcat (n + 1))
+            have hs : ModuleCat.Hom.hom
+                ((φ e) • 𝟙 (ModuleCat.of R (⋀[R]^(n + 1) E))) =
+                (φ e) • LinearMap.id := by
+              ext y
+              rfl
+            rw [hs]
+            have hx := LinearMap.congr_fun hc x
+            have hcomp :
+                (ModuleCat.Hom.hom
+                    (ModuleCat.ofHom
+                      (koszulDifferential R E φ (n + 1) ∘ₗ
+                        koszulWedge R E e (n + 1) +
+                        koszulHomotopyPrev R E φ e (n + 1)))) x =
+                  (ModuleCat.Hom.hom
+                    (ModuleCat.ofHom (koszulDifferential R E φ n) ≫
+                        ModuleCat.ofHom (koszulWedge R E e n) +
+                      ModuleCat.ofHom (koszulWedge R E e (n + 1)) ≫
+                        ModuleCat.ofHom (koszulDifferential R E φ (n + 1)))) x := by
+              change
+                koszulDifferential R E φ (n + 1)
+                    (koszulWedge R E e (n + 1) x) +
+                    koszulWedge R E e n
+                      (koszulDifferential R E φ n x) =
+                  koszulWedge R E e n
+                      (koszulDifferential R E φ n x) +
+                    koszulDifferential R E φ (n + 1)
+                      (koszulWedge R E e (n + 1) x)
+              exact add_comm _ _
+            exact hx.trans hcomp
+    | negSucc n =>
+        exact (koszulComplex_X_negative R E φ (Int.negSucc n) (by omega)).eq_of_src _ _
+  rw [hmap]
+  exact ⟨Homotopy.nullHomotopy' (C := koszulComplex R E φ)
+    (D := koszulComplex R E φ) (c := ComplexShape.down ℤ) h⟩
 
 theorem koszul_homotopy_sequence
     (R : Type u) [CommRing R] (r : ℕ) (f : Fin r → R) (i : Fin r) :
     Nonempty (Homotopy
       (scalarChainMap R (koszulComplexOn R r f) (f i)) 0) := by
-  sorry
+  classical
+  have hsingle :
+      sequenceLinearMap R r f (Pi.single i 1) = f i := by
+    simp [sequenceLinearMap, Pi.single_apply]
+  change Nonempty (Homotopy
+    (scalarChainMap R
+      (koszulComplex R (Fin r → R) (sequenceLinearMap R r f)) (f i)) 0)
+  rw [← hsingle]
+  exact koszul_homotopy_abstract R (Fin r → R)
+    (sequenceLinearMap R r f) (Pi.single i 1)
 
 /-- An ideal acts by zero on a module. -/
 def IdealActsByZero (R : Type u) [CommRing R] (I : Ideal R) (M : Type u)

@@ -546,7 +546,7 @@ theorem exists_global_isDimensionFunction_of_isCatenary_of_top
       intro x y himm
       exact hδ_immediate himm)⟩
   · intro x
-    simpa [δ]
+    simp [δ]
 
 /-! ## Uniqueness -/
 

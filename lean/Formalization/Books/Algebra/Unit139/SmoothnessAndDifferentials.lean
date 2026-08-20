@@ -121,7 +121,7 @@ theorem section_smooth_conormal_finiteLocallyFree
     exact Algebra.FinitePresentation.ker_fG_of_surjective σ hσ
   let oldAlg : Algebra R S := inferInstance
   let oldFormal : @Algebra.FormallySmooth R S _ _ oldAlg := by
-    letI : Algebra R S := oldAlg
+    let : Algebra R S := oldAlg
     exact inferInstance
   have alg_eq : oldAlg = P.algebra₁ := by
     apply Algebra.algebra_ext
@@ -130,10 +130,10 @@ theorem section_smooth_conormal_finiteLocallyFree
   let : Algebra R P.Ring := P.algebra₁
   let : @Algebra.FormallySmooth R P.Ring _ _ P.algebra₁ := by
     exact alg_eq ▸ oldFormal
-  letI : Algebra S R := P.algebra₂
+  let : Algebra S R := P.algebra₂
   have hfinite : Module.Finite R P.Cotangent :=
     Algebra.Extension.Cotangent.finite hker
-  letI : Module.Projective R P.CotangentSpace := by
+  let : Module.Projective R P.CotangentSpace := by
     change Module.Projective R (R ⊗[S]
       Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)
     infer_instance

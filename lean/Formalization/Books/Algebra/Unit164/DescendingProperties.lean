@@ -5,6 +5,7 @@ import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
 import Formalization.Books.Algebra.Unit152.LocalStructureUnramifiedRingMaps
 import Formalization.Books.Algebra.Unit157.SerresCriterion
 import Formalization.Books.Algebra.Unit162.NagataRings
+import Formalization.Books.Algebra.Unit163.AscendingProperties
 import Mathlib.Algebra.GroupWithZero.Basic
 import Mathlib.RingTheory.Ideal.Height
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic

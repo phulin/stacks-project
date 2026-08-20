@@ -4339,7 +4339,25 @@ def filteredKernelCoimageGradedShortComplex {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ) : ShortComplex C :=
   ShortComplex.mk
     (gradedPieceMap (C := C) (filteredKernelι f) p)
-    (gradedPieceMap (C := C) (filteredCoimageπ f) p) (by sorry)
+    (gradedPieceMap (C := C) (filteredCoimageπ f) p) (by
+      rw [← gradedPiece_map_comp]
+      have hzero : filteredKernelι f ≫ filteredCoimageπ f = 0 := by
+        let k := (kernelIsKernel f).lift
+          (KernelFork.ofι (filteredKernelι f) (filteredKernelι_comp f))
+        have hk : k ≫ kernel.ι f = filteredKernelι f :=
+          (kernelIsKernel f).fac
+            (KernelFork.ofι (filteredKernelι f) (filteredKernelι_comp f))
+            WalkingParallelPair.zero
+        rw [← hk]
+        dsimp [filteredCoimageπ, filteredCoimage]
+        rw [Category.assoc, cokernel.condition, comp_zero]
+        rfl
+      rw [hzero]
+      let : (gradedPieceFunctor (C := C) p).Additive :=
+        gradedPieceFunctor_is_additive p
+      change (gradedPieceFunctor (C := C) p).map (0 :
+        filteredKernel f ⟶ filteredCoimage f) = 0
+      exact Functor.map_zero (F := gradedPieceFunctor (C := C) p) _ _)
 
 theorem graded_piece_kernel_coimage_short_exact {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ) :
@@ -4350,7 +4368,22 @@ def filteredImageCokernelGradedShortComplex {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ) : ShortComplex C :=
   ShortComplex.mk
     (gradedPieceMap (C := C) (filteredImageι f) p)
-    (gradedPieceMap (C := C) (filteredCokernelπ f) p) (by sorry)
+    (gradedPieceMap (C := C) (filteredCokernelπ f) p) (by
+      rw [← gradedPiece_map_comp]
+      have hzero : filteredImageι f ≫ filteredCokernelπ f = 0 := by
+        change kernel.ι (cokernel.π f) ≫ filteredCokernelπ f = 0
+        let c := CokernelCofork.ofπ (filteredCokernelπ f)
+          (filteredCokernel_comp f)
+        let k := (cokernelIsCokernel f).desc c
+        have hk : cokernel.π f ≫ k = filteredCokernelπ f :=
+          (cokernelIsCokernel f).fac c WalkingParallelPair.one
+        rw [← hk, ← Category.assoc, kernel.condition, zero_comp]
+      rw [hzero]
+      let : (gradedPieceFunctor (C := C) p).Additive :=
+        gradedPieceFunctor_is_additive p
+      change (gradedPieceFunctor (C := C) p).map (0 :
+        filteredImage f ⟶ filteredCokernel f) = 0
+      exact Functor.map_zero (F := gradedPieceFunctor (C := C) p) _ _)
 
 theorem graded_piece_image_cokernel_short_exact {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ) :

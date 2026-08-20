@@ -30,7 +30,7 @@ noncomputable section
 private theorem irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible
     {k : Type u} {S : Type v} {R : Type w}
     [Field k] [CommRing S] [CommRing R] [Algebra k S] [Algebra k R]
-    (hS : IsGeometricallyIrreducible k S)
+    (hS : IsGeometricallyIrreducible.{u, v, w} k S)
     [IrreducibleSpace (PrimeSpectrum R)] :
     IrreducibleSpace (PrimeSpectrum (R ⊗[k] S)) := by
   let X := PrimeSpectrum R
@@ -152,7 +152,7 @@ theorem isGeometricallyIntegral_iff_finiteExtension_iff_algebraicClosure
 /-- Tensoring a geometrically integral algebra with an integral-domain
 `k`-algebra remains an integral domain. -/
 theorem isGeometricallyIntegral_any_integral_base_change
-    {k : Type u} {S : Type v} {R : Type w}
+    {k : Type u} {S : Type v} {R : Type u}
     [Field k] [CommRing S] [CommRing R] [Algebra k S] [Algebra k R]
     [IsDomain R] (hS : IsGeometricallyIntegral.{u, v, u} k S) :
     IsDomain (R ⊗[k] S) := by

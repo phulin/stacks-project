@@ -270,7 +270,32 @@ theorem regular_descends_of_faithfullyFlat
      from `Formalization/Books/Algebra/Unit110/RegularRingsAndGlobalDimension.lean`
      to `g`.  This is exactly the required field of `IsRegularRing.mk`.
   -/
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module.FaithfullyFlat R S := by
+    simpa [RingHom.FaithfullyFlat] using hff
+  let _ : IsNoetherianRing R :=
+    noetherian_descends_of_faithfullyFlat f hff hS.toIsNoetherian
+  refine (isRegularRing_iff (R := R)).2 ?_
+  intro p hp
+  let p' : PrimeSpectrum R := ⟨p, hp⟩
+  obtain ⟨q, hq⟩ :=
+    PrimeSpectrum.comap_surjective_of_faithfullyFlat (A := R) (B := S) p'
+  have hpq : p = q.asIdeal.comap f := by
+    have hpq' : q.asIdeal.comap (algebraMap R S) = p :=
+      congrArg PrimeSpectrum.asIdeal hq
+    change p = q.asIdeal.comap (algebraMap R S)
+    exact hpq'.symm
+  let g := Localization.localRingHom p q.asIdeal f hpq
+  have hflat : RingHom.Flat g :=
+    RingHom.Flat.localRingHom hff.flat q.asIdeal p hpq
+  let _ : IsLocalHom g := by
+    change IsLocalHom (Localization.localRingHom p q.asIdeal f hpq)
+    infer_instance
+  let _ : IsRegularRing S := hS
+  have hSreg : IsRegularLocalRing (Localization.AtPrime q.asIdeal) :=
+    IsRegularRing.isRegularLocalRing_localization q.asIdeal
+  exact Formalization.Books.Algebra.Unit110.isRegularLocalRing_of_flat_localHom_of_regular
+    g hflat hSreg
 
 theorem propertySk_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
@@ -351,7 +376,109 @@ theorem propertyRk_descends_of_faithfullyFlat
      regularity `hRk q (...)`.  This is precisely the required regularity of
      `Localization.AtPrime p.asIdeal`.
   -/
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module.FaithfullyFlat R S := by
+    simpa [RingHom.FaithfullyFlat] using hff
+  let _ : IsNoetherianRing S := hS
+  have hRnoeth : IsNoetherianRing R :=
+    noetherian_descends_of_faithfullyFlat f hff hS
+  refine ⟨hRnoeth, ?_⟩
+  let _ : IsNoetherianRing R := hRnoeth
+  unfold Formalization.Books.Algebra.Unit157.HasPropertyRk
+  intro p hp
+  obtain ⟨q₀, hq₀⟩ :=
+    PrimeSpectrum.comap_surjective_of_faithfullyFlat (A := R) (B := S) p
+  have hq₀' : q₀.asIdeal.comap f = p.asIdeal := by
+    exact congrArg PrimeSpectrum.asIdeal hq₀
+  have hle : p.asIdeal.map f ≤ q₀.asIdeal := by
+    apply Ideal.map_le_iff_le_comap.mpr
+    exact hq₀'.symm.le
+  obtain ⟨qI, hqmin, hqIle⟩ := Ideal.exists_minimalPrimes_le hle
+  let q : PrimeSpectrum S := ⟨qI, hqmin.isPrime⟩
+  let _ : q.asIdeal.IsPrime := q.isPrime
+  have hqcomap : PrimeSpectrum.comap f q = p := by
+    apply PrimeSpectrum.ext
+    apply le_antisymm
+    · calc
+        qI.comap f ≤ q₀.asIdeal.comap f := Ideal.comap_mono hqIle
+        _ = p.asIdeal := hq₀'
+    · exact (Ideal.map_le_iff_le_comap).mp hqmin.1.2
+  have hdim :=
+    Formalization.Books.Algebra.Unit112.ringKrullDim_localization_eq_base_add_fibre_of_goingDown
+      f p q hqcomap inferInstance
+  have hqbarmin :
+      (Formalization.Books.Algebra.Unit112.fibreQuotientPrime f p q hqcomap).asIdeal ∈
+        minimalPrimes (S ⧸ Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p) := by
+    rw [Ideal.minimalPrimes_eq_comap] at hqmin
+    rcases hqmin with ⟨r, hr, hreq⟩
+    have hqbarcomap :
+        (Formalization.Books.Algebra.Unit112.fibreQuotientPrime f p q hqcomap).asIdeal.comap
+          (Ideal.Quotient.mk
+            (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p)) = qI := by
+      change (qI.map (Ideal.Quotient.mk
+        (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p))).comap
+          (Ideal.Quotient.mk _) = qI
+      rw [Ideal.comap_map_of_surjective (f := Ideal.Quotient.mk
+        (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p))
+        Ideal.Quotient.mk_surjective]
+      apply sup_eq_left.mpr
+      intro x hx
+      have hx0 : Ideal.Quotient.mk
+          (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p) x = 0 := by
+        simpa using hx
+      exact hqmin.1.2 (Ideal.Quotient.eq_zero_iff_mem.mp hx0)
+    have heq :
+        Ideal.comap (Ideal.Quotient.mk
+          (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p)) r =
+          Ideal.comap (Ideal.Quotient.mk
+            (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p))
+            (Formalization.Books.Algebra.Unit112.fibreQuotientPrime f p q hqcomap).asIdeal := by
+      exact hreq.trans hqbarcomap.symm
+    have hrq :
+        r = (Formalization.Books.Algebra.Unit112.fibreQuotientPrime f p q hqcomap).asIdeal :=
+      (Ideal.comap_injective_of_surjective
+        (f := Ideal.Quotient.mk
+          (Formalization.Books.Algebra.Unit112.fibreIdealInTarget f p))
+        Ideal.Quotient.mk_surjective) heq
+    rw [← hrq]
+    exact hr
+  have hfibre :
+      ringKrullDim
+          (Formalization.Books.Algebra.Unit112.localRingOfFibre f p q hqcomap) = 0 := by
+    obtain ⟨e⟩ :=
+      Formalization.Books.Algebra.Unit112.localRingOfFibre_equiv_localized_quotient
+        f p q hqcomap
+    rw [ringKrullDim_eq_of_ringEquiv e]
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height
+      (Formalization.Books.Algebra.Unit112.fibreQuotientPrime f p q hqcomap).asIdeal
+      (Localization.AtPrime
+        (Formalization.Books.Algebra.Unit112.fibreQuotientPrime f p q hqcomap).asIdeal)]
+    simpa using congrArg (fun n : ℕ∞ => (n : WithBot ℕ∞))
+      (Ideal.height_eq_zero_iff.mpr hqbarmin)
+  have hdim_eq :
+      ringKrullDim (Localization.AtPrime q.asIdeal) =
+        ringKrullDim (Localization.AtPrime p.asIdeal) := by
+    rw [hdim, hfibre, add_zero]
+  have hheight : q.asIdeal.height = p.asIdeal.height := by
+    have h := hdim_eq
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height
+      q.asIdeal (Localization.AtPrime q.asIdeal),
+      IsLocalization.AtPrime.ringKrullDim_eq_height
+        p.asIdeal (Localization.AtPrime p.asIdeal)] at h
+    exact_mod_cast h
+  have hqheight : q.asIdeal.height ≤ (k : ℕ∞) := by
+    simpa [hheight] using hp
+  have hqreg := hRk q hqheight
+  have hpq : p.asIdeal = q.asIdeal.comap f := by
+    exact (congrArg PrimeSpectrum.asIdeal hqcomap).symm
+  let g := Localization.localRingHom p.asIdeal q.asIdeal f hpq
+  have hflat : RingHom.Flat g :=
+    RingHom.Flat.localRingHom hff.flat q.asIdeal p.asIdeal hpq
+  let _ : IsLocalHom g := by
+    change IsLocalHom (Localization.localRingHom p.asIdeal q.asIdeal f hpq)
+    infer_instance
+  exact Formalization.Books.Algebra.Unit110.isRegularLocalRing_of_flat_localHom_of_regular
+    g hflat hqreg
 
 /- Smoothness and surjectivity on spectra are the exact hypotheses in the
   source's Nagata descent lemma.  The proof route is the finite-type local

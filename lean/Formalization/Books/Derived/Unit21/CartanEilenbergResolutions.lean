@@ -31,6 +31,7 @@ open Formalization.Books.Homology.Unit18
 open Formalization.Books.Homology.Unit07
 open Formalization.Books.Homology.Unit24
 open Formalization.Books.Homology.Unit25
+open Formalization.Books.Homology.Unit19
 open scoped ZeroObject
 
 universe v u v' u' w w'
@@ -363,6 +364,80 @@ theorem cartanEilenberg_two_spectral_sequences
 
 /-! ## Functoriality -/
 
+/-- The morphism of double complexes obtained by applying an additive functor
+to a morphism of double complexes. -/
+def mapDoubleComplexMap
+    {A : Type u} [Category.{v} A] [Preadditive A]
+    {B : Type u'} [Category.{v'} B] [Preadditive B]
+    (F : A ⥤ B) (hF : F.Additive)
+    {I J : DoubleComplex A} (f : DoubleComplexMap I J) :
+    DoubleComplexMap (mapDoubleComplex F hF I) (mapDoubleComplex F hF J) := by
+  letI : F.Additive := hF
+  exact
+    { f := fun p q => F.map (f.f p q)
+      comm1 := fun p q => by
+        simpa only [mapDoubleComplex, Functor.map_comp] using
+          congrArg F.map (f.comm1 p q)
+      comm2 := fun p q => by
+        simpa only [mapDoubleComplex, Functor.map_comp] using
+          congrArg F.map (f.comm2 p q) }
+
+/-- The filtered total-complex map induced by a map of double complexes for
+the first filtration. -/
+theorem cartanEilenbergFirstFilteredTotalMap_filtration
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C]
+    {I J : DoubleComplex C} (f : DoubleComplexMap I J) (n : ℤ) :
+    ∀ p : ℤ,
+      ((doubleComplexFirstFilteredTotalObject J n).filtration.obj p).Factors
+        (((doubleComplexFirstFilteredTotalObject I n).filtration.obj p).arrow ≫
+          totalMapComponent f n) := by
+  sorry
+
+noncomputable def cartanEilenbergFirstFilteredTotalMap
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C]
+    {I J : DoubleComplex C} (f : DoubleComplexMap I J) :
+    doubleComplexFirstFilteredTotal I ⟶ doubleComplexFirstFilteredTotal J where
+  f n := ⟨totalMapComponent f n,
+    cartanEilenbergFirstFilteredTotalMap_filtration f n⟩
+  comm' n m hnm := by
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    subst m
+    apply FilteredHom.ext
+    simp only [doubleComplexFirstFilteredTotal, dif_pos]
+    exact totalMapComponent_comm f n (n + 1) (by
+      simp only [ComplexShape.up_Rel])
+
+/-- The filtered total-complex map induced by a map of double complexes for
+the second filtration. -/
+theorem cartanEilenbergSecondFilteredTotalMap_filtration
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C]
+    {I J : DoubleComplex C} (f : DoubleComplexMap I J) (n : ℤ) :
+    ∀ p : ℤ,
+      ((doubleComplexSecondFilteredTotalObject J n).filtration.obj p).Factors
+        (((doubleComplexSecondFilteredTotalObject I n).filtration.obj p).arrow ≫
+          totalMapComponent f n) := by
+  sorry
+
+noncomputable def cartanEilenbergSecondFilteredTotalMap
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C]
+    {I J : DoubleComplex C} (f : DoubleComplexMap I J) :
+    doubleComplexSecondFilteredTotal I ⟶ doubleComplexSecondFilteredTotal J where
+  f n := ⟨totalMapComponent f n,
+    cartanEilenbergSecondFilteredTotalMap_filtration f n⟩
+  comm' n m hnm := by
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    subst m
+    apply FilteredHom.ext
+    simp only [doubleComplexSecondFilteredTotal, dif_pos]
+    exact totalMapComponent_comm f n (n + 1) (by
+      simp only [ComplexShape.up_Rel])
+
 /-- A morphism of Cartan–Eilenberg resolutions over a map of complexes. -/
 structure CartanEilenbergResolutionMap
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -387,12 +462,30 @@ theorem cartanEilenberg_spectral_sequences_functorial
     (h : CartanEilenbergResolutionMap R S f) :
     Nonempty
         (FilteredComplexSpectralSequenceHom
+          (cartanEilenbergFirstFilteredTotalMap
+            (mapDoubleComplexMap F
+              (left_or_right_exact_additive F (Or.inl hF))
+              h.doubleComplexMap))
           (cartanEilenbergFirstSpectralSequence F hF R)
           (cartanEilenbergFirstSpectralSequence F hF S)) ∧
       Nonempty
         (FilteredComplexSpectralSequenceHom
+          (cartanEilenbergSecondFilteredTotalMap
+            (mapDoubleComplexMap F
+              (left_or_right_exact_additive F (Or.inl hF))
+              h.doubleComplexMap))
           (cartanEilenbergSecondSpectralSequence F hF R)
           (cartanEilenbergSecondSpectralSequence F hF S)) := by
-  sorry
+  let hF' := left_or_right_exact_additive F (Or.inl hF)
+  let fF := mapDoubleComplexMap F hF' h.doubleComplexMap
+  refine ⟨?_, ?_⟩
+  · exact Formalization.Books.Homology.Unit24.filteredComplex_functoriality
+      (cartanEilenbergFirstFilteredTotalMap fF)
+      (cartanEilenbergFirstSpectralSequence F hF R)
+      (cartanEilenbergFirstSpectralSequence F hF S)
+  · exact Formalization.Books.Homology.Unit24.filteredComplex_functoriality
+      (cartanEilenbergSecondFilteredTotalMap fF)
+      (cartanEilenbergSecondSpectralSequence F hF R)
+      (cartanEilenbergSecondSpectralSequence F hF S)
 
 end Formalization.Books.Derived.Unit21

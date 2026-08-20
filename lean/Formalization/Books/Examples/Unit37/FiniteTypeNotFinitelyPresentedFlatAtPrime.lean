@@ -3206,7 +3206,7 @@ private theorem ftCRPrimeIdeal_sup_CQPrimeIdeal_aux (k : Type u) [Field k] (n : 
 private theorem ftCQPrimeIdeal_quotient_isField (k : Type u) [Field k] (n : ℕ)
     (hn : 0 < n) : IsField (ftC k ⧸ ftCQPrimeIdeal k n) := by
   let K := FractionRing (Polynomial k)
-  letI : Field K := IsFractionRing.toField (Polynomial k)
+  let : Field K := IsFractionRing.toField (Polynomial k)
   let D := ftC k ⧸ ftCQPrimeIdeal k n
   let ePoly : ftBasePolynomialRing k →+* Polynomial k :=
     MvPolynomial.eval₂Hom (Polynomial.C : k →+* Polynomial k)
@@ -3294,12 +3294,13 @@ private theorem ftCQPrimeIdeal_quotient_isField (k : Type u) [Field k] (n : ℕ)
   let zK : K := -(xK ^ (n + 1) + 1) * xK⁻¹
   have hxK : xK ≠ 0 := by
     intro hx
-    have hx' : algebraMap (Polynomial k) K Polynomial.X = 0 := by
-      simpa [xK] using hx
+    change algebraMap (Polynomial k) K Polynomial.X = 0 at hx
     have : (Polynomial.X : Polynomial k) = 0 :=
       (IsFractionRing.injective (Polynomial k) K).eq_iff.mp
         (show algebraMap (Polynomial k) K Polynomial.X =
-          algebraMap (Polynomial k) K 0 by simpa using hx')
+          algebraMap (Polynomial k) K 0 by
+            rw [map_zero]
+            exact hx)
     exact Polynomial.X_ne_zero this
   have hx_cancel (a : K) : xK * a * xK⁻¹ = a := by
     calc
@@ -3739,7 +3740,6 @@ private theorem ftCQPrimeIdeal_quotient_isField (k : Type u) [Field k] (n : ℕ)
         rw [ha0X, hgx, hdX]
       · change g (a0toK (ftY k)) = dA0 (ftY k)
         rw [ha0Y]
-        change g (-(xK ^ n + xK ^ (2 * n + 1))) = _
         rw [map_neg]
         have h := congrArg (fun h : Polynomial k →+* D => h
           (Polynomial.X ^ n + Polynomial.X ^ (2 * n + 1))) hgdpoly
@@ -4025,7 +4025,7 @@ theorem ftCQPrimeIdeal_annihilator_Xi (k : Type u) [Field k] (n : ℕ) :
         (IsLocalRing.maximalIdeal (ftA k)).mul_mem_left 2 hpowA
       have hone := (IsLocalRing.maximalIdeal (ftA k)).sub_mem hmem hterm
       have hone' : (1 : ftA k) ∈ IsLocalRing.maximalIdeal (ftA k) := by
-        convert hone using 1 <;> ring
+        convert hone using 1; ring
       apply (IsLocalRing.maximalIdeal.isMaximal (ftA k)).ne_top
       rw [Ideal.eq_top_iff_one]
       exact hone'
@@ -4041,7 +4041,7 @@ theorem ftCQPrimeIdeal_annihilator_Xi (k : Type u) [Field k] (n : ℕ) :
         (by simpa [mul_comm] using hP.2))
     have h' : r * (1 + 2 * (ftCX k) ^ (n + 1)) ∈
         ftCQPrimeIdeal k n := by
-      convert h using 1 <;> ring
+      convert h using 1; ring
     apply (Ideal.unit_mul_mem_iff_mem _ hunit).mp
     simpa [mul_comm] using h'
   · intro hr
@@ -4072,10 +4072,10 @@ theorem ftCRPrimeIdeal_le_CQ (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
         (ftBaseMaximalIdeal k)
     have hx : ftX k ∈ IsLocalRing.maximalIdeal (ftA0 k) := by
       rw [← hmax0]
-      exact Ideal.mem_map_of_mem _ (Ideal.subset_span (by simp [ftX]))
+      exact Ideal.mem_map_of_mem _ (Ideal.subset_span (by simp))
     have hy : ftY k ∈ IsLocalRing.maximalIdeal (ftA0 k) := by
       rw [← hmax0]
-      exact Ideal.mem_map_of_mem _ (Ideal.subset_span (by simp [ftY]))
+      exact Ideal.mem_map_of_mem _ (Ideal.subset_span (by simp))
     have hpow (m : ℕ) (hm : 0 < m) :
         (ftX k) ^ m ∈ IsLocalRing.maximalIdeal (ftA0 k) :=
       (IsLocalRing.maximalIdeal (ftA0 k)).pow_mem_of_mem hx m hm
@@ -4135,7 +4135,7 @@ theorem ftCQPrimeIdeal_sup_CQ (k : Type u) [Field k] (n : ℕ) :
       (Nat.succ_pos n))
   have hone : (1 : ftC k) ∈ I := by
     have h := I.sub_mem (I.sub_mem hb hzx) hpow
-    convert h using 1 <;> ring
+    convert h using 1; ring
   intro r hr
   change r ∈ I
   simpa using I.mul_mem_left r hone
@@ -4158,12 +4158,12 @@ theorem ftCQPrimeIdeal_sup_CQPrimeIdeal (k : Type u) [Field k] {n m : ℕ}
       Ideal.mem_sup_right hbb0
     have hdiff : (ftCX k) * ((ftCX k) ^ a - (ftCX k) ^ b) ∈ I := by
       have h := I.sub_mem hba hbb
-      convert h using 1 <;> ring
+      convert h using 1; ring
     have hcancel (u : ftC k) (hu : ftCX k * u ∈ I) : u ∈ I := by
       have hbm : ftCX k * ftCZ k + (ftCX k) ^ (b + 1) + 1 ∈ I := hbb
       have h := I.sub_mem (I.mul_mem_left u hbm)
         (I.mul_mem_left (ftCZ k + (ftCX k) ^ b) hu)
-      convert h using 1 <;> ring
+      convert h using 1; ring
     have hdiff' : (ftCX k) ^ a - (ftCX k) ^ b ∈ I :=
       hcancel _ hdiff
     have hfactor : (ftCX k) ^ a - (ftCX k) ^ b =
@@ -4186,7 +4186,7 @@ theorem ftCQPrimeIdeal_sup_CQPrimeIdeal (k : Type u) [Field k] {n m : ℕ}
       | succ j ih =>
           apply ih
           apply hcancel ((ftCX k) ^ j * u)
-          convert hu using 1 <;> simp [pow_succ] <;> ring
+          convert hu using 1; simp [pow_succ]; ring
     have hu : 1 - (ftCX k) ^ (b - a) ∈ I :=
       hcancel_pow a _ hfactor'
     have hxA : ftAX k ∈ IsLocalRing.maximalIdeal (ftA k) := by
@@ -4201,7 +4201,7 @@ theorem ftCQPrimeIdeal_sup_CQPrimeIdeal (k : Type u) [Field k] {n m : ℕ}
       intro hmem
       have hone := (IsLocalRing.maximalIdeal (ftA k)).add_mem hmem hpowA
       have hone' : (1 : ftA k) ∈ IsLocalRing.maximalIdeal (ftA k) := by
-        convert hone using 1 <;> ring
+        convert hone using 1; ring
       apply (IsLocalRing.maximalIdeal.isMaximal (ftA k)).ne_top
       rw [Ideal.eq_top_iff_one]
       exact hone'

@@ -98,7 +98,7 @@ theorem adjoin_one_root
       ∃ (α : R') (Q : Polynomial R'), Q.Monic ∧
         Polynomial.map f P = (Polynomial.X - Polynomial.C α) * Q := by
   refine ⟨AdjoinRoot P, inferInstance, AdjoinRoot.of P, ?_⟩
-  letI : Algebra R (AdjoinRoot P) := AdjoinRoot.instAlgebra (S := R) P
+  let : Algebra R (AdjoinRoot P) := AdjoinRoot.instAlgebra (S := R) P
   have halg : (AdjoinRoot.of P).toAlgebra = (inferInstance : Algebra R (AdjoinRoot P)) := by
     rw [← AdjoinRoot.algebraMap_eq]
     exact toAlgebra_algebraMap
@@ -124,10 +124,10 @@ theorem finite_split
       Function.Injective g ∧ Module.Finite R R' ∧ Module.Free R R' ∧
         letI : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
         Nonempty (SplitPolynomialPresentation R' (S ⊗[R] R')) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   classical
   rcases subsingleton_or_nontrivial R with hR | hR
-  · letI : Subsingleton R := hR
+  · let : Subsingleton R := hR
     have hS : Subsingleton S := by
       have h01 : (0 : S) = 1 := by
         calc
@@ -142,10 +142,10 @@ theorem finite_split
           _ = y * 0 := (mul_zero y).symm
           _ = y * 1 := by rw [h01]
           _ = y := mul_one y⟩
-    letI : Subsingleton S := hS
+    let : Subsingleton S := hS
     let T := S ⊗[R] R
-    letI : Algebra R R := (RingHom.id R).toAlgebra
-    letI : Algebra R T := Algebra.TensorProduct.rightAlgebra
+    let : Algebra R R := (RingHom.id R).toAlgebra
+    let : Algebra R T := Algebra.TensorProduct.rightAlgebra
     have hT : Subsingleton T := by
       refine ⟨?_⟩
       intro x y
@@ -153,7 +153,7 @@ theorem finite_split
       | zero => exact Subsingleton.elim _ _
       | add x y hx hy => exact Subsingleton.elim _ _
       | tmul x y => exact Subsingleton.elim _ _
-    letI : Subsingleton T := hT
+    let : Subsingleton T := hT
     have hφ : Function.Surjective
         (MvPolynomial.aeval (R := R) (fun i : Fin 0 => (0 : T))) := by
       intro x
@@ -169,7 +169,7 @@ theorem finite_split
       rw [← hker]
       exact Ideal.quotientKerAlgEquivOfSurjective hφ
     refine ⟨R, inferInstance, RingHom.id R, ?_⟩
-    letI : Algebra R R := (RingHom.id R).toAlgebra
+    let : Algebra R R := (RingHom.id R).toAlgebra
     refine ⟨Function.bijective_id.injective, inferInstance, inferInstance, ?_⟩
     exact ⟨{
       number := 0
@@ -180,8 +180,8 @@ theorem finite_split
       ideal := ⊤
       ideal_contains := fun i => Fin.elim0 i
       quotientEquiv := he }⟩
-  · letI : Nontrivial R := hR
-    letI : Module.Finite R S := hf
+  · let : Nontrivial R := hR
+    let : Module.Finite R S := hf
     obtain ⟨n, ⟨P⟩⟩ := (Algebra.FiniteType.iff_exists_generators.mp
       (RingHom.Finite.finiteType hf))
     choose q hq using fun i => IsIntegral.of_finite R (P.val i)
@@ -197,11 +197,11 @@ theorem finite_split
       apply Finset.prod_eq_zero (Finset.mem_univ i)
       exact (hq i).2
     obtain ⟨R', _, alg, hfinite, hfree, hnontrivial, hsplit⟩ := hp.exists_splits_map
-    letI : CommRing R' := ‹CommRing R'›
-    letI : Algebra R R' := alg
-    letI : Module.Finite R R' := hfinite
-    letI : Module.Free R R' := hfree
-    letI : Nontrivial R' := hnontrivial
+    let : CommRing R' := ‹CommRing R'›
+    let : Algebra R R' := alg
+    let : Module.Finite R R' := hfinite
+    let : Module.Free R R' := hfree
+    let : Nontrivial R' := hnontrivial
     have hinj : Function.Injective (algebraMap R R') :=
       FaithfulSMul.algebraMap_injective R R'
     obtain ⟨m, hm⟩ := Polynomial.splits_iff_exists_multiset.mp hsplit
@@ -212,11 +212,11 @@ theorem finite_split
       rw [hm]
       dsimp [splitPolynomial, roots, d]
       rw [(hp.map (algebraMap R R')).leadingCoeff]
-      simp only [map_one, Polynomial.C_1, one_mul]
+      simp only [map_one, one_mul]
       simpa using (Fin.prod_univ_fun_getElem m.toList
         (fun x => Polynomial.X - Polynomial.C x)).symm
     let T := S ⊗[R] R'
-    letI : Algebra R' T := Algebra.TensorProduct.rightAlgebra
+    let : Algebra R' T := Algebra.TensorProduct.rightAlgebra
     let iota : S →ₐ[R] T :=
       Algebra.TensorProduct.includeLeft (R := R) (S := R) (A := S) (B := R')
     let val : Fin n → T := fun i => iota (P.val i)
@@ -267,8 +267,8 @@ theorem finite_split
                 rw [hbase]
         _ = iota (Polynomial.eval₂ (algebraMap R S) (P.val i) p) := by
           symm
-          simpa [val] using
-            (Polynomial.hom_eval₂ (algebraMap R S) iota.toRingHom p (P.val i))
+          exact Polynomial.hom_eval₂ (p := p) (f := algebraMap R S)
+            (g := iota.toRingHom) (P.val i)
         _ = 0 := by simpa using congrArg iota (hroot i)
     let e : (MvPolynomial (Fin n) R' ⧸ RingHom.ker ψ.toRingHom) ≃ₐ[R'] T :=
       Ideal.quotientKerAlgEquivOfSurjective hsurj

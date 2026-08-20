@@ -1,5 +1,6 @@
 import Formalization.Books.Cotangent.Unit03.StandardResolution
 import Mathlib.Algebra.Category.ModuleCat.Abelian
+import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.Algebra.Homology.Embedding.Extend
 import Mathlib.AlgebraicTopology.AlternatingFaceMapComplex
 import Mathlib.Order.Directed
@@ -535,17 +536,66 @@ theorem cotangentComplex_positive_degree
   omega
 
 /-!
-The textbook's filtered-colimit lemma is recorded at the level of complexes
-as the canonical comparison property below.  The source suppresses the
-transition maps on the cotangent complexes; here `D` is the resulting diagram
-after the stage complexes have been transported to the common colimit algebra
-`B`.  Thus the ring-map system and its induced transition maps are supplied by
-the caller through `D`, while the directed-index hypotheses are explicit.
+The source's filtered-colimit lemma concerns a directed system of ring maps,
+not an arbitrary diagram of complexes over one already fixed target ring.
+Since the module categories vary with the target rings, the common categorical
+comparison is recorded after forgetting to additive groups.  The stage
+identifications, cocone, and colimit proof below keep the transition data
+explicit instead of hiding it in an unrelated fixed-base diagram.
 -/
-def CotangentComplexColimitStatement {I : Type u} [Preorder I] [Nonempty I]
-    [IsDirectedOrder I]
-    (D : I ⥤ CochainComplex (ModuleCat.{u} B) ℤ) : Prop :=
-  ∃ c : Cocone D, Nonempty (IsColimit c) ∧
-    Nonempty (cotangentComplex A B ≅ c.pt)
+
+noncomputable def additiveCotangentComplex
+    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B] :
+    CochainComplex (AddCommGrpCat.{u}) ℤ :=
+  ((forget₂ (ModuleCat.{u} B) AddCommGrpCat).mapHomologicalComplex
+    (ComplexShape.up ℤ)).obj (cotangentComplex A B)
+
+/-- A directed system of ring maps together with its source and target colimits. -/
+structure RingMapColimitSystem (I : Type u) [Preorder I] [Nonempty I]
+    [IsDirectedOrder I] where
+  source : I ⥤ CommRingCat.{u}
+  target : I ⥤ CommRingCat.{u}
+  map : source ⟶ target
+  sourceCocone : Cocone source
+  targetCocone : Cocone target
+  sourceIsColimit : IsColimit sourceCocone
+  targetIsColimit : IsColimit targetCocone
+  colimitMap : sourceCocone.pt ⟶ targetCocone.pt
+  colimitMap_comm : ∀ i,
+    map.app i ≫ targetCocone.ι.app i = sourceCocone.ι.app i ≫ colimitMap
+
+/-- The source's filtered-colimit comparison, with the varying ring maps explicit. -/
+structure CotangentComplexColimitData
+    {I : Type u} [Preorder I] [Nonempty I] [IsDirectedOrder I]
+    (S : RingMapColimitSystem I) where
+  diagram : I ⥤ CochainComplex (AddCommGrpCat.{u}) ℤ
+  stageIso : ∀ i, diagram.obj i ≅
+    letI := (S.map.app i).hom.toAlgebra
+    additiveCotangentComplex (S.source.obj i) (S.target.obj i)
+  stageMap : ∀ {i j} (f : i ⟶ j),
+    letI := (S.map.app i).hom.toAlgebra
+    letI := (S.map.app j).hom.toAlgebra
+    additiveCotangentComplex (S.source.obj i) (S.target.obj i) ⟶
+      additiveCotangentComplex (S.source.obj j) (S.target.obj j)
+  stageIso_naturality : ∀ {i j} (f : i ⟶ j),
+    letI := (S.map.app i).hom.toAlgebra
+    letI := (S.map.app j).hom.toAlgebra
+    (stageIso i).hom ≫ stageMap f = diagram.map f ≫ (stageIso j).hom
+  cocone : Cocone diagram
+  isColimit : IsColimit cocone
+  targetIso : cocone.pt ≅
+    letI := S.colimitMap.hom.toAlgebra
+    additiveCotangentComplex S.sourceCocone.pt S.targetCocone.pt
+
+def CotangentComplexColimitStatement
+    {I : Type u} [Preorder I] [Nonempty I] [IsDirectedOrder I]
+    (S : RingMapColimitSystem I) : Prop :=
+  Nonempty (CotangentComplexColimitData S)
+
+/-- Filtered colimits commute with the standard cotangent-complex construction. -/
+theorem colimit_cotangent_complex
+    {I : Type u} [Preorder I] [Nonempty I] [IsDirectedOrder I]
+    (S : RingMapColimitSystem I) : CotangentComplexColimitStatement S := by
+  sorry
 
 end Formalization.Books.Cotangent.Unit03

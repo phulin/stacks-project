@@ -1,5 +1,4 @@
 import Formalization.Books.Cotangent.Unit03.AlgebraInterfaces
-import Formalization.Books.Simplicial.Unit03.SimplicialObjects
 import Formalization.Books.Simplicial.Unit34.StandardResolutions
 import Mathlib.Algebra.MvPolynomial.Monad
 import Mathlib.AlgebraicTopology.SimplicialObject.Basic
@@ -110,9 +109,10 @@ resolution construction. -/
 noncomputable def polynomialResolutionSituation (A : Type u) [CommRing A] :
     Formalization.Books.Simplicial.Unit34.StandardResolutionSituation
       (CommAlgCat A) (Type u) :=
-  { U := polynomialFree A
+  { U := Formalization.Books.Simplicial.Unit34.commutativePolynomialFree (A := A)
     V := polynomialForget A
-    adjunction := polynomialFreeAdjunction A }
+    adjunction :=
+      Formalization.Books.Simplicial.Unit34.commutativePolynomialAdjunction (A := A) }
 
 /-- The functor-valued simplicial object `X_•` from the source. -/
 noncomputable def standardResolutionFunctor :

@@ -1,5 +1,7 @@
+import Formalization.Books.Simplicial.Unit34.StandardResolutions
 import Mathlib.Algebra.Category.CommAlgCat.Basic
-import Mathlib.Algebra.MvPolynomial.Monad
+import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Algebra.MvPolynomial.Rename
 import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic
 
@@ -19,81 +21,25 @@ universe u
 
 variable (A : Type u) [CommRing A]
 
-/-- The free commutative `A`-algebra functor `E ↦ A[E]`. -/
-noncomputable def polynomialFree : Type u ⥤ CommAlgCat A where
-  obj E := CommAlgCat.of A (MvPolynomial E A)
-  map f := CommAlgCat.ofHom (MvPolynomial.rename (R := A) f)
-  map_id := by
-    intro E
-    apply CommAlgCat.hom_ext
-    apply MvPolynomial.algHom_ext
-    intro e
-    change MvPolynomial.rename (R := A) (fun x : E => x) (MvPolynomial.X e) =
-      MvPolynomial.X e
-    simp
-  map_comp := by
-    intro E F G f g
-    apply CommAlgCat.hom_ext
-    apply MvPolynomial.algHom_ext
-    intro e
-    change MvPolynomial.rename (R := A) (fun x : E => g (f x)) (MvPolynomial.X e) =
-      MvPolynomial.rename (R := A) g
-        (MvPolynomial.rename (R := A) f (MvPolynomial.X e))
-    simp
-
 /-- The forgetful functor from commutative `A`-algebras to sets. -/
 abbrev polynomialForget : CommAlgCat A ⥤ Type u := CategoryTheory.forget _
 
 /-- The universal bijection for the free polynomial algebra. -/
 noncomputable def polynomialFreeHomEquiv (E : Type u) (C : CommAlgCat A) :
-    ((polynomialFree A).obj E ⟶ C) ≃
+    ((Formalization.Books.Simplicial.Unit34.commutativePolynomialFree
+      (A := A)).obj E ⟶ C) ≃
       (E ⟶ (polynomialForget A).obj C) :=
-  { toFun := fun f => TypeCat.ofHom (fun e => f.hom (MvPolynomial.X e))
-    invFun := fun g => CommAlgCat.ofHom (MvPolynomial.aeval g)
-    left_inv := by
-      intro f
-      apply CommAlgCat.hom_ext
-      apply MvPolynomial.algHom_ext
-      intro e
-      change MvPolynomial.aeval (R := A)
-          (fun e : E => f.hom (MvPolynomial.X e)) (MvPolynomial.X e) =
-        f.hom (MvPolynomial.X e)
-      rw [MvPolynomial.aeval_X]
-    right_inv := by
-      intro g
-      apply ConcreteCategory.hom_ext
-      intro e
-      exact MvPolynomial.aeval_X (f := g) e }
-
-/-- The free-forgetful adjunction for polynomial algebras. -/
-noncomputable def polynomialFreeAdjunction :
-    polynomialFree A ⊣ polynomialForget A :=
-  Adjunction.mkOfHomEquiv
-    { homEquiv := fun E C => by
-        exact polynomialFreeHomEquiv A E C
-      homEquiv_naturality_left_symm := by
-        intro X' X Y f g
-        apply CommAlgCat.hom_ext
-        apply MvPolynomial.algHom_ext
-        intro e
-        change MvPolynomial.aeval (R := A) (fun e : X' => g (f e)) (MvPolynomial.X e) =
-          MvPolynomial.aeval (R := A) (fun e : X => g e)
-            (MvPolynomial.rename (R := A) f (MvPolynomial.X e))
-        simp
-      homEquiv_naturality_right := by
-        intro X Y Y' f g
-        apply ConcreteCategory.hom_ext
-        intro e
-        change g.hom (f.hom (MvPolynomial.X e)) = g.hom (f.hom (MvPolynomial.X e))
-        rfl }
+  (Formalization.Books.Simplicial.Unit34.commutativePolynomialAdjunction
+    (A := A)).homEquiv E C
 
 /-- A proposition recording the free-forgetful adjunction. -/
 def PolynomialFreeForgetfulAdjunction : Prop :=
-  Nonempty (polynomialFree A ⊣ polynomialForget A)
+  Nonempty (Formalization.Books.Simplicial.Unit34.commutativePolynomialFree
+    (A := A) ⊣ polynomialForget A)
 
 theorem polynomialFreeForgetfulAdjunction :
     PolynomialFreeForgetfulAdjunction A :=
-  ⟨polynomialFreeAdjunction A⟩
+  ⟨Formalization.Books.Simplicial.Unit34.commutativePolynomialAdjunction (A := A)⟩
 
 /-! ## The arrow-category variant from the source remark -/
 
@@ -120,7 +66,8 @@ noncomputable def variantFree (A B : Type u) [CommRing A] [CommRing B]
   CostructuredArrow.map₂
     (S := 𝟭 (Type u)) (T := B)
     (U := 𝟭 (CommAlgCat A)) (V := CommAlgCat.of A B)
-    (F := polynomialFree A) (G := polynomialFree A)
+    (F := Formalization.Books.Simplicial.Unit34.commutativePolynomialFree (A := A))
+    (G := Formalization.Books.Simplicial.Unit34.commutativePolynomialFree (A := A))
     (NatTrans.id _) (CommAlgCat.ofHom (MvPolynomial.aeval (fun b : B => b)))
 
 def variantAlgebraProjection (A B : Type u) [CommRing A] [CommRing B]
@@ -219,7 +166,8 @@ noncomputable def variantFreeAdjunction (A B : Type u) [CommRing A] [CommRing B]
         apply CostructuredArrow.hom_ext
         change (polynomialFreeHomEquiv A X'.left Y.left).symm
             ((f ≫ g).left) =
-          (polynomialFree A).map f.left ≫
+          (Formalization.Books.Simplicial.Unit34.commutativePolynomialFree
+            (A := A)).map f.left ≫
             (polynomialFreeHomEquiv A X.left Y.left).symm g.left
         apply CommAlgCat.hom_ext
         apply MvPolynomial.algHom_ext
@@ -236,7 +184,8 @@ noncomputable def variantFreeAdjunction (A B : Type u) [CommRing A] [CommRing B]
         change polynomialFreeHomEquiv A X.left Y'.left (f ≫ g).left =
             polynomialFreeHomEquiv A X.left Y.left f.left ≫
               (polynomialForget A).map g.left
-        exact (polynomialFreeAdjunction A).homEquiv_naturality_right f.left g.left }
+        exact (Formalization.Books.Simplicial.Unit34.commutativePolynomialAdjunction
+          (A := A)).homEquiv_naturality_right f.left g.left }
 
 /-- A proposition recording the arrow-category adjunction. -/
 def VariantFreeForgetfulAdjunction (A B : Type u) [CommRing A] [CommRing B]

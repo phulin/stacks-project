@@ -978,8 +978,8 @@ theorem truncation_product_with_standard_simplex
     (SimplicialObject.truncation (C := C) n).obj
       (objectProductWithSimplicialSet X (Δ[n + 1] : SSet.{w})
           (Unit13.standardSimplex_finite_nonempty (n + 1))) =
-      truncatedProductWithStandardSimplex X n := by
-  sorry
+      truncatedProductWithStandardSimplex.{v, u, w} X n := by
+  rfl
 
 /-- The product compatibility of `iₙ!` used in the final proof. -/
 theorem leftAdjoint_product_with_standard_simplex

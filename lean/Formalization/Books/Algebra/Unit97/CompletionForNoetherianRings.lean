@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit69.QuasiRegularSequences
 import Formalization.Books.Algebra.Unit96.Completion
 import Mathlib.Algebra.Module.Projective
 import Mathlib.RingTheory.AdicCompletion.RingHom
@@ -184,7 +185,10 @@ theorem completion_is_noetherian_of_fg_quotient
         (e.symm.toRingEquiv.trans (Ideal.quotEquivOfEq hKpow.symm))
     exact isNoetherianRing_of_ringEquiv (R ⧸ I) e'
   refine ⟨?_, ?_⟩
-  · sorry
+  · letI : IsNoetherianRing ((ringCompletion I) ⧸ K) := hKnoetherian
+    letI : IsAdicComplete K (ringCompletion I) := hKcomplete
+    exact Unit69.isNoetherianRing_of_isAdicComplete_of_fg_quotient K
+      (hI.map (algebraMap R (ringCompletion I)))
   · simpa [K] using hKcomplete
 
 theorem completion_is_noetherian

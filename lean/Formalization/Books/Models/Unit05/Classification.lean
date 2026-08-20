@@ -8281,6 +8281,242 @@ private lemma d5_reordered_data (D : LocalNumericalData 5)
     fin_cases i <;> fin_cases j <;>
       simp [scalarMatrix, branchPrefixMatrix, hf0', hf1', hf2', hf3', hf4']
 
+private theorem path5_classification (D : LocalNumericalData 5)
+    (h : UpToReversal D (fun E => isA5 E ∨ isC5 E ∨ isB5 E)) :
+    (∃ r : ℤ, 0 < r ∧ D.a = scalarMatrix
+        (pathMatrix 5 (constantVector (-2)) 1) r ∧
+      D.w = scalarVector (constantVector 1) r) ∨
+    (∃ r : ℤ, 0 < r ∧ D.a = scalarMatrix
+        (pathLastMatrix 5 (-2) (-4) 1 2) r ∧
+      D.w = scalarVector (lastVector 5 1 2) r) ∨
+    (∃ r : ℤ, 0 < r ∧ D.a = scalarMatrix
+        (pathLastMatrix 5 (-4) (-2) 2 2) r ∧
+      D.w = scalarVector (lastVector 5 2 1) r) ∨
+    (∃ r : ℤ, 0 < r ∧ D.a = scalarMatrix
+        (pathFirstMatrix 5 (fun i => if i.val = 0 then -4 else -2) 2 1) r ∧
+      D.w = scalarVector (fun i => if i.val = 0 then 2 else 1) r) ∨
+    (∃ r : ℤ, 0 < r ∧ D.a = scalarMatrix
+        (pathFirstMatrix 5 (fun i => if i.val = 0 then -2 else -4) 2 2) r ∧
+      D.w = scalarVector (fun i => if i.val = 0 then 1 else 2) r) := by
+  classical
+  have reverse_values (e : Fin 5 ≃ Fin 5)
+      (he : ∀ i, (e i).val + i.val + 1 = 5) :
+      e 0 = 4 ∧ e 1 = 3 ∧ e 2 = 2 ∧ e 3 = 1 ∧ e 4 = 0 := by
+    have h0 := he 0
+    have h1 := he 1
+    have h2 := he 2
+    have h3 := he 3
+    have h4 := he 4
+    constructor
+    · apply Fin.ext
+      omega
+    constructor
+    · apply Fin.ext
+      omega
+    constructor
+    · apply Fin.ext
+      omega
+    constructor
+    · apply Fin.ext
+      omega
+    · apply Fin.ext
+      omega
+  have normalize_reversed (e : Fin 5 ≃ Fin 5)
+      (he : ∀ i, (e i).val + i.val + 1 = 5)
+      (C : Matrix (Fin 5) (Fin 5) ℤ) (v : Fin 5 → ℤ)
+      (C' : Matrix (Fin 5) (Fin 5) ℤ) (v' : Fin 5 → ℤ) (r : ℤ)
+      (hmat : (reindexLocalData D e).a = scalarMatrix C r)
+      (hvec : (reindexLocalData D e).w = scalarVector v r)
+      (hC : ∀ i j, C i j = C' (e i) (e j))
+      (hv : ∀ i, v i = v' (e i)) :
+      D.a = scalarMatrix C' r ∧ D.w = scalarVector v' r := by
+    rcases reverse_values e he with ⟨h0, h1, h2, h3, h4⟩
+    have hmat' : D.a = scalarMatrix C' r := by
+      ext i j
+      obtain ⟨u, rfl⟩ := e.surjective i
+      obtain ⟨v', rfl⟩ := e.surjective j
+      have hh := congrArg (fun M : Matrix (Fin 5) (Fin 5) ℤ => M u v') hmat
+      have hc := hC u v'
+      calc
+        D.a (e u) (e v') = r * C u v' := by
+          simpa [reindexLocalData, scalarMatrix] using hh
+        _ = scalarMatrix C' r (e u) (e v') := by simp [scalarMatrix, hc]
+    have hvec' : D.w = scalarVector v' r := by
+      ext i
+      obtain ⟨u, rfl⟩ := e.surjective i
+      have hh := congrArg (fun z : Fin 5 → ℤ => z u) hvec
+      have hvu := hv u
+      calc
+        D.w (e u) = r * v u := by
+          simpa [reindexLocalData, scalarVector] using hh
+        _ = scalarVector v' r (e u) := by simp [scalarVector, hvu]
+    exact ⟨hmat', hvec'⟩
+  rcases h with hdirect | ⟨e, he, hrev⟩
+  · rcases hdirect with hA | hC | hB
+    · rcases hA with ⟨r, hr, hmat, hvec, _, _⟩
+      exact Or.inl ⟨r, hr, hmat, hvec⟩
+    · rcases hC with ⟨r, hr, hmat, hvec, _, _⟩
+      exact Or.inr (Or.inl ⟨r, hr, hmat, hvec⟩)
+    · rcases hB with ⟨r, hr, hmat, hvec, _, _⟩
+      exact Or.inr (Or.inr (Or.inl ⟨r, hr, hmat, hvec⟩))
+  · rcases hrev with hA | hC | hB
+    · rcases hA with ⟨r, hr, hmat, hvec, _, _⟩
+      have hn := normalize_reversed e he
+        (pathMatrix 5 (constantVector (-2)) 1) (constantVector 1)
+        (pathMatrix 5 (constantVector (-2)) 1) (constantVector 1) r hmat hvec
+        (by
+          intro i j
+          rcases reverse_values e he with ⟨h0, h1, h2, h3, h4⟩
+          fin_cases i <;> fin_cases j <;>
+            simp [pathMatrix, constantVector, h0, h1, h2, h3, h4])
+        (by intro i; simp [constantVector])
+      exact Or.inl ⟨r, hr, hn.1, hn.2⟩
+    · rcases hC with ⟨r, hr, hmat, hvec, _, _⟩
+      have hn := normalize_reversed e he
+        (pathLastMatrix 5 (-2) (-4) 1 2) (lastVector 5 1 2)
+        (pathFirstMatrix 5 (fun i => if i.val = 0 then -4 else -2) 2 1)
+        (fun i => if i.val = 0 then 2 else 1) r hmat hvec
+        (by
+          intro i j
+          rcases reverse_values e he with ⟨h0, h1, h2, h3, h4⟩
+          fin_cases i <;> fin_cases j <;>
+            simp [pathLastMatrix, pathFirstMatrix, h0, h1, h2, h3, h4])
+        (by
+          intro i
+          rcases reverse_values e he with ⟨h0, h1, h2, h3, h4⟩
+          fin_cases i <;> simp [lastVector, h0, h1, h2, h3, h4])
+      rcases hn with ⟨hmat', hvec'⟩
+      exact Or.inr (Or.inr (Or.inr (Or.inl ⟨r, hr, hmat', hvec'⟩)))
+    · rcases hB with ⟨r, hr, hmat, hvec, _, _⟩
+      have hn := normalize_reversed e he
+        (pathLastMatrix 5 (-4) (-2) 2 2) (lastVector 5 2 1)
+        (pathFirstMatrix 5 (fun i => if i.val = 0 then -2 else -4) 2 2)
+        (fun i => if i.val = 0 then 1 else 2) r hmat hvec
+        (by
+          intro i j
+          rcases reverse_values e he with ⟨h0, h1, h2, h3, h4⟩
+          fin_cases i <;> fin_cases j <;>
+            simp [pathLastMatrix, pathFirstMatrix, h0, h1, h2, h3, h4])
+        (by
+          intro i
+          rcases reverse_values e he with ⟨h0, h1, h2, h3, h4⟩
+          fin_cases i <;> simp [lastVector, h0, h1, h2, h3, h4])
+      rcases hn with ⟨hmat', hvec'⟩
+      exact Or.inr (Or.inr (Or.inr (Or.inr ⟨r, hr, hmat', hvec'⟩)))
+
+private theorem normalize_reversed_path
+    {t : ℕ} (D : LocalNumericalData t) (e : Fin t ≃ Fin t)
+    (he : ∀ i, (e i).val + i.val + 1 = t) (r : ℤ)
+    (hmat : (reindexLocalData D e).a = scalarMatrix
+      (pathMatrix t (constantVector (-2)) 1) r)
+    (hvec : (reindexLocalData D e).w = scalarVector (constantVector 1) r) :
+    D.a = scalarMatrix (pathMatrix t (constantVector (-2)) 1) r ∧
+      D.w = scalarVector (constantVector 1) r := by
+  have hadj (u v : Fin t) :
+      u.val + 1 = v.val ↔ (e v).val + 1 = (e u).val := by
+    have hu := he u
+    have hv := he v
+    omega
+  have hmat' : D.a = scalarMatrix (pathMatrix t (constantVector (-2)) 1) r := by
+    ext i j
+    obtain ⟨u, rfl⟩ := e.surjective i
+    obtain ⟨v, rfl⟩ := e.surjective j
+    have hh := congrArg (fun M : Matrix (Fin t) (Fin t) ℤ => M u v) hmat
+    have heq : e u = e v ↔ u = v := e.injective.eq_iff
+    change (reindexLocalData D e).a u v = _
+    rw [hh]
+    simp only [scalarMatrix]
+    apply congrArg (fun z : ℤ => r * z)
+    dsimp [pathMatrix, constantVector]
+    by_cases huv : u = v
+    · subst v
+      simp
+    · have hev : e u ≠ e v := by
+        intro h
+        exact huv (e.injective h)
+      by_cases hforward : u.val + 1 = v.val
+      · have hrev : ¬ v.val + 1 = u.val := by omega
+        have hforward' := (hadj u v).1 hforward
+        simp [huv, hev, hforward, hrev, hforward']
+      · by_cases hreverse : v.val + 1 = u.val
+        · have hreverse' := (hadj v u).1 hreverse
+          simp [huv, hev, hforward, hreverse, hreverse']
+        · have hforward' : ¬ (e v).val + 1 = (e u).val := by
+            intro h
+            exact hforward ((hadj u v).2 h)
+          have hreverse' : ¬ (e u).val + 1 = (e v).val := by
+            intro h
+            exact hreverse ((hadj v u).2 h)
+          simp [huv, hev, hforward, hreverse, hforward', hreverse']
+  have hvec' : D.w = scalarVector (constantVector 1) r := by
+    ext i
+    obtain ⟨u, rfl⟩ := e.surjective i
+    have hh := congrArg (fun v : Fin t → ℤ => v u) hvec
+    have hh' : D.w (e u) = r * 1 := by
+      simpa [reindexLocalData, scalarVector, constantVector] using hh
+    calc
+      D.w (e u) = r * 1 := hh'
+      _ = scalarVector (constantVector 1) r (e u) := by
+        simp [scalarVector, constantVector]
+  exact ⟨hmat', hvec'⟩
+
+private theorem normalize_reversed_pathLast
+    {t : ℕ} (D : LocalNumericalData t) (e : Fin t ≃ Fin t)
+    (he : ∀ i, (e i).val + i.val + 1 = t)
+    (d ld edge lastEdge c last r : ℤ)
+    (hmat : (reindexLocalData D e).a = scalarMatrix
+      (pathLastMatrix t d ld edge lastEdge) r)
+    (hvec : (reindexLocalData D e).w = scalarVector
+      (lastVector t c last) r) :
+    D.a = scalarMatrix
+        (pathFirstMatrix t (fun i => if i.val = 0 then ld else d)
+          lastEdge edge) r ∧
+      D.w = scalarVector (fun i => if i.val = 0 then last else c) r := by
+  have hvalue (i : Fin t) : (e i).val = t - 1 - i.val := by
+    have hi := he i
+    omega
+  have hfirst (i : Fin t) : (e i).val = 0 ↔ i.val + 1 = t := by
+    have hi := he i
+    omega
+  have hadj (u v : Fin t) :
+      u.val + 1 = v.val ↔ (e v).val + 1 = (e u).val := by
+    have hu := he u
+    have hv := he v
+    omega
+  have hmat' : D.a = scalarMatrix
+        (pathFirstMatrix t (fun i => if i.val = 0 then ld else d)
+          lastEdge edge) r := by
+    ext i j
+    obtain ⟨u, rfl⟩ := e.surjective i
+    obtain ⟨v, rfl⟩ := e.surjective j
+    have hh := congrArg (fun M : Matrix (Fin t) (Fin t) ℤ => M u v) hmat
+    have heq : e u = e v ↔ u = v := e.injective.eq_iff
+    simp only [reindexLocalData, scalarMatrix] at hh ⊢
+    rw [hh]
+    apply congrArg (fun z : ℤ => r * z)
+    dsimp [pathLastMatrix, pathFirstMatrix]
+    simp only [hvalue u, hvalue v]
+    split_ifs <;> omega
+  have hvec' : D.w = scalarVector
+      (fun i => if i.val = 0 then last else c) r := by
+    ext i
+    obtain ⟨u, rfl⟩ := e.surjective i
+    have hh := congrArg (fun v : Fin t → ℤ => v u) hvec
+    have hh' : D.w (e u) = r * lastVector t c last u := by
+      simpa [reindexLocalData, scalarVector] using hh
+    calc
+      D.w (e u) = r * lastVector t c last u := hh'
+      _ = scalarVector (fun i => if i.val = 0 then last else c) r (e u) := by
+        dsimp [scalarVector, lastVector]
+        by_cases hu : u.val + 1 = t
+        · have heu : (e u).val = 0 := (hfirst u).2 hu
+          simp [hu, heu]
+        · have heu : (e u).val ≠ 0 := by
+            intro hzero
+            exact hu ((hfirst u).1 hzero)
+          simp [hu, heu]
+  exact ⟨hmat', hvec'⟩
+
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →

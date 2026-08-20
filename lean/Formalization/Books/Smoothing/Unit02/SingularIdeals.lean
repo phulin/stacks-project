@@ -202,9 +202,7 @@ theorem strictlyStandard_jacobian_gives_split
       intro j
       apply funext
       intro i
-      simp [ρ, M, presentationRelationMap, presentationRelationCotangent,
-        Algebra.Generators.cotangentRestrict,
-        Algebra.Generators.cotangentSpaceBasis_repr_one_tmul]
+      simp [ρ, M, presentationRelationMap, presentationRelationCotangent]
       change _ = (MvPolynomial.aeval P.val)
         (MvPolynomial.pderiv (u i) (P.relation (v j)))
       simpa [M] using
@@ -253,7 +251,7 @@ theorem strictlyStandard_jacobian_gives_split
       obtain ⟨ψf, hψf⟩ := hf'
       refine ⟨r • ψf, ?_⟩
       rw [LinearMap.smul_comp, hψf, smul_smul]
-      simp [mul_comm]
+      simp
 
 /-- Conversely, a split composite forces the c-th power of a to satisfy
 the strictly-standard Jacobian identity. -/

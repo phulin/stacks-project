@@ -1,3 +1,4 @@
+import Formalization.Books.MoreAlgebra.Unit26.FlatnessAndFiniteness
 import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
 import Formalization.Books.MoreAlgebra.Unit08.FittingIdeals
 

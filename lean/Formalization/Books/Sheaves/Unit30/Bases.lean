@@ -945,7 +945,8 @@ def basisUnderlyingPresheaf {C : Type u} [Category.{v} C]
 /-- The sheaf predicate for a category-valued basis presheaf. -/
 def BasisAlgebraicSheaf {C : Type u} [Category.{v} C]
     {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
-    (U : C ⥤ Type v) (P : BasisAlgebraicPresheaf B (C := C)) : Prop :=
+    (U : C ⥤ Type v) [AlgebraicStructureType C U]
+    (P : BasisAlgebraicPresheaf B (C := C)) : Prop :=
   CategoryTheory.Presheaf.IsSheaf (basisTopology B)
     (basisUnderlyingPresheaf B U P)
 
@@ -954,6 +955,7 @@ the underlying presheaf of sets. -/
 theorem basisAlgebraicSheaf_iff_underlying_condition {C : Type u}
     [Category.{v} C] {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (U : C ⥤ Type v)
+    [AlgebraicStructureType C U]
     (P : BasisAlgebraicPresheaf B (C := C)) :
     BasisAlgebraicSheaf B U P ↔
       BasisSheafCondition B (basisUnderlyingPresheaf B U P) := by
@@ -1011,6 +1013,7 @@ theorem basisAlgebraicRestrictionFunctor_isEquivalence {C : Type u}
 noncomputable def basisAlgebraicExtension {C : Type u} [Category.{v} C]
     {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [AlgebraicStructureType C (CategoryTheory.forget C)]
     [HasColimits C] [HasLimits C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
@@ -1029,9 +1032,10 @@ noncomputable def basisAlgebraicExtension {C : Type u} [Category.{v} C]
 /-- Restriction of the selected category-valued extension recovers the basis
 sheaf. -/
 noncomputable def basisAlgebraicExtensionRestrictionIso {C : Type u}
-    [Category.{v} C] [HasLimits C] [HasColimits C]
-    {FC : C → C → Type*} {CC : C → Type v}
+    [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [AlgebraicStructureType C (CategoryTheory.forget C)]
+    [HasLimits C] [HasColimits C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
     [(CategoryTheory.forget C).ReflectsIsomorphisms]
@@ -1093,6 +1097,7 @@ theorem basisAlgebraicExtension_unique {C : Type u} [Category.{v} C]
 theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
     {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [AlgebraicStructureType C (CategoryTheory.forget C)]
     [HasColimits C] [HasLimits C]
     [PreservesLimits (CategoryTheory.forget C)]
     [PreservesFilteredColimits (CategoryTheory.forget C)]
@@ -1146,13 +1151,19 @@ abbrev BasisRingPresheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
 /-- A sheaf of rings on an indexed basis. -/
 def BasisRingSheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     (O : BasisRingPresheaf B) : Prop :=
-  BasisAlgebraicSheaf B (CategoryTheory.forget RingCat) O
+  by
+    letI : AlgebraicStructureType RingCat (CategoryTheory.forget RingCat) :=
+      standardAlgebraicStructureTypes.{v, v, v}.2.2.2.2.1
+    exact BasisAlgebraicSheaf B (CategoryTheory.forget RingCat) O
 
 /-- The sheaf of rings extending a basis sheaf of rings. -/
 noncomputable def basisRingSheafExtension {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     (O : BasisRingPresheaf B) (hO : BasisRingSheaf B O) : RingSheaf X :=
-  basisAlgebraicExtension B hB O hO
+  by
+    letI : AlgebraicStructureType RingCat (CategoryTheory.forget RingCat) :=
+      standardAlgebraicStructureTypes.{v, v, v}.2.2.2.2.1
+    exact basisAlgebraicExtension B hB O hO
 
 /-- Restriction of the ring extension recovers the prescribed basis sheaf. -/
 noncomputable def basisRingSheafExtensionRestrictionIso
@@ -1163,8 +1174,10 @@ noncomputable def basisRingSheafExtensionRestrictionIso
         (basisRingSheafExtension B hB O hO) ≅
       ⟨O, (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
         (J := basisTopology B) (P' := O)
-        (CategoryTheory.forget RingCat)).2 hO⟩ :=
-  basisAlgebraicExtensionRestrictionIso B hB O hO
+        (CategoryTheory.forget RingCat)).2 hO⟩ := by
+  letI : AlgebraicStructureType RingCat (CategoryTheory.forget RingCat) :=
+    standardAlgebraicStructureTypes.{v, v, v}.2.2.2.2.1
+  exact basisAlgebraicExtensionRestrictionIso B hB O hO
 
 /-- A presheaf of modules over a basis ring presheaf. -/
 abbrev BasisModulePresheaf {X : TopCat.{v}} {ι : Type v}
@@ -1811,10 +1824,10 @@ abbrev BasisModuleSheafCategory {X : TopCat.{v}} {ι : Type v}
     (fun F : PresheafOfModules ((inducedFunctor B).op ⋙ O.1) => BasisModuleSheaf B F)
 
 /-- Restriction identifies sheaves of modules with module sheaves on the basis. -/
-theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
+noncomputable def basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     (O : RingSheaf.{v, v} X) :
-    Nonempty (Mod O ≌ BasisModuleSheafCategory.{v, v} B O) := by
+    Mod O ≌ BasisModuleSheafCategory.{v, v} B O := by
   let R : Mod O ⥤ BasisModuleSheafCategory B O := {
     obj M := ⟨basisModuleRestriction B M.val, by
       change Presheaf.IsSheaf (basisTopology B)
@@ -2003,7 +2016,7 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
     refine ⟨basisModuleExtension B hB O Q.obj Q.property, ?_⟩
     exact ⟨ObjectProperty.isoMk _ r⟩
   let : R.IsEquivalence := ⟨inferInstance, inferInstance, inferInstance⟩
-  exact ⟨R.asEquivalence⟩
+  exact R.asEquivalence
 
 /-! ## `f`-maps checked on bases -/
 

@@ -356,9 +356,8 @@ theorem canonicalDerivedTriangle_distinguished
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     {S : ShortComplex (CochainComplex C ℤ)} (hS : S.ShortExact) :
     canonicalDerivedTriangle hS ∈ distTriang (DerivedCategory C) := by
-  simpa only [canonicalDerivedTriangle, DerivedCategory.triangleOfSES,
-    canonicalDerivedDelta_eq_triangleOfSESδ hS] using
-    (DerivedCategory.triangleOfSES_distinguished hS)
+  change DerivedCategory.triangleOfSES hS ∈ distTriang (DerivedCategory C)
+  exact DerivedCategory.triangleOfSES_distinguished hS
 
 /-- The canonical triangle is the cone triangle after localization. -/
 noncomputable def canonicalDerivedTriangleIsoCone
@@ -381,9 +380,9 @@ theorem canonicalDerivedDelta_naturality
     canonicalDerivedDelta h₁ ≫
         (DerivedCategory.Q.map φ.τ₁)⟦(1 : ℤ)⟧' =
       DerivedCategory.Q.map φ.τ₃ ≫ canonicalDerivedDelta h₂ := by
-  simpa only [canonicalDerivedDelta_eq_triangleOfSESδ h₁,
-    canonicalDerivedDelta_eq_triangleOfSESδ h₂] using
-    (DerivedCategory.triangleOfSESδ_naturality h₁ h₂ φ)
+  rw [canonicalDerivedDelta_eq_triangleOfSESδ h₁,
+    canonicalDerivedDelta_eq_triangleOfSESδ h₂]
+  exact DerivedCategory.triangleOfSESδ_naturality h₁ h₂ φ
 
 /-- The cone map induced by a morphism of short exact sequences. -/
 noncomputable def mappingConeMapOfShortComplex

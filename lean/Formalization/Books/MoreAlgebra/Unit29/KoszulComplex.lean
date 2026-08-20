@@ -1,11 +1,9 @@
-import Formalization.Books.Algebra.Unit09.Localization
 import Formalization.Books.Algebra.Unit13.TensorAlgebra
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Formalization.Books.Homology.Unit14.HomotopyAndShift
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Symmetric
 import Mathlib.Algebra.Homology.HomotopyCofiber
 import Mathlib.Algebra.Homology.Monoidal
-import Mathlib.Algebra.Homology.TotalComplex
 import Mathlib.LinearAlgebra.Alternating.Uncurry.Fin
 
 /-!
@@ -23,6 +21,7 @@ open CategoryTheory
 open CategoryTheory.Limits
 open HomologicalComplex
 open ComplexShape
+open Formalization.Books.Algebra.Unit13
 
 universe u
 
@@ -574,18 +573,12 @@ theorem koszul_finiteLocallyFree_local
     map_on_basis := by intro i; rfl
   }⟩
 
-/-- The exterior-algebra map induced by a linear map of generators. -/
-def koszulAlgebraMap (R E E' : Type u) [CommRing R] [AddCommGroup E]
-    [AddCommGroup E'] [Module R E] [Module R E'] (ψ : E →ₗ[R] E') :
-    ExteriorAlgebra R E →ₐ[R] ExteriorAlgebra R E' :=
-  ExteriorAlgebra.map ψ
-
 /-- Data of the DGA map induced by a map of Koszul generators. -/
 structure KoszulDGAHom (R E E' : Type u) [CommRing R] [AddCommGroup E]
     [AddCommGroup E'] [Module R E] [Module R E']
     (φ : E →ₗ[R] R) (φ' : E' →ₗ[R] R) (ψ : E →ₗ[R] E') where
   algebraMap : ExteriorAlgebra R E →ₐ[R] ExteriorAlgebra R E'
-  algebraMap_eq_induced : algebraMap = koszulAlgebraMap R E E' ψ
+  algebraMap_eq_induced : algebraMap = exteriorAlgebraMap ψ
   differential_commutes :
     algebraMap.toLinearMap.comp (koszulAlgebraDifferential R E φ) =
       (koszulAlgebraDifferential R E' φ').comp algebraMap.toLinearMap
@@ -596,7 +589,7 @@ theorem koszul_functorial
     (ψ : E →ₗ[R] E') (h : φ'.comp ψ = φ) :
     Nonempty (KoszulDGAHom R E E' φ φ' ψ) := by
   refine ⟨{
-    algebraMap := koszulAlgebraMap R E E' ψ
+    algebraMap := exteriorAlgebraMap ψ
     algebraMap_eq_induced := rfl
     differential_commutes := ?_
   }⟩
@@ -604,32 +597,30 @@ theorem koszul_functorial
   intro x
   induction x using CliffordAlgebra.left_induction with
   | algebraMap =>
-      simp [koszulAlgebraMap, koszulAlgebraDifferential]
+      simp [exteriorAlgebraMap, koszulAlgebraDifferential]
   | add x y hx hy =>
       simp only [LinearMap.comp_apply, map_add] at hx hy ⊢
       simpa using congrArg₂ (· + ·) hx hy
   | ι_mul e x hx =>
       simp only [LinearMap.comp_apply]
-      change (koszulAlgebraMap R E E' ψ)
+      change (exteriorAlgebraMap ψ)
           (koszulAlgebraDifferential R E φ (ExteriorAlgebra.ι R x * e)) =
         koszulAlgebraDifferential R E' φ'
-          ((koszulAlgebraMap R E E' ψ) (ExteriorAlgebra.ι R x * e))
+          ((exteriorAlgebraMap ψ) (ExteriorAlgebra.ι R x * e))
       rw [koszulAlgebraDifferential_mul_generator_aux]
       rw [map_add, map_smul, map_mul, map_mul, map_mul]
-      simp only [koszulAlgebraMap, ExteriorAlgebra.map_apply_ι]
+      simp only [exteriorAlgebraMap, ExteriorAlgebra.map_apply_ι]
       rw [koszulAlgebraDifferential_mul_generator_aux]
       rw [koszulAlgebraDifferential_on_generator_aux,
         koszulAlgebraDifferential_on_generator_aux]
       have hx' :
-          (koszulAlgebraMap R E E' ψ) (koszulAlgebraDifferential R E φ e) =
-            koszulAlgebraDifferential R E' φ'
-              ((koszulAlgebraMap R E E' ψ) e) := by
-        simpa [koszulAlgebraMap] using hx
-      have hx'' :
           (ExteriorAlgebra.map ψ) (koszulAlgebraDifferential R E φ e) =
-            koszulAlgebraDifferential R E' φ' ((ExteriorAlgebra.map ψ) e) := by
-        simpa [koszulAlgebraMap] using hx'
-      rw [hx'']
+            koszulAlgebraDifferential R E' φ'
+              ((ExteriorAlgebra.map ψ) e) := by
+        change (ExteriorAlgebra.map ψ) (koszulAlgebraDifferential R E φ e) =
+          koszulAlgebraDifferential R E' φ' ((ExteriorAlgebra.map ψ) e) at hx
+        exact hx
+      rw [hx']
       have hxe : φ' (ψ x) = φ x := LinearMap.congr_fun h x
       simp [hxe, Algebra.smul_def]
 
@@ -639,7 +630,7 @@ structure KoszulDGAIso (R E E' : Type u) [CommRing R] [AddCommGroup E]
     (φ : E →ₗ[R] R) (φ' : E' →ₗ[R] R) (ψ : E ≃ₗ[R] E') where
   algebraEquiv : ExteriorAlgebra R E ≃ₐ[R] ExteriorAlgebra R E'
   algebraEquiv_eq_induced :
-    algebraEquiv.toAlgHom = koszulAlgebraMap R E E' ψ.toLinearMap
+    algebraEquiv.toAlgHom = exteriorAlgebraMap ψ.toLinearMap
   differential_commutes :
     algebraEquiv.toLinearMap.comp (koszulAlgebraDifferential R E φ) =
       (koszulAlgebraDifferential R E' φ').comp algebraEquiv.toLinearMap
@@ -1098,15 +1089,10 @@ theorem koszul_homotopy_sequence
   exact koszul_homotopy_abstract R (Fin r → R)
     (sequenceLinearMap R r f) (Pi.single i 1)
 
-/-- An ideal acts by zero on a module. -/
-def IdealActsByZero (R : Type u) [CommRing R] (I : Ideal R) (M : Type u)
-    [AddCommGroup M] [Module R M] : Prop :=
-  ∀ a ∈ I, ∀ x : M, a • x = 0
-
 theorem koszul_homology_annihilated
     (R : Type u) [CommRing R] (r : ℕ) (f : Fin r → R) (n : ℤ) :
-    IdealActsByZero R (Ideal.span (Set.range f))
-      ((koszulComplexOn R r f).homology n) := by
+    Module.IsTorsionBySet R ((koszulComplexOn R r f).homology n)
+      (Ideal.span (Set.range f) : Set R) := by
   sorry
 
 /-! ## Mapping cones -/

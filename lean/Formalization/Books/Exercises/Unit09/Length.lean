@@ -569,32 +569,142 @@ def planeNormalSocleMulIndex (i j : Fin 9) : Fin 9 :=
       3 * (planeNormalSocleYDegree i + planeNormalSocleYDegree j))) % 9,
       Nat.mod_lt _ (by norm_num)⟩
 
+private theorem planeNormalX_cube_eq (k : Type u) [Field k] :
+    planeNormalX k ^ 3 = -(planeNormalX k ^ 2 * planeNormalYInAlgebra k ^ 2) :=
+  eq_neg_of_add_eq_zero_left (planeNormalX_relation k)
+
+private theorem planeNormalYInAlgebra_fourth (k : Type u) [Field k] :
+    planeNormalYInAlgebra k ^ 4 = 0 := by
+  calc
+    planeNormalYInAlgebra k ^ 4 =
+        planeNormalYInAlgebra k ^ 3 * planeNormalYInAlgebra k := by ring
+    _ = 0 := by rw [planeNormalYInAlgebra_cube, zero_mul]
+
+private theorem planeNormalSocleBasis_mul_zero (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 0 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 0 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 0 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_one (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 1 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 1 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 1 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_two (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 2 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 2 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 2 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_three (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 3 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 3 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 3 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_four (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 4 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 4 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 4 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_five (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 5 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 5 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 5 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_six (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 6 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 6 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 6 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_seven (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 7 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 7 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 7 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
+private theorem planeNormalSocleBasis_mul_eight (k : Type u) [Field k] (j : Fin 9) :
+    planeNormalSocleBasis k 8 * planeNormalSocleBasis k j =
+      planeNormalSocleMulCoeff k 8 j • planeNormalSocleBasis k
+        (planeNormalSocleMulIndex 8 j) := by
+  fin_cases j <;> simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
+    planeNormalSocleMulVanishes, planeNormalSocleXDegree, planeNormalSocleYDegree,
+    planeNormalSocleBasis_apply, planeNormalBasis_apply, Algebra.smul_def] <;>
+    ring_nf <;> simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth] <;> ring_nf <;>
+    simp [planeNormalX_cube_eq, planeNormalX_fourth,
+      planeNormalYInAlgebra_cube, planeNormalYInAlgebra_fourth]
+
 theorem planeNormalSocleBasis_mul (k : Type u) [Field k] (i j : Fin 9) :
     planeNormalSocleMulIndex i j ≤ j ∧
       planeNormalSocleBasis k i * planeNormalSocleBasis k j =
         planeNormalSocleMulCoeff k i j •
           planeNormalSocleBasis k (planeNormalSocleMulIndex i j) := by
-  have hx3 : planeNormalX k ^ 3 =
-      -(planeNormalX k ^ 2 * planeNormalYInAlgebra k ^ 2) :=
-    eq_neg_of_add_eq_zero_left (planeNormalX_relation k)
-  have hx4 := planeNormalX_fourth k
-  have hy3 := planeNormalYInAlgebra_cube k
-  have hy4 : planeNormalYInAlgebra k ^ 4 = 0 := by
-    calc
-      planeNormalYInAlgebra k ^ 4 =
-          planeNormalYInAlgebra k ^ 3 * planeNormalYInAlgebra k := by ring
-      _ = 0 := by rw [hy3, zero_mul]
   constructor
-  · fin_cases i <;> fin_cases j <;>
-      norm_num [planeNormalSocleMulIndex, planeNormalSocleMulVanishes,
-        planeNormalSocleXDegree, planeNormalSocleYDegree] <;> decide
-  · fin_cases i <;> fin_cases j <;>
-      simp [planeNormalSocleMulIndex, planeNormalSocleMulCoeff,
-        planeNormalSocleMulVanishes, planeNormalSocleXDegree,
-        planeNormalSocleYDegree, planeNormalSocleBasis_apply,
-        planeNormalBasis_apply, Algebra.smul_def] <;>
-      ring_nf <;> simp [hx3, hx4, hy3, hy4] <;>
-      ring_nf <;> simp [hx3, hx4, hy3, hy4]
+  · native_decide +revert
+  · fin_cases i
+    · exact planeNormalSocleBasis_mul_zero k j
+    · exact planeNormalSocleBasis_mul_one k j
+    · exact planeNormalSocleBasis_mul_two k j
+    · exact planeNormalSocleBasis_mul_three k j
+    · exact planeNormalSocleBasis_mul_four k j
+    · exact planeNormalSocleBasis_mul_five k j
+    · exact planeNormalSocleBasis_mul_six k j
+    · exact planeNormalSocleBasis_mul_seven k j
+    · exact planeNormalSocleBasis_mul_eight k j
 
 theorem planeNormalSocleFlag_mul_mem (k : Type u) [Field k]
     (i : Fin 10) (a z : planeNormalAlgebra k)

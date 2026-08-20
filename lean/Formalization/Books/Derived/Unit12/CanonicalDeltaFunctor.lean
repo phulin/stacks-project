@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Homology.DerivedCategory.ShortExact
 import Mathlib.Algebra.Homology.DerivedCategory.TStructure
+import Mathlib.Algebra.Homology.SingleHomology
 import Mathlib.Algebra.Homology.Embedding.CochainComplex
 import Mathlib.CategoryTheory.Abelian.Subcategory
 import Formalization.Books.Derived.Unit11.DerivedCategories
@@ -1440,7 +1441,138 @@ theorem canonicalTruncationTriangle_isomorphic_to_tStructure
       (canonicalTruncationTriangle C K a ≅
         ((canonicalTStructure C).triangleLEGE a (a + 1) rfl).obj
           ((DerivedCategory.Q (C := C)).obj K)) := by
-  sorry
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+  exact (by
+    obtain ⟨e, _⟩ := (canonicalTStructure C).triangle_iso_exists
+      (canonicalTruncationTriangle_distinguished C K a)
+      ((canonicalTStructure C).triangleLEGE_distinguished a (a + 1) rfl _)
+      (Iso.refl _) a (a + 1)
+      (by
+        change ((DerivedCategory.Q (C := C)).obj (K.truncLE a)).IsLE a
+        rw [DerivedCategory.isLE_Q_obj_iff]
+        infer_instance)
+      (by
+        change ((DerivedCategory.Q (C := C)).obj (K.truncGE (a + 1))).IsGE (a + 1)
+        rw [DerivedCategory.isGE_Q_obj_iff]
+        infer_instance)
+      (by
+        change (canonicalTStructure C).IsLE
+          (((canonicalTStructure C).truncLE a).obj
+            ((DerivedCategory.Q (C := C)).obj K)) a
+        infer_instance)
+      (by
+        change (canonicalTStructure C).IsGE
+          (((canonicalTStructure C).truncGE (a + 1)).obj
+            ((DerivedCategory.Q (C := C)).obj K)) (a + 1)
+        infer_instance)
+    exact ⟨e⟩)
+
+private noncomputable def singleFunctorCompHomologyFunctorIso'
+    (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
+    (n : ℤ) :
+    DerivedCategory.singleFunctor C n ⋙ DerivedCategory.homologyFunctor C n ≅
+      𝟭 C :=
+  Functor.isoWhiskerRight (DerivedCategory.singleFunctorIsoCompQ C n) _ ≪≫
+    Functor.associator _ _ _ ≪≫
+    Functor.isoWhiskerLeft _ (DerivedCategory.homologyFunctorFactors C n) ≪≫
+      HomologicalComplex.homologyFunctorSingleIso C (ComplexShape.up ℤ) n
+
+private theorem isIso_derived_homology_map_of_quasiIsoAt
+    (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
+    {K L : CochainComplex C ℤ} (f : K ⟶ L) (n : ℤ)
+    (hf : QuasiIsoAt f n) :
+    IsIso ((DerivedCategory.homologyFunctor C n).map
+      ((DerivedCategory.Q (C := C)).map f)) := by
+  have hhom : IsIso (HomologicalComplex.homologyMap f n) :=
+    (quasiIsoAt_iff_isIso_homologyMap f n).1 hf
+  letI : IsIso (HomologicalComplex.homologyMap f n) := hhom
+  letI : IsIso ((DerivedCategory.homologyFunctorFactors C n).hom.app K) := by
+    infer_instance
+  letI : IsIso
+      ((DerivedCategory.homologyFunctor C n).map
+        ((DerivedCategory.Q (C := C)).map f) ≫
+          (DerivedCategory.homologyFunctorFactors C n).hom.app L) := by
+    rw [DerivedCategory.homologyFunctorFactors_hom_naturality]
+    exact
+      (asIso ((DerivedCategory.homologyFunctorFactors C n).hom.app K) ≪≫
+        (@asIso _ _ _ _ (HomologicalComplex.homologyMap f n) hhom)).isIso_hom
+  exact IsIso.of_isIso_comp_right
+    ((DerivedCategory.homologyFunctor C n).map
+      ((DerivedCategory.Q (C := C)).map f))
+    ((DerivedCategory.homologyFunctorFactors C n).hom.app L)
+
+private theorem concreteHeartTruncation_iso_canonicalCohomologyPiece
+    (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
+    (K : CochainComplex C ℤ) (n : ℤ) :
+    Nonempty
+      ((DerivedCategory.Q (C := C)).obj ((K.truncGE n).truncLE n) ≅
+        canonicalCohomologyPiece C K n) := by
+  let L := K.truncGE n
+  let M := L.truncLE n
+  have hK : QuasiIsoAt (K.πTruncGE n) n := by infer_instance
+  have hM : QuasiIsoAt (L.ιTruncLE n) n := by infer_instance
+  have hK' := isIso_derived_homology_map_of_quasiIsoAt C (K.πTruncGE n) n hK
+  have hM' := isIso_derived_homology_map_of_quasiIsoAt C (L.ιTruncLE n) n hM
+  have hGE : ((DerivedCategory.Q (C := C)).obj M).IsGE n := by
+    rw [DerivedCategory.isGE_Q_obj_iff]
+    dsimp [M, L]
+    infer_instance
+  have hLE : ((DerivedCategory.Q (C := C)).obj M).IsLE n := by
+    rw [DerivedCategory.isLE_Q_obj_iff]
+    dsimp [M, L]
+    infer_instance
+  obtain ⟨Y, ⟨e⟩⟩ :=
+    @DerivedCategory.exists_iso_singleFunctor_obj_of_isGE_of_isLE C _ _ _
+      ((DerivedCategory.Q (C := C)).obj M) n hGE hLE
+  let eMY : (DerivedCategory.homologyFunctor C n).obj
+      ((DerivedCategory.Q (C := C)).obj M) ≅ Y :=
+    (DerivedCategory.homologyFunctor C n).mapIso e ≪≫
+      (singleFunctorCompHomologyFunctorIso' C n).app Y
+  let eYK : Y ≅ (DerivedCategory.homologyFunctor C n).obj
+      ((DerivedCategory.Q (C := C)).obj K) :=
+    eMY.symm ≪≫
+      (@asIso _ _ _ _
+        ((DerivedCategory.homologyFunctor C n).map
+          ((DerivedCategory.Q (C := C)).map (L.ιTruncLE n))) hM') ≪≫
+      (@asIso _ _ _ _
+        ((DerivedCategory.homologyFunctor C n).map
+          ((DerivedCategory.Q (C := C)).map (K.πTruncGE n))) hK').symm
+  exact ⟨e ≪≫ (DerivedCategory.singleFunctor C n).mapIso eYK⟩
+
+private theorem canonicalHeartTruncation_iso_canonicalCohomologyPiece
+    (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
+    (K : CochainComplex C ℤ) (n : ℤ) :
+    Nonempty
+      (((canonicalTStructure C).truncLEGE n n).obj
+          ((DerivedCategory.Q (C := C)).obj K) ≅
+        canonicalCohomologyPiece C K n) := by
+  obtain ⟨eK⟩ := canonicalTruncationTriangle_isomorphic_to_tStructure C K (n - 1)
+  obtain ⟨eL⟩ := canonicalTruncationTriangle_isomorphic_to_tStructure C
+    (K.truncGE n) n
+  have hn : n - 1 + 1 = n := by lia
+  have hobj : (canonicalTruncationTriangle C K (n - 1)).obj₃ =
+      (DerivedCategory.Q (C := C)).obj (K.truncGE (n - 1 + 1)) := by
+    dsimp [canonicalTruncationTriangle, Triangle.mk]
+  let eG₀ : (canonicalTruncationTriangle C K (n - 1)).obj₃ ≅
+      (((canonicalTStructure C).triangleLEGE (n - 1) (n - 1 + 1) rfl).obj
+        ((DerivedCategory.Q (C := C)).obj K)).obj₃ := by
+    exact Triangle.π₃.mapIso eK
+  have hobj' : (canonicalTruncationTriangle C K (n - 1)).obj₃ =
+      (DerivedCategory.Q (C := C)).obj (K.truncGE n) := by
+    simpa [hn] using hobj
+  let eG : (DerivedCategory.Q (C := C)).obj (K.truncGE n) ≅
+      ((canonicalTStructure C).truncGE n).obj
+        ((DerivedCategory.Q (C := C)).obj K) :=
+    by simpa [hn] using (eqToIso hobj'.symm ≪≫ eG₀)
+  let eM : (DerivedCategory.Q (C := C)).obj ((K.truncGE n).truncLE n) ≅
+      ((canonicalTStructure C).truncLE n).obj
+        ((DerivedCategory.Q (C := C)).obj (K.truncGE n)) :=
+    Triangle.π₁.mapIso eL
+  obtain ⟨eH⟩ := concreteHeartTruncation_iso_canonicalCohomologyPiece C K n
+  exact ⟨(((canonicalTStructure C).truncLE n).mapIso eG).symm ≪≫
+    eM.symm ≪≫ eH⟩
 
 /-- The lower truncation step triangle, whose third object is the cohomology
 piece in degree a + 1. -/
@@ -1463,7 +1595,10 @@ theorem lowerTruncationStepTriangle_third_is_cohomologyPiece
     Nonempty
       ((lowerTruncationStepTriangle C K a).obj₃ ≅
         canonicalCohomologyPiece C K (a + 1)) := by
-  sorry
+  dsimp [lowerTruncationStepTriangle]
+  obtain ⟨e⟩ := canonicalHeartTruncation_iso_canonicalCohomologyPiece C K (a + 1)
+  exact ⟨((canonicalTStructure C).truncGELEIsoLEGE (a + 1) (a + 1)).app
+    ((DerivedCategory.Q (C := C)).obj K) ≪≫ e⟩
 
 theorem lowerTruncationStepTriangle_first_is_lowerTruncation
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -1472,7 +1607,14 @@ theorem lowerTruncationStepTriangle_first_is_lowerTruncation
       ((lowerTruncationStepTriangle C K a).obj₁ ≅
         ((canonicalTStructure C).truncLE a).obj
           ((DerivedCategory.Q (C := C)).obj K)) := by
-  sorry
+  dsimp [lowerTruncationStepTriangle]
+  exact ⟨@asIso _ _ _ _
+    (((canonicalTStructure C).truncLE a).map
+      (((canonicalTStructure C).truncLEι (a + 1)).app
+        ((DerivedCategory.Q (C := C)).obj K)))
+    (CategoryTheory.Triangulated.TStructure.isIso_truncLE_map_truncLEι_app
+      (canonicalTStructure C) a (a + 1) (by lia)
+        ((DerivedCategory.Q (C := C)).obj K))⟩
 
 theorem lowerTruncationStepTriangle_second_is_nextLowerTruncation
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -1481,7 +1623,7 @@ theorem lowerTruncationStepTriangle_second_is_nextLowerTruncation
       ((lowerTruncationStepTriangle C K a).obj₂ ≅
         ((canonicalTStructure C).truncLE (a + 1)).obj
           ((DerivedCategory.Q (C := C)).obj K)) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 /-- The upper truncation step triangle, whose first object is the cohomology
 piece in degree a. -/
@@ -1504,7 +1646,8 @@ theorem upperTruncationStepTriangle_first_is_cohomologyPiece
     Nonempty
       ((upperTruncationStepTriangle C K a).obj₁ ≅
         canonicalCohomologyPiece C K a) := by
-  sorry
+  dsimp [upperTruncationStepTriangle]
+  exact canonicalHeartTruncation_iso_canonicalCohomologyPiece C K a
 
 theorem upperTruncationStepTriangle_second_is_upperTruncation
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -1513,7 +1656,7 @@ theorem upperTruncationStepTriangle_second_is_upperTruncation
       ((upperTruncationStepTriangle C K a).obj₂ ≅
         ((canonicalTStructure C).truncGE a).obj
           ((DerivedCategory.Q (C := C)).obj K)) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 theorem upperTruncationStepTriangle_third_is_nextUpperTruncation
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]

@@ -499,7 +499,83 @@ def FiltrationGradedActionCompatible
 
 /-! ## 28.1. Inverse systems and cohomology, I -/
 
-/-- `lemma-ML-general`: the first graded-ACC criterion for Mittag--Leffler. -/
+/-- `lemma-ML-general`: the first graded-ACC criterion for Mittag--Leffler.
+
+Proof roadmap (share the construction with the stable-image wrapper below):
+* Before this theorem, prove a private comparison lemma
+  `moduleEventualRange_coe` saying that, for
+  `M : InverseSystem ℕ+ (ModuleCat.{v} A)`, the underlying set of
+  `moduleEventualRange M i` is
+  `(M ⋙ forget (ModuleCat.{v} A)).eventualRange i`.  Extensionality followed
+  by `Submodule.mem_iInf` and `Functor.mem_eventualRange_iff` proves it; the
+  relevant declarations are in
+  `Algebra/Unit86/MittagLefflerSystems.lean` and
+  `Mathlib/CategoryTheory/CofilteredSystem.lean`.
+* Also prove
+  `isMittagLefflerModuleSystem_of_uniformStableImage`, with input
+  `inverseSystemHasUniformStableImage M`.  For a target `i : ℕ+`, use the
+  source stage `⟨(i : ℕ) + c, by omega⟩`; then
+  `positiveStageSub _ c _ = i`.  Rewrite the supplied submodule equality by
+  `moduleEventualRange_coe` and apply
+  `Functor.isMittagLeffler_iff_eventualRange` to
+  `M ⋙ forget (ModuleCat.{v} A)`.  This verifies that the strict bound
+  `c < n` in `inverseSystemHasUniformStableImage` loses no target stage.
+* For the hard part, install `hN` and put
+  `G := associatedGradedRing I`, `P n :=
+  (powerCohomologyModuleFamily H S (p + 1) n : Type v)`, and
+  `δ n := (cohomologyBoundaryAtStage H S n p).hom`.  Define
+  `B n : Submodule A (P n)` to be `⊥` for `n = 0` and
+  `LinearMap.range (δ ⟨n, hn⟩)` for `hn : 0 < n`.  Define a
+  `G`-submodule `Bsum` of `DirectSum ℕ P` by the componentwise condition
+  `∀ n, z n ∈ B n`.
+* Prove scalar closure of `Bsum` by `DirectSum.induction_on` first on the
+  scalar and then on the vector.  In the homogeneous/homogeneous case rewrite
+  with `DirectSum.Gmodule.of_smul_of` and apply `hBoundary`; the degree-zero
+  case is bottom.  These direct-sum declarations are in
+  `Mathlib/Algebra/DirectSum/Basic.lean` and
+  `Mathlib/Algebra/Module/GradedModule.lean`.
+* Unfold `GradedModuleHasACC` at `hACC` to obtain the local instance
+  `IsNoetherian G (DirectSum ℕ P)`.  Then
+  `IsNoetherian.noetherian Bsum` and
+  `Submodule.fg_iff_exists_fin_generating_family` (respectively
+  `Mathlib/RingTheory/Noetherian/Defs.lean` and
+  `Mathlib/RingTheory/Finiteness/Defs.lean`) give finitely many generators.
+  Replace each by its finitely many homogeneous components using
+  `DirectSum.sum_support_of`; every component remains in `Bsum` by its
+  definition.  Discard the zero-degree components, choose
+  `s_j : (cohomologySystem H S p).obj (op ⟨d_j, hd_j⟩)` mapping to each
+  remaining generator, and let `c := max_j d_j`.
+* Prove the shared stabilization claim.  Given `n : ℕ+` and
+  `hn : c < (n : ℕ)`, put `q := positiveStageSub n c hn` and
+  `next := ⟨(n : ℕ) + 1, Nat.succ_pos _⟩`.  Show
+  `LinearMap.range (M.map (opHomOfLE (show q ≤ next by omega))).hom =
+   LinearMap.range (M.map (opHomOfLE (positiveStageSub_le n c hn))).hom`
+  for `M := cohomologySystem H S p`.  For `x : M.obj (op n)`, express the
+  homogeneous element `DirectSum.of P n (δ n x)` in the finite homogeneous
+  generators using `Submodule.mem_span_range_iff_exists_fun` from
+  `Mathlib/LinearAlgebra/Finsupp/LinearCombination.lean`.  Project to degree
+  `n`; only the degree `n - d_j` component of each coefficient survives, by
+  `DirectSum.component.of` and `DirectSum.Gmodule.of_smul_of`.
+* Unpack `hAction` as `⟨action, hδ, hzero⟩`.  Subtract
+  `∑ j, action (n - d_j) ⟨d_j, hd_j⟩ a_j s_j` from `x`; `hδ` says
+  its boundary is zero.  Apply
+  `(H.exact (adicPowerShortComplex S (n : ℕ) (n : ℕ) n.2 le_rfl)
+    (adicPowerShortComplex_shortExact S (n : ℕ) (n : ℕ) n.2 le_rfl)).at_right p`
+  and
+  `ShortComplex.ab_exact_iff` from
+  `Mathlib/Algebra/Homology/ShortComplex/Ab.lean` to lift the difference from
+  stage `n + 1`.  The clause `hzero`, with lower stage `n - c`, kills every
+  correction because `d_j ≤ c`.
+* Iterate that consecutive-image equality and postcompose transition maps to
+  show that the image of stage `n` in stage `n - c` equals the image of every
+  later stage there.  Earlier stages between `n - c` and `n` contain that
+  image by functoriality.  Extensionality, `Submodule.mem_iInf`, `limit.w`-style
+  functorial rewrites (`Functor.map_comp`), and linearity therefore identify
+  it with `moduleEventualRange M (op (positiveStageSub n c _))`.  Package this
+  as a private `lemma_ML_general_uniform_core` returning
+  `cohomologySystemHasUniformStableImage H S p`.
+* Apply `isMittagLefflerModuleSystem_of_uniformStableImage` to that core.
+-/
 theorem lemma_ML_general
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
@@ -519,7 +595,17 @@ theorem lemma_ML_general
     cohomologySystemIsMittagLeffler H S p := by
   sorry
 
-/-- The uniform stable-image conclusion recorded in the first footnote. -/
+/-- The uniform stable-image conclusion recorded in the first footnote.
+
+Proof roadmap:
+* Invoke `lemma_ML_general_uniform_core` constructed immediately before
+  `lemma_ML_general`, with the same `hN`, `hBoundary`, `hAction`, and `hACC`.
+  Return its conclusion directly.
+* Do not derive this wrapper from `lemma_ML_general`: Mathlib's
+  `Functor.IsMittagLeffler` only supplies a stage depending on the target,
+  whereas this footnote asserts the single uniform shift produced by the
+  finite homogeneous boundary generators.
+-/
 theorem lemma_ML_general_stable_image
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
@@ -539,7 +625,44 @@ theorem lemma_ML_general_stable_image
     cohomologySystemHasUniformStableImage H S p := by
   sorry
 
-/-- `lemma-ML-general-better`: the criterion using the stable `N_n`. -/
+/-- `lemma-ML-general-better`: the criterion using the stable `N_n`.
+
+Proof roadmap (parallel to `lemma_ML_general`, but run ACC inside the stable
+family rather than the ambient power-cohomology family):
+* Install `hP` and `hN`.  Define, for every `n : ℕ+`, the restricted map
+  `δstable n` by `LinearMap.codRestrict` from
+  `(cohomologyBoundaryAtStage H S n p).hom` to
+  `stablePowerCohomologySubmodule H S (p + 1) (n : ℕ)`, using
+  `hBoundaryStable n`.  Regard its codomain as
+  `stablePowerCohomologyModuleFamily H S (p + 1) (n : ℕ)`.
+* Inside `DirectSum ℕ (fun n =>
+  (stablePowerCohomologyModuleFamily H S (p + 1) n : Type v))`, define the
+  componentwise boundary-range submodule exactly as in
+  `lemma_ML_general`, with bottom in degree zero and
+  `LinearMap.range (δstable ⟨n, hn⟩)` in positive degree.
+* Its scalar closure is the one point where the stable interface matters.
+  For homogeneous `a` and `x = δstable n y`, use
+  `hStableCompatible` to identify the coercion of the stable-family action
+  with the ambient action, then use the first clause of `hAction` to rewrite
+  that ambient action as a boundary in degree `k + n`.  Finish equality in
+  the stable subtype by `Subtype.ext`; `hBoundaryStable` supplies membership
+  of the new boundary.  Use `DirectSum.induction_on` and
+  `DirectSum.Gmodule.of_smul_of` to extend to arbitrary direct sums.
+* Unfold `GradedModuleHasACC` at `hACC`, apply
+  `IsNoetherian.noetherian` to this stable boundary-range submodule, and
+  homogenize a finite generating family with `DirectSum.sum_support_of`.
+  Choose preimages under `δstable`, and let `c` be the maximum positive
+  degree, exactly as in the ordinary proof.
+* Feed those generators to the same private consecutive-image stabilization
+  lemma used by `lemma_ML_general`.  That lemma acts in the ambient system
+  through `hAction`, so no transition maps on the family `N_n` are required.
+  It returns `cohomologySystemHasUniformStableImage H S p`.
+* Finish with the private
+  `isMittagLefflerModuleSystem_of_uniformStableImage`.  The interfaces are
+  sufficient as stated: `hBoundaryStable` gives the codomain restriction,
+  while `hStableCompatible` is essential for transporting the supplied
+  stable action to the ambient action controlled by `hAction`.
+-/
 theorem lemma_ML_general_better
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
@@ -567,7 +690,22 @@ theorem lemma_ML_general_better
     cohomologySystemIsMittagLeffler H S p := by
   sorry
 
-/-- The uniform stable-image conclusion recorded in the second footnote. -/
+/-- The uniform stable-image conclusion recorded in the second footnote.
+
+Proof roadmap:
+* Factor the stable-family construction described at
+  `lemma_ML_general_better` into a private
+  `lemma_ML_general_better_uniform_core`, placed before the two public better
+  wrappers.  Its parameters and universe instantiations are exactly those of
+  this theorem, and its conclusion is
+  `cohomologySystemHasUniformStableImage H S p`.
+* Return that core directly.  The ordinary stable-image core cannot be used:
+  `hACC` is for `DirectSum ℕ (stablePowerCohomologyModuleFamily ...)`, not
+  for the ambient power-cohomology direct sum.  Conversely, no additional
+  comparison hypothesis is missing because `hStableCompatible` and
+  `hBoundaryStable` provide precisely the two coercion facts used when
+  constructing the stable boundary-range submodule.
+-/
 theorem lemma_ML_general_better_stable_image
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
@@ -668,72 +806,120 @@ theorem lemma_topology_I_adic_general
 /-- The uniform filtration estimate recorded in the topology lemma's footnote.
 
 Proof roadmap for the shared graded-ACC-to-uniform-bound bridge:
-* Put `G := associatedGradedRing I`, `F n :=
-  inverseSystemLimitFiltrationAt (cohomologySystem H S p) n`, and
-  `Q n := submoduleQuotient (F n) (F (n + 1))`.  Unpack
-  `hFiltrationGraded` as `⟨hQ, e, he_surj, he_graded, hsmul⟩`, installing its
-  `DirectSum.Gmodule` instances with `letI`.  Use `hECompatible` to make the
-  componentwise inclusions `E n → P n` into a `G`-linear map
+* First add three small private kernel-filtration API lemmas, all polymorphic
+  in `A : Type v` and `M : InverseSystem ℕ+ (ModuleCat.{v} A)`:
+  `inverseSystemLimitFiltrationAt_antitone`,
+  `inverseSystemLimitTopology_hasBasis_zero`, and its translated-at-`x`
+  version.  For antitonicity, split zero indices and use `limit.w M
+  (opHomOfLE h)` plus `LinearMap.ker_le_ker_comp`.  The zero-neighborhood
+  basis should have sets
+  `(inverseSystemLimitFiltrationAt M n : Set _)`, indexed by `n : ℕ`.
+  Unfold `inverseSystemLimitTopology`, use `nhds_iInf`, `nhds_induced`,
+  `nhds_discrete`, `Filter.comap_pure`, and
+  `Filter.hasBasis_iInf_principal`; translate with
+  `map_add_left_nhds_zero`.  The exact model is
+  `inverseLimit_kernels_form_fundamental_system` in
+  `MoreAlgebra/Unit36/TopologicalGroups.lean`.
+* Factor the remaining argument into a private
+  `inverseSystemLimitHasUniformAdicBound_of_gradedACC`, placed before the two
+  ordinary wrappers.  It is universe-polymorphic in `A : Type v`, and takes
+  `I`, `M : InverseSystem ℕ+ (ModuleCat.{v} A)`,
+  `P : ℕ → ModuleCat.{v} A`, `E : ∀ n, Submodule A (P n : Type v)`, and the
+  seven inputs `hI`, `hN`, `hE`, `hECompatible`, `hFiltration`,
+  `hFiltrationGraded`, and `hACC`; its result is
+  `inverseSystemLimitHasUniformAdicBound I M`.
+* In that helper put `G := associatedGradedRing I`, `F n :=
+  inverseSystemLimitFiltrationAt M n`, and
+  `Q n := submoduleQuotient (F n) (F (n + 1))`.  Install `hN` and `hE`, then
+  unpack `hFiltrationGraded` as
+  `⟨hQ, e, he_surj, he_graded, hsmul⟩` and install `hQ`.  Wrap
+  `DirectSum.lmap (fun n => (E n).subtype)` as a `G`-linear map
   `iE : DirectSum ℕ (fun n => (E n : Type v)) →ₗ[G]
-    DirectSum ℕ (fun n => (P n : Type v))`.  Its `toFun` is
-  `DirectSum.map (fun n => (E n).subtype.toAddMonoidHom)`; prove `map_smul'`
-  by `DirectSum.induction_on` twice, reducing the homogeneous case with
-  `DirectSum.Gmodule.of_smul_of`, `DirectSum.map_of`, and `hECompatible`.
-  The same construction applied to `e` and `he_graded` gives a `G`-linear
+    DirectSum ℕ (fun n => (P n : Type v))`; prove `map_smul'` by two
+  `DirectSum.induction_on`s, `DirectSum.Gmodule.of_smul_of`,
+  `DirectSum.lmap_of`, and `hECompatible`.  Similarly wrap
+  `DirectSum.lmap e` as
   `qE : DirectSum ℕ (fun n => (E n : Type v)) →ₗ[G]
-    DirectSum ℕ (fun n => (Q n : Type v))`.
-* Prove `iE` injective componentwise, turn `hACC` into a local
-  `IsNoetherian G (DirectSum ℕ (fun n => (P n : Type v)))` instance, and use
-  `isNoetherian_of_injective iE`.  Prove `qE` surjective with
-  `DirectSum.lmap_surjective.mpr he_surj` (its underlying function is the
-  componentwise `DirectSum.lmap e`) and use `isNoetherian_of_surjective`.
-  Thus `IsNoetherian.noetherian (⊤ : Submodule G (DirectSum ℕ Q))` supplies a
-  finite generating family via
-  `Submodule.fg_iff_exists_fin_generating_family`.
-* Homogenize that family: replace every generator by its finitely many
-  components and use `DirectSum.sum_support_of` to show the replacement still
-  spans.  Let `c` be the maximum of their degrees.  Choose representatives
-  `a_j : F (degree j)` of the homogeneous quotient generators using
-  `Submodule.mkQ_surjective`.
-* For every `m ≥ c`, prove the key equality
-  `F (m + 1) = F (m + 2) ⊔ I • F m`.  Project a homogeneous spanning
-  expression to degree `m + 1`; `DirectSum.Gmodule.of_smul_of` eliminates all
-  degree-mismatched terms.  Quotient-induct the remaining scalars and rewrite
-  their products using
-  `Formalization.Books.Algebra.Unit150.associatedGradedPieceMul_mk_mk` from
-  `Algebra/Unit150/FormallyEtaleMaps.lean`.  Factor
-  `I ^ (m + 1 - degree j)` as `I * I ^ (m - degree j)` using
-  `Ideal.IsTwoSided.pow_add`; the last clause `hsmul` then identifies the
-  homogeneous action with the actual scalar multiple of `a_j`.  The opposite
-  inclusion uses the structural antitonicity of the kernel filtration and
-  `hFiltration`.
-* Iterating the key equality shows `I • F m` is dense in `F (m + 1)` for the
-  kernel topology.  Use `hI` to choose a finite generating family of `I` and
-  form the continuous additive homomorphism
-  `u : (Fin r → (F m : Type v)) →+ (F (m + 1) : Type v)` sending
-  `(x_i)` to `∑ i, k_i • x_i`.  Apply
+    DirectSum ℕ (fun n => (Q n : Type v))`, using `he_graded`.
+  These APIs are in `Mathlib/Algebra/DirectSum/Module.lean` and
+  `Mathlib/Algebra/Module/GradedModule.lean`.
+* Unfold `GradedModuleHasACC` at `hACC` to install
+  `IsNoetherian G (DirectSum ℕ (fun n => (P n : Type v)))`.  Obtain
+  injectivity of `iE` from `DirectSum.lmap_injective` and apply
+  `isNoetherian_of_injective iE`.  Obtain surjectivity of `qE` from
+  `DirectSum.lmap_surjective.mpr he_surj`, convert it with
+  `LinearMap.range_eq_top.mpr`, and apply
+  `isNoetherian_of_surjective qE`.  The latter two theorems are in
+  `Mathlib/RingTheory/Noetherian/Basic.lean`.
+  Now `IsNoetherian.noetherian (⊤ : Submodule G (DirectSum ℕ Q))` and
+  `Submodule.fg_iff_exists_fin_generating_family` give finitely many
+  generators of the quotient direct sum.
+* Homogenize those generators by replacing each with the finitely many terms
+  in its support and using `DirectSum.sum_support_of` to prove that the new
+  finite family still spans `⊤`.  Let `c` be the maximum of its degrees.
+  For every homogeneous generator of degree `d`, choose
+  `a : F d` mapping to it with
+  `Submodule.mkQ_surjective` for
+  `(F (d + 1)).comap (F d).subtype`; this is exactly the quotient hidden by
+  `submoduleQuotient`.
+* For `m ≥ c`, prove
+  `F (m + 1) = F (m + 2) ⊔ I • F m`.  Embed the class of
+  `x : F (m + 1)` in the quotient direct sum, express it in the homogeneous
+  generators with `Submodule.mem_span_range_iff_exists_fun`, and project to
+  degree `m + 1` using `DirectSum.component.of` and
+  `DirectSum.Gmodule.of_smul_of`.  Choose a representative
+  `r : I ^ (m + 1 - d)` for each surviving homogeneous coefficient.
+  The clause `hsmul` identifies its action on the representative `a : F d`
+  with the class of the actual scalar multiple `(r : A) • (a : limit M)`.
+* To put that actual multiple in `I • F m`, rewrite
+  `I ^ (m + 1 - d) = I * I ^ (m - d)` using
+  `Ideal.IsTwoSided.pow_add` (after the arithmetic normalization), and use
+  `Submodule.smul_induction_on`.  On a product `g * h`, apply `hsmul` once
+  more to `h : I ^ (m - d)` and `a`, obtaining an element of `F m`, then
+  multiply it by `g : I`.  This route uses only the supplied `hsmul`
+  interface.  The reverse inclusion follows from
+  `inverseSystemLimitFiltrationAt_antitone` and `hFiltration m`.
+* Iterate the equality to show `I • F m` is dense in `F (m + 1)` for the
+  induced kernel topology.  Use `hI` and
+  `Submodule.fg_iff_exists_fin_generating_family` to choose
+  `k : Fin r → I`, and define
+  `u : (Fin r → (F m : Type v)) →+ (F (m + 1) : Type v)` by
+  `u x = ∑ i, k i • x i`.  Prove continuity directly on the kernel basis:
+  fixed scalar multiplication commutes with every limit projection, and a
+  finite sum preserves each kernel.
+* Apply
   `Formalization.Books.MoreAlgebra.Unit36.openMapping_or_nowhereDense_image`
-  from `MoreAlgebra/Unit36/OpenMapping.lean`.  Supply completeness, linearity,
-  and the countable kernel basis by adapting, respectively,
-  `inverseLimit_is_complete`, `inverseLimit_is_linearly_topologized`, and
+  from `MoreAlgebra/Unit36/OpenMapping.lean`.  Supply its exact inputs by
+  adapting `inverseLimit_is_complete`,
+  `inverseLimit_is_linearly_topologized`, and
   `inverseLimit_kernels_form_fundamental_system` from
-  `MoreAlgebra/Unit36/TopologicalGroups.lean` to this module-valued inverse
-  limit and its closed filtration submodules.  The density statement excludes
-  the nowhere-dense alternative for every basic open subgroup, so `u` is open;
-  its dense image is therefore all of `F (m + 1)`.  Conclude
-  `I • F m = F (m + 1)` for `m ≥ c`.
-* Package `F` as `Ideal.Filtration I (cohomologyLimit H S p)`: prove `mono`
-  from `limit.w` (split the zero index) and use `hFiltration` for `smul_le`.
-  The preceding equality is its `Ideal.Filtration.Stable` witness.  Apply
+  `MoreAlgebra/Unit36/TopologicalGroups.lean` to the module-valued limit.
+  Each `F n` is a closed kernel (or top at zero), hence is complete; finite
+  products preserve completeness and linear topology, and the ℕ-indexed
+  kernel basis gives `HasCountableNeighborhoodBasisAtZero`.  If the theorem
+  returns an open subgroup with nowhere-dense image, that subgroup contains
+  `(F q)^r` for some `q`; the iterated equality says its image is dense in
+  the open subgroup `F (q + 1)`, contradicting nowhere density.  Thus `u` is
+  open.  Its image `I • F m` is already dense in `F (m + 1)`, so it is all of
+  `F (m + 1)`.
+* Package `F` as `Ideal.Filtration I ((InverseSystemLimit M :
+  ModuleCat.{v} A) : Type v)`: use the antitonicity helper for `mono` and
+  `hFiltration` for `smul_le`.  The preceding equality is an
+  `Ideal.Filtration.Stable` witness.  Apply
   `Ideal.Filtration.Stable.exists_pow_smul_eq` from
-  `Mathlib/RingTheory/Filtration.lean` and obtain
-  `F (c + n) = I ^ n • F c ≤ I ^ n • ⊤`; commute `c + n` to `n + c` to
-  assemble `inverseSystemLimitHasUniformAdicBound`.
+  `Mathlib/RingTheory/Filtration.lean` to get
+  `F (c + n) = I ^ n • F c ≤ I ^ n • ⊤`; commute `c + n` to `n + c` and
+  assemble `inverseSystemLimitHasUniformAdicBound I M`.
 
 Do not retry `Ideal.Filtration.submodule_fg_iff_stable`: it asks for finite
 generation of every `F n` and of the Rees-filtration submodule, neither of
 which follows from the supplied graded ACC.  The open-mapping step above is
 what upgrades density to the required equality.
+
+Also do not rely on
+`Formalization.Books.Algebra.Unit150.associatedGradedPieceMul_mk_mk`: that
+declaration is not present in the current `FormallyEtaleMaps.lean` interface.
+The two applications of `hsmul` above avoid that upstream dead end.
 -/
 theorem lemma_topology_I_adic_general_uniform_bound
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}

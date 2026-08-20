@@ -190,7 +190,8 @@ theorem completion_is_noetherian_of_fg_quotient
 theorem completion_is_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R) :
     IsNoetherianRing (ringCompletion I) := by
-  sorry
+  exact (completion_is_noetherian_of_fg_quotient I
+    I.fg_of_isNoetherianRing).1
 
 /-! ## Local completions -/
 
@@ -228,7 +229,9 @@ theorem maximalIdeal_pow_le_comap_pow
     [IsLocalRing R] [IsLocalRing S] [IsLocalHom (algebraMap R S)] (n : ℕ) :
     (IsLocalRing.maximalIdeal R) ^ n ≤
       ((IsLocalRing.maximalIdeal S) ^ n).comap (algebraMap R S) := by
-  sorry
+  rw [← Ideal.map_le_iff_le_comap, Ideal.map_pow]
+  exact Ideal.pow_right_mono
+    (IsLocalRing.map_maximalIdeal_le (algebraMap R S)) n
 
 def localQuotientMap
     (R S : Type u) [CommRing R] [CommRing S] [Algebra R S]
@@ -262,7 +265,12 @@ theorem completedLocalMap_mod
     (n : ℕ) :
     (AdicCompletion.evalₐ (IsLocalRing.maximalIdeal S) n).toRingHom.comp
         (completedLocalMap R S) = localQuotientMap R S n := by
-  sorry
+  change (AdicCompletion.evalₐ (IsLocalRing.maximalIdeal S) n).toRingHom.comp
+      (AdicCompletion.liftRingHom (IsLocalRing.maximalIdeal S)
+        (fun n => localQuotientMap R S n) (localQuotientMap_compatible R S)) = _
+  exact AdicCompletion.evalₐ_comp_liftRingHom
+    (I := IsLocalRing.maximalIdeal S)
+    (fun n => localQuotientMap R S n) (localQuotientMap_compatible R S) n
 
 theorem finite_after_completion
     (R S : Type u) [CommRing R] [CommRing S] [Algebra R S]

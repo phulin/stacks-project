@@ -35,12 +35,12 @@ noncomputable def idealTorsionAmbient
     D R ⥤ D R := by
   letI : Abelian (Formalization.Books.Dualizing.Unit08.TorsionModuleCategory R I) :=
     Classical.choice
-      (Formalization.Books.Dualizing.Unit08.torsion_module_category_is_abelian R I hI)
+      (Formalization.Books.Dualizing.Unit08.torsion_module_category_is_abelian I hI)
   letI : HasDerivedCategory.{w}
       (Formalization.Books.Dualizing.Unit08.TorsionModuleCategory R I) :=
-    Classical.choice
+      Classical.choice
       (Formalization.Books.Dualizing.Unit08.torsion_module_category_has_derived_category
-        R I hI)
+        I hI)
   exact
     Formalization.Books.Dualizing.Unit08.derivedTorsionFunctor I hI
         (Formalization.Books.Dualizing.Unit08.idealPowerTorsionFunctor_isLeftExact I hI) ⋙
@@ -52,12 +52,12 @@ noncomputable def idealTorsionCounit
     idealTorsionAmbient I hI ⟶ 𝟭 (D R) := by
   letI : Abelian (Formalization.Books.Dualizing.Unit08.TorsionModuleCategory R I) :=
     Classical.choice
-      (Formalization.Books.Dualizing.Unit08.torsion_module_category_is_abelian R I hI)
+      (Formalization.Books.Dualizing.Unit08.torsion_module_category_is_abelian I hI)
   letI : HasDerivedCategory.{w}
       (Formalization.Books.Dualizing.Unit08.TorsionModuleCategory R I) :=
-    Classical.choice
+      Classical.choice
       (Formalization.Books.Dualizing.Unit08.torsion_module_category_has_derived_category
-        R I hI)
+        I hI)
   exact
     (Classical.choice
       (Formalization.Books.Dualizing.Unit08.derivedTorsionFunctor_rightAdjoint_to_inclusion
@@ -97,20 +97,10 @@ noncomputable def torsionToSupportComparison
     idealTorsionAmbient I hI ⟶ localCohomologyAmbient I hI :=
   (Classical.choice (torsionToSupportComparisonData_exists I hI)).comparison
 
-/- The source also records that the comparison need not be invertible without
-Noetherianity. Packaging a witness keeps that warning as a usable statement
-without choosing a particular counterexample in this interface file. -/
-structure TorsionToSupportComparisonFailure where
-  R : Type u
-  [commRing : CommRing R]
-  [hasDerivedCategory : HasDerivedCategory.{w} (ModuleCat.{u} R)]
-  I : Ideal R
-  hI : I.FG
-  notNoetherian : ¬ IsNoetherianRing R
-  notIso : ¬ IsIso (torsionToSupportComparison I hI)
-
 theorem torsionToSupportComparison_not_iso_in_general :
-    Nonempty (TorsionToSupportComparisonFailure (u := u) (w := w)) := by
+    ∃ (R : Type u) (_ : CommRing R) (I : Ideal R) (hI : I.FG)
+      (_ : HasDerivedCategory.{w} (ModuleCat.{u} R)),
+      ¬ IsIso (torsionToSupportComparison I hI) := by
   sorry
 
 /-- Over a Noetherian ring the comparison from ideal torsion to closed support
@@ -173,8 +163,9 @@ structure ModuleCechPresentation {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] {r : ℕ}
     (f : Fin r → R) (M : ModuleCat.{u} R) where
   complex : Formalization.Books.MoreAlgebra.Unit59.Comp R
-  term_spec : ∀ p : ℕ,
-    Nonempty (complex.X (p : ℤ) ≅ moduleCechTerm f M p)
+  term_spec : ∀ p : Fin (r + 1),
+    Nonempty (complex.X (-((p : ℕ) : ℤ)) ≅
+      moduleCechTerm f M (p : ℕ))
 
 /-- The source's two canonical identifications for the finite Čech complex.
 The ring case is obtained by taking `M = A`; the same declaration handles

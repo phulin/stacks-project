@@ -150,12 +150,71 @@ theorem representablePresheaf_map_apply {C : Type u} [Category.{v} C]
    the warning can be recorded without importing the later Étale Cohomology
    sheaf section. -/
 
+private instance unitBoolCategory : Category.{v} (ULift.{u} Unit) where
+  Hom _ _ := ULift.{v} Bool
+  id _ := ULift.up true
+  comp f g := ULift.up (f.down && g.down)
+  comp_id := by
+    intro X Y f
+    cases f
+    all_goals simp
+  id_comp := by
+    intro X Y f
+    cases f
+    all_goals simp
+  assoc := by
+    intro W X Y Z f g k
+    cases f
+    all_goals
+      cases g
+      all_goals
+        cases k
+        all_goals simp [Bool.and_assoc]
+
 /-- Not every representable presheaf is a sheaf for every Grothendieck topology. -/
 theorem representablePresheaf_not_sheaf_in_every_topology :
     ¬ (∀ (C : Type u) [Category.{v} C]
       (J : GrothendieckTopology C) (X : C),
       CategoryTheory.Presheaf.IsSheaf J (representablePresheaf X)) := by
-  sorry
+  intro h
+  let C : Type u := ULift.{u} Unit
+  let X : C := ULift.up ()
+  have hsheaf :
+      CategoryTheory.Presheaf.IsSheaf
+        (CategoryTheory.GrothendieckTopology.discrete C)
+        (representablePresheaf X) :=
+    h C (CategoryTheory.GrothendieckTopology.discrete C) X
+  have hcover : (⊥ : Sieve X) ∈
+      (CategoryTheory.GrothendieckTopology.discrete C) X := by
+    change True
+    trivial
+  have hbot :
+      CategoryTheory.Presieve.IsSheafFor (representablePresheaf X)
+        (⊥ : CategoryTheory.Presieve X) := by
+    simpa using hsheaf.isSheafFor (⊥ : Sieve X) hcover
+  let x :
+      CategoryTheory.Presieve.FamilyOfElements (representablePresheaf X)
+        (⊥ : CategoryTheory.Presieve X) :=
+    fun _ _ hf => False.elim hf
+  have hx : x.Compatible := by
+    intro Y₁ Y₂ Z g₁ g₂ f₁ f₂ h₁ h₂ hcomp
+    exact False.elim h₁
+  obtain ⟨t, ht, huniq⟩ := hbot x hx
+  let tFalse : (representablePresheaf X).obj (op X) :=
+    (show X ⟶ X from ULift.up false)
+  let tTrue : (representablePresheaf X).obj (op X) :=
+    (show X ⟶ X from ULift.up true)
+  have htFalse : x.IsAmalgamation tFalse := by
+    intro Y f hf
+    exact False.elim hf
+  have htTrue : x.IsAmalgamation tTrue := by
+    intro Y f hf
+    exact False.elim hf
+  have heq : tFalse = tTrue :=
+    (huniq tFalse htFalse).trans (huniq tTrue htTrue).symm
+  change (ULift.up false : ULift.{v} Bool) = ULift.up true at heq
+  have hbool : false = true := congrArg ULift.down heq
+  cases hbool
 
 /-- The morphism of representables induced by `ψ : X ⟶ Y`. -/
 def representableMap {C : Type u} [Category.{v} C] {X Y : C} (ψ : X ⟶ Y) :

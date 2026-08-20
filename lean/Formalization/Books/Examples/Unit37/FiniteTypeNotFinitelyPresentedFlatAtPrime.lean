@@ -25,7 +25,7 @@ open DirectSum
 
 namespace Formalization.Books.Examples.Unit37
 
-universe u v
+universe u
 
 /-! ## The local base ring and the square-zero extension -/
 
@@ -77,24 +77,6 @@ noncomputable instance ftA0IsLocalRing (k : Type u) [Field k] : IsLocalRing (ftA
 abbrev ftAPolynomialRing (k : Type u) [Field k] [h : CommRing (ftA0 k)] :=
   @MvPolynomial ℕ (ftA0 k) h.toCommSemiring
 
-abbrev ftPolynomialRing (R : Type v) [h : CommRing R] :=
-  @Polynomial R h.toCommSemiring.toSemiring
-
-
-/-- A small wrapper for the canonical ideal quotient, keeping its coefficient ring explicit. -/
-abbrev ftIdealQuotient (R : Type v) [CommRing R] (I : Ideal R) := R ⧸ I
-
-abbrev ftAway (R : Type v) [CommRing R] (f : R) := Localization.Away f
-
-def ftIdealQuotientMk {R : Type v} [CommRing R] (I : Ideal R) :
-    R →+* ftIdealQuotient R I :=
-  Ideal.Quotient.mk I
-
-def ftIdealQuotientLift {R : Type v} [CommRing R] {S : Type v} [Semiring S]
-    (I : Ideal R) (f : R →+* S) (h : ∀ r : R, r ∈ I → f r = 0) :
-    ftIdealQuotient R I →+* S :=
-  Ideal.Quotient.lift I f h
-
 def ftX (k : Type u) [Field k] : ftA0 k :=
   algebraMap (ftBasePolynomialRing k) (ftA0 k) (ftBaseX k)
 
@@ -125,7 +107,7 @@ def ftARelationsIdeal (k : Type u) [Field k] : Ideal (ftAPolynomialRing k) :=
 /-- The ring
 `A = A₀[z₁, z₂, …]/(zₙzₘ, zₙ(y+xⁿ+x^(2n+1)))`. -/
 def ftA (k : Type u) [Field k] :=
-  ftIdealQuotient (ftAPolynomialRing k) (ftARelationsIdeal k)
+  ftAPolynomialRing k ⧸ ftARelationsIdeal k
 
 noncomputable instance ftACommRing (k : Type u) [Field k] : CommRing (ftA k) := by
   unfold ftA
@@ -136,7 +118,7 @@ noncomputable instance ftAAlgebra (k : Type u) [Field k] : Algebra (ftA0 k) (ftA
   infer_instance
 
 def ftAGenerator (k : Type u) [Field k] (n : ℕ) : ftA k :=
-  ftIdealQuotientMk (ftARelationsIdeal k) (MvPolynomial.X n)
+  Ideal.Quotient.mk (ftARelationsIdeal k) (MvPolynomial.X n)
 
 def ftA0ToA (k : Type u) [Field k] : ftA0 k →+* ftA k :=
   algebraMap (ftA0 k) (ftA k)
@@ -161,7 +143,7 @@ theorem ftARelations_le_augmentation_ker (k : Type u) [Field k] :
 
 /-- The quotient map `A → A₀`. -/
 def ftAToA0 (k : Type u) [Field k] : ftA k →+* ftA0 k :=
-  ftIdealQuotientLift (ftARelationsIdeal k) (ftAAugmentation k)
+  Ideal.Quotient.lift (ftARelationsIdeal k) (ftAAugmentation k)
     (fun _ h => ftARelations_le_augmentation_ker k h)
 
 theorem ftAToA0_surjective (k : Type u) [Field k] :
@@ -197,14 +179,14 @@ theorem ftAGenerator_annihilator (k : Type u) [Field k] (n : ℕ) :
 /-! ## The standard-étale algebra `C` -/
 
 /-- The polynomial relation `xz² + z + y`. -/
-def ftCRelation (k : Type u) [Field k] : ftPolynomialRing (ftA k) :=
+def ftCRelation (k : Type u) [Field k] : Polynomial (ftA k) :=
   Polynomial.C (ftAX k) * Polynomial.X ^ 2 + Polynomial.X + Polynomial.C (ftAY k)
 
-def ftCRelationsIdeal (k : Type u) [Field k] : Ideal (ftPolynomialRing (ftA k)) :=
+def ftCRelationsIdeal (k : Type u) [Field k] : Ideal (Polynomial (ftA k)) :=
   Ideal.span {ftCRelation k}
 
 def ftCQuotient (k : Type u) [Field k] :=
-  ftIdealQuotient (ftPolynomialRing (ftA k)) (ftCRelationsIdeal k)
+  Polynomial (ftA k) ⧸ ftCRelationsIdeal k
 
 noncomputable instance ftCQuotientCommRing (k : Type u) [Field k] :
     CommRing (ftCQuotient k) := by
@@ -216,16 +198,16 @@ noncomputable instance ftCQuotientAlgebra (k : Type u) [Field k] :
   unfold ftCQuotient
   infer_instance
 
-def ftCDerivativePolynomial (k : Type u) [Field k] : ftPolynomialRing (ftA k) :=
+def ftCDerivativePolynomial (k : Type u) [Field k] : Polynomial (ftA k) :=
   Polynomial.C (2 * ftAX k) * Polynomial.X + 1
 
 def ftCDerivative (k : Type u) [Field k] : ftCQuotient k :=
-  ftIdealQuotientMk (ftCRelationsIdeal k) (ftCDerivativePolynomial k)
+  Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCDerivativePolynomial k)
 
 /-- The ring
 `C = A[z]/(xz²+z+y)[1/(2zx+1)]`. -/
 def ftC (k : Type u) [Field k] :=
-  ftAway (ftCQuotient k) (ftCDerivative k)
+  Localization.Away (ftCDerivative k)
 
 noncomputable instance ftCCommRing (k : Type u) [Field k] : CommRing (ftC k) := by
   unfold ftC
@@ -245,7 +227,7 @@ def ftAToC (k : Type u) [Field k] : ftA k →+* ftC k :=
 
 def ftCZ (k : Type u) [Field k] : ftC k :=
   algebraMap (ftCQuotient k) (ftC k)
-    (ftIdealQuotientMk (ftCRelationsIdeal k) Polynomial.X)
+    (Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X)
 
 def ftCX (k : Type u) [Field k] : ftC k :=
   ftAToC k (ftAX k)
@@ -258,6 +240,10 @@ def ftCZn (k : Type u) [Field k] (n : ℕ) : ftC k :=
 
 theorem ftAToC_etale (k : Type u) [Field k] :
     RingHom.Etale (ftAToC k) := by
+  sorry
+
+theorem ftAToC_finiteType (k : Type u) [Field k] :
+    RingHom.FiniteType (ftAToC k) := by
   sorry
 
 theorem ftAToC_flat (k : Type u) [Field k] :
@@ -287,24 +273,24 @@ theorem ftCZn_annihilator (k : Type u) [Field k] (n : ℕ) :
 /-! ## The fibre computation -/
 
 abbrev ftCPrimeFibre (k : Type u) [Field k] (n : ℕ) :=
-  ftIdealQuotient (ftC k) (ftCPrimeIdeal k n)
+  ftC k ⧸ ftCPrimeIdeal k n
 
-def ftCRelationOverA0 (k : Type u) [Field k] : ftPolynomialRing (ftA0 k) :=
+def ftCRelationOverA0 (k : Type u) [Field k] : Polynomial (ftA0 k) :=
   Polynomial.C (ftX k) * Polynomial.X ^ 2 + Polynomial.X + Polynomial.C (ftY k)
 
 abbrev ftCPrimePresentationBase (k : Type u) [Field k] (n : ℕ) :=
-  ftIdealQuotient (ftPolynomialRing (ftA0 k))
+  Polynomial (ftA0 k) ⧸
     (Ideal.span {ftCRelationOverA0 k, Polynomial.C (ftPrimeEquation k n)})
 
 def ftCPrimePresentationDerivative (k : Type u) [Field k] (n : ℕ) :
     ftCPrimePresentationBase k n :=
-  ftIdealQuotientMk _ (Polynomial.C (2 * ftX k) * Polynomial.X + 1)
+  Ideal.Quotient.mk _ (Polynomial.C (2 * ftX k) * Polynomial.X + 1)
 
 abbrev ftCPrimePresentation (k : Type u) [Field k] (n : ℕ) :=
-  ftAway (ftCPrimePresentationBase k n) (ftCPrimePresentationDerivative k n)
+  Localization.Away (ftCPrimePresentationDerivative k n)
 
-def ftKXMaximalIdeal (k : Type u) [Field k] : Ideal (ftPolynomialRing k) :=
-  Ideal.span {(Polynomial.X : ftPolynomialRing k)}
+def ftKXMaximalIdeal (k : Type u) [Field k] : Ideal (Polynomial k) :=
+  Ideal.span {(Polynomial.X : Polynomial k)}
 
 instance ftKXMaximalIdeal_isPrime (k : Type u) [Field k] :
     (ftKXMaximalIdeal k).IsPrime := by
@@ -317,50 +303,55 @@ instance ftKXMaximalIdeal_isMaximal (k : Type u) [Field k] :
 abbrev ftKXLocal (k : Type u) [Field k] :=
   Localization.AtPrime (ftKXMaximalIdeal k)
 
+noncomputable instance ftKXLocalCommRing (k : Type u) [Field k] :
+    CommRing (ftKXLocal k) := by
+  unfold ftKXLocal
+  infer_instance
+
 def ftKX (k : Type u) [Field k] : ftKXLocal k :=
-  algebraMap (ftPolynomialRing k) (ftKXLocal k) Polynomial.X
+  algebraMap (Polynomial k) (ftKXLocal k) Polynomial.X
 
 def ftSecondRelationPolynomial (k : Type u) [Field k] (n : ℕ) :
-    ftPolynomialRing (ftKXLocal k) :=
+    Polynomial (ftKXLocal k) :=
   Polynomial.C (ftKX k) * Polynomial.X ^ 2 + Polynomial.X -
     Polynomial.C (ftKX k ^ n + ftKX k ^ (2 * n + 1))
 
-def ftSecondDerivative (k : Type u) [Field k] : ftPolynomialRing (ftKXLocal k) :=
+def ftSecondDerivative (k : Type u) [Field k] : Polynomial (ftKXLocal k) :=
   Polynomial.C (2 * ftKX k) * Polynomial.X + 1
 
 abbrev ftSecondBase (k : Type u) [Field k] (n : ℕ) :=
-  ftIdealQuotient (ftPolynomialRing (ftKXLocal k))
+  Polynomial (ftKXLocal k) ⧸
     (Ideal.span {ftSecondRelationPolynomial k n})
 
 def ftSecondDerivativeQuotient (k : Type u) [Field k] (n : ℕ) :
     ftSecondBase k n :=
-  ftIdealQuotientMk _ (ftSecondDerivative k)
+  Ideal.Quotient.mk _ (ftSecondDerivative k)
 
 abbrev ftSecondPresentation (k : Type u) [Field k] (n : ℕ) :=
-  ftAway (ftSecondBase k n) (ftSecondDerivativeQuotient k n)
+  Localization.Away (ftSecondDerivativeQuotient k n)
 
 def ftSecondLeftRelation (k : Type u) [Field k] (n : ℕ) :
-    ftPolynomialRing (ftKXLocal k) :=
+    Polynomial (ftKXLocal k) :=
   Polynomial.X - Polynomial.C (ftKX k ^ n)
 
 abbrev ftSecondLeft (k : Type u) [Field k] (n : ℕ) :=
-  ftIdealQuotient (ftPolynomialRing (ftKXLocal k)) (Ideal.span {ftSecondLeftRelation k n})
+  Polynomial (ftKXLocal k) ⧸ (Ideal.span {ftSecondLeftRelation k n})
 
 def ftSecondRightRelation (k : Type u) [Field k] (n : ℕ) :
-    ftPolynomialRing (ftKXLocal k) :=
+    Polynomial (ftKXLocal k) :=
   Polynomial.C (ftKX k) * Polynomial.X +
     Polynomial.C (ftKX k ^ (n + 1) + 1)
 
 abbrev ftSecondRightBase (k : Type u) [Field k] (n : ℕ) :=
-  ftIdealQuotient (ftPolynomialRing (ftKXLocal k))
+  Polynomial (ftKXLocal k) ⧸
     (Ideal.span {ftSecondRightRelation k n})
 
 def ftSecondRightDerivative (k : Type u) [Field k] (n : ℕ) :
     ftSecondRightBase k n :=
-  ftIdealQuotientMk _ (ftSecondDerivative k)
+  Ideal.Quotient.mk _ (ftSecondDerivative k)
 
 abbrev ftSecondRight (k : Type u) [Field k] (n : ℕ) :=
-  ftAway (ftSecondRightBase k n) (ftSecondRightDerivative k n)
+  Localization.Away (ftSecondRightDerivative k n)
 
 abbrev ftSecondProduct (k : Type u) [Field k] (n : ℕ) :=
   ftSecondLeft k n × ftSecondRight k n
@@ -403,6 +394,10 @@ def ftCRPrimeIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (ftC k) :=
 def ftCQPrimeIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (ftC k) :=
   ftCPrimeIdeal k n ⊔
     Ideal.span {ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1}
+
+instance ftCQPrimeIdeal_isMaximal (k : Type u) [Field k] (n : ℕ) :
+    (ftCQPrimeIdeal k n).IsMaximal := by
+  sorry
 
 def ftXi (k : Type u) [Field k] (n : ℕ) : ftC k :=
   (ftCZ k - (ftCX k) ^ n) * ftCZn k n
@@ -547,14 +542,14 @@ abbrev ftKernelIndex (k : Type u) [Field k] (g : ftC k) :=
 
 abbrev ftKernelSummand (k : Type u) [Field k] (g : ftC k)
     (n : ftKernelIndex k g) :=
-  ftIdealQuotient (ftC k) (ftCQPrimeIdeal k n.1)
+  ftC k ⧸ ftCQPrimeIdeal k n.1
 
 abbrev ftKernelDirectSum (k : Type u) [Field k] (g : ftC k) :=
   ⨁ n : ftKernelIndex k g, ftKernelSummand k g n
 
 def ftQuotientMulAddHom {R S : Type u} [CommRing R] [CommRing S]
     (I : Ideal R) (f : R →+* S) (s : S)
-    (h : ∀ r : R, r ∈ I → f r * s = 0) : ftIdealQuotient R I →+ S :=
+    (h : ∀ r : R, r ∈ I → f r * s = 0) : (R ⧸ I) →+ S :=
   QuotientAddGroup.lift I.toAddSubgroup
     ((AddMonoidHom.mulRight s).comp f.toAddMonoidHom)
     (fun r hr => h r hr)

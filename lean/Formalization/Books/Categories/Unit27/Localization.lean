@@ -336,9 +336,9 @@ theorem left_denominator_category_postcompose_is_final {C : Type u}
     [Category.{v} C] {W : MorphismProperty C} [LeftMultiplicativeSystem W]
     {X Y : C} (s : X ⟶ Y) (hs : W s) :
     Functor.Final (leftDenominatorCategoryPostcompose s hs) := by
-  letI : IsFiltered (LeftDenominatorCategory W Y) :=
+  let : IsFiltered (LeftDenominatorCategory W Y) :=
     left_denominator_category_is_filtered Y
-  letI : IsFiltered (LeftDenominatorCategory W X) :=
+  let : IsFiltered (LeftDenominatorCategory W X) :=
     left_denominator_category_is_filtered X
   apply Functor.final_of_exists_of_isFiltered
     (leftDenominatorCategoryPostcompose s hs)
@@ -944,9 +944,9 @@ theorem right_denominator_category_precompose_is_initial {C : Type u}
     [Category.{v} C] {W : MorphismProperty C} [RightMultiplicativeSystem W]
     {X Y : C} (s : X ⟶ Y) (hs : W s) :
     Functor.Initial (rightDenominatorCategoryPrecompose s hs) := by
-  letI : IsCofiltered (RightDenominatorCategory W X) :=
+  let : IsCofiltered (RightDenominatorCategory W X) :=
     right_denominator_category_is_cofiltered X
-  letI : IsCofiltered (RightDenominatorCategory W Y) :=
+  let : IsCofiltered (RightDenominatorCategory W Y) :=
     right_denominator_category_is_cofiltered Y
   apply Functor.initial_of_exists_of_isCofiltered
     (rightDenominatorCategoryPrecompose s hs)
@@ -965,7 +965,6 @@ theorem right_denominator_category_precompose_is_initial {C : Type u}
     obtain ⟨Z, t, ht, hfg⟩ :=
       MorphismProperty.HasRightCalculusOfFractions.ext
         f.left g.left d.hom d.prop (by
-          change f.left ≫ d.hom = g.left ≫ d.hom
           rw [MorphismProperty.Over.w f, MorphismProperty.Over.w g])
     let c' : RightDenominatorCategory W X :=
       MorphismProperty.Over.mk (P := W) (Q := (⊤ : MorphismProperty C))

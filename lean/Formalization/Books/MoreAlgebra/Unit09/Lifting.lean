@@ -117,12 +117,12 @@ theorem compose_etale_quotient_lifts
     (I : Ideal A) (f : A →+* A') (g : A' →+* A'')
     (hf : RingHom.Etale f) (hg : RingHom.Etale g)
     (e₁ : (A ⧸ I) ≃+* (A' ⧸ Ideal.map f I))
-    (he₁ : ∀ a : A,
+    (_he₁ : ∀ a : A,
       e₁ (Ideal.Quotient.mk I a) =
         Ideal.Quotient.mk (Ideal.map f I) (f a))
     (e₂ : (A' ⧸ Ideal.map f I) ≃+*
       (A'' ⧸ Ideal.map g (Ideal.map f I)))
-    (he₂ : ∀ a : A',
+    (_he₂ : ∀ a : A',
       e₂ (Ideal.Quotient.mk (Ideal.map f I) a) =
         Ideal.Quotient.mk (Ideal.map g (Ideal.map f I)) (g a)) :
     RingHom.Etale (g.comp f) ∧

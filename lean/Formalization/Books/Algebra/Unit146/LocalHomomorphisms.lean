@@ -18,7 +18,7 @@ open Set
 
 noncomputable section
 
-universe u v
+universe u
 
 /-! ## Localization witnesses -/
 
@@ -78,7 +78,7 @@ theorem lindel
 /-- The finite faithfully flat refinement of a localized étale map. -/
 structure FiniteFlatLocalFactorData
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) where
-  S' : Type v
+  S' : Type u
   [commRingS' : CommRing S']
   [algebraRS' : Algebra R S']
   finite : RingHom.Finite (algebraMap R S')

@@ -1,7 +1,5 @@
 import Formalization.Books.Categories.Unit22.EssentiallyConstantSystems
 import Formalization.Books.Categories.Unit27.Localization
-import Formalization.Books.Derived.Unit13.FilteredDerivedCategories
-import Formalization.Books.Homology.Unit04.KaroubianCategories
 
 /-!
 # Derived Categories, Chapter 14: core derived-functor data
@@ -16,11 +14,8 @@ noncomputable section
 
 open CategoryTheory
 open CategoryTheory.Limits
-open CategoryTheory.Preadditive
-open CategoryTheory.Pretriangulated
 open Formalization.Books.Categories.Unit22
 open Formalization.Books.Categories.Unit27
-open scoped CategoryTheory.Pretriangulated.Opposite ZeroObject
 
 universe v u v' u'
 

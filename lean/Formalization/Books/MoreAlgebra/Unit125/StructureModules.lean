@@ -2,12 +2,11 @@
 # More on Algebra, Chapter 125: Structure of modules over a PID
 -/
 
-import Formalization.Books.Algebra.Unit50.ValuationRings
-import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.RingTheory.Valuation.ValuationRing
 import Mathlib.Algebra.DirectSum.Module
+import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.FinitePresentation
-import Mathlib.Algebra.Module.Projective
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -27,7 +26,7 @@ open Set
 open CategoryTheory
 open scoped DirectSum
 
-universe u
+universe u v w
 
 /-! ## Cyclic modules and summands -/
 
@@ -41,26 +40,26 @@ abbrev finiteCyclicDirectSum (R : Type u) [CommRing R] (n : ℕ)
   ⨁ i : Fin n, principalQuotient R (f i)
 
 /-- A module is a linear direct summand of another module. -/
-def IsLinearSummandOf (R T N : Type u) [CommRing R]
+def IsLinearSummandOf (R : Type u) (T : Type v) (N : Type w) [CommRing R]
     [AddCommGroup T] [Module R T] [AddCommGroup N] [Module R N] : Prop :=
   ∃ K : Submodule R N,
     IsComplemented K ∧ Nonempty (T ≃ₗ[R] K)
 
 /-- A module is a summand of a possibly infinite direct sum of cyclic modules. -/
-def IsCyclicDirectSummand (R T : Type u) [CommRing R]
+def IsCyclicDirectSummand (R : Type u) (T : Type v) [CommRing R]
     [AddCommGroup T] [Module R T] : Prop :=
-  ∃ (ι : Type u) (f : ι → R),
+  ∃ (ι : Type (max u v)) (f : ι → R),
     IsLinearSummandOf R T (⨁ i : ι, principalQuotient R (f i))
 
 /-- A module is a summand of a finite direct sum of cyclic modules. -/
-def IsFiniteCyclicSummand (R T : Type u) [CommRing R]
+def IsFiniteCyclicSummand (R : Type u) (T : Type v) [CommRing R]
     [AddCommGroup T] [Module R T] : Prop :=
   ∃ (n : ℕ) (f : Fin n → R),
     IsLinearSummandOf R T (finiteCyclicDirectSum R n f)
 
 /-- A module is a summand of a finite direct sum of cyclic torsion modules
 whose defining scalars are nonzero. -/
-def IsFiniteNonzeroCyclicSummand (R T : Type u) [CommRing R]
+def IsFiniteNonzeroCyclicSummand (R : Type u) (T : Type v) [CommRing R]
     [AddCommGroup T] [Module R T] : Prop :=
   ∃ (n : ℕ) (f : Fin n → R),
     (∀ i, f i ≠ 0) ∧
@@ -70,50 +69,49 @@ def IsFiniteNonzeroCyclicSummand (R T : Type u) [CommRing R]
 
 /-- The condition `fA = A ∩ fB` for the first map of a module short complex. -/
 def IsPureFirstMap {R : Type u} [CommRing R]
-    (S : ShortComplex (ModuleCat.{u} R)) : Prop :=
-  ∀ f : R, ∀ x : (S.X₁ : Type u),
-    (∃ y : (S.X₁ : Type u), f • y = x) ↔
-      ∃ y : (S.X₂ : Type u), f • y = S.f.hom x
+    (S : ShortComplex (ModuleCat.{v} R)) : Prop :=
+  ∀ f : R, ∀ x : (S.X₁ : Type v),
+    (∃ y : (S.X₁ : Type v), f • y = x) ↔
+      ∃ y : (S.X₂ : Type v), f • y = S.f.hom x
 
 /-- Postcomposition with the second map of a module short complex. -/
-def homToThirdMap {R P : Type u} [CommRing R]
+def homToThirdMap {R : Type u} {P : Type v} [CommRing R]
     [AddCommGroup P] [Module R P]
-    (S : ShortComplex (ModuleCat.{u} R)) :
-    (P →ₗ[R] (S.X₂ : Type u)) → (P →ₗ[R] (S.X₃ : Type u)) :=
+    (S : ShortComplex (ModuleCat.{v} R)) :
+    (P →ₗ[R] (S.X₂ : Type v)) → (P →ₗ[R] (S.X₃ : Type v)) :=
   fun φ => S.g.hom.comp φ
 
 /-- The source's characterization of modules which are summands of sums of cyclic modules. -/
 theorem characterize_pd_modules
-    {R P : Type u} [CommRing R] [AddCommGroup P] [Module R P] :
+    {R : Type u} {P : Type v} [CommRing R] [AddCommGroup P] [Module R P] :
     IsCyclicDirectSummand R P ↔
-      ∀ (S : ShortComplex (ModuleCat.{u} R)),
+      ∀ (S : ShortComplex (ModuleCat.{v} R)),
         S.ShortExact → IsPureFirstMap S →
           Function.Surjective (homToThirdMap (P := P) S) := by
   sorry
 
 /-! ## Generalized valuation rings -/
 
-/-- The divisibility condition used for the generalized valuation rings in the source. -/
-def IsGeneralizedValuationRing (R : Type u) [CommRing R] : Prop :=
-  ∀ a b : R, a ∣ b ∨ b ∣ a
+/- The source's generalized valuation-ring condition is Mathlib's
+`PreValuationRing`, which deliberately does not require a domain. -/
 
 /-- The divisibility characterization is equivalent to locality and the Bézout property. -/
 theorem generalizedValuationRing_iff_local_bezout
     (R : Type u) [CommRing R] [Nontrivial R] :
-    IsGeneralizedValuationRing R ↔ IsLocalRing R ∧ IsBezout R := by
+    PreValuationRing R ↔ IsLocalRing R ∧ IsBezout R := by
   sorry
 
 /-- The divisibility characterization is equivalent to the linear order on ideals. -/
 theorem generalizedValuationRing_iff_ideal_chain
     (R : Type u) [CommRing R] [Nontrivial R] :
-    IsGeneralizedValuationRing R ↔
+    PreValuationRing R ↔
       ∀ I J : Ideal R, I ≤ J ∨ J ≤ I := by
   sorry
 
 /-- A valuation ring satisfies the generalized valuation-ring condition. -/
 theorem valuationRing_isGeneralizedValuationRing
     (R : Type u) [CommRing R] [IsDomain R] [ValuationRing R] :
-    IsGeneralizedValuationRing R := by
+    PreValuationRing R := by
   sorry
 
 /-! ## Finitely presented modules over generalized valuation rings -/
@@ -121,9 +119,9 @@ theorem valuationRing_isGeneralizedValuationRing
 /-- A finitely presented module over a generalized valuation ring is a finite
 direct sum of principal cyclic modules. -/
 theorem generalizedValuationRing_finitePresentation
-    {R M : Type u} [CommRing R] [Nontrivial R]
+    {R : Type u} {M : Type v} [CommRing R] [Nontrivial R]
     [AddCommGroup M] [Module R M]
-    (hR : IsGeneralizedValuationRing R)
+    (hR : PreValuationRing R)
     [Module.FinitePresentation R M] :
     ∃ (n : ℕ) (f : Fin n → R),
       Nonempty (M ≃ₗ[R] finiteCyclicDirectSum R n f) := by
@@ -134,10 +132,10 @@ theorem generalizedValuationRing_finitePresentation
 /-- Warfield's theorem: the local generalized valuation-ring hypothesis makes
 a finitely presented module a summand of a finite cyclic direct sum. -/
 theorem warfield
-    {R M : Type u} [CommRing R]
+    {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M]
     (hlocal : ∀ m : MaximalSpectrum R,
-      IsGeneralizedValuationRing (Localization.AtPrime m.asIdeal))
+      PreValuationRing (Localization.AtPrime m.asIdeal))
     [Module.FinitePresentation R M] :
     IsFiniteCyclicSummand R M := by
   sorry
@@ -240,7 +238,7 @@ theorem finite_submodule_of_free_isFree
 /-- A finitely presented module over a Bézout domain splits as a finite free
 module and its canonical torsion submodule, which is a finite cyclic summand. -/
 theorem finitelyPresented_split_free_torsion
-    {R M : Type u} [CommRing R]
+    {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M]
     (hR : IsBezoutDomain R)
     [Module.FinitePresentation R M] :
@@ -256,7 +254,7 @@ theorem finitelyPresented_split_free_torsion
 /-- Every finite module over a PID is a finite free module plus finitely many
 cyclic torsion modules. -/
 theorem finiteModule_over_pid_structure
-    {R M : Type u} [CommRing R] [IsDomain R] [IsPrincipalIdealRing R]
+    {R : Type u} {M : Type v} [CommRing R] [IsDomain R] [IsPrincipalIdealRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     ∃ (r n : ℕ) (f : Fin n → R),
       (∀ i, f i ≠ 0) ∧

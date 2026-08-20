@@ -163,7 +163,7 @@ theorem relativeTwoYoneda_existsUnique_normalizedIso
         IsIso η ∧
         (RelativeTwoYonedaEvaluation p U).map η =
           a.hom ≫ eqToHom hG.symm := by
-  letI : (RelativeTwoYonedaEvaluation p U).IsEquivalence :=
+  let : (RelativeTwoYonedaEvaluation p U).IsEquivalence :=
     relative_two_yoneda_equivalence p U
   let η : (RelativeTwoYonedaFromFibre p P U).obj x ⟶ G :=
     (RelativeTwoYonedaEvaluation p U).preimage
@@ -173,7 +173,7 @@ theorem relativeTwoYoneda_existsUnique_normalizedIso
     (RelativeTwoYonedaEvaluation p U).map_preimage _
   refine ⟨η, ?_, ?_⟩
   · constructor
-    · haveI : IsIso ((RelativeTwoYonedaEvaluation p U).map η) := by
+    · have : IsIso ((RelativeTwoYonedaEvaluation p U).map η) := by
         rw [hη]
         infer_instance
       exact (Functor.FullyFaithful.ofFullyFaithful

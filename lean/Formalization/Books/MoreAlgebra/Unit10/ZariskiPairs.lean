@@ -97,7 +97,7 @@ hypotheses. -/
 the distinguished element `(1, 0)` produce a monic annihilating polynomial
 whose reduction is `(X - 1) X^d` for some positive `d`. -/
 theorem helper_finite
-    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
+    {A B : Type u} [CommRing A] [CommRing B]
     (I : Ideal A) (hI : ZariskiPair I)
     (f : A →+* B) (hfinite : RingHom.Finite f)
     (B₁ B₂ : Type w) [CommRing B₁] [CommRing B₂]

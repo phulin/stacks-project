@@ -647,10 +647,10 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
       change φP (a * x) = 0
       rw [map_mul, hxy, mul_zero])
   let m : Ideal Q := RingHom.ker φQ
-  letI : Algebra P k := φP.toAlgebra
+  let : Algebra P k := φP.toAlgebra
   have hφC : φP.comp (MvPolynomial.C : k →+* P) = RingHom.id k := by
     exact MvPolynomial.eval₂Hom_comp_C _ _
-  letI : IsScalarTower k P k :=
+  let : IsScalarTower k P k :=
     IsScalarTower.of_algebraMap_eq' (by
       ext r
       change (RingHom.id k) r = φP (MvPolynomial.C r)
@@ -714,7 +714,7 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
       rw [map_add, hxy, hyy, add_zero]
     · intro a x hx hxy
       rw [smul_eq_mul, Derivation.leibniz, hxy]
-      simp only [Algebra.smul_def, map_zero, zero_add]
+      simp only [Algebra.smul_def]
       have hxI : x ∈ I := hx
       change φP a * 0 + φP x * (D i) a = 0
       rw [hIφ x hxI]
@@ -769,8 +769,8 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
     change φP (MvPolynomial.C r) = r
     exact congrArg (fun h : k →+* k => h r) hφC
   have hmmax : m.IsMaximal := RingHom.ker_isMaximal_of_surjective φQ hφQ_surj
-  letI : m.IsMaximal := hmmax
-  letI : m.IsPrime := hmmax.isPrime
+  let : m.IsMaximal := hmmax
+  let : m.IsPrime := hmmax.isPrime
   have hfin_bounds :
       6 ≤ Module.finrank k m.Cotangent ∧
         Module.finrank k m.Cotangent ≤ m.spanFinrank := by
@@ -829,7 +829,6 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
         · intro a q hq hq'
           have ha : a - algebraMap k Q (φQ a) ∈ m := by
             apply RingHom.mem_ker.mpr
-            change φQ (a - algebraMap k Q (φQ a)) = 0
             rw [map_sub]
             have hqa := congrArg (fun h : k →+* k => h (φQ a)) hφQ_alg
             exact sub_eq_zero.mpr (by
@@ -874,7 +873,7 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
     have hfcomb : Function.Surjective fcomb := by
       rw [← LinearMap.range_eq_top, Finsupp.range_linearCombination]
       exact hvspan
-    letI : Module.Finite k m.Cotangent :=
+    let : Module.Finite k m.Cotangent :=
       Module.Finite.of_surjective fcomb hfcomb
     constructor
     · simpa using hli_independent.fintype_card_le_finrank
@@ -890,7 +889,7 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
     RingHom.quotientKerEquivOfSurjective hφQ_surj
   let eK : k ≃+* IsLocalRing.ResidueField L :=
     eQk.symm.trans (IsLocalization.AtPrime.equivQuotMaximalIdeal m L)
-  letI : Algebra L (IsLocalRing.ResidueField L) :=
+  let : Algebra L (IsLocalRing.ResidueField L) :=
     IsLocalRing.ResidueField.algebra (R₀ := L) L
   have heK_alg (a : k) :
       eK a = Ideal.Quotient.mk (IsLocalRing.maximalIdeal L) (algebraMap k L a) := by
@@ -934,8 +933,8 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
       exact hc (by simpa using hz)
     · intro r x
       exact hc_scalars r x
-  letI : IsRegularRing Q := IsRegularRing.of_ringEquiv e.symm
-  letI : IsRegularLocalRing L :=
+  let : IsRegularRing Q := IsRegularRing.of_ringEquiv e.symm
+  let : IsRegularLocalRing L :=
     IsRegularRing.isRegularLocalRing_localization m
   have hreg := (IsRegularLocalRing.iff_finrank_cotangentSpace L).mp
     (inferInstance : IsRegularLocalRing L)

@@ -1676,7 +1676,7 @@ theorem exists_valuationRing_dimension_gt_one_not_flat_over_polynomial :
       PowerSeries.C (-x * x) := by
     refine PowerSeries.ext (fun n => ?_)
     rcases n with _ | n
-    · simp [F, PowerSeries.coeff_C_mul, hc0]
+    · simp [F, hc0]
     · rw [sub_mul, map_sub]
       simp [F, PowerSeries.coeff_C_mul, PowerSeries.coeff_succ_X_mul,
         mul_assoc]
@@ -1754,7 +1754,7 @@ def almostIntegralSeries {R : Type u} {K : Type v}
 
 theorem exists_almostIntegralSeriesData
     (R : Type u) (K : Type v) [CommRing R] [IsDomain R] [Field K]
-    [Algebra R K] [IsFractionRing R K] (α : K) (r : R) (hr : r ≠ 0)
+    [Algebra R K] [IsFractionRing R K] (α : K) (r : R) (_hr : r ≠ 0)
     (hpow : ∀ n : ℕ, 1 ≤ n →
       ∃ c : R, algebraMap R K c = algebraMap R K r * α ^ n) :
     Nonempty (AlmostIntegralSeriesData R K α r) := by
@@ -2123,8 +2123,8 @@ theorem flat_powerSeries_normal_iff_completelyNormal
       simpa [hev_p] using hev_eq.symm
     have hev_m : ev m = 0 :=
       (mul_eq_zero.mp hprod).resolve_right hqev
-    letI : Invertible x := invertibleOfNonzero hx0
-    letI : Invertible x⁻¹ := invertibleOfNonzero (inv_ne_zero hx0)
+    let : Invertible x := invertibleOfNonzero hx0
+    let : Invertible x⁻¹ := invertibleOfNonzero (inv_ne_zero hx0)
     have hrootrev : Polynomial.eval₂ (algebraMap R K)
         (⅟ (x⁻¹)) (Polynomial.reverse m) = 0 := by
       exact (Polynomial.eval₂_reverse_eq_zero_iff
@@ -2160,7 +2160,7 @@ theorem valuationRing_dimension_gt_one_not_completelyNormal
     intro h
     apply hdim
     exact (Ring.krullDimLE_one_iff_of_noZeroDivisors).mpr h
-  push_neg at hnot
+  push Not at hnot
   obtain ⟨P, hPbot, hPprime, hPmax⟩ := hnot
   have hPle : P ≤ IsLocalRing.maximalIdeal R := by
     exact IsLocalRing.le_maximalIdeal_of_isPrime P
@@ -2190,7 +2190,7 @@ theorem valuationRing_dimension_gt_one_not_completelyNormal
   have hy0 : y ≠ 0 := by
     intro hy
     apply hyP
-    simpa [hy]
+    simp [hy]
   have hAI : IsAlmostIntegral R
       ((algebraMap R (FractionRing R) y)⁻¹) := by
     refine ⟨x, mem_nonZeroDivisors_iff_ne_zero.mpr hx0, ?_⟩

@@ -995,7 +995,7 @@ theorem reflexiveHullMap_comp
     (f : M →ₗ[R] N) (g : N →ₗ[R] P) :
     reflexiveHullMap (g.comp f) =
       (reflexiveHullMap g).comp (reflexiveHullMap f) := by
-  sorry
+  simp [reflexiveHullMap, ← LinearMap.dualMap_comp_dualMap]
 
 /-- The canonical factor through the reflexive hull of a map into a reflexive
 module. -/
@@ -1012,7 +1012,15 @@ theorem reflexiveHullFactor_comp_reflexivityMap
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     [Module.IsReflexive R N] (f : M →ₗ[R] N) :
     (reflexiveHullFactor f).comp (reflexivityMap (R := R) (M := M)) = f := by
-  sorry
+  ext x
+  change (Module.evalEquiv R N).symm
+      (f.dualMap.dualMap ((Module.Dual.eval R M) x)) = f x
+  have h := congrArg
+    (fun k : M →ₗ[R] Module.Dual R (Module.Dual R N) => k x)
+    (Module.Dual.eval_naturality f)
+  simp only [LinearMap.comp_apply] at h
+  rw [h, ← Module.evalEquiv_apply]
+  exact (Module.evalEquiv R N).symm_apply_apply (f x)
 
 /-- The hull factor is the unique factor through the natural evaluation map. -/
 theorem reflexiveHullFactor_unique
@@ -1023,7 +1031,39 @@ theorem reflexiveHullFactor_unique
     (g : reflexiveHull (R := R) (M := M) →ₗ[R] N)
     (hg : g.comp (reflexivityMap (R := R) (M := M)) = f) :
     g = reflexiveHullFactor f := by
-  sorry
+  let j := reflexivityMap (R := R) (M := M)
+  let h := g - reflexiveHullFactor f
+  have hj : h.comp j = 0 := by
+    ext x
+    change g (j x) - reflexiveHullFactor f (j x) = 0
+    have hgx := congrArg (fun k : M →ₗ[R] N => k x) hg
+    have hfx := congrArg (fun k : M →ₗ[R] N => k x)
+      (reflexiveHullFactor_comp_reflexivityMap f)
+    simpa [j, LinearMap.comp_apply] using sub_eq_zero.mpr (hgx.trans hfx.symm)
+  have hQ : Module.IsTorsion R
+      (Module.Dual R (Module.Dual R M) ⧸ LinearMap.range j) :=
+    (dualEval_kernel_cokernel_isTorsion (R := R) (M := M)).2
+  have hNtf : Module.IsTorsionFree R N :=
+    reflexive_torsionFree (R := R) (M := N) (by infer_instance)
+  apply LinearMap.ext
+  intro z
+  rcases hQ (x := (LinearMap.range j).mkQ z) with ⟨a, ha⟩
+  have haz : (a : R) • z ∈ LinearMap.range j := by
+    apply (Submodule.Quotient.mk_eq_zero (LinearMap.range j)).mp
+    change (LinearMap.range j).mkQ ((a : R) • z) = 0
+    rw [(LinearMap.range j).mkQ.map_smul]
+    simpa [Submonoid.smul_def] using ha
+  obtain ⟨y, hy⟩ := haz
+  have hkill : (a : R) • h z = 0 := by
+    calc
+      (a : R) • h z = h ((a : R) • z) := (h.map_smul _ _).symm
+      _ = h (j y) := by rw [hy]
+      _ = 0 := by
+        simpa [LinearMap.comp_apply] using congrArg (fun k : _ →ₗ[R] N => k y) hj
+  have hz : h z = 0 :=
+    ((Module.isTorsionFree_iff_smul_eq_zero.mp hNtf)
+      (a : R) (h z) hkill).resolve_left (nonZeroDivisors.ne_zero a.property)
+  exact sub_eq_zero.mp (by simpa [h] using hz)
 
 /-! ## Hom modules, depth, and Serre conditions -/
 
@@ -1035,7 +1075,37 @@ theorem hom_depth_ge_one
     [AddCommGroup N] [Module R N] [Module.Finite R N]
     (hN : 1 ≤ localDepth R N) :
     1 ≤ localDepth R (M →ₗ[R] N) := by
-  sorry
+  let _ : Module.FinitePresentation R M := finitePresentation_of_finite R M
+  have hNreg : ∃ r : R, r ∈ IsLocalRing.maximalIdeal R ∧ IsSMulRegular N r := by
+    by_cases hNtr : Nontrivial N
+    · by_contra hno
+      have hzero : localDepth R N = 0 :=
+        (depth_eq_zero_iff (IsLocalRing.maximalIdeal R) N).2 ⟨hNtr, hno⟩
+      rw [hzero] at hN
+      simp at hN
+    · refine ⟨0, Ideal.zero_mem _, ?_⟩
+      intro x y hxy
+      exact (not_nontrivial_iff_subsingleton.mp hNtr).elim x y
+  obtain ⟨r, hr, hregN⟩ := hNreg
+  have hregHom : IsSMulRegular (M →ₗ[R] N) r := by
+    intro a b hab
+    apply LinearMap.ext
+    intro x
+    apply hregN
+    simpa using congrArg (fun k : M →ₗ[R] N => k x) hab
+  by_cases hHtr : Nontrivial (M →ₗ[R] N)
+  · have hHne : localDepth R (M →ₗ[R] N) ≠ 0 := by
+      intro hzero
+      exact ((depth_eq_zero_iff (IsLocalRing.maximalIdeal R)
+        (M →ₗ[R] N)).mp hzero).2 ⟨r, hr, hregHom⟩
+    exact Order.one_le_iff_ne_zero.mpr hHne
+  · have hsub : Subsingleton (M →ₗ[R] N) :=
+      not_nontrivial_iff_subsingleton.mp hHtr
+    have htop : localDepth R (M →ₗ[R] N) = ⊤ := by
+      exact depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R)
+        (M →ₗ[R] N)
+    rw [htop]
+    exact le_top
 
 /-- Hom into a module of depth at least two has depth at least two. -/
 theorem hom_depth_ge_two

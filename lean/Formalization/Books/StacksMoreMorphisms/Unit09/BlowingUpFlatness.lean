@@ -35,12 +35,23 @@ quasi-compactness and local finite presentation already supplied above.
 class BlowingUpFlatnessGeometry (C : Type u) [Category.{v} C]
     [AlgebraicStackCategory C] where
   finiteType : ∀ {X Y : C}, (X ⟶ Y) → Prop
+  finiteType_quasiCompact_of_quasiCompact_target :
+    ∀ {X Y : C} (f : X ⟶ Y), finiteType f →
+      IsQuasiCompactStack Y → IsQuasiCompactStack X
   isBlowup : ∀ {X Y : C}, (X ⟶ Y) → Prop
 
 def FiniteType {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [BlowingUpFlatnessGeometry C]
     {X Y : C} (f : X ⟶ Y) : Prop :=
   BlowingUpFlatnessGeometry.finiteType f
+
+lemma finiteType_quasiCompact_of_quasiCompact_target
+    {C : Type u} [Category.{v} C] [AlgebraicStackCategory C]
+    [BlowingUpFlatnessGeometry C] {X Y : C} (f : X ⟶ Y)
+    (hf : FiniteType f) (hYqc : IsQuasiCompactStack Y) :
+    IsQuasiCompactStack X :=
+  BlowingUpFlatnessGeometry.finiteType_quasiCompact_of_quasiCompact_target
+    f hf hYqc
 
 def FinitePresentation {C : Type u} [Category.{v} C]
     [HasPullbacks C] [AlgebraicStackCategory C]
@@ -52,26 +63,39 @@ def IsBlowup {C : Type u} [Category.{v} C]
     {X Y : C} (f : X ⟶ Y) : Prop :=
   BlowingUpFlatnessGeometry.isBlowup f
 
+/-! The preceding algebraic-stack interface has no open-immersion predicate.
+    Keep that missing geometric property separate from the blowup-specific
+    interface, so an open subspace cannot be represented by an unrelated
+    proposition. -/
+class OpenSubspaceGeometry (C : Type u) [Category.{v} C]
+    [AlgebraicStackCategory C] where
+  isOpenImmersion : ∀ {X Y : C}, (X ⟶ Y) → Prop
+
+def IsOpenImmersion {C : Type u} [Category.{v} C]
+    [AlgebraicStackCategory C] [OpenSubspaceGeometry C]
+    {X Y : C} (f : X ⟶ Y) : Prop :=
+  OpenSubspaceGeometry.isOpenImmersion f
+
 /-! ## Open subspaces and admissible blowups -/
 
 /-- An open algebraic subspace of an object in the ambient stack category. -/
 structure OpenSubspace {C : Type u} [Category.{v} C]
-    [AlgebraicStackCategory C] (Y : C) where
+    [AlgebraicStackCategory C] [OpenSubspaceGeometry C] (Y : C) where
   carrier : C
   inclusion : carrier ⟶ Y
   algebraicSpace : IsAlgebraicSpace carrier
-  isOpen : Prop
+  openImmersion : IsOpenImmersion inclusion
 
 /-- The stack-theoretic restriction of a morphism to an open subspace. -/
 abbrev stackRestriction {C : Type u} [Category.{v} C]
-    [AlgebraicStackCategory C] [HasPullbacks C]
+    [AlgebraicStackCategory C] [HasPullbacks C] [OpenSubspaceGeometry C]
     {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y) : C :=
   pullback f V.inclusion
 
 /-- A blowup whose center is disjoint from `V`, expressed by its base change
     to `V` being an isomorphism. -/
 structure VAdmissibleBlowup {C : Type u} [Category.{v} C]
-    [AlgebraicStackCategory C] [HasPullbacks C]
+    [AlgebraicStackCategory C] [HasPullbacks C] [OpenSubspaceGeometry C]
     [BlowingUpFlatnessGeometry C]
     {Y : C} (V : OpenSubspace Y) where
   carrier : C
@@ -86,7 +110,7 @@ blowup.  This is the categorical form of the fact that a `V`-admissible
 blowup is unchanged over `V`.
 -/
 def VAdmissibleBlowup.liftToCarrier {C : Type u} [Category.{v} C]
-    [AlgebraicStackCategory C] [HasPullbacks C]
+    [AlgebraicStackCategory C] [HasPullbacks C] [OpenSubspaceGeometry C]
     [BlowingUpFlatnessGeometry C]
     {Y : C} {V : OpenSubspace Y} (B : VAdmissibleBlowup V) :
     V.carrier ⟶ B.carrier := by
@@ -108,7 +132,8 @@ structure ClosedSubstack {C : Type u} [Category.{v} C]
 abbrev stackBaseChange {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
     [BlowingUpFlatnessGeometry C]
-    {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
+    [OpenSubspaceGeometry C]
+    {X Y : C} (f : X ⟶ Y) {V : OpenSubspace Y}
     (B : VAdmissibleBlowup V) : C :=
   pullback f B.map
 
@@ -121,10 +146,10 @@ of the admissible blowup over `V`.
 -/
 def restrictedClosedSubstack {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
-    [BlowingUpFlatnessGeometry C]
+    [BlowingUpFlatnessGeometry C] [OpenSubspaceGeometry C]
     {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
     (B : VAdmissibleBlowup V)
-    (X' : ClosedSubstack (X := stackBaseChange f V B)) : C :=
+    (X' : ClosedSubstack (X := stackBaseChange f B)) : C :=
   pullback
     (X'.inclusion ≫ pullback.snd f B.map)
     B.liftToCarrier
@@ -135,29 +160,29 @@ statement that the restricted closed substack agrees with `X_V`.
 -/
 def restrictedClosedSubstack.toX {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
-    [BlowingUpFlatnessGeometry C]
+    [BlowingUpFlatnessGeometry C] [OpenSubspaceGeometry C]
     {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
     (B : VAdmissibleBlowup V)
-    (X' : ClosedSubstack (X := stackBaseChange f V B)) :
+    (X' : ClosedSubstack (X := stackBaseChange f B)) :
     restrictedClosedSubstack f V B X' ⟶ X :=
   pullback.fst (X'.inclusion ≫ pullback.snd f B.map) B.liftToCarrier ≫
     X'.inclusion ≫ pullback.fst f B.map
 
 def restrictedClosedSubstack.toV {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
-    [BlowingUpFlatnessGeometry C]
+    [BlowingUpFlatnessGeometry C] [OpenSubspaceGeometry C]
     {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
     (B : VAdmissibleBlowup V)
-    (X' : ClosedSubstack (X := stackBaseChange f V B)) :
+    (X' : ClosedSubstack (X := stackBaseChange f B)) :
     restrictedClosedSubstack f V B X' ⟶ V.carrier :=
   pullback.snd (X'.inclusion ≫ pullback.snd f B.map) B.liftToCarrier
 
 def AgreesOnOpen {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
-    [BlowingUpFlatnessGeometry C]
+    [BlowingUpFlatnessGeometry C] [OpenSubspaceGeometry C]
     {X Y : C} (f : X ⟶ Y) (V : OpenSubspace Y)
     (B : VAdmissibleBlowup V)
-    (X' : ClosedSubstack (X := stackBaseChange f V B)) : Prop :=
+    (X' : ClosedSubstack (X := stackBaseChange f B)) : Prop :=
   ∃ e : restrictedClosedSubstack f V B X' ≅ stackRestriction f V,
     e.hom ≫ pullback.fst f V.inclusion =
         restrictedClosedSubstack.toX f V B X' ∧
@@ -169,7 +194,7 @@ def AgreesOnOpen {C : Type u} [Category.{v} C]
 /-- Algebraic-stack form of the source's flattening lemma. -/
 theorem flatten_stack {C : Type u} [Category.{v} C]
     [AlgebraicStackCategory C] [HasPullbacks C]
-    [BlowingUpFlatnessGeometry C]
+    [BlowingUpFlatnessGeometry C] [OpenSubspaceGeometry C]
     {X Y : C} (f : X ⟶ Y) (hYspace : IsAlgebraicSpace Y)
     (V : OpenSubspace Y)
     (hYqc : IsQuasiCompactStack Y)
@@ -180,7 +205,7 @@ theorem flatten_stack {C : Type u} [Category.{v} C]
     (hXV_flat : Flat (pullback.snd f V.inclusion))
     (hXV_lfp : LocallyOfFinitePresentation (pullback.snd f V.inclusion)) :
     ∃ (B : VAdmissibleBlowup V)
-      (X' : ClosedSubstack (X := stackBaseChange f V B)),
+      (X' : ClosedSubstack (X := stackBaseChange f B)),
       AgreesOnOpen f V B X' ∧
         Flat (X'.inclusion ≫ pullback.snd f B.map) ∧
           FinitePresentation (X'.inclusion ≫ pullback.snd f B.map) := by

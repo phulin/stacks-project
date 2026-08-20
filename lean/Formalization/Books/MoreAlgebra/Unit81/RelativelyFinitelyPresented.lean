@@ -1865,8 +1865,6 @@ theorem relativelyFinitelyPresented_glue_iff
         ((algebraMap A (Localization.Away (x : A))).comp f)
         (LocalizedModule.Away (x : A) M)) ↔
       RelativelyFinitelyPresented f M := by
-  sorry
-  /- Original proof attempt:
   let : Algebra R A := f.toAlgebra
   constructor
   · intro hloc
@@ -2121,19 +2119,159 @@ theorem relativelyFinitelyPresented_glue_iff
     dsimp [g] at hpull
     dsimp [RelativelyFinitelyPresented] at hpull ⊢
     obtain ⟨n, α, hα, hP⟩ := hpull
-    let X := ↑((ModuleCat.extendScalars
-      (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M))
+    letI : Algebra R (Localization.Away (x : A)) :=
+      ((algebraMap A (Localization.Away (x : A))).comp f).toAlgebra
     let L := LocalizedModule.Away (x : A) M
-    let e : X ≃ₗ[Localization.Away (x : A)] L :=
-      by
-        simpa [X, L, ModuleCat.extendScalars, ModuleCat.ExtendScalars.obj'] using
-          (LocalizedModule.equivTensorProduct
-            (Submonoid.powers (x : A)) M).symm
-    sorry
+    let eA : ((ModuleCat.restrictScalars
+        (algebraMap A (Localization.Away (x : A)))).obj
+        (ModuleCat.of (Localization.Away (x : A))
+          (Localization.Away (x : A))) : Type _) ≃ₗ[A]
+        Localization.Away (x : A) :=
+      { toFun := fun z => z
+        invFun := fun z => z
+        left_inv := by intro z; rfl
+        right_inv := by intro z; rfl
+        map_add' := by intro z w; rfl
+        map_smul' := by
+          intro a z
+          rw [ModuleCat.restrictScalars.smul_def]
+          let z' : Localization.Away (x : A) := z
+          have hz : (algebraMap A (Localization.Away (x : A))) a • z' =
+              a • z' := by
+            rw [smul_eq_mul, Algebra.smul_def]
+          simpa only [RingHom.id_apply] using
+            hz }
+    let eM : (ModuleCat.of A M : Type _) ≃ₗ[A] M :=
+      { toFun := fun m => m
+        invFun := fun m => m
+        left_inv := by intro m; rfl
+        right_inv := by intro m; rfl
+        map_add' := by intro m n; rfl
+        map_smul' := by intro a m; rfl }
+    let T := ((((ModuleCat.restrictScalars
+        (algebraMap A (Localization.Away (x : A)))).obj
+        (ModuleCat.of (Localization.Away (x : A))
+          (Localization.Away (x : A))) : Type _) ⊗[A]
+        (ModuleCat.of A M : Type _)))
+    letI : AddCommGroup T :=
+      ((ModuleCat.extendScalars
+        (algebraMap A (Localization.Away (x : A)))).obj
+        (ModuleCat.of A M)).isAddCommGroup
+    letI : Module (Localization.Away (x : A)) T :=
+      ((ModuleCat.extendScalars
+        (algebraMap A (Localization.Away (x : A)))).obj
+        (ModuleCat.of A M)).isModule
+    let eT := TensorProduct.congr eA eM
+    let eT' : T ≃ₗ[A] Localization.Away (x : A) ⊗[A] M :=
+      { toFun := eT
+        invFun := eT.symm
+        left_inv := by intro z; exact eT.left_inv z
+        right_inv := by intro z; exact eT.right_inv z
+        map_add' := by intro z w; exact eT.map_add z w
+        map_smul' := by intro a z; exact eT.map_smul a z }
+    let eX : (↑((ModuleCat.extendScalars
+        (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M)))
+        ≃ₗ[Localization.Away (x : A)]
+        T :=
+      { toFun := fun z => z
+        invFun := fun z => z
+        left_inv := by intro z; rfl
+        right_inv := by intro z; rfl
+        map_add' := by intro z w; rfl
+        map_smul' := by intro a z; rfl }
+    let e0 : T
+        ≃ₗ[Localization.Away (x : A)]
+        Localization.Away (x : A) ⊗[A] M :=
+      { toFun := fun z => eT' z
+        invFun := fun z => eT'.symm z
+        left_inv := eT'.left_inv
+        right_inv := eT'.right_inv
+        map_add' := eT'.map_add
+        map_smul' := by
+          intro a z
+          induction z using TensorProduct.induction_on with
+          | zero =>
+            change eT' (a • (0 : T)) = _
+            calc
+              eT' (a • (0 : T)) = eT' (0 : T) := by rw [smul_zero]
+              _ = 0 := eT'.map_zero
+              _ = (RingHom.id (Localization.Away (x : A))) a •
+                  eT' (0 : T) := by simp only [eT'.map_zero, smul_zero]
+          | add z w hz hw =>
+            change eT' (a • ((z + w : T))) = _
+            calc
+              eT' (a • ((z + w : T))) =
+                  eT' ((a • (z : T)) + (a • (w : T))) := by
+                rw [smul_add]
+              _ = eT' (a • (z : T)) + eT' (a • (w : T)) :=
+                eT'.map_add _ _
+              _ = (RingHom.id (Localization.Away (x : A))) a • eT' z +
+                  (RingHom.id (Localization.Away (x : A))) a • eT' w := by
+                exact congrArg₂ (fun u v => u + v) hz hw
+              _ = (RingHom.id (Localization.Away (x : A))) a •
+                  (eT' z + eT' w) := (smul_add _ _ _).symm
+              _ = (RingHom.id (Localization.Away (x : A))) a •
+                  eT' (z + w) := by rw [eT'.map_add]
+          | tmul b m =>
+            change eT' (a • ((b ⊗ₜ[A] m : T))) = _
+            have hmul :
+                a • ((b ⊗ₜ[A] m : T)) =
+                  ((eA.symm (a * eA b) ⊗ₜ[A] m : T)) := by
+              have hbt : (b ⊗ₜ[A] m : T) =
+                  (eA b ⊗ₜ[A] m : T) := by rfl
+              calc
+                a • ((b ⊗ₜ[A] m : T)) =
+                    a • (eA b ⊗ₜ[A] m : T) := by rw [hbt]
+                _ = ((a * eA b) ⊗ₜ[A] m : T) :=
+                  ModuleCat.ExtendScalars.smul_tmul
+                    (algebraMap A (Localization.Away (x : A))) a
+                    (eA b) m
+                _ = (eA.symm (a * eA b) ⊗ₜ[A] m : T) := by rfl
+            rw [hmul]
+            change (TensorProduct.congr eA eM)
+                (eA.symm (a * eA b) ⊗ₜ[A] m) =
+              a • (TensorProduct.congr eA eM) (b ⊗ₜ[A] m)
+            rw [TensorProduct.congr_tmul, TensorProduct.congr_tmul]
+            calc
+              eA (eA.symm (a * eA b)) ⊗ₜ[A] eM m =
+                  (a * eA b) ⊗ₜ[A] eM m := by
+                    rw [eA.apply_symm_apply]
+              _ = a • (eA b ⊗ₜ[A] eM m) := by
+                rw [TensorProduct.smul_tmul', smul_eq_mul] }
+    let e : (↑((ModuleCat.extendScalars
+        (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M)))
+        ≃ₗ[Localization.Away (x : A)] L :=
+      eX.trans (e0.trans (LocalizedModule.equivTensorProduct
+        (Submonoid.powers (x : A)) M).symm)
+    let P := MvPolynomial (Fin n) R
+    letI : Algebra P (Localization.Away (x : A)) := α.toAlgebra
+    letI : Module P (↑((ModuleCat.extendScalars
+        (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M))) :=
+      Module.compHom _ α.toRingHom
+    letI : Module P L := Module.compHom L α.toRingHom
+    have hPL : Module.FinitePresentation P L := by
+      let eP : (↑((ModuleCat.extendScalars
+          (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M)))
+          ≃ₗ[P] L :=
+        { toFun := e
+          invFun := e.symm
+          left_inv := e.left_inv
+          right_inv := e.right_inv
+          map_add' := e.map_add
+          map_smul' := by
+            intro p y
+            change e (α p • y) = (α p) • e y
+            exact e.map_smul (α p) y }
+      letI : Module.FinitePresentation P
+          (↑((ModuleCat.extendScalars
+            (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M))) := by
+        simpa [P, g] using hP
+      exact Module.FinitePresentation.of_equiv eP
+    refine ⟨n, α, hα, ?_⟩
+    simpa [P, L] using hPL
 
-/-- The middle term of a short exact sequence is relatively finitely
+/- The middle term of a short exact sequence is relatively finitely
 presented when the ends are. -/
-  -/
 
 theorem relativelyFinitelyPresented_middle_of_shortExact
     {R A M' M M'' : Type*} [CommRing R] [CommRing A]

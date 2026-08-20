@@ -2030,6 +2030,209 @@ def IsEquivalenceOverFunctor
         ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
           IsNatIsoOver q e over)
 
+/- A universe-polymorphic strictification of an ordinary equivalence over a
+common base.  The inverse is chosen by lifting the components of the
+ordinary counit, and the groupoid lifting uniqueness then makes those choices
+functorial. -/
+theorem fibredInGroupoids_equivalence_over_of_equivalence
+    {S S' C : Type*} [Category* S] [Category* S'] [Category* C]
+    (p : S ⥤ C) (p' : S' ⥤ C) (G : S ⥤ S')
+    (over : G ⋙ p' = p)
+    (hp : p.IsFibredInGroupoids) (hp' : p'.IsFibredInGroupoids)
+    (hG : G.IsEquivalence) :
+    ∃ K : S' ⥤ S,
+      G ⋙ p' = p ∧ K ⋙ p = p' ∧
+        MapsStronglyCartesian p p' G ∧
+        MapsStronglyCartesian p' p K ∧
+        (∃ e : G ⋙ K ≅ 𝟭 S,
+          ∃ over : (G ⋙ K) ⋙ p = (𝟭 S) ⋙ p,
+            IsNatIsoOver p e over) ∧
+        (∃ e : K ⋙ G ≅ 𝟭 S',
+          ∃ over : (K ⋙ G) ⋙ p' = (𝟭 S') ⋙ p',
+            IsNatIsoOver p' e over) := by
+  classical
+  let _ : p.IsFibredInGroupoids := hp
+  let _ : p'.IsFibredInGroupoids := hp'
+  let _ : G.IsEquivalence := hG
+  let E := G.asEquivalence
+  let H := G.inv
+  have hHG : (H ⋙ G) ⋙ p' = H ⋙ p := by
+    simp only [Functor.assoc]
+    rw [over]
+  let eH : H ⋙ p ≅ p' :=
+    (eqToIso hHG).symm ≪≫
+      Functor.isoWhiskerRight E.counitIso p' ≪≫
+      eqToIso (Functor.id_comp p')
+  let y (z : S') :=
+    Classical.choose (hp.exists_lift (eH.inv.app z) rfl)
+  let i (z : S') : y z ⟶ H.obj z :=
+    Classical.choose
+      (Classical.choose_spec (hp.exists_lift (eH.inv.app z) rfl))
+  have hi (z : S') : p.IsHomLift (eH.inv.app z) (i z) :=
+    Classical.choose_spec
+      (Classical.choose_spec (hp.exists_lift (eH.inv.app z) rfl))
+  let hdom (z : S') : p.obj (y z) = p'.obj z := by
+    let _ : p.IsHomLift (eH.inv.app z) (i z) := hi z
+    exact CategoryTheory.IsHomLift.domain_eq p (eH.inv.app z) (i z)
+  let basef {z₁ z₂ : S'} (f : z₁ ⟶ z₂) :
+      p.obj (y z₁) ⟶ p.obj (y z₂) :=
+    eqToHom (hdom z₁) ≫ p'.map f ≫ eqToHom (hdom z₂).symm
+  have hbase {z₁ z₂ : S'} (f : z₁ ⟶ z₂) :
+      basef f ≫ p.map (i z₂) = p.map (i z₁ ≫ H.map f) := by
+    let _ : p.IsHomLift (eH.inv.app z₁) (i z₁) := hi z₁
+    let _ : p.IsHomLift (eH.inv.app z₂) (i z₂) := hi z₂
+    rw [Functor.map_comp]
+    rw [CategoryTheory.IsHomLift.fac' p (eH.inv.app z₂) (i z₂)]
+    rw [CategoryTheory.IsHomLift.fac' p (eH.inv.app z₁) (i z₁)]
+    simp [basef, Category.assoc]
+  let m {z₁ z₂ : S'} (f : z₁ ⟶ z₂) : y z₁ ⟶ y z₂ :=
+    Classical.choose
+      ((hp.unique_lift (i z₂) (i z₁ ≫ H.map f) (hbase f)).exists)
+  have hm {z₁ z₂ : S'} (f : z₁ ⟶ z₂) :
+      p.IsHomLift (basef f) (m f) :=
+    (Classical.choose_spec
+      ((hp.unique_lift (i z₂) (i z₁ ≫ H.map f) (hbase f)).exists)).1
+  have hmf {z₁ z₂ : S'} (f : z₁ ⟶ z₂) :
+      m f ≫ i z₂ = i z₁ ≫ H.map f :=
+    (Classical.choose_spec
+      ((hp.unique_lift (i z₂) (i z₁ ≫ H.map f) (hbase f)).exists)).2
+  let K : S' ⥤ S := {
+    obj := y
+    map := m
+    map_id := by
+      intro z
+      apply (hp.unique_lift (i z) (i z) (f := 𝟙 _) (by simp)).unique
+      · refine ⟨?_, ?_⟩
+        · simpa [basef] using hm (𝟙 z)
+        · simpa using hmf (𝟙 z)
+      · exact ⟨inferInstance, by simp⟩
+    map_comp := by
+      intro z₁ z₂ z₃ f g
+      apply (hp.unique_lift (i z₃) (i z₁ ≫ H.map (f ≫ g))
+        (f := basef (f ≫ g)) (hbase (f ≫ g))).unique
+      · refine ⟨?_, ?_⟩
+        · exact hm (f ≫ g)
+        · exact hmf (f ≫ g)
+      · let _ : p.IsHomLift (basef f) (m f) := hm f
+        let _ : p.IsHomLift (basef g) (m g) := hm g
+        have hcomp : p.IsHomLift (basef f ≫ basef g) (m f ≫ m g) :=
+          inferInstance
+        refine ⟨?_, ?_⟩
+        · simpa [basef, Category.assoc] using hcomp
+        · rw [Category.assoc, hmf g, ← Category.assoc, hmf f,
+            Category.assoc, ← Functor.map_comp]
+  }
+  have hKp : K ⋙ p = p' := by
+    refine CategoryTheory.Functor.ext (fun z => ?_) (fun z₁ z₂ f => ?_)
+    · exact hdom z
+    · let _ : p.IsHomLift (basef f) (m f) := hm f
+      simpa [K, basef, Category.assoc] using
+        (CategoryTheory.IsHomLift.fac' p (basef f) (m f))
+  have hi_iso (z : S') : IsIso (i z) := by
+    let _ : p.IsStronglyCartesian (p.map (i z)) (i z) :=
+      fibredInGroupoids_all_morphisms_stronglyCartesian p hp (i z)
+    let _ : IsIso (p.map (i z)) := by
+      rw [CategoryTheory.IsHomLift.fac' p (eH.inv.app z) (i z)]
+      infer_instance
+    exact stronglyCartesian_of_base_isIso p (p.map (i z)) (i z)
+  let ηKH : K ≅ H := NatIso.ofComponents (fun z => by
+    let _ : IsIso (i z) := hi_iso z
+    exact asIso (i z)) (by
+      intro z₁ z₂ f
+      change m f ≫ i z₂ = i z₁ ≫ H.map f
+      exact hmf f)
+  let hKcart : MapsStronglyCartesian p' p K := by
+    intro a b f _hf
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian p hp
+      (K.map f)
+  have hGcart : MapsStronglyCartesian p p' G := by
+    intro a b f _hf
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian p' hp'
+      (G.map f)
+  let unit : G ⋙ K ≅ 𝟭 S :=
+    Functor.isoWhiskerLeft G ηKH ≪≫ E.unitIso.symm
+  let counit : K ⋙ G ≅ 𝟭 S' :=
+    Functor.isoWhiskerRight ηKH G ≪≫ E.counitIso
+  let unitOver : (G ⋙ K) ⋙ p = (𝟭 S) ⋙ p := by
+    calc
+      (G ⋙ K) ⋙ p = G ⋙ (K ⋙ p) := by simp [Functor.assoc]
+      _ = G ⋙ p' := by rw [hKp]
+      _ = p := over
+      _ = (𝟭 S) ⋙ p := (Functor.id_comp p).symm
+  let counitOver : (K ⋙ G) ⋙ p' = (𝟭 S') ⋙ p' := by
+    calc
+      (K ⋙ G) ⋙ p' = K ⋙ (G ⋙ p') := by simp [Functor.assoc]
+      _ = K ⋙ p := by rw [over]
+      _ = p' := hKp
+      _ = (𝟭 S') ⋙ p' := (Functor.id_comp p').symm
+  refine ⟨K, over, hKp, hGcart, hKcart, ?_, ?_⟩
+  · exact ⟨unit, unitOver, by
+      intro X
+      have hheq : p.map (unit.hom.app X) ≍ 𝟙 (p.obj X) := by
+        have hunit_app : unit.hom.app X =
+            i (G.obj X) ≫
+              (G.preimageIso (G.objObjPreimageIso (G.obj X))).hom := by
+          dsimp [unit, ηKH, E, Functor.asEquivalence]
+        rw [hunit_app]
+        simp only [Functor.map_comp]
+        have hi_eq : p.map (i (G.obj X)) =
+            eqToHom (hdom (G.obj X)) ≫ eH.inv.app (G.obj X) := by
+          let _ : p.IsHomLift (eH.inv.app (G.obj X)) (i (G.obj X)) :=
+            hi (G.obj X)
+          simpa using CategoryTheory.IsHomLift.fac' p
+            (eH.inv.app (G.obj X)) (i (G.obj X))
+        rw [hi_eq]
+        simp [eH, E, Functor.asEquivalence, Category.assoc]
+        have hpre :
+            p'.map (G.map (G.preimage (G.objObjPreimageIso (G.obj X)).hom)) =
+              eqToHom (Functor.congr_obj over (G.objPreimage (G.obj X))) ≫
+                p.map (G.preimage (G.objObjPreimageIso (G.obj X)).hom) ≫
+                eqToHom (Functor.congr_obj over X).symm := by
+          simpa only [Functor.comp_map] using
+            Functor.congr_hom over
+              (G.preimage (G.objObjPreimageIso (G.obj X)).hom)
+        have hpremap :
+            G.map (G.preimage (G.objObjPreimageIso (G.obj X)).hom) =
+              (G.objObjPreimageIso (G.obj X)).hom :=
+          G.map_preimage _
+        have hpre' :
+            eqToHom (Functor.congr_obj over (G.objPreimage (G.obj X))) ≫
+                p.map (G.preimage (G.objObjPreimageIso (G.obj X)).hom) =
+              p'.map (G.objObjPreimageIso (G.obj X)).hom ≫
+                eqToHom (Functor.congr_obj over X) := by
+          rw [← hpremap, hpre]
+          simp
+        rw [hpre']
+        simp
+        exact eqToHom_heq_id_cod _ _ _
+      simpa using
+        (conj_eqToHom_iff_heq (p.map (unit.hom.app X)) (𝟙 (p.obj X))
+          (Functor.congr_obj unitOver X) rfl).2 hheq⟩
+  · exact ⟨counit, counitOver, by
+      intro X
+      have hheq : p'.map (counit.hom.app X) ≍ 𝟙 (p'.obj X) := by
+        have hcounit_app : counit.hom.app X =
+            G.map (i X) ≫ (G.objObjPreimageIso X).hom := by
+          dsimp [counit, ηKH, E, Functor.asEquivalence]
+        rw [hcounit_app]
+        simp only [Functor.map_comp]
+        have hi_eq : p.map (i X) =
+            eqToHom (hdom X) ≫ eH.inv.app X := by
+          let _ : p.IsHomLift (eH.inv.app X) (i X) := hi X
+          simpa using CategoryTheory.IsHomLift.fac' p
+            (eH.inv.app X) (i X)
+        have hG_i : p'.map (G.map (i X)) =
+            eqToHom (Functor.congr_obj over (y X)) ≫
+              p.map (i X) ≫
+                eqToHom (Functor.congr_obj over (H.obj X)).symm := by
+          simpa only [Functor.comp_map] using Functor.congr_hom over (i X)
+        rw [hG_i, hi_eq]
+        simp [eH, E, Functor.asEquivalence, Category.assoc]
+        exact eqToHom_heq_id_cod _ _ _
+      simpa using
+        (conj_eqToHom_iff_heq (p'.map (counit.hom.app X)) (𝟙 (p'.obj X))
+          (Functor.congr_obj counitOver X) rfl).2 hheq⟩
+
 /-- Forgetting the equations and verticality data from an equivalence over a
 base gives an ordinary equivalence of the total categories. -/
 theorem isEquivalence_of_isEquivalenceOverFunctor
@@ -2983,7 +3186,7 @@ theorem amelioration_unique_when_strictly_commutative
    CoGrothendieck implementation of the total category. -/
 
 abbrev CategoryPresheaf (C : Type u') [Category.{v'} C]
-    (X : Type u := ULift.{u} PUnit) :=
+    (_X : Type u := ULift.{u} PUnit) :=
   Cᵒᵖ ⥤ Cat.{v, u}
 
 noncomputable def categoryPresheafPseudofunctor

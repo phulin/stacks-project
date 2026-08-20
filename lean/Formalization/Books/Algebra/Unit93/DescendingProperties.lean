@@ -243,14 +243,20 @@ theorem countablyGenerated_descends_of_faithfullyFlat
         (baseChangeSubmoduleMap (R := R) (S := S) (M := M)
           (Submodule.span R t))
       exact hst z hz)
-  have hsurj : Function.Surjective (baseChangeSubmoduleMap P) := by
+  have hsurj : Function.Surjective
+      (baseChangeSubmoduleMap (R := R) (S := S) (M := M) P) := by
     intro z
     have hz : z ∈ rangeS := by rw [hrange]; trivial
     exact hz
+  have hsurj_l : Function.Surjective (P.subtype.lTensor S) := by
+    change Function.Surjective
+      (TensorProduct.map (LinearMap.id : S →ₗ[R] S) P.subtype)
+    exact hsurj
   have hsurj' : Function.Surjective P.subtype :=
     (Module.FaithfullyFlat.lTensor_surjective_iff_surjective R S P.subtype).mp
-      (by simpa [baseChangeSubmoduleMap] using hsurj)
-  exact countablyGenerated_of_surjective P.subtype hsurj' ⟨t, ht, rfl⟩
+      hsurj_l
+  exact countablyGenerated_of_surjective P.subtype hsurj'
+    (countablyGenerated_span_submodule t ht)
 
 /-- Countably generated projectivity descends along faithfully flat base
 change. -/

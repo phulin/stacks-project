@@ -72,7 +72,7 @@ epimorphisms, and its kernel ideal is locally nilpotent. -/
 structure IsThickening {X X' : RingedSpace.{v}}
     (i : RingedSpaceHom X X') : Prop where
   underlying_homeomorph : IsHomeomorph i.continuous.hom
-  structureSheaf_epi : Epi i.sharp
+  structureSheaf_surjective : StructureSheafMapSurjective i
   structureSheaf_module_epi :
     Epi (SheafOfModules.unitToPushforwardObjUnit i.sharp)
   kernel_locallyNilpotent : IsLocallyNilpotentIdeal (thickeningIdeal i)
@@ -94,6 +94,19 @@ noncomputable def thickeningKernelShortComplex {X X' : RingedSpace.{v}}
     (kernel.condition (SheafOfModules.unitToPushforwardObjUnit i.sharp))
 
 /-- The kernel sequence of a thickening is short exact. -/
+/- Proof roadmap for the `prove` stage:
+   Put `q := SheafOfModules.unitToPushforwardObjUnit i.sharp`.  After
+   unfolding `thickeningKernelShortComplex`, its first arrow is definitionally
+   `kernel.ι q`, so
+   `ShortComplex.exact_of_f_is_kernel _ (kernelIsKernel q)` supplies exactness
+   (`Mathlib/Algebra/Homology/ShortComplex/Exact.lean`).  Install
+   `hi.structureSheaf_module_epi` as the local `Epi q` instance; the first
+   arrow is already mono by the kernel instance.  Finish with
+   `ShortComplex.ShortExact.mk'`, passing the exactness proof, the inferred
+   `Mono (kernel.ι q)`, and the installed `Epi q`.  Do not try to derive this
+   from `hi.structureSheaf_surjective`: that field is stalk-surjectivity for
+   the ring sheaf, whereas this declaration needs the explicitly stored epi
+   in the sheaf-of-modules category. -/
 theorem thickeningKernelShortComplex_shortExact
     {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
     (hi : IsThickening i) :
@@ -122,19 +135,20 @@ theorem thickening_module_category_equivalence
   have hclosed := hi.underlying_homeomorph.isClosedEmbedding
   let F : Mod X.structureSheaf ⥤ AnnihilatedByThickeningIdealCategory i :=
     { obj := fun G => ⟨(ringedSpaceModulePushforward i).obj G, by
-        exact (closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_epi
+        exact (closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_surjective
           ((ringedSpaceModulePushforward i).obj G)).mp ⟨G, ⟨Iso.refl _⟩⟩⟩
       map := fun f => ObjectProperty.homMk ((ringedSpaceModulePushforward i).map f)
       map_id := by intros; apply ObjectProperty.hom_ext; simp
       map_comp := by intros; apply ObjectProperty.hom_ext; simp }
   have hcomp : (F ⋙ ObjectProperty.ι (AnnihilatedByThickeningIdeal i)).FullyFaithful := by
     dsimp [F]
-    exact (closedImmersion_pushforward_fullyFaithful i hclosed hi.structureSheaf_epi).some
+    exact (closedImmersion_pushforward_fullyFaithful i hclosed hi.structureSheaf_surjective).some
   have hF : F.FullyFaithful := Functor.FullyFaithful.ofCompFaithful hcomp
   have hEss : Functor.EssSurj F := by
     refine { mem_essImage := ?_ }
     intro G
-    rcases (closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_epi G.obj).mpr G.property with ⟨H, ⟨e⟩⟩
+    rcases (closedImmersion_pushforward_essentialImage i hclosed
+      hi.structureSheaf_surjective G.obj).mpr G.property with ⟨H, ⟨e⟩⟩
     refine ⟨H, ?_⟩
     let e' : F.obj H ≅ G := ObjectProperty.isoMk (P := AnnihilatedByThickeningIdeal i) (X := F.obj H) (Y := G) e
     exact ⟨e'⟩
@@ -149,7 +163,8 @@ theorem thickening_module_essential_image
       Nonempty ((ringedSpaceModulePushforward i).obj F ≅ G)) ↔
       AnnihilatedByThickeningIdeal i G := by
   have hclosed := hi.underlying_homeomorph.isClosedEmbedding
-  exact closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_epi G
+  exact closedImmersion_pushforward_essentialImage i hclosed
+    hi.structureSheaf_surjective G
 
 /-- For a first-order thickening, the kernel ideal is an
 `𝒪_X`-module, expressed through the module-category equivalence. -/
@@ -162,7 +177,7 @@ theorem firstOrderThickening_kernel_is_module
           (thickeningIdeal i).carrier) := by
   have hclosed := hi.toIsThickening.underlying_homeomorph.isClosedEmbedding
   apply (closedImmersion_pushforward_essentialImage i hclosed
-    hi.toIsThickening.structureSheaf_epi (thickeningIdeal i).carrier).mpr
+    hi.toIsThickening.structureSheaf_surjective (thickeningIdeal i).carrier).mpr
   intro U a b
   let a' : X'.structureSheaf.obj.obj (op U) := by
     have t := ((closedImmersionIdealInclusion i).val.app (op U)).hom a
@@ -237,16 +252,54 @@ abbrev baseIdeal (M : MorphismOfThickenings) : IdealSheaf M.S' :=
    `f'^{-1}𝓙 → 𝓘`), then transpose it along the existing pullback/pushforward
    Hom equivalence. -/
 
-/- The source's map `f'⁻¹𝓙 → 𝓘` is represented as an `f'`-map
-   `𝓙 → f'_*𝓘`; extension of scalars gives the displayed map
-   `(f')^*𝓙 → 𝓘`. -/
+/- The source's map `f'⁻¹𝓙 → 𝓘` is represented as the unique kernel
+   factorization of the canonical `f'`-map
+   `𝓙 → f'_*𝒪_{X'}`.  Recording the factorization equation is essential:
+   mere inhabitation of this Hom type would also admit the zero map and would
+   make `IsStrict` unrelated to the square of thickenings. -/
+/- Proof roadmap for the `prove` stage:
+   Let `R := ringedSpaceModulePushforward M.f'`,
+   `L := ringedSpaceModulePullback M.f'`, and
+   `adj := ringedSpaceModuleAdjunction M.f'` (all from
+   `Formalization/Books/Sheaves/Unit26/Infrastructure.lean`).  Form
+   `u := M.baseIdeal.inclusion ≫
+     SheafOfModules.unitToPushforwardObjUnit M.f'.sharp` and transpose it to
+   `u' : L.obj M.baseIdeal.carrier ⟶ SheafOfModules.unit _` with
+   `(adj.homEquiv _ _).symm`.
+
+   The key intermediate claim is
+   `u' ≫ SheafOfModules.unitToPushforwardObjUnit M.i.sharp = 0`.
+   Apply the injectivity of `adj.homEquiv` and rewrite the transpose of this
+   composite with `Adjunction.homEquiv_naturality_right`.  The resulting
+   `f'`-map is the base inclusion followed around the structure-sheaf square.
+   Expand the two composites with `RingedSpaceHom.comp_sharp` and compare
+   their pushforwards using `ringedSpaceModulePushforwardCompIso M.f M.t`
+   and `ringedSpaceModulePushforwardCompIso M.i M.f'`; rewrite the middle
+   morphism with `M.commutes`.  It is zero because the other route begins
+   with `M.baseIdeal.inclusion = kernel.ι _` and
+   `kernel.condition (SheafOfModules.unitToPushforwardObjUnit M.t.sharp)`.
+   If simplification does not expose the equality, ext on an open `U` and a
+   section and use
+   `SheafOfModules.unitToPushforwardObjUnit_val_app_apply`; both sides then
+   reduce to `congrArg RingedSpaceHom.sharp M.commutes`.
+
+   Define `l := kernel.lift
+     (SheafOfModules.unitToPushforwardObjUnit M.i.sharp) u'` using that
+   vanishing claim (the kernel is definitionally `M.sourceIdeal.carrier`).
+   Set `φ := adj.homEquiv _ _ l`.  For the displayed factorization, again
+   use `Adjunction.homEquiv_naturality_right`, `kernel.lift_ι`, and
+   `Equiv.apply_symm_apply`.  This constructs the canonical map; the old
+   approach `⟨0⟩` proves only the discarded `Nonempty` interface and must not
+   be reused. -/
 theorem exists_inducedIdealFMap
     (M : MorphismOfThickenings)
     [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
       M.f'.sharp).IsRightAdjoint)] :
-    Nonempty
-      (M.baseIdeal.carrier ⟶
-        (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier) := by
+    ∃ φ : M.baseIdeal.carrier ⟶
+        (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier,
+      φ ≫ (ringedSpaceModulePushforward M.f').map M.sourceIdeal.inclusion =
+        M.baseIdeal.inclusion ≫
+          SheafOfModules.unitToPushforwardObjUnit M.f'.sharp := by
   sorry
 
 /- A chosen source-facing representative of the induced map before extension
@@ -257,7 +310,19 @@ noncomputable def inducedIdealFMap
       M.f'.sharp).IsRightAdjoint)] :
     M.baseIdeal.carrier ⟶
       (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier :=
-  Classical.choice (exists_inducedIdealFMap M)
+  Classical.choose (exists_inducedIdealFMap M)
+
+/-- The chosen induced `f'`-map is the canonical factorization through the
+source kernel ideal. -/
+theorem inducedIdealFMap_fac
+    (M : MorphismOfThickenings)
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)] :
+    inducedIdealFMap M ≫
+        (ringedSpaceModulePushforward M.f').map M.sourceIdeal.inclusion =
+      M.baseIdeal.inclusion ≫
+        SheafOfModules.unitToPushforwardObjUnit M.f'.sharp :=
+  Classical.choose_spec (exists_inducedIdealFMap M)
 
 /- The adjoint-transposed map is the source's map
    `(f')^*𝓙 → 𝓘`. -/
@@ -289,6 +354,12 @@ def IsStrict
   Epi (inducedIdealMap M)
 
 /-- The first-order base ideal is an `𝒪_S`-module. -/
+/- Proof roadmap for the `prove` stage:
+   This is exactly `firstOrderThickening_kernel_is_module M.t ht` above.
+   `M.baseIdeal` is an abbreviation for `thickeningIdeal M.t`, so
+   `simpa only [baseIdeal]` (or simply `simpa`) turns that theorem into the
+   displayed existential.  No choice of module or isomorphism needs to be
+   reconstructed. -/
 theorem firstOrder_baseIdeal_is_module
     (M : MorphismOfThickenings)
     (ht : IsFirstOrderThickening M.t) :
@@ -297,8 +368,52 @@ theorem firstOrder_baseIdeal_is_module
         ((ringedSpaceModulePushforward M.t).obj J ≅ M.baseIdeal.carrier) := by
   sorry
 
-/-- After identifying the base ideal with its `𝒪_S`-module structure, the two
-pullbacks in a first-order morphism are canonically identified. -/
+/-- After identifying the two square-zero ideals with modules on the reduced
+spaces, maps `(f')^*𝓙 ⟶ 𝓘` are identified with maps `i_*f^*𝓙 ⟶ 𝓘`.
+
+This is a Hom-set equivalence, not an isomorphism
+`(f')^*𝓙 ≅ i_*f^*𝓙`: the latter is false in general (the first object can
+retain a nontrivial action by the source thickening ideal). -/
+/- Proof roadmap for the `prove` stage:
+   1. Obtain `⟨I, ⟨eI⟩⟩` from
+      `firstOrderThickening_kernel_is_module M.i hi`; thus
+      `eI : (ringedSpaceModulePushforward M.i).obj I ≅
+        M.sourceIdeal.carrier`.  Choose `eJ` from `hJ`.
+   2. Obtain fully-faithful structures `ffi` and `fft` from
+      `closedImmersion_pushforward_fullyFaithful` in
+      `Formalization/Books/Modules/Unit13/ClosedImmersions.lean`, using
+      `hi.toIsThickening.underlying_homeomorph.isClosedEmbedding` and
+      `.structureSheaf_surjective` for `M.i`, and the corresponding fields of
+      `M.t_isThickening` for `M.t`.  Use the explicit
+      `Functor.FullyFaithful.homEquiv` from
+      `Mathlib/CategoryTheory/Functor/FullyFaithful.lean`; no global Full or
+      Faithful instances are required.
+   3. Build an object isomorphism
+      `K : t_* (f_* I) ≅ f'_* (i_* I)`.  Compose the app at `I` of
+      `ringedSpaceModulePushforwardCompIso M.f M.t`, the `eqToIso` obtained
+      by applying `(fun g => (ringedSpaceModulePushforward g).obj I)` to
+      `M.commutes`, and the inverse app of
+      `ringedSpaceModulePushforwardCompIso M.i M.f'`.  This fixes the
+      otherwise easy-to-miss orientation of the commutative square.
+   4. Compose the following equivalences in order:
+      * `Iso.homCongr eJ.symm
+          ((ringedSpaceModulePushforward M.f').mapIso eI.symm)`;
+      * `Iso.homCongr (Iso.refl _) K.symm`;
+      * `fft.homEquiv.symm`;
+      * `(ringedSpaceModuleHomEquiv M.f J I).symm` from
+        `Formalization/Books/Sheaves/Unit26/Infrastructure.lean`;
+      * `ffi.homEquiv`;
+      * `Iso.homCongr (Iso.refl _) eI`.
+      The source and target of the composite are exactly the two Hom types in
+      the statement.  The square-zero hypothesis on `M.i` is used to obtain
+      `I`; `ht` is represented by the supplied `hJ` (normally obtained from
+      `firstOrder_baseIdeal_is_module`).
+
+   Known dead end: do not try to prove the previous object-level isomorphism.
+   For rings `A' = k[ε]/(ε²) → A = k` and
+   `B' = k[x]/(x²) → B = k`, with `ε ↦ 0`, one has
+   `B' ⊗_{A'} (ε) ≅ B'` but `B ⊗_A (ε) ≅ k`; only maps from these objects
+   into the square-zero source ideal are canonically identified. -/
 theorem firstOrder_pullback_baseIdeal_iso
     (M : MorphismOfThickenings)
     (hi : IsFirstOrderThickening M.i)
@@ -311,13 +426,42 @@ theorem firstOrder_pullback_baseIdeal_iso
     [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
       M.f'.sharp).IsRightAdjoint)] :
     Nonempty
-      ((ringedSpaceModulePullback M.f').obj M.baseIdeal.carrier ≅
-        (ringedSpaceModulePushforward M.i).obj
-          ((ringedSpaceModulePullback M.f).obj J)) := by
+      ((M.baseIdeal.carrier ⟶
+          (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier) ≃
+        ((ringedSpaceModulePushforward M.i).obj
+            ((ringedSpaceModulePullback M.f).obj J) ⟶
+          M.sourceIdeal.carrier)) := by
   sorry
+
+/-- The chosen first-order identification of the two presentations of an
+ideal map. -/
+noncomputable def firstOrderIdealMapHomEquiv
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    (J : Mod M.S.structureSheaf)
+    (hJ : Nonempty
+      ((ringedSpaceModulePushforward M.t).obj J ≅ M.baseIdeal.carrier))
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)] :
+    (M.baseIdeal.carrier ⟶
+        (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier) ≃
+      ((ringedSpaceModulePushforward M.i).obj
+          ((ringedSpaceModulePullback M.f).obj J) ⟶
+        M.sourceIdeal.carrier) :=
+  Classical.choice (firstOrder_pullback_baseIdeal_iso M hi ht J hJ)
 
 /-- In the first-order case the induced ideal map can be expressed as a map
 `f^*𝓙 → 𝓘`, after the canonical first-order identification. -/
+/- Proof roadmap for the `prove` stage:
+   Set `e := firstOrderIdealMapHomEquiv M hi ht J hJ` and
+   `α := inducedIdealFMap M`.  Take `φ := e α`.  The required compatibility
+   is exactly `Equiv.symm_apply_apply e α`.  Keeping this equation in the
+   interface is what says that `φ` is the first-order presentation of the
+   canonical kernel map; the former `Nonempty` Hom statement was vacuous
+   because `0` inhabits every such Hom type. -/
 theorem exists_firstOrder_idealMap
     (M : MorphismOfThickenings)
     (hi : IsFirstOrderThickening M.i)
@@ -326,11 +470,14 @@ theorem exists_firstOrder_idealMap
     (hJ : Nonempty
       ((ringedSpaceModulePushforward M.t).obj J ≅ M.baseIdeal.carrier))
     [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
-      M.f.sharp).IsRightAdjoint)] :
-    Nonempty
-      ((ringedSpaceModulePushforward M.i).obj
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)] :
+    ∃ φ : (ringedSpaceModulePushforward M.i).obj
           ((ringedSpaceModulePullback M.f).obj J) ⟶
-        M.sourceIdeal.carrier) := by
+        M.sourceIdeal.carrier,
+      (firstOrderIdealMapHomEquiv M hi ht J hJ).symm φ =
+        inducedIdealFMap M := by
   sorry
 
 end MorphismOfThickenings

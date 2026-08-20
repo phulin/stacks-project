@@ -850,6 +850,17 @@ end LinearShiftFamily
 
 /-! ## Graded-module shift isomorphisms -/
 
+/-- Compatibility between a total shift equivalence and its component maps.
+Keeping the dependent equality behind a named proposition makes the structure
+declaration substantially cheaper for the kernel to check. -/
+def GradedModuleShiftCompatibility (R : Type u)
+    {M N : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (G : GradedModuleData R M ℤ) (H : GradedModuleData R N ℤ)
+    (n : ℤ) (total : M ≃ₗ[R] N)
+    (component : ∀ i, G.component i ≃ₗ[R] H.component (i + n)) : Prop :=
+  ∀ i (x : G.component i), total (x : M) = (component i x : N)
+
 /-- A degree shift isomorphism between two internal graded modules.  The
 `total` equivalence is compatible with the component equivalences, so this
 records an isomorphism of graded modules rather than only a family of
@@ -861,8 +872,7 @@ structure GradedModuleShiftIso (R : Type u)
     (n : ℤ) where
   total : M ≃ₗ[R] N
   component : ∀ i, G.component i ≃ₗ[R] H.component (i + n)
-  component_coe : ∀ i (x : G.component i),
-    total (x : M) = (component i x : N)
+  component_coe : GradedModuleShiftCompatibility R G H n total component
 
 /-- A graded category equipped with strict shifts and the Hom-shift
 isomorphisms required in the source remark. -/

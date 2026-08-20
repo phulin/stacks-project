@@ -502,7 +502,10 @@ theorem doubleComplex_first_quadrant_weak_serre_first
     (hP : ∀ p q : ℤ,
       P ((doubleComplexFirstSpectralSequence A).page r (p, q))) :
     ∀ n : ℤ, P (doubleComplexFirstTotalCohomology A n) := by
-  sorry
+  exact filteredComplex_finite_filtration_weak_serre_membership
+    (doubleComplexFirstFilteredTotal A)
+    (doubleComplex_finite_diagonal_support_first_filtered_total A hA)
+    (doubleComplexFirstSpectralSequence A) r P hP
 
 theorem doubleComplex_first_quadrant_weak_serre_second
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -512,7 +515,10 @@ theorem doubleComplex_first_quadrant_weak_serre_second
     (hP : ∀ p q : ℤ,
       P ((doubleComplexSecondSpectralSequence A).page r (p, q))) :
     ∀ n : ℤ, P (doubleComplexSecondTotalCohomology A n) := by
-  sorry
+  exact filteredComplex_finite_filtration_weak_serre_membership
+    (doubleComplexSecondFilteredTotal A)
+    (doubleComplex_finite_diagonal_support_second_filtered_total A hA)
+    (doubleComplexSecondSpectralSequence A) r P hP
 
 /-! ## The two resolution orientations -/
 
@@ -552,7 +558,150 @@ noncomputable def doubleComplexResolutionMap
     eqToHom (congrArg (fun q : ℤ => A.obj n q) (by ring)) ≫
     (T.diagonal n).cocone.ι.app (Discrete.mk n) ≫ (T.term_iso n).inv
   comm' n m hnm := by
-    sorry
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    subst m
+    let αn : K.X n ⟶ A.obj n 0 := by
+      change K.X n ⟶ (row A 0).X n
+      exact h.augmentation.f n
+    let αm : K.X (n + 1) ⟶ A.obj (n + 1) 0 := by
+      change K.X (n + 1) ⟶ (row A 0).X (n + 1)
+      exact h.augmentation.f (n + 1)
+    have hαn : h.augmentation.f n = αn := by rfl
+    have hαm : h.augmentation.f (n + 1) = αm := by rfl
+    clear_value αn αm
+    rw [hαn, hαm]
+    change
+      (αn ≫ eqToHom (congrArg (fun q : ℤ => A.obj n q) (by ring)) ≫
+          (T.diagonal n).cocone.ι.app (Discrete.mk n) ≫ (T.term_iso n).inv) ≫
+          T.complex.d n (n + 1) =
+        K.d n (n + 1) ≫ αm ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q) (by ring)) ≫
+          (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk (n + 1)) ≫
+          (T.term_iso (n + 1)).inv
+    have hcomm : αn ≫ A.d1 n 0 =
+        K.d n (n + 1) ≫ αm := by
+      rw [← hαn, ← hαm]
+      have h' := h.augmentation.comm' n (n + 1) (by
+        change n + 1 = n + 1
+        rfl)
+      simp [row] at h'
+      exact h'
+    have hcycle : αn ≫ A.d2 n 0 = 0 := by
+      rw [← hαn]
+      simpa [row] using doubleComplex_resolution_augmentation_cycle h n
+    have hD1 :
+        αn ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj n q)
+              (show 0 = n - n by ring)) ≫
+            totalD1Component A n n =
+          K.d n (n + 1) ≫ αm ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q) (by ring)) := by
+      dsimp [totalD1Component]
+      change αn ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj n q)
+            (show 0 = n - n by ring)) ≫
+          A.d1 n (n - n) ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q)
+            (show n - n = n + 1 - (n + 1) by ring)) =
+        K.d n (n + 1) ≫ αm ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q)
+            (show 0 = n + 1 - (n + 1) by ring))
+      have hnat :
+          eqToHom (congrArg (fun q : ℤ => A.obj n q)
+              (show 0 = n - n by ring)) ≫
+              A.d1 n (n - n) ≫
+              eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q)
+                (show n - n = n + 1 - (n + 1) by ring)) =
+            A.d1 n 0 ≫
+              eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q)
+                (show 0 = n + 1 - (n + 1) by ring)) := by
+        rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d1 n q)
+          (show 0 = n - n by ring)]
+        simp
+      rw [hnat]
+      simpa only [Category.assoc] using
+        congrArg (fun f => f ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q)
+            (show 0 = n + 1 - (n + 1) by ring))) hcomm
+    have hD2 :
+        αn ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj n q) (by ring)) ≫
+            totalD2Component A n n = 0 := by
+      dsimp [totalD2Component]
+      change αn ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj n q)
+            (show 0 = n - n by ring)) ≫
+          A.d2 n (n - n) ≫
+          eqToHom (congrArg (fun q : ℤ => A.obj n q)
+            (show n - n + 1 = n + 1 - n by ring)) = 0
+      have hnat :
+          eqToHom (congrArg (fun q : ℤ => A.obj n q)
+              (show 0 = n - n by ring)) ≫
+              A.d2 n (n - n) ≫
+              eqToHom (congrArg (fun q : ℤ => A.obj n q)
+                (show n - n + 1 = n + 1 - n by ring)) =
+            A.d2 n 0 ≫
+              eqToHom (congrArg (fun q : ℤ => A.obj n q)
+                (show 0 + 1 = n + 1 - n by ring)) := by
+        rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 n q)
+          (show 0 = n - n by ring)]
+        simp
+      rw [hnat]
+      rw [← Category.assoc, hcycle, zero_comp]
+    have hD1comp :
+        αn ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj n q) (by ring)) ≫
+            totalD1Component A n n ≫
+            (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk (n + 1)) ≫
+            eqToHom (by dsimp) =
+          K.d n (n + 1) ≫ αm ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj (n + 1) q) (by ring)) ≫
+            (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk (n + 1)) ≫
+            eqToHom (by dsimp) := by
+      simpa only [Category.assoc] using
+        congrArg (fun f =>
+          f ≫ (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk (n + 1)) ≫
+            eqToHom (by dsimp)) hD1
+    have hD2comp :
+        αn ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj n q) (by ring)) ≫
+            totalD2Component A n n ≫
+            (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk n) ≫
+            eqToHom (by dsimp) = 0 := by
+      simpa only [Category.assoc, zero_comp] using
+        congrArg (fun f =>
+          f ≫ (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk n) ≫
+            eqToHom (by dsimp)) hD2
+    have hscalar :
+        αn ≫
+            eqToHom (congrArg (fun q : ℤ => A.obj n q)
+              (show 0 = n - n by ring)) ≫
+            (n.negOnePow •
+              (totalD2Component A n n ≫
+                (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk n) ≫
+                eqToHom (by dsimp))) =
+          n.negOnePow •
+            (αn ≫
+              eqToHom (congrArg (fun q : ℤ => A.obj n q)
+                (show 0 = n - n by ring)) ≫
+              totalD2Component A n n ≫
+              (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk n) ≫
+              eqToHom (by dsimp)) := by
+      simpa only [Category.assoc] using
+        (Linear.comp_units_smul
+          (αn ≫ eqToHom (congrArg (fun q : ℤ => A.obj n q)
+            (show 0 = n - n by ring))) n.negOnePow
+          (totalD2Component A n n ≫
+            (T.diagonal (n + 1)).cocone.ι.app (Discrete.mk n) ≫
+            eqToHom (by dsimp)))
+    apply (cancel_mono (T.term_iso (n + 1)).hom).1
+    simp only [Category.assoc]
+    rw [T.differential_formula n n]
+    simp only [Preadditive.comp_add, Iso.inv_hom_id, Category.comp_id]
+    rw [hD1comp]
+    rw [hscalar, hD2comp]
+    simp
 
 theorem doubleComplex_resolution_totalization_exists
     {C : Type u} [Category.{v} C] [Abelian C]

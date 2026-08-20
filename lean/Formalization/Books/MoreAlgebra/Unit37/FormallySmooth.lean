@@ -827,7 +827,72 @@ theorem formallySmoothForIdeal_of_le
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) {n n' : Ideal S} (hnn' : n ≤ n') :
     FormallySmoothForIdeal f n → FormallySmoothForIdeal f n' := by
-  sorry
+  intro hf
+  unfold FormallySmoothForIdeal at hf ⊢
+  let : TopologicalSpace R := ⊥
+  let : DiscreteTopology R := discreteTopology_bot R
+  let : IsLinearTopology R R := by infer_instance
+  let : TopologicalSpace S := IAdicRingTopology S n'
+  let : NonarchimedeanRing S := n'.nonarchimedean
+  let : IsLinearTopology S S := n'.isLinearTopology
+  refine ⟨continuous_of_discreteTopology, ?_⟩
+  intro A _ J hJ g ψ hg hψ hcomm
+  let : TopologicalSpace A := ⊥
+  let : DiscreteTopology A := discreteTopology_bot A
+  let : TopologicalSpace (A ⧸ J) :=
+    Formalization.Books.Topology.Unit29.quotientRingTopology (Ideal.Quotient.mk J)
+  have hdisc : Formalization.Books.Topology.Unit29.quotientRingTopology
+      (Ideal.Quotient.mk J) = (⊥ : TopologicalSpace (A ⧸ J)) := by
+    apply le_antisymm
+    · exact bot_le
+    · intro s hs
+      exact @isOpen_discrete (A ⧸ J) (⊥ : TopologicalSpace (A ⧸ J))
+        (discreteTopology_bot (A ⧸ J)) s
+  let : DiscreteTopology (A ⧸ J) := ⟨hdisc⟩
+  let : IsTopologicalRing A := by infer_instance
+  let : IsTopologicalRing (A ⧸ J) := by
+    apply Formalization.Books.Topology.Unit29.topologicalRing_surjective_quotient
+    exact Ideal.Quotient.mk_surjective
+  have hqopen : IsOpen ({0} : Set (A ⧸ J)) := by
+    rw [isOpen_coinduced]
+    exact isOpen_discrete _
+  have hzero : ψ ⁻¹' ({0} : Set (A ⧸ J)) ∈ nhds (0 : S) :=
+    hψ.continuousAt.preimage_mem_nhds (hqopen.mem_nhds (by simp))
+  obtain ⟨k, -, hkpow⟩ :=
+    (iAdicRingTopology_hasBasis S n').mem_iff.mp hzero
+  have hpow_all : ∀ k : ℕ, n ^ k ≤ n' ^ k := by
+    intro k
+    induction k with
+    | zero => simp
+    | succ k ih =>
+        rw [pow_succ, pow_succ, Ideal.mul_le]
+        intro x hx y hy
+        exact Ideal.mul_mem_mul (ih hx) (hnn' hy)
+  have hpow := hpow_all k
+  have hzero' : ψ ⁻¹' ({0} : Set (A ⧸ J)) ∈
+      @nhds S (IAdicRingTopology S n) 0 :=
+    (iAdicRingTopology_hasBasis S n).mem_iff.mpr ⟨k, trivial, fun x hx =>
+      hkpow (hpow hx)⟩
+  have hψ' : @Continuous S (A ⧸ J)
+      (IAdicRingTopology S n) _ ψ := by
+    let : TopologicalSpace S := IAdicRingTopology S n
+    let : IsTopologicalRing S := by infer_instance
+    apply continuous_of_continuousAt_zero ψ
+    rw [continuousAt_def]
+    simp only [map_zero]
+    rw [nhds_discrete (A ⧸ J)]
+    change Filter.Tendsto ψ (nhds (0 : S)) (pure (0 : A ⧸ J))
+    rw [Filter.tendsto_pure]
+    filter_upwards [hzero'] with x hx
+    exact hx
+  obtain ⟨lift, hlift, hliftψ, hliftg⟩ :=
+    hf.2 J hJ g ψ hg hψ' hcomm
+  refine ⟨lift, ?_, hliftψ, hliftg⟩
+  have hquot : @Continuous S (A ⧸ J)
+      (IAdicRingTopology S n') _ ((Ideal.Quotient.mk J).comp lift) := by
+    rw [hliftψ]
+    exact hψ
+  exact continuous_of_square_zero_quotient n' J hJ lift hquot
 
 /-- Composition of formally smooth continuous maps of linearly topologized rings is formally
 smooth. -/

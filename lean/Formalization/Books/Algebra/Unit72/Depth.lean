@@ -1304,7 +1304,7 @@ theorem localDepth_le_dim_of_associatedPrime
     induction n with
     | zero =>
         intro M _ _ _ p hdepth hp
-        letI : Nontrivial (R ⧸ p.asIdeal) :=
+        let : Nontrivial (R ⧸ p.asIdeal) :=
           Ideal.Quotient.nontrivial_iff.mpr p.isPrime.ne_top
         rw [hdepth]
         exact ringKrullDim_nonneg_of_nontrivial
@@ -1316,7 +1316,7 @@ theorem localDepth_le_dim_of_associatedPrime
         have hMnontr : Nontrivial M := by
           by_contra h
           have hsub : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
-          letI : Subsingleton M := hsub
+          let : Subsingleton M := hsub
           have hptop : p.asIdeal = ⊤ := by
             rw [← hm]
             ext r
@@ -1390,12 +1390,12 @@ theorem localDepth_le_dim_of_associatedPrime
         have hIH : ((localDepth R Q : ℕ∞) : WithBot ℕ∞) ≤
             ringKrullDim (R ⧸ q.asIdeal) := by
           exact ih Q q hQdepth hqass
-        letI : Nontrivial (R ⧸ p.asIdeal) :=
+        let : Nontrivial (R ⧸ p.asIdeal) :=
           Ideal.Quotient.nontrivial_iff.mpr p.isPrime.ne_top
-        letI : IsLocalRing (R ⧸ p.asIdeal) :=
+        let : IsLocalRing (R ⧸ p.asIdeal) :=
           IsLocalRing.of_surjective' (Ideal.Quotient.mk p.asIdeal)
             Ideal.Quotient.mk_surjective
-        letI : IsLocalHom (Ideal.Quotient.mk p.asIdeal) :=
+        let : IsLocalHom (Ideal.Quotient.mk p.asIdeal) :=
           IsLocalHom.of_surjective (Ideal.Quotient.mk p.asIdeal)
             Ideal.Quotient.mk_surjective
         have hbarmax : Ideal.Quotient.mk p.asIdeal x ∈
@@ -1474,7 +1474,7 @@ theorem localDepth_le_dim_of_associatedPrime
   have hMnontr : Nontrivial M := by
     by_contra h
     have hsub : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
-    letI : Subsingleton M := hsub
+    let : Subsingleton M := hsub
     change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
     obtain ⟨m, hm⟩ := hp
     have hptop : p.asIdeal = ⊤ := by
@@ -1487,7 +1487,7 @@ theorem localDepth_le_dim_of_associatedPrime
         rw [Submodule.mem_colon_singleton]
         exact Subsingleton.elim (r • m : M) (0 : M)
     exact p.isPrime.ne_top hptop
-  letI : Nontrivial M := hMnontr
+  let : Nontrivial M := hMnontr
   have hmax : IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) ≠ ⊤ :=
     smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
       (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
@@ -1565,7 +1565,7 @@ theorem localDepth_localization_add_dim
           ((⊤ : ℕ∞) : WithBot ℕ∞)
         rfl
   by_cases hMsub : Subsingleton M
-  · letI : Subsingleton M := hMsub
+  · let : Subsingleton M := hMsub
     have hdepth : localDepth R M = ⊤ :=
       depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) M
     have hloc : localDepth (Localization.AtPrime p)
@@ -1586,7 +1586,7 @@ theorem localDepth_localization_add_dim
       induction n with
       | zero =>
           intro M _ _ _ p _ hdepth
-          haveI : Nontrivial (R ⧸ p) :=
+          have : Nontrivial (R ⧸ p) :=
             Ideal.Quotient.nontrivial_iff.mpr (inferInstance : p.IsPrime).ne_top
           have hdim : (0 : WithBot ℕ∞) ≤ ringKrullDim (R ⧸ p) := by
             exact ringKrullDim_nonneg_of_nontrivial
@@ -1596,12 +1596,12 @@ theorem localDepth_localization_add_dim
           intro M _ _ _ p hp hdepth
           have hMnontr : Nontrivial M := by
             by_contra h
-            letI : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
+            let : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
             have htop : localDepth R M = ⊤ :=
               depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) M
             have hcontra : (n.succ : ℕ∞) = ⊤ := hdepth ▸ htop
             exact ENat.natCast_ne_top _ hcontra
-          haveI : Nontrivial (R ⧸ p) := Ideal.Quotient.nontrivial_iff.mpr hp.ne_top
+          have : Nontrivial (R ⧸ p) := Ideal.Quotient.nontrivial_iff.mpr hp.ne_top
           by_cases hle :
               ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤ ringKrullDim (R ⧸ p)
           · exact hle.trans (by
@@ -1638,7 +1638,7 @@ theorem localDepth_localization_add_dim
             have hQnon : Nontrivial Q :=
               nontrivial_quotSMulTop_of_mem_maximalIdeal M hxmax
             have hQdepth : localDepth R Q = (n : ℕ∞) := by
-              letI : Nontrivial M := hMnontr
+              let : Nontrivial M := hMnontr
               have hdrop : localDepth R Q = localDepth R M - 1 :=
                 localDepth_drops_by_one (R := R) (M := M) x hxmax hreg
               rw [hdrop, hdepth]
@@ -1682,7 +1682,7 @@ theorem localDepth_localization_add_dim
               change (algebraMap R S x) • a = (algebraMap R S x) • b
               simpa [y] using hab
             by_cases hLsub : Subsingleton L
-            · letI : Subsingleton L := hLsub
+            · let : Subsingleton L := hLsub
               have htopL : localDepth S L = ⊤ :=
                 depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal S) L
               rw [htopL]
@@ -1691,7 +1691,7 @@ theorem localDepth_localization_add_dim
               rw [htop_add (ringKrullDim (R ⧸ p))
                 ringKrullDim_nonneg_of_nontrivial]
               exact le_top
-            · letI : Nontrivial L := not_subsingleton_iff_nontrivial.mp hLsub
+            · let : Nontrivial L := not_subsingleton_iff_nontrivial.mp hLsub
               have hloc_drop : localDepth S (QuotSMulTop y L) =
                   localDepth S L - 1 :=
                 localDepth_drops_by_one (R := S) (M := L) y hy hregLoc
@@ -1752,7 +1752,7 @@ theorem localDepth_localization_add_dim
                 simpa [Nat.cast_add, WithBot.coe_add, add_assoc, add_left_comm,
                   add_comm] using hstep
               simpa [S, L, y] using hlocal
-    letI : Nontrivial M := not_subsingleton_iff_nontrivial.mp hMsub
+    let : Nontrivial M := not_subsingleton_iff_nontrivial.mp hMsub
     obtain ⟨n, hdepth, _⟩ := localDepth_eq_min_ext_universe (R := R) (M := M)
     exact aux n M p hdepth
 
@@ -1783,9 +1783,9 @@ theorem depth_goes_down_finite
        letI : Module.Finite R N := Module.Finite.trans S N
        localDepth R N) := by
   classical
-  letI : Algebra R S := f.toAlgebra
-  letI : Module.Finite R S := hf
-  letI : IsNoetherianRing S := IsNoetherianRing.of_finite R S
+  let : Algebra R S := f.toAlgebra
+  let : Module.Finite R S := hf
+  let : IsNoetherianRing S := IsNoetherianRing.of_finite R S
   let compDepth (X : Type u) [AddCommGroup X] [Module S X]
       [Module.Finite S X] : ℕ∞ :=
     letI : Module R X := Module.compHom X f
@@ -1800,16 +1800,16 @@ theorem depth_goes_down_finite
     induction n with
     | zero =>
         intro X _ _ _ hdepth
-        letI : Module R X := Module.compHom X f
-        letI : IsScalarTower R S X := SMul.comp.isScalarTower f
-        letI : Module.Finite R X := Module.Finite.trans S X
+        let : Module R X := Module.compHom X f
+        let : IsScalarTower R S X := SMul.comp.isScalarTower f
+        let : Module.Finite R X := Module.Finite.trans S X
         have hdepth' : localDepth R X = 0 := by
           simpa [compDepth] using hdepth
         by_cases hsub : Subsingleton X
         · have htop : localDepth R X = ⊤ :=
             depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) X
           exact (ENat.natCast_ne_top 0 (hdepth'.symm.trans htop)).elim
-        · letI : Nontrivial X := not_subsingleton_iff_nontrivial.mp hsub
+        · let : Nontrivial X := not_subsingleton_iff_nontrivial.mp hsub
           have hno : ¬ ∃ x : R, x ∈ IsLocalRing.maximalIdeal R ∧
               IsSMulRegular X x :=
             (depth_eq_zero_iff (IsLocalRing.maximalIdeal R) X).mp hdepth' |>.2
@@ -1821,7 +1821,7 @@ theorem depth_goes_down_finite
               (R := R) (M := X) (IsLocalRing.maximalIdeal R)
               le_rfl).2 hall)
           obtain ⟨q, hq⟩ := not_forall.mp hnotall
-          obtain ⟨hqass, hqmax⟩ := _root_.not_imp.mp hq
+          obtain ⟨hqass, hqmax⟩ := Classical.not_imp.mp hq
           have hqmax' : IsLocalRing.maximalIdeal R ≤ q.asIdeal := by
             by_contra h
             exact hqmax h
@@ -1881,7 +1881,7 @@ theorem depth_goes_down_finite
             simpa only [smul_zero] using hyz
           have hdepthL : localDepth T L = 0 := by
             apply (depth_eq_zero_iff (IsLocalRing.maximalIdeal T) L).2
-            letI : Nontrivial L := ⟨⟨z, 0, hzne⟩⟩
+            let : Nontrivial L := ⟨⟨z, 0, hzne⟩⟩
             exact ⟨inferInstance, hnoL⟩
           apply le_antisymm
           · unfold finiteExtensionMaximalDepth
@@ -1896,18 +1896,18 @@ theorem depth_goes_down_finite
           · exact bot_le
     | succ n ih =>
         intro X _ _ _ hdepth
-        letI : Module R X := Module.compHom X f
-        letI : IsScalarTower R S X := SMul.comp.isScalarTower f
-        letI : Module.Finite R X := Module.Finite.trans S X
+        let : Module R X := Module.compHom X f
+        let : IsScalarTower R S X := SMul.comp.isScalarTower f
+        let : Module.Finite R X := Module.Finite.trans S X
         have hdepth' : localDepth R X = (n.succ : ℕ∞) := by
           simpa [compDepth] using hdepth
         have hXnontr : Nontrivial X := by
           by_contra h
-          letI : Subsingleton X := not_nontrivial_iff_subsingleton.mp h
+          let : Subsingleton X := not_nontrivial_iff_subsingleton.mp h
           have htop : localDepth R X = ⊤ :=
             depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) X
           exact ENat.natCast_ne_top _ (hdepth'.symm.trans htop)
-        letI : Nontrivial X := hXnontr
+        let : Nontrivial X := hXnontr
         have hreg_exists : ∃ x : R, x ∈ IsLocalRing.maximalIdeal R ∧
             IsSMulRegular X x := by
           by_contra h
@@ -1919,9 +1919,9 @@ theorem depth_goes_down_finite
           exact hne (hdepth'.symm.trans hzero)
         obtain ⟨x, hx, hreg⟩ := hreg_exists
         let Q := QuotSMulTop (algebraMap R S x) X
-        letI : Module R Q := Module.compHom Q f
-        letI : IsScalarTower R S Q := SMul.comp.isScalarTower f
-        letI : Module.Finite R Q := Module.Finite.trans S Q
+        let : Module R Q := Module.compHom Q f
+        let : IsScalarTower R S Q := SMul.comp.isScalarTower f
+        let : Module.Finite R Q := Module.Finite.trans S Q
         have hP :
             (algebraMap R S x • (⊤ : Submodule S X)).restrictScalars R =
               x • (⊤ : Submodule R X) := by
@@ -2031,7 +2031,7 @@ theorem depth_goes_down_finite
               depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal T) L
             change (n.succ : ℕ∞) ≤ localDepth T L
             simp [htop]
-          · letI : Nontrivial L := not_subsingleton_iff_nontrivial.mp hLsub
+          · let : Nontrivial L := not_subsingleton_iff_nontrivial.mp hLsub
             have hone : (1 : ℕ∞) ≤ localDepth T L := by
               unfold localDepth depth
               have hmax : IsLocalRing.maximalIdeal T •
@@ -2052,7 +2052,7 @@ theorem depth_goes_down_finite
               localDepth_drops_by_one (R := T) (M := L) y hy hregLoc
             rw [hlocQ, hdrop] at hIHm
             cases hd : localDepth T L with
-            | top => simp [hd]
+            | top => simp
             | coe d =>
                 rw [hd] at hIHm
                 rw [hd] at hone
@@ -2085,7 +2085,7 @@ theorem depth_goes_down_finite
             have hlt := lt_of_not_ge hnotle
             cases hd : localDepth (Localization.AtPrime m.asIdeal)
                 (LocalizedModule.AtPrime m.asIdeal Q) with
-            | top => simp [hd]
+            | top => simp
             | coe d =>
                 rw [hd] at hlt
                 have hnat : n < d := by exact_mod_cast hlt
@@ -2167,7 +2167,7 @@ theorem depth_goes_down_finite
           exact depth_congr e (IsLocalRing.maximalIdeal T)
         have hLsub : ¬ Subsingleton L := by
           intro hsub
-          letI : Subsingleton L := hsub
+          let : Subsingleton L := hsub
           have htop : localDepth T (QuotSMulTop y L) = ⊤ :=
             depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal T)
               (QuotSMulTop y L)
@@ -2175,7 +2175,7 @@ theorem depth_goes_down_finite
               (LocalizedModule.AtPrime m.asIdeal Q) = ⊤ := hlocQ.trans htop
           rw [htopQ] at hm
           exact ENat.natCast_ne_top n (top_unique hm)
-        letI : Nontrivial L := not_subsingleton_iff_nontrivial.mp hLsub
+        let : Nontrivial L := not_subsingleton_iff_nontrivial.mp hLsub
         have hdrop : localDepth T (QuotSMulTop y L) =
             localDepth T L - 1 :=
           localDepth_drops_by_one (R := T) (M := L) y hy hregLoc
@@ -2216,11 +2216,11 @@ theorem depth_goes_down_finite
             ⟨m, rfl⟩
           exact (sInf_le hmemb).trans (by simpa [T, L] using hupper)
         exact le_antisymm hupper' hlower
-  letI : Module R N := Module.compHom N f
-  letI : IsScalarTower R S N := SMul.comp.isScalarTower f
-  letI : Module.Finite R N := Module.Finite.trans S N
+  let : Module R N := Module.compHom N f
+  let : IsScalarTower R S N := SMul.comp.isScalarTower f
+  let : Module.Finite R N := Module.Finite.trans S N
   by_cases hNsub : Subsingleton N
-  · letI : Subsingleton N := hNsub
+  · let : Subsingleton N := hNsub
     have hfinite : finiteExtensionMaximalDepth S N = ⊤ := by
       unfold finiteExtensionMaximalDepth
       apply le_antisymm le_top
@@ -2233,7 +2233,7 @@ theorem depth_goes_down_finite
     have hlocal : localDepth R N = ⊤ :=
       depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) N
     rw [hfinite, hlocal]
-  · letI : Nontrivial N := not_subsingleton_iff_nontrivial.mp hNsub
+  · let : Nontrivial N := not_subsingleton_iff_nontrivial.mp hNsub
     obtain ⟨n, hdepth, _⟩ := localDepth_eq_min_ext_universe (R := R) (M := N)
     simpa [compDepth, hdepth] using aux n N hdepth
 

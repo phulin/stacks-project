@@ -24,7 +24,7 @@ namespace Formalization.Books.EtaleCohomology.Unit09
 
 open CategoryTheory Opposite
 
-universe u v
+universe u v w
 
 /-! ## Presheaves and their sections -/
 
@@ -34,7 +34,7 @@ abbrev Presheaf (C : Type u) [Category.{v} C] :=
 
 /-- An abelian presheaf on `C`, namely a functor to abelian groups. -/
 abbrev AbelianPresheaf (C : Type u) [Category.{v} C] :=
-  Formalization.Books.Sites.Unit02.PresheafWithValues C AddCommGrpCat
+  Formalization.Books.Sites.Unit02.PresheafWithValues C AddCommGrpCat.{w}
 
 /-- The sections of a presheaf over an object `U`. -/
 abbrev Sections {C : Type u} [Category.{v} C] (F : Presheaf C) (U : C) :=
@@ -70,7 +70,7 @@ theorem sectionRestriction_comp {C : Type u} [Category.{v} C]
 /-- The underlying type of sections of an abelian presheaf. -/
 abbrev AbelianSections {C : Type u} [Category.{v} C]
     (F : AbelianPresheaf C) (U : C) :=
-  (F.obj (op U) : Type v)
+  (F.obj (op U) : Type w)
 
 /-- The value of an abelian presheaf at `U`, in `Γ(U, F)` notation. -/
 abbrev AbelianGamma {C : Type u} [Category.{v} C]

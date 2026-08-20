@@ -481,7 +481,169 @@ theorem finite_after_completion
         (inferInstance : IsArtinian (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K))
     obtain ⟨n, hn⟩ := IsLocalRing.exists_maximalIdeal_pow_le_of_isArtinianRing_quotient K
     exact ⟨n, hn⟩
-  sorry
+  rcases hpower with ⟨n, hn⟩
+  have hnpos : 0 < n := by
+    by_contra h
+    have hn0 : n = 0 := Nat.eq_zero_of_not_pos h
+    subst n
+    have htop : (⊤ : Ideal S) ≤ K := by simpa using hn
+    have hmax : (IsLocalRing.maximalIdeal S) = ⊤ := by
+      apply top_unique
+      exact htop.trans (IsLocalRing.map_maximalIdeal_le (algebraMap R S))
+    exact (IsLocalRing.maximalIdeal.isMaximal S).ne_top hmax
+  refine ⟨local_completion_agrees_of_power_le R S n hnpos hn, ?_⟩
+  dsimp
+  let A := ringCompletion (IsLocalRing.maximalIdeal R)
+  let M := completion (IsLocalRing.maximalIdeal S) S
+  let φ : A →+* M := completedLocalMap R S
+  letI : Algebra A M := φ.toAlgebra
+  let I : Ideal A := (IsLocalRing.maximalIdeal R).map (algebraMap R A)
+  let L : Ideal M := I.map φ
+  have hφ_alg (r : R) :
+      φ (algebraMap R A r) =
+        algebraMap S M (algebraMap R S r) := by
+    apply AdicCompletion.ext_evalₐ
+    intro q
+    have hmod := congrArg (fun f => f (algebraMap R A r))
+      (congrArg (fun f => f) (completedLocalMap_mod R S q))
+    calc
+      AdicCompletion.evalₐ (IsLocalRing.maximalIdeal S) q
+          (φ (algebraMap R A r)) = localQuotientMap R S q (algebraMap R A r) := by
+            simpa [φ, RingHom.comp_apply] using hmod
+      _ = AdicCompletion.evalₐ (IsLocalRing.maximalIdeal S) q
+          (algebraMap S M (algebraMap R S r)) := by
+            change (Ideal.quotientMap
+                ((IsLocalRing.maximalIdeal S) ^ q) (algebraMap R S)
+                (maximalIdeal_pow_le_comap_pow R S q))
+                (Ideal.Quotient.mk ((IsLocalRing.maximalIdeal R) ^ q) r) = _
+            change (Ideal.quotientMap
+                ((IsLocalRing.maximalIdeal S) ^ q) (algebraMap R S)
+                (maximalIdeal_pow_le_comap_pow R S q))
+                (Ideal.Quotient.mk ((IsLocalRing.maximalIdeal R) ^ q) r) =
+              Ideal.Quotient.mk ((IsLocalRing.maximalIdeal S) ^ q)
+                (algebraMap R S r)
+            rfl
+  have hK : K ≤ L.comap (algebraMap S M) := by
+    refine (Ideal.map_le_iff_le_comap).2 ?_
+    intro r hr
+    change algebraMap S M (algebraMap R S r) ∈ L
+    rw [← hφ_alg r]
+    exact Ideal.mem_map_of_mem φ
+      (Ideal.mem_map_of_mem (algebraMap R A) hr)
+  have hIL : I • (⊤ : Submodule A M) = L.restrictScalars A := by
+    simp only [Ideal.smul_top_eq_map]
+    rw [show algebraMap A M = φ by rfl, show L = I.map φ by rfl]
+  let N : Submodule A M := I • (⊤ : Submodule A M)
+  have hKN : K • (⊤ : Submodule S M) ≤ L.restrictScalars S := by
+    rw [Ideal.smul_top_eq_map]
+    exact (Ideal.map_le_iff_le_comap).2 hK
+  have hpowN : (IsLocalRing.maximalIdeal S) ^ n • (⊤ : Submodule S M) ≤
+      L.restrictScalars S :=
+    (Submodule.smul_mono_left hn).trans hKN
+  have hqK : ∀ k : S, k ∈ K →
+      Submodule.Quotient.mk (p := N) (algebraMap S M k) = 0 := by
+    intro k hk
+    change Submodule.Quotient.mk (p := I • (⊤ : Submodule A M))
+      (algebraMap S M k) = 0
+    rw [Submodule.Quotient.mk_eq_zero]
+    rw [hIL]
+    exact hK hk
+  let q₀ : S →+ M ⧸ N :=
+    { toFun := fun s => Submodule.Quotient.mk (p := N) (algebraMap S M s)
+      map_zero' := by simp
+      map_add' := by intro x y; simp }
+  let q : S ⧸ K →+ M ⧸ N :=
+    QuotientAddGroup.lift K.toAddSubgroup q₀ hqK
+  have hq_surj : Function.Surjective q := by
+    intro y
+    obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective N y
+    obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective
+      (AdicCompletion.evalₐ (IsLocalRing.maximalIdeal S) n x)
+    have hx : x - algebraMap S M s ∈
+        (IsLocalRing.maximalIdeal S) ^ n • (⊤ : Submodule S M) := by
+      rw [AdicCompletion.pow_smul_top_eq_ker_eval hS]
+      apply LinearMap.mem_ker.mpr
+      rw [← AdicCompletion.factor_evalₐ_eq_eval
+        (IsLocalRing.maximalIdeal S) (x - algebraMap S M s)
+        (show (IsLocalRing.maximalIdeal S) ^ n ≤
+          (IsLocalRing.maximalIdeal S) ^ n • (⊤ : Submodule S S) by simp)]
+      have hsalg :
+          AdicCompletion.evalₐ (IsLocalRing.maximalIdeal S) n
+              (algebraMap S M s) = Ideal.Quotient.mk
+                ((IsLocalRing.maximalIdeal S) ^ n) s := by rfl
+      rw [map_sub, hsalg, ← hs]
+      simp
+    have hxL : x - algebraMap S M s ∈ L := hpowN hx
+    refine ⟨Ideal.Quotient.mk K s, ?_⟩
+    change Submodule.Quotient.mk (p := N) (algebraMap S M s) =
+      Submodule.Quotient.mk (p := N) x
+    apply (Submodule.Quotient.eq N).2
+    change algebraMap S M s - x ∈ I • (⊤ : Submodule A M)
+    rw [hIL]
+    change algebraMap S M s - x ∈ L
+    have hneg := L.neg_mem hxL
+    convert hneg using 1 <;> abel
+  let σ : (R ⧸ IsLocalRing.maximalIdeal R) →+* (A ⧸ I) :=
+    Ideal.Quotient.lift (IsLocalRing.maximalIdeal R)
+      ((Ideal.Quotient.mk I).comp (algebraMap R A)) (by
+        intro r hr
+        change Ideal.Quotient.mk I (algebraMap R A r) = 0
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        exact Ideal.mem_map_of_mem (algebraMap R A) hr)
+  let f : (S ⧸ K) →ₛₗ[σ] (M ⧸ N) :=
+    { toFun := q
+      map_add' := q.map_add
+      map_smul' := by
+        intro c x
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective c
+        obtain ⟨s, rfl⟩ := Ideal.Quotient.mk_surjective x
+        simp only [σ, Ideal.Quotient.lift_mk, RingHom.coe_comp, Algebra.smul_def]
+        change q (Ideal.Quotient.mk K ((algebraMap R S r) * s)) =
+          (Ideal.Quotient.mk I (algebraMap R A r)) •
+            q (Ideal.Quotient.mk K s)
+        change Submodule.Quotient.mk (p := N)
+              (algebraMap S M ((algebraMap R S r) * s)) =
+          Submodule.Quotient.mk (p := N)
+            (φ (algebraMap R A r) * algebraMap S M s)
+        rw [hφ_alg]
+        rfl }
+  letI : Module.Finite (A ⧸ I) (M ⧸ N) :=
+    Module.Finite.of_surjective f (by simpa [f] using hq_surj)
+  have hA : IsAdicComplete I A := by
+    simpa [I, Unit96.completionPowerIdeal] using
+      AdicCompletion.isAdicComplete_self (IsLocalRing.maximalIdeal R) hR
+  have hImax : I.map φ ≤
+      (IsLocalRing.maximalIdeal S).map (algebraMap S M) := by
+    refine (Ideal.map_le_iff_le_comap).2 ?_
+    rw [show I = (IsLocalRing.maximalIdeal R).map (algebraMap R A) by rfl]
+    refine (Ideal.map_le_iff_le_comap).2 ?_
+    intro r hr
+    change φ (algebraMap R A r) ∈
+      (IsLocalRing.maximalIdeal S).map (algebraMap S M)
+    rw [hφ_alg r]
+    exact Ideal.mem_map_of_mem (algebraMap S M)
+      ((IsLocalRing.map_maximalIdeal_le (algebraMap R S))
+        (Ideal.mem_map_of_mem (algebraMap R S) hr))
+  have hpowA (k : ℕ) : I ^ k • (⊤ : Submodule A M) ≤
+      (((IsLocalRing.maximalIdeal S) ^ k).map (algebraMap S M)).restrictScalars A := by
+    simp only [Ideal.smul_top_eq_map]
+    rw [show algebraMap A M = φ by rfl, Ideal.map_pow, Ideal.map_pow]
+    exact Ideal.pow_right_mono hImax k
+  have hM : (⨅ k : ℕ, I ^ k • (⊤ : Submodule A M)) = ⊥ := by
+    have hsep := Unit96.isAdicComplete_separated
+      (IsLocalRing.maximalIdeal S)
+      (completion_isAdicComplete_of_fg (IsLocalRing.maximalIdeal S) S hS)
+    apply le_antisymm
+    · intro x hx
+      have hx' : x ∈ (⊥ : Submodule S M) := by
+        rw [← hsep]
+        apply (Submodule.mem_iInf _).2
+        intro k
+        simpa [Ideal.smul_top_eq_map] using
+          (hpowA k ((Submodule.mem_iInf _).1 hx k))
+      exact (Submodule.mem_bot A).2 ((Submodule.mem_bot S).1 hx')
+    · exact bot_le
+  exact Unit96.finite_of_complete_ring_of_finite_residue I hA hM
 
 /-! ## Finite ring maps and completed localizations -/
 

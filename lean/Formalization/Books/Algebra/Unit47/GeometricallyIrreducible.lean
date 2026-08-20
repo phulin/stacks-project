@@ -316,7 +316,34 @@ theorem isGeometricallyIrreducible_subalgebra
   `Ideal.IsPrime.comap`; rewrite by this equality and convert back with
   `PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical`.
   -/
-  sorry
+  intro A K _ _
+  let m := Algebra.TensorProduct.map (AlgHom.id k K) A.val
+  have hm : Function.Injective m :=
+    Module.Flat.lTensor_preserves_injective_linearMap A.val.toLinearMap Subtype.val_injective
+  have htarget : (nilradical (K ⊗[k] S)).IsPrime :=
+    PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS K)
+  have hcomap : Ideal.comap m.toRingHom (nilradical (K ⊗[k] S)) =
+      nilradical (K ⊗[k] A) := by
+    ext x
+    rw [Ideal.mem_comap, mem_nilradical, mem_nilradical]
+    exact IsNilpotent.map_iff hm
+  have hcomapprime : (Ideal.comap m.toRingHom (nilradical (K ⊗[k] S))).IsPrime := by
+    refine ⟨Ideal.comap_ne_top m.toRingHom htarget.1, ?_⟩
+    intro x y hxy
+    have hxy' : m x * m y ∈ nilradical (K ⊗[k] S) := by
+      change m (x * y) ∈ nilradical (K ⊗[k] S) at hxy
+      rwa [map_mul] at hxy
+    have hcases := htarget.2 hxy'
+    rcases hcases with hx | hy
+    · left
+      change m x ∈ nilradical (K ⊗[k] S)
+      exact hx
+    · right
+      change m y ∈ nilradical (K ⊗[k] S)
+      exact hy
+  rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+  rw [← hcomap]
+  exact hcomapprime
 
 /-- Geometric irreducibility of all finite-type subalgebras implies geometric
 irreducibility of the ambient algebra. -/

@@ -719,25 +719,501 @@ theorem ftAToC_flat (k : Type u) [Field k] :
     RingHom.Flat (ftAToC k) := by
   exact (RingHom.Etale.iff_flat_and_formallyUnramified.mp (ftAToC_etale k)).1
 
+private theorem ftA_maximalIdeal_eq_span_generators (k : Type u) [Field k] :
+    IsLocalRing.maximalIdeal (ftA k) =
+      Ideal.span (({ftAX k, ftAY k} : Set (ftA k)) ∪ Set.range (ftAGenerator k)) := by
+  let I : Ideal (ftA k) :=
+    Ideal.span (({ftAX k, ftAY k} : Set (ftA k)) ∪ Set.range (ftAGenerator k))
+  have hmax0 : Ideal.map (algebraMap (ftBasePolynomialRing k) (ftA0 k))
+      (ftBaseMaximalIdeal k) = IsLocalRing.maximalIdeal (ftA0 k) := by
+    unfold ftA0
+    exact IsLocalization.AtPrime.map_eq_maximalIdeal
+      (Rₚ := Localization.AtPrime (ftBaseMaximalIdeal k)) (ftBaseMaximalIdeal k)
+  have hbase : Ideal.map (algebraMap (ftBasePolynomialRing k) (ftA0 k))
+      (ftBaseMaximalIdeal k) = Ideal.span ({ftX k, ftY k} : Set (ftA0 k)) := by
+    rw [ftBaseMaximalIdeal, Ideal.map_span]
+    apply le_antisymm
+    · refine Ideal.span_le.2 ?_
+      rintro _ ⟨b, hb, rfl⟩
+      rcases (show b = ftBaseX k ∨ b = ftBaseY k by simpa using hb) with rfl | rfl
+      · exact Ideal.subset_span (by simp [ftX])
+      · exact Ideal.subset_span (by simp [ftY])
+    · refine Ideal.span_le.2 ?_
+      rintro _ (rfl | rfl)
+      · exact Ideal.subset_span ⟨ftBaseX k, by simp, rfl⟩
+      · exact Ideal.subset_span ⟨ftBaseY k, by simp, rfl⟩
+  have hgen_le : I ≤ (IsLocalRing.maximalIdeal (ftA0 k)).comap (ftAToA0 k) := by
+    have hA0 : ∀ a : ftA0 k, ftAToA0 k (ftA0ToA k a) = a := by
+      intro a
+      have hzero : ∀ x ∈ ftARelationsIdeal k, ftAAugmentation k x = 0 := by
+        intro x hx
+        exact ftARelations_le_augmentation_ker k hx
+      change Ideal.Quotient.lift (ftARelationsIdeal k) (ftAAugmentation k) hzero
+          (Ideal.Quotient.mk (ftARelationsIdeal k) (MvPolynomial.C a)) = a
+      rw [Ideal.Quotient.lift_mk]
+      simp [ftAAugmentation]
+    refine Ideal.span_le.2 ?_
+    rintro a (ha | ha)
+    · rcases (show a = ftAX k ∨ a = ftAY k by simpa using ha) with rfl | rfl
+      · have hx0 : ftX k ∈ IsLocalRing.maximalIdeal (ftA0 k) := by
+          rw [← hmax0, hbase]
+          exact Ideal.subset_span (by simp)
+        change ftAToA0 k (ftAX k) ∈ IsLocalRing.maximalIdeal (ftA0 k)
+        rw [show ftAToA0 k (ftAX k) = ftX k by
+          simpa [ftAX, ftA0ToA] using hA0 (ftX k)]
+        exact hx0
+      · have hy0 : ftY k ∈ IsLocalRing.maximalIdeal (ftA0 k) := by
+          rw [← hmax0, hbase]
+          exact Ideal.subset_span (by simp)
+        change ftAToA0 k (ftAY k) ∈ IsLocalRing.maximalIdeal (ftA0 k)
+        rw [show ftAToA0 k (ftAY k) = ftY k by
+          simpa [ftAY, ftA0ToA] using hA0 (ftY k)]
+        exact hy0
+    · rcases ha with ⟨n, rfl⟩
+      change ftAToA0 k (ftAGenerator k n) ∈ IsLocalRing.maximalIdeal (ftA0 k)
+      change ftAAugmentation k (MvPolynomial.X n) ∈ IsLocalRing.maximalIdeal (ftA0 k)
+      simp [ftAAugmentation]
+  have hcomp : IsLocalRing.maximalIdeal (ftA k) =
+      (IsLocalRing.maximalIdeal (ftA0 k)).comap (ftAToA0 k) :=
+    (IsLocalRing.eq_maximalIdeal
+      (Ideal.comap_isMaximal_of_surjective (ftAToA0 k) (ftAToA0_surjective k))).symm
+  rw [hcomp]
+  apply le_antisymm ?_ hgen_le
+  intro a ha
+  obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
+  change ftAAugmentation k p ∈ IsLocalRing.maximalIdeal (ftA0 k) at ha
+  have hconst : ftAAugmentation k p ∈ Ideal.span ({ftX k, ftY k} : Set (ftA0 k)) := by
+    rw [← hbase, hmax0]
+    exact ha
+  have hvar_le : Ideal.map (Ideal.Quotient.mk (ftARelationsIdeal k))
+      (MvPolynomial.idealOfVars ℕ (ftA0 k)) ≤ I := by
+    rw [MvPolynomial.idealOfVars, Ideal.map_span]
+    refine Ideal.span_le.2 ?_
+    rintro _ ⟨p, ⟨n, rfl⟩, rfl⟩
+    exact Ideal.subset_span (Set.mem_union_right _ ⟨n, rfl⟩)
+  have hvar : Ideal.Quotient.mk (ftARelationsIdeal k)
+      (p - MvPolynomial.C (ftAAugmentation k p)) ∈ I :=
+    hvar_le (Ideal.mem_map_of_mem _ (ftAAugmentation_eq_zero_mem_idealOfVars k
+      (by simp [ftAAugmentation])))
+  have hconst_le : Ideal.map (algebraMap (ftA0 k) (ftA k))
+      (Ideal.span ({ftX k, ftY k} : Set (ftA0 k))) ≤ I := by
+    rw [Ideal.map_span]
+    refine Ideal.span_le.2 ?_
+    rintro _ ⟨a, ha, rfl⟩
+    rcases (show a = ftX k ∨ a = ftY k by simpa using ha) with rfl | rfl
+    · change ftAX k ∈ I
+      exact Ideal.subset_span (Set.mem_union_left _ (Set.mem_insert_iff.mpr (Or.inl rfl)))
+    · change ftAY k ∈ I
+      exact Ideal.subset_span (Set.mem_union_left _ (Set.mem_insert_iff.mpr (Or.inr rfl)))
+  have hconst' : Ideal.Quotient.mk (ftARelationsIdeal k)
+      (MvPolynomial.C (ftAAugmentation k p)) ∈ I := by
+    change algebraMap (ftA0 k) (ftA k) (ftAAugmentation k p) ∈ I
+    exact hconst_le (Ideal.mem_map_of_mem _ hconst)
+  change Ideal.Quotient.mk (ftARelationsIdeal k) p ∈ I
+  have heq : Ideal.Quotient.mk (ftARelationsIdeal k) p =
+      Ideal.Quotient.mk (ftARelationsIdeal k)
+          (p - MvPolynomial.C (ftAAugmentation k p)) +
+        Ideal.Quotient.mk (ftARelationsIdeal k) (MvPolynomial.C (ftAAugmentation k p)) := by
+    rw [← map_add]
+    simp
+  rw [heq]
+  exact I.add_mem hvar hconst'
+
 /-- The maximal ideal generated by `x`, `y`, `z`, and all `zₙ`. -/
 def ftCQ (k : Type u) [Field k] : Ideal (ftC k) :=
   Ideal.span (({ftCX k, ftCY k, ftCZ k} : Set (ftC k)) ∪ Set.range (ftCZn k))
 
 instance ftCQ_isMaximal (k : Type u) [Field k] :
     (ftCQ k).IsMaximal := by
-  sorry
+  let m : Ideal (ftA k) := IsLocalRing.maximalIdeal (ftA k)
+  let K := ftA k ⧸ m
+  letI : Field K := Ideal.Quotient.field m
+  let ρ : ftA k →+* K := Ideal.Quotient.mk m
+  let e : Polynomial (ftA k) →+* K := Polynomial.eval₂RingHom ρ 0
+  have hmX : ftAX k ∈ m := by
+    rw [show m = IsLocalRing.maximalIdeal (ftA k) by rfl,
+      ftA_maximalIdeal_eq_span_generators]
+    exact Ideal.subset_span (Set.mem_union_left _ (by simp))
+  have hmY : ftAY k ∈ m := by
+    rw [show m = IsLocalRing.maximalIdeal (ftA k) by rfl,
+      ftA_maximalIdeal_eq_span_generators]
+    exact Ideal.subset_span (Set.mem_union_left _ (by simp))
+  have hmG : ∀ n : ℕ, ftAGenerator k n ∈ m := by
+    intro n
+    rw [show m = IsLocalRing.maximalIdeal (ftA k) by rfl,
+      ftA_maximalIdeal_eq_span_generators]
+    exact Ideal.subset_span (Set.mem_union_right _ ⟨n, rfl⟩)
+  have hρX : ρ (ftAX k) = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr hmX
+  have hρY : ρ (ftAY k) = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr hmY
+  have hρG : ∀ n : ℕ, ρ (ftAGenerator k n) = 0 :=
+    fun n => Ideal.Quotient.eq_zero_iff_mem.mpr (hmG n)
+  have hrel : ftCRelationsIdeal k ≤ RingHom.ker e := by
+    refine Ideal.span_le.2 ?_
+    intro p hp
+    rcases hp with rfl
+    change e (Polynomial.C (ftAX k) * Polynomial.X ^ 2 + Polynomial.X +
+      Polynomial.C (ftAY k)) = 0
+    simp [e, hρX, hρY]
+  let f0 : ftCQuotient k →+* K :=
+    Ideal.Quotient.lift (ftCRelationsIdeal k) e hrel
+  let q0 : Ideal (ftCQuotient k) :=
+    Ideal.span ((({algebraMap (ftA k) (ftCQuotient k) (ftAX k),
+      algebraMap (ftA k) (ftCQuotient k) (ftAY k)} : Set (ftCQuotient k)) ∪
+      {Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X}) ∪
+      Set.range (fun n : ℕ => algebraMap (ftA k) (ftCQuotient k)
+        (ftAGenerator k n)))
+  have hq0ker : q0 ≤ RingHom.ker f0 := by
+    refine Ideal.span_le.2 ?_
+    rintro z (hz | hz)
+    · rcases hz with hz | hz
+      · rcases (show z = algebraMap (ftA k) (ftCQuotient k) (ftAX k) ∨
+          z = algebraMap (ftA k) (ftCQuotient k) (ftAY k) by
+          simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hz) with rfl | rfl
+        · change e (Polynomial.C (ftAX k)) = 0
+          simp [e, hρX]
+        · change e (Polynomial.C (ftAY k)) = 0
+          simp [e, hρY]
+      · have hz' := Set.mem_singleton_iff.mp hz
+        rw [hz']
+        change e Polynomial.X = 0
+        simp [e]
+    · rcases hz with ⟨n, rfl⟩
+      change e (Polynomial.C (ftAGenerator k n)) = 0
+      simp [e, hρG n]
+  let qmap : Polynomial (ftA k) →+* ftCQuotient k := by
+    change Polynomial (ftA k) →+* (Polynomial (ftA k) ⧸ ftCRelationsIdeal k)
+    exact Ideal.Quotient.mk (ftCRelationsIdeal k)
+  let P : Ideal (Polynomial (ftA k)) :=
+    Ideal.span (({Polynomial.C a | a ∈ m} : Set (Polynomial (ftA k))) ∪
+      {Polynomial.X})
+  have hmap_m : Ideal.map (algebraMap (ftA k) (ftCQuotient k)) m ≤ q0 := by
+    rw [show m = IsLocalRing.maximalIdeal (ftA k) by rfl,
+      ftA_maximalIdeal_eq_span_generators, Ideal.map_span]
+    refine Ideal.span_le.2 ?_
+    rintro z ⟨a, ha, rfl⟩
+    rcases ha with ha | ha
+    · rcases (show a = ftAX k ∨ a = ftAY k by simpa using ha) with rfl | rfl
+      · exact Ideal.subset_span (Set.mem_union_left _ (by simp))
+      · exact Ideal.subset_span (Set.mem_union_left _ (by simp))
+    · rcases ha with ⟨n, rfl⟩
+      exact Ideal.subset_span (Set.mem_union_right _ ⟨n, rfl⟩)
+  have hPmap : Ideal.map qmap P ≤ q0 := by
+    change Ideal.map qmap
+      (Ideal.span (({Polynomial.C a | a ∈ m} : Set (Polynomial (ftA k))) ∪
+        {Polynomial.X})) ≤ q0
+    rw [Ideal.map_span]
+    refine Ideal.span_le.2 ?_
+    rintro z ⟨p, hp, rfl⟩
+    rcases hp with ⟨a, ha, rfl⟩ | rfl
+    · change algebraMap (ftA k) (ftCQuotient k) a ∈ q0
+      exact hmap_m (Ideal.mem_map_of_mem _ ha)
+    · change Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X ∈ q0
+      change Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X ∈
+        Ideal.span ((({algebraMap (ftA k) (ftCQuotient k) (ftAX k),
+          algebraMap (ftA k) (ftCQuotient k) (ftAY k)} : Set (ftCQuotient k)) ∪
+          {Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X}) ∪
+          Set.range (fun n : ℕ => algebraMap (ftA k) (ftCQuotient k)
+            (ftAGenerator k n)))
+      exact Ideal.subset_span (Set.mem_union_left _
+        (Set.mem_union_right _ (Set.mem_singleton_iff.mpr rfl)))
+  have hpoly : ∀ t : Polynomial (ftA k), e t = 0 → t ∈ P := by
+    intro t ht
+    have htconst : ρ (t.constantCoeff) = 0 := by
+      simpa [e] using ht
+    have hconst : t.constantCoeff ∈ m :=
+      Ideal.Quotient.eq_zero_iff_mem.mp htconst
+    have hrest0 : (t - Polynomial.C (t.constantCoeff)).constantCoeff = 0 := by
+      simp
+    have hrest : t - Polynomial.C (t.constantCoeff) ∈
+        Ideal.span ({Polynomial.X} : Set (Polynomial (ftA k))) := by
+      rw [← Polynomial.ker_constantCoeff]
+      exact hrest0
+    have hrestle : Ideal.span ({Polynomial.X} : Set (Polynomial (ftA k))) ≤ P := by
+      refine Ideal.span_le.2 ?_
+      intro z hz
+      exact Ideal.subset_span (Set.mem_union_right _ hz)
+    have hconstmem : Polynomial.C (t.constantCoeff) ∈ P := by
+      exact Ideal.subset_span
+        (Set.mem_union_left _ ⟨t.constantCoeff, hconst, rfl⟩)
+    have hadd := P.add_mem (hrestle hrest) hconstmem
+    rw [← sub_add_cancel t (Polynomial.C (t.constantCoeff))]
+    exact hadd
+  have hker0 : RingHom.ker f0 ≤ q0 := by
+    intro b hb
+    obtain ⟨t, rfl⟩ := Ideal.Quotient.mk_surjective b
+    change e t = 0 at hb
+    exact hPmap (Ideal.mem_map_of_mem _ (hpoly t hb))
+  have hqmap : Ideal.map (algebraMap (ftCQuotient k) (ftC k)) q0 ≤ ftCQ k := by
+    change Ideal.map (algebraMap (ftCQuotient k) (ftC k))
+        (Ideal.span ((({algebraMap (ftA k) (ftCQuotient k) (ftAX k),
+          algebraMap (ftA k) (ftCQuotient k) (ftAY k)} : Set (ftCQuotient k)) ∪
+          {Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X}) ∪
+          Set.range (fun n : ℕ => algebraMap (ftA k) (ftCQuotient k)
+            (ftAGenerator k n)))) ≤
+      Ideal.span (({ftCX k, ftCY k, ftCZ k} : Set (ftC k)) ∪
+        Set.range (ftCZn k))
+    rw [Ideal.map_span]
+    have hscalar (a : ftA k) :
+        algebraMap (ftCQuotient k) (ftC k)
+            (algebraMap (ftA k) (ftCQuotient k) a) = ftAToC k a := by
+      change algebraMap (ftA k) (ftC k) a = ftAToC k a
+      rfl
+    refine Ideal.span_le.2 ?_
+    rintro z ⟨b, hb, rfl⟩
+    rcases hb with hb | hb
+    · rcases hb with hb | hb
+      · rcases (show b = algebraMap (ftA k) (ftCQuotient k) (ftAX k) ∨
+          b = algebraMap (ftA k) (ftCQuotient k) (ftAY k) by
+          simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hb) with rfl | rfl
+        · change ftAToC k (ftAX k) ∈ _
+          rw [← hscalar (ftAX k)]
+          exact Ideal.subset_span (Set.mem_union_left _
+            (Set.mem_insert_iff.mpr (Or.inl rfl)))
+        · change ftAToC k (ftAY k) ∈ _
+          rw [← hscalar (ftAY k)]
+          exact Ideal.subset_span (Set.mem_union_left _
+            (Set.mem_insert_iff.mpr (Or.inr (Or.inl rfl))))
+      · have hb' := Set.mem_singleton_iff.mp hb
+        rw [hb']
+        exact Ideal.subset_span (Set.mem_union_left _
+          (Set.mem_insert_iff.mpr (Or.inr (Or.inr rfl))))
+    · rcases hb with ⟨n, rfl⟩
+      exact Ideal.subset_span (Set.mem_union_right _ ⟨n, rfl⟩)
+  have hder : IsUnit (f0 (ftCDerivative k)) := by
+    change IsUnit (e (ftCDerivativePolynomial k))
+    simp [ftCDerivativePolynomial, e, hρX]
+  let f : ftC k →+* K := by
+    change Localization.Away (ftCDerivative k) →+* K
+    exact IsLocalization.Away.lift (S := Localization.Away (ftCDerivative k))
+      (x := ftCDerivative k) (g := f0) hder
+  have hfB : f.comp (algebraMap (ftCQuotient k) (ftC k)) = f0 := by
+    change (IsLocalization.Away.lift (S := Localization.Away (ftCDerivative k))
+      (x := ftCDerivative k) (g := f0) hder).comp
+        (algebraMap (ftCQuotient k) (Localization.Away (ftCDerivative k))) = f0
+    exact IsLocalization.Away.lift_comp (x := ftCDerivative k) (g := f0) hder
+  have hfB_apply : ∀ b : ftCQuotient k,
+      f (algebraMap (ftCQuotient k) (ftC k) b) = f0 b := by
+    intro b
+    have h := congrArg (fun g : ftCQuotient k →+* K => g b) hfB
+    change f (algebraMap (ftCQuotient k) (ftC k) b) = f0 b at h
+    exact h
+  have hfA : ∀ a : ftA k, f (ftAToC k a) = ρ a := by
+    intro a
+    change f (algebraMap (ftCQuotient k) (ftC k)
+      (algebraMap (ftA k) (ftCQuotient k) a)) = ρ a
+    calc
+      f (algebraMap (ftCQuotient k) (ftC k)
+          (algebraMap (ftA k) (ftCQuotient k) a)) =
+          f0 (algebraMap (ftA k) (ftCQuotient k) a) := hfB_apply _
+      _ = ρ a := by
+        change e (Polynomial.C a) = ρ a
+        simp [e]
+  have hsurj : Function.Surjective f := by
+    intro z
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective z
+    exact ⟨ftAToC k a, hfA a⟩
+  let x0 : ftCQuotient k := by
+    change Polynomial (ftA k) ⧸ ftCRelationsIdeal k
+    exact Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X
+  have hx0 : algebraMap (ftCQuotient k) (ftC k) x0 = ftCZ k := by
+    rfl
+  have hfCZ : f (ftCZ k) = 0 := by
+    rw [← hx0, hfB_apply]
+    change e Polynomial.X = 0
+    simp [e]
+  have hCQker : ftCQ k ≤ RingHom.ker f := by
+    rw [ftCQ]
+    refine Ideal.span_le.2 ?_
+    rintro z (hz | hz)
+    · rcases (show z = ftCX k ∨ z = ftCY k ∨ z = ftCZ k by
+        simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hz) with rfl | rfl | rfl
+      · change f (ftAToC k (ftAX k)) = 0
+        rw [hfA, hρX]
+      · change f (ftAToC k (ftAY k)) = 0
+        rw [hfA, hρY]
+      · exact hfCZ
+    · rcases hz with ⟨n, rfl⟩
+      change f (ftAToC k (ftAGenerator k n)) = 0
+      rw [hfA, hρG n]
+  have hkerf : RingHom.ker f ≤ ftCQ k := by
+    intro c hc
+    letI : IsLocalization (Submonoid.powers (ftCDerivative k)) (ftC k) := by
+      change IsLocalization (Submonoid.powers (ftCDerivative k))
+        (Localization.Away (ftCDerivative k))
+      infer_instance
+    change Localization.Away (ftCDerivative k) at c
+    obtain ⟨p, s, rfl⟩ := IsLocalization.exists_mk'_eq
+      (S := ftC k) (Submonoid.powers (ftCDerivative k)) c
+    have hprod := congrArg f (IsLocalization.mk'_spec
+      (S := ftC k) p s)
+    have hc0 : f (IsLocalization.mk' (ftC k) p s) = 0 := hc
+    have hprod' : f (IsLocalization.mk' (ftC k) p s) *
+        f (algebraMap (ftCQuotient k) (ftC k) (s : ftCQuotient k)) =
+        f (algebraMap (ftCQuotient k) (ftC k) p) := by
+      rw [← map_mul]
+      exact hprod
+    rw [hc0, zero_mul] at hprod'
+    have hnumf : f (algebraMap (ftCQuotient k) (ftC k) p) = 0 := hprod'.symm
+    have hnumf0 : f0 p = 0 := by
+      have h := hfB_apply p
+      exact (h.symm ▸ hnumf)
+    have hpq : p ∈ q0 := hker0 hnumf0
+    have hnum : algebraMap (ftCQuotient k) (ftC k) p ∈ ftCQ k := by
+      exact hqmap (Ideal.mem_map_of_mem _ hpq)
+    apply (Ideal.unit_mul_mem_iff_mem _
+      (IsLocalization.map_units (ftC k) s)).mp
+    change algebraMap (ftCQuotient k) (ftC k) (s : ftCQuotient k) *
+      IsLocalization.mk' (ftC k) p s ∈ ftCQ k
+    have heq : algebraMap (ftCQuotient k) (ftC k) (s : ftCQuotient k) *
+        IsLocalization.mk' (ftC k) p s =
+        algebraMap (ftCQuotient k) (ftC k) p := by
+      rw [mul_comm]
+      exact IsLocalization.mk'_spec (S := ftC k) p s
+    rw [heq]
+    exact hnum
+  have hker : RingHom.ker f = ftCQ k := le_antisymm hkerf hCQker
+  exact hker ▸ RingHom.ker_isMaximal_of_surjective f hsurj
 
 instance ftCQ_isPrime (k : Type u) [Field k] :
     (ftCQ k).IsPrime := by
-  sorry
+  exact (ftCQ_isMaximal k).isPrime
 
 def ftCPrimeIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (ftC k) :=
   Ideal.map (ftAToC k) (ftAPrime k n)
 
+private theorem ft_annihilator_element_flat_base_change
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M] [Module.Flat R S] (m : M) :
+    (Submodule.span R ({m} : Set M)).annihilator.map (algebraMap R S) =
+      (Submodule.span S ({(1 : S) ⊗ₜ[R] m} : Set (TensorProduct R S M))).annihilator := by
+  rw [Submodule.annihilator_span_singleton, Submodule.annihilator_span_singleton]
+  let f : R →ₗ[R] M := LinearMap.toSpanSingleton R M m
+  have h_exact : Function.Exact (LinearMap.ker f).subtype f :=
+    f.exact_subtype_ker_map
+  have h_exact' := Module.Flat.lTensor_exact S h_exact
+  have hker : LinearMap.ker (f.lTensor S) =
+      LinearMap.range ((LinearMap.ker f).subtype.lTensor S) :=
+    h_exact'.linearMap_ker_eq
+  apply le_antisymm
+  · rw [Ideal.map_le_iff_le_comap]
+    intro r hr
+    change (LinearMap.toSpanSingleton S (TensorProduct R S M)
+      (1 ⊗ₜ[R] m)) (algebraMap R S r) = 0
+    rw [LinearMap.toSpanSingleton_apply]
+    simpa [f] using congrArg (fun x => (1 : S) ⊗ₜ[R] x)
+      (show f r = 0 from hr)
+  · intro s hs
+    have hs' : (s ⊗ₜ[R] (1 : R)) ∈ LinearMap.ker (f.lTensor S) := by
+      change (f.lTensor S) (s ⊗ₜ[R] (1 : R)) = 0
+      have hcalc : (f.lTensor S) (s ⊗ₜ[R] (1 : R)) =
+          s ⊗ₜ[R] f 1 := by rfl
+      rw [hcalc]
+      rw [show f 1 = m by simp [f]]
+      rw [TensorProduct.tmul_eq_smul_one_tmul]
+      exact (LinearMap.toSpanSingleton_apply S (TensorProduct R S M)
+        (1 ⊗ₜ[R] m) s).symm ▸ hs
+    obtain ⟨y, hy⟩ := LinearMap.mem_range.mp (hker ▸ hs')
+    have hmem : ∀ (y : TensorProduct R S (LinearMap.ker f)) (s : S),
+        (LinearMap.lTensor S (LinearMap.ker f).subtype) y =
+            s ⊗ₜ[R] (1 : R) →
+          s ∈ Ideal.map (algebraMap R S)
+            (LinearMap.ker (LinearMap.toSpanSingleton R M m)) := by
+      intro y
+      induction y using TensorProduct.induction_on with
+      | zero =>
+          intro s hs
+          have hs0 := congrArg (TensorProduct.rid R S) hs
+          simp at hs0
+          simpa [hs0] using (Ideal.map (algebraMap R S)
+            (LinearMap.ker (LinearMap.toSpanSingleton R M m))).zero_mem
+      | add x y hx hy =>
+          intro s hs
+          have hs' := congrArg (TensorProduct.rid R S) hs
+          have hxy : s = (TensorProduct.rid R S)
+              ((LinearMap.lTensor S (LinearMap.ker f).subtype) x) +
+              (TensorProduct.rid R S)
+                ((LinearMap.lTensor S (LinearMap.ker f).subtype) y) := by
+            simpa using hs'.symm
+          subst s
+          exact (Ideal.map (algebraMap R S)
+            (LinearMap.ker (LinearMap.toSpanSingleton R M m))).add_mem
+            (hx _ (by
+              rw [← TensorProduct.rid_symm_apply]
+              exact ((TensorProduct.rid R S).symm_apply_apply _).symm))
+            (hy _ (by
+              rw [← TensorProduct.rid_symm_apply]
+              exact ((TensorProduct.rid R S).symm_apply_apply _).symm))
+      | tmul s' i =>
+          intro s hs
+          have hs' := congrArg (TensorProduct.rid R S) hs
+          have hi : algebraMap R S (i : R) ∈
+              Ideal.map (algebraMap R S)
+                (LinearMap.ker (LinearMap.toSpanSingleton R M m)) :=
+            Ideal.mem_map_of_mem (algebraMap R S) i.property
+          have hsi := (Ideal.map (algebraMap R S)
+            (LinearMap.ker (LinearMap.toSpanSingleton R M m))).mul_mem_left s' hi
+          have hs'' : (i : R) • s' = s := by simpa using hs'
+          rw [← hs'']
+          simpa [Algebra.smul_def, mul_comm] using hsi
+    exact hmem y s hy
+
 theorem ftCZn_annihilator (k : Type u) [Field k] (n : ℕ) :
     (Submodule.span (ftC k) ({ftCZn k n} : Set (ftC k))).annihilator =
       ftCPrimeIdeal k n := by
-  sorry
+  have hflat : Module.Flat (ftA k) (ftC k) :=
+    RingHom.flat_algebraMap_iff.mp (ftAToC_flat k)
+  have hbase := @ft_annihilator_element_flat_base_change (ftA k) (ftC k) (ftA k)
+    _ _ _ _ (inferInstance : Module (ftA k) (ftA k)) hflat (ftAGenerator k n)
+  let g := ftAGenerator k n
+  let rid := TensorProduct.rid (ftA k) (ftC k)
+  have hrid (s : ftC k) : rid (s • ((1 : ftC k) ⊗ₜ[ftA k] g)) =
+      s * ftAToC k g := by
+    rw [← TensorProduct.tmul_eq_smul_one_tmul]
+    simp [rid, g, ftAToC, Algebra.smul_def, mul_comm]
+  have hmem (s : ftC k) :
+      s ∈ (Submodule.span (ftC k) ({ftCZn k n} : Set (ftC k))).annihilator ↔
+        s ∈ (Submodule.span (ftC k)
+          ({(1 : ftC k) ⊗ₜ[ftA k] g} :
+            Set (TensorProduct (ftA k) (ftC k) (ftA k)))).annihilator := by
+    rw [Submodule.mem_annihilator_span_singleton,
+      Submodule.mem_annihilator_span_singleton]
+    change s • ftAToC k g = 0 ↔
+      s • ((1 : ftC k) ⊗ₜ[ftA k] g) = 0
+    constructor
+    · intro hs
+      apply rid.injective
+      rw [map_zero, hrid]
+      simpa [Algebra.smul_def, mul_comm] using hs
+    · intro hs
+      have h := congrArg rid hs
+      rw [hrid] at h
+      simpa [Algebra.smul_def, mul_comm] using h
+  apply le_antisymm
+  · intro s hs
+    have hs' := (hmem s).mp hs
+    have hs'' : s ∈ (Submodule.span (ftC k)
+        ({(1 : ftC k) ⊗ₜ[ftA k] (ftAGenerator k n)} :
+          Set (TensorProduct (ftA k) (ftC k) (ftA k)))).annihilator := by
+      simpa [g] using hs'
+    have hsmap : s ∈ Ideal.map (algebraMap (ftA k) (ftC k))
+        (Submodule.span (ftA k) ({ftAGenerator k n} : Set (ftA k))).annihilator := by
+      exact hbase.symm ▸ hs''
+    change s ∈ Ideal.map (ftAToC k) (ftAPrime k n)
+    simpa only [ftAGenerator_annihilator k n, ftAToC] using hsmap
+  · intro s hs
+    change s ∈ Ideal.map (ftAToC k) (ftAPrime k n) at hs
+    have hsmap : s ∈ Ideal.map (algebraMap (ftA k) (ftC k))
+        (Submodule.span (ftA k) ({ftAGenerator k n} : Set (ftA k))).annihilator := by
+      exact (ftAGenerator_annihilator k n).symm ▸ hs
+    have hs'' : s ∈ (Submodule.span (ftC k)
+        ({(1 : ftC k) ⊗ₜ[ftA k] (ftAGenerator k n)} :
+          Set (TensorProduct (ftA k) (ftC k) (ftA k)))).annihilator := by
+      exact hbase ▸ hsmap
+    have hs' : s ∈ (Submodule.span (ftC k)
+        ({(1 : ftC k) ⊗ₜ[ftA k] g} :
+          Set (TensorProduct (ftA k) (ftC k) (ftA k)))).annihilator := by
+      simpa [g] using hs''
+    exact (hmem s).mpr hs'
 
 /-! ## The fibre computation -/
 
@@ -763,7 +1239,8 @@ def ftKXMaximalIdeal (k : Type u) [Field k] : Ideal (Polynomial k) :=
 
 instance ftKXMaximalIdeal_isPrime (k : Type u) [Field k] :
     (ftKXMaximalIdeal k).IsPrime := by
-  sorry
+  simpa [ftKXMaximalIdeal] using
+    (RingHom.ker_isPrime (Polynomial.constantCoeff : Polynomial k →+* k))
 
 instance ftKXMaximalIdeal_isMaximal (k : Type u) [Field k] :
     (ftKXMaximalIdeal k).IsMaximal := by

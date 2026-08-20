@@ -1,4 +1,5 @@
 import Formalization.Books.MoreAlgebra.Unit90.FormalGlueing
+import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Module.Projective
 import Mathlib.RingTheory.Localization.Module
@@ -180,6 +181,11 @@ def IsGlueingPair {R S : Type u} [CommRing R] [CommRing S]
 def IsSelfGlueingPair {R : Type u} [CommRing R] (f : R) : Prop :=
   IsGlueingPair (fAdicCompletionMap R f) f
 
+theorem localization_away_is_flat
+    {R : Type u} [CommRing R] (f : R) :
+    RingHom.Flat (algebraMap R (Localization.Away f)) := by
+  sorry
+
 theorem same_quotients_for_fAdicCompletion
     {R : Type u} [CommRing R] (f : R) :
     SamePowerQuotients (fAdicCompletionMap R f) f := by
@@ -248,9 +254,9 @@ open MvPolynomial
 def firstBlRelationIdeal (k : Type u) [Field k] :
     Ideal (MvPolynomial (Option ℕ) k) :=
   Ideal.span
-    ((Set.range (fun n : ℕ => X none * X (some n))) ∪
+    ({X none * X (some 1)} ∪
       (Set.range (fun n : ℕ =>
-        X none * X (some (n + 1)) - X (some n))))
+        X none * X (some (n + 2)) - X (some (n + 1)))))
 
 abbrev firstBlPresentedRing (k : Type u) [Field k] :=
   MvPolynomial (Option ℕ) k ⧸ firstBlRelationIdeal k
@@ -261,7 +267,7 @@ def firstBlF (k : Type u) [Field k] : firstBlPresentedRing k :=
 def secondBlRelationIdeal (k : Type u) [Field k] :
     Ideal (MvPolynomial (Option ℕ) k) :=
   Ideal.span (Set.range (fun n : ℕ =>
-    (X none) ^ (n + 1) * X (some n)))
+    (X none) ^ (n + 1) * X (some (n + 1))))
 
 abbrev secondBlPresentedRing (k : Type u) [Field k] :=
   MvPolynomial (Option ℕ) k ⧸ secondBlRelationIdeal k
@@ -286,6 +292,18 @@ theorem second_presented_ring_torsion_map_not_surjective
     ¬ SurjectiveOnFPowerTorsion
       (fAdicCompletionMap (secondBlPresentedRing k) (secondBlF k))
       (secondBlF k) := by
+  sorry
+
+theorem first_presented_completion_not_flat
+    (k : Type u) [Field k] :
+    ¬ RingHom.Flat
+      (fAdicCompletionMap (firstBlPresentedRing k) (firstBlF k)) := by
+  sorry
+
+theorem second_presented_completion_not_flat
+    (k : Type u) [Field k] :
+    ¬ RingHom.Flat
+      (fAdicCompletionMap (secondBlPresentedRing k) (secondBlF k)) := by
   sorry
 
 /-! ## Faithfulness, finite generation, and spectra -/
@@ -433,6 +451,21 @@ def BeauvilleLaszloHypotheses {R S M : Type u}
     (φ : R →+* S) (f : R) : Prop :=
   BijectiveOnFPowerTorsion φ f ∧
     InjectiveOnModuleFPowerTorsion (M := M) φ f
+
+theorem glueable_of_beauvilleLaszloHypotheses
+    {R S M : Type u} [CommRing R] [CommRing S]
+    [AddCommGroup M] [Module R M] (φ : R →+* S) (f : R)
+    (h : BeauvilleLaszloHypotheses (M := M) φ f) :
+    IsGlueable (M := M) φ f := by
+  sorry
+
+theorem selfGlueable_of_beauvilleLaszloHypotheses
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (f : R)
+    (h : BeauvilleLaszloHypotheses
+      (M := M) (fAdicCompletionMap R f) f) :
+    IsSelfGlueable (M := M) f := by
+  sorry
 
 noncomputable def moduleBaseChangeUnit {R S M : Type u}
     [CommRing R] [CommRing S] [AddCommGroup M] [Module R M]
@@ -698,16 +731,29 @@ abbrev GlueableModuleCategory {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) :=
   (GlueableModuleProperty φ f).FullSubcategory
 
+noncomputable abbrev CanOnGlueable {R S : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (f : R) :
+    GlueableModuleCategory φ f ⥤ GlueingDataCategory φ f :=
+  ObjectProperty.ι (GlueableModuleProperty φ f) ⋙ Can φ f
+
+structure BeauvilleLaszloEquivalenceData
+    {R S : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (f : R) where
+  equivalence : GlueableModuleCategory φ f ≌ GlueingDataCategory φ f
+  functor_eq : equivalence.functor = CanOnGlueable φ f
+
 theorem beauville_laszlo_equivalence
     {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) (hpair : IsGlueingPair φ f) :
-    Nonempty (GlueableModuleCategory φ f ≌ GlueingDataCategory φ f) := by
+    Nonempty (BeauvilleLaszloEquivalenceData φ f) := by
   sorry
 
 structure CanonicalizationData {R S : Type u} [CommRing R] [CommRing S]
     (φ : R →+* S) (f : R) (M : ModuleCat.{u} R) where
   module : ModuleCat.{u} R
   canonicalMap : M ⟶ module
+  h0Iso : module ≅ (H0 φ f).obj ((Can φ f).obj M)
+  canonicalMap_h0 : canonicalMap ≫ h0Iso.hom = blCanH0Unit φ f M
   glueable : IsGlueable φ f (M := (module : Type u))
   surjective : Function.Surjective canonicalMap.hom
   formalIso : (ModuleCat.extendScalars φ).obj M ≅
@@ -734,9 +780,9 @@ theorem flatness_descends_along_bl_pair
           ((ModuleCat.extendScalars (algebraMap R (Localization.Away f))).obj M : Type u)) := by
   sorry
 
-def FiniteProjectiveModule {R M : Type u} [CommRing R]
+abbrev FiniteProjectiveModule {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] : Prop :=
-  Module.Finite R M ∧ Module.Projective R M
+  Formalization.Books.Algebra.Unit78.FiniteProjective R M
 
 theorem finite_projectivity_descends_along_bl_pair
     {R S : Type u} [CommRing R] [CommRing S]

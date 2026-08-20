@@ -23,6 +23,7 @@ universe u v
 noncomputable section
 
 open Set
+open TopologicalSpace
 open Formalization.Books.Topology.Unit10
 open Formalization.Books.Topology.Unit11
 
@@ -42,6 +43,99 @@ def maximalLocalDimensionsAbove
   {d | ∃ m : MaximalSpectrum S,
     p.asIdeal ≤ m.asIdeal ∧
       ringKrullDim (Localization.AtPrime m.asIdeal) = d}
+
+private lemma isIrreducible_preimage_of_isInducing
+    {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y]
+    {f : Y → X} (hf : _root_.Topology.IsInducing f) {s : Set X}
+    (hs : IsIrreducible s) (hsrange : s ⊆ Set.range f) :
+    IsIrreducible (f ⁻¹' s) := by
+  refine ⟨?_, ?_⟩
+  · rcases hs.nonempty with ⟨x, hx⟩
+    rcases hsrange hx with ⟨y, rfl⟩
+    exact ⟨y, hx⟩
+  · intro u v hu hv hU hV
+    rcases hf.isOpen_iff.mp hu with ⟨u', huopen, hu_eq⟩
+    rcases hf.isOpen_iff.mp hv with ⟨v', hvopen, hv_eq⟩
+    have hsu : (s ∩ u').Nonempty := by
+      rw [← hu_eq] at hU
+      rcases hU with ⟨y, hyS, hyU⟩
+      exact ⟨f y, hyS, hyU⟩
+    have hsv : (s ∩ v').Nonempty := by
+      rw [← hv_eq] at hV
+      rcases hV with ⟨y, hyS, hyV⟩
+      exact ⟨f y, hyS, hyV⟩
+    rcases hs.2 u' v' huopen hvopen hsu hsv with ⟨x, hxs, hxu, hxv⟩
+    rcases hsrange hxs with ⟨y, rfl⟩
+    refine ⟨y, hxs, ?_⟩
+    constructor
+    · rw [← hu_eq]
+      exact hxu
+    · rw [← hv_eq]
+      exact hxv
+
+private theorem topologicalKrullDim_le_iSup_componentDimensions
+    {X : Type u} [TopologicalSpace X] :
+    topologicalKrullDim X ≤
+      ⨆ Z : irreducibleComponents X, topologicalKrullDim (Z : Set X) := by
+  rw [topologicalKrullDim, Order.krullDim_eq_iSup_height]
+  refine iSup_le fun A => ?_
+  obtain ⟨Z, hZ, hAZ⟩ :=
+    exists_mem_irreducibleComponents_subset_of_isIrreducible
+      (A : Set X) A.isIrreducible
+  have hZnebot : topologicalKrullDim (Z : Set X) ≠ ⊥ := by
+    rw [topologicalKrullDim, Order.krullDim_ne_bot_iff]
+    let U : IrreducibleCloseds Z :=
+      { carrier := Set.univ
+        isIrreducible' :=
+          @IrreducibleSpace.isIrreducible_univ Z _ (Subtype.irreducibleSpace hZ.1)
+        isClosed' := isClosed_univ }
+    exact ⟨U⟩
+  have hheight : Order.height A ≤ topologicalKrullDim (Z : Set X) := by
+    rw [← WithBot.le_unbotD_iff (a := 0) hZnebot]
+    apply Order.height_le
+    intro C hC
+    let f : Z → X := (↑)
+    have hf : _root_.Topology.IsClosedEmbedding f :=
+      (isClosed_of_mem_irreducibleComponents Z hZ).isClosedEmbedding_subtypeVal
+    let g : {V : IrreducibleCloseds X // (V : Set X) ⊆ Z} →
+        IrreducibleCloseds Z := fun V =>
+      { carrier := f ⁻¹' (V : Set X)
+        isIrreducible' :=
+          isIrreducible_preimage_of_isInducing hf.isInducing V.1.isIrreducible
+            (fun x hx => ⟨⟨x, V.2 hx⟩, rfl⟩)
+        isClosed' := V.1.isClosed.preimage hf.continuous }
+    have hg : StrictMono g := by
+      intro V W hVW
+      apply lt_of_le_of_ne
+      · change f ⁻¹' (V : Set X) ⊆ f ⁻¹' (W : Set X)
+        exact Set.preimage_mono hVW.le
+      · intro hEq
+        apply hVW.2
+        intro x hx
+        have hxZ : x ∈ Z := W.2 hx
+        have hx' : (⟨x, hxZ⟩ : Z) ∈ (g W : Set Z) := by
+          exact hx
+        have hx'' : (⟨x, hxZ⟩ : Z) ∈ (g V : Set Z) := by
+          rw [hEq]
+          exact hx'
+        exact hx''
+    have hsubset : ∀ i : Fin (C.length + 1),
+        ((C i : IrreducibleCloseds X) : Set X) ⊆ Z := by
+      intro i x hx
+      have hi : (C i : Set X) ⊆ (C.last : Set X) :=
+        C.monotone (Fin.le_last _)
+      apply hAZ
+      rw [← hC]
+      exact hi hx
+    let D : LTSeries (IrreducibleCloseds Z) :=
+      { length := C.length
+        toFun := fun i => g ⟨C i, hsubset i⟩
+        step := fun i => hg (C.step i) }
+    rw [WithBot.le_unbotD_iff (a := 0) hZnebot]
+    simpa [D, topologicalKrullDim] using
+      (Order.LTSeries.length_le_krullDim D)
+  exact hheight.trans (le_iSup (fun Z : irreducibleComponents X =>
+    topologicalKrullDim (Z : Set X)) ⟨Z, hZ⟩)
 
 /-! ## The dimension of affine space -/
 
@@ -111,6 +205,36 @@ theorem dimension_at_a_point_finite_type_over_field
         IsGreatest (componentDimensionsAtPoint x) d ∧
           IsLeast (maximalLocalDimensionsAbove x) d := by
   sorry
+
+/-- A maximal ideal containing every minimal prime sees the global dimension. -/
+theorem ringKrullDim_eq_krullDimensionAt_of_minimalPrimes_le
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] (m : MaximalSpectrum S)
+    (hmin : ∀ p : Ideal S, p ∈ minimalPrimes S → p ≤ m.asIdeal) :
+    ringKrullDim S = krullDimensionAt (MaximalSpectrum.toPrimeSpectrum m) := by
+  have hpoint :=
+    dimension_at_a_point_finite_type_over_field (k := k) (S := S) m.asIdeal m.2.isPrime
+  dsimp at hpoint
+  obtain ⟨d, hdx, hdcomp, _⟩ := hpoint
+  have hcomp : ∀ Z : Set (PrimeSpectrum S),
+      Z ∈ irreducibleComponents (PrimeSpectrum S) →
+        MaximalSpectrum.toPrimeSpectrum m ∈ Z := by
+    intro Z hZ
+    rw [← PrimeSpectrum.zeroLocus_minimalPrimes] at hZ
+    rcases (Set.mem_image _ _ _).mp hZ with ⟨p, hp, rfl⟩
+    exact (PrimeSpectrum.mem_zeroLocus _ _).mpr (hmin p hp)
+  have hdim : topologicalKrullDim (PrimeSpectrum S) ≤ d := by
+    refine topologicalKrullDim_le_iSup_componentDimensions.trans ?_
+    refine iSup_le fun Z => ?_
+    exact hdcomp.2 ⟨Z, Z.2, hcomp Z Z.2, rfl⟩
+  have hdim_lower : d ≤ ringKrullDim S := by
+    rw [← PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim]
+    rcases hdcomp.1 with ⟨Z, hZ, _, hZd⟩
+    rw [← hZd]
+    exact topologicalKrullDim_subspace_le (PrimeSpectrum S) Z
+  rw [PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim] at hdim
+  have hglobal : ringKrullDim S = d := le_antisymm hdim hdim_lower
+  exact hglobal.trans hdx.symm
 
 /-- The local dimension at a closed point of a finite-type affine algebra over
 a field is the dimension of the corresponding maximal localization. -/

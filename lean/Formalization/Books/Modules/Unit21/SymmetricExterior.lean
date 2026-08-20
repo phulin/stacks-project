@@ -43,7 +43,7 @@ theorem sectionwiseModule_exists {X : TopCat.{v}} (O : CommRingSheaf X)
     Nonempty (Module (↑(O.obj.obj U)) (↑(F.val.obj U))) := by
   sorry
 
-noncomputable def sectionwiseModule {X : TopCat.{v}} (O : CommRingSheaf X)
+noncomputable abbrev sectionwiseModule {X : TopCat.{v}} (O : CommRingSheaf X)
     (F : CommRingSheafModule O) (U : (Opens X)ᵒᵖ) :
     Module (↑(O.obj.obj U)) (↑(F.val.obj U)) :=
   Classical.choice (sectionwiseModule_exists O F U)
@@ -235,39 +235,35 @@ theorem local_symmetricPower_sheafification {X : TopCat.{v}}
 
 /-! ## Stalks -/
 
-/-- Stalks of the chosen sectionwise presheaves carry the induced scalar
-action. -/
-theorem stalkSectionModule_exists {X : TopCat.{v}}
-    (O : CommRingSheaf X)
-    (P : PMod (commRingSheafToRingSheaf O).obj) (x : X) :
-    Nonempty (Module (↑(TopCat.Presheaf.stalk O.obj x))
-      (↑(TopCat.Presheaf.stalk P.presheaf x))) := by
-  sorry
-
-noncomputable def stalkSectionModule {X : TopCat.{v}}
-    (O : CommRingSheaf X)
-    (P : PMod (commRingSheafToRingSheaf O).obj) (x : X) :
-    Module (↑(TopCat.Presheaf.stalk O.obj x))
-      (↑(TopCat.Presheaf.stalk P.presheaf x)) :=
-  Classical.choice (stalkSectionModule_exists O P x)
-
-/-- The sectionwise stalk object used in the stalk comparison. -/
+/-- The degree-n exterior power of the stalk module. -/
 noncomputable def exteriorPowerStalk {X : TopCat.{v}}
     (O : CommRingSheaf X) (F : CommRingSheafModule O) (n : ℕ) (x : X) :
-    ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) :=
-  letI := stalkSectionModule O (exteriorPowerPresheaf O F n) x
-  ModuleCat.of (↑(TopCat.Presheaf.stalk O.obj x))
-    (↑(TopCat.Presheaf.stalk
-      (exteriorPowerPresheaf O F n).presheaf x))
+  ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) :=
+  let R := (TopCat.Presheaf.stalkFunctor (CommRingCat.{v}) x).obj O.obj
+  letI : Module (↑R) (↑(commRingSheafModuleStalk F x)) :=
+    Formalization.Books.Sheaves.Unit14.stalkModule O.obj F.val x
+  ModuleCat.of (↑R)
+    (ExteriorAlgebra.exteriorPower R n (↑(commRingSheafModuleStalk F x)))
 
-/-- The sectionwise stalk object used in the stalk comparison. -/
+/-- The degree-n symmetric power of the stalk module. -/
 noncomputable def symmetricPowerStalk {X : TopCat.{v}}
     (O : CommRingSheaf X) (F : CommRingSheafModule O) (n : ℕ) (x : X) :
-    ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) :=
-  letI := stalkSectionModule O (symmetricPowerPresheaf O F n) x
-  ModuleCat.of (↑(TopCat.Presheaf.stalk O.obj x))
-    (↑(TopCat.Presheaf.stalk
-      (symmetricPowerPresheaf O F n).presheaf x))
+  ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) :=
+  let R := (TopCat.Presheaf.stalkFunctor (CommRingCat.{v}) x).obj O.obj
+  letI : Module (↑R) (↑(commRingSheafModuleStalk F x)) :=
+    Formalization.Books.Sheaves.Unit14.stalkModule O.obj F.val x
+  ModuleCat.of (↑R)
+    (SymmetricPower R (ULift.{v} (Fin n)) (↑(commRingSheafModuleStalk F x)))
+
+/-- The degree-n tensor power of the stalk module. -/
+noncomputable def tensorPowerStalk {X : TopCat.{v}}
+    (O : CommRingSheaf X) (F : CommRingSheafModule O) (n : ℕ) (x : X) :
+  ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) :=
+  let R := (TopCat.Presheaf.stalkFunctor (CommRingCat.{v}) x).obj O.obj
+  letI : Module (↑R) (↑(commRingSheafModuleStalk F x)) :=
+    Formalization.Books.Sheaves.Unit14.stalkModule O.obj F.val x
+  ModuleCat.of (↑R)
+    (TensorPower R n (↑(commRingSheafModuleStalk F x)))
 
 /-- The stalk comparison for the exterior power. -/
 theorem stalk_exteriorPowerSheaf_iso {X : TopCat.{v}}
@@ -288,7 +284,7 @@ theorem stalk_tensorAlgebra_iso {X : TopCat.{v}}
     (O : CommRingSheaf X) (F : CommRingSheafModule O) (n : ℕ) (x : X) :
     Nonempty
       (commRingSheafModuleStalk ((tensorAlgebra O F).component n) x ≅
-        commRingSheafModuleStalk ((tensorAlgebra O F).component n) x) := by
+        tensorPowerStalk O F n x) := by
   sorry
 
 /-! ## Pullback -/
@@ -336,7 +332,8 @@ noncomputable def symmetricPowerPresentationData
     {X : TopCat.{v}} {O : CommRingSheaf X}
     {F₂ F₁ F : CommRingSheafModule O} (n : ℕ) (hn : 0 < n)
     {f : F₂ ⟶ F₁} {g : F₁ ⟶ F}
-    (h : RightExactSequence f g) : SymmetricPowerPresentationData n :=
+    (h : RightExactSequence f g) : SymmetricPowerPresentationData
+      (X := X) (O := O) (F₂ := F₂) (F₁ := F₁) (F := F) n :=
   Classical.choice (symmetricPowerPresentationData_exists
     (X := X) (O := O) (F₂ := F₂) (F₁ := F₁) (F := F) n hn h)
 
@@ -375,7 +372,8 @@ noncomputable def exteriorPowerPresentationData
     {X : TopCat.{v}} {O : CommRingSheaf X}
     {F₂ F₁ F : CommRingSheafModule O} (n : ℕ) (hn : 0 < n)
     {f : F₂ ⟶ F₁} {g : F₁ ⟶ F}
-    (h : RightExactSequence f g) : ExteriorPowerPresentationData n :=
+    (h : RightExactSequence f g) : ExteriorPowerPresentationData
+      (X := X) (O := O) (F₂ := F₂) (F₁ := F₁) (F := F) n :=
   Classical.choice (exteriorPowerPresentationData_exists
     (X := X) (O := O) (F₂ := F₂) (F₁ := F₁) (F := F) n hn h)
 
@@ -398,7 +396,7 @@ theorem exteriorPower_presentation_rightExact
 constructions. Coherence is stated for positive degree, as in the source. -/
 theorem tensor_symmetric_exterior_permanence
     {X : TopCat.{v}} {O : CommRingSheaf X}
-    (F : CommRingSheafModule O) (n : ℕ) (hn : 0 < n) :
+    (F : CommRingSheafModule O) (n : ℕ) :
     (IsLocallyGenerated F →
       IsLocallyGenerated (tensorPowerSheaf O F n) ∧
       IsLocallyGenerated (symmetricPowerSheaf O F n) ∧
@@ -411,7 +409,7 @@ theorem tensor_symmetric_exterior_permanence
       IsFinitePresentation (tensorPowerSheaf O F n) ∧
       IsFinitePresentation (symmetricPowerSheaf O F n) ∧
       IsFinitePresentation (exteriorPowerSheaf O F n)) ∧
-    (IsCoherent F →
+    (IsCoherent F → 0 < n →
       IsCoherent (tensorPowerSheaf O F n) ∧
       IsCoherent (symmetricPowerSheaf O F n) ∧
       IsCoherent (exteriorPowerSheaf O F n)) ∧
@@ -439,8 +437,8 @@ theorem whole_tensor_symmetric_exterior_permanence
     {X : TopCat.{v}} {O : CommRingSheaf X}
     (F : CommRingSheafModule O) :
     IsQuasiCoherent F →
-      IsQuasiCoherentGradedAlgebra (tensorAlgebra O F) ∧
-      IsQuasiCoherentGradedAlgebra (symmetricAlgebra O F) ∧
+      IsQuasiCoherentGradedAlgebra ((tensorAlgebra O F).toGradedSheafAlgebra) ∧
+      IsQuasiCoherentGradedAlgebra ((symmetricAlgebra O F).toGradedSheafAlgebra) ∧
       IsQuasiCoherentGradedAlgebra ((exteriorAlgebra O F).toGradedSheafAlgebra) := by
   sorry
 
@@ -448,8 +446,8 @@ theorem whole_tensor_symmetric_exterior_locallyFree_permanence
     {X : TopCat.{v}} {O : CommRingSheaf X}
     (F : CommRingSheafModule O) :
     IsLocallyFree F →
-      IsLocallyFreeGradedAlgebra (tensorAlgebra O F) ∧
-      IsLocallyFreeGradedAlgebra (symmetricAlgebra O F) ∧
+      IsLocallyFreeGradedAlgebra ((tensorAlgebra O F).toGradedSheafAlgebra) ∧
+      IsLocallyFreeGradedAlgebra ((symmetricAlgebra O F).toGradedSheafAlgebra) ∧
       IsLocallyFreeGradedAlgebra ((exteriorAlgebra O F).toGradedSheafAlgebra) := by
   sorry
 

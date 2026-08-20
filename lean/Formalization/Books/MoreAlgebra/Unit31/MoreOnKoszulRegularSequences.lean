@@ -2,7 +2,6 @@ import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
 import Formalization.Books.MoreAlgebra.Unit30.KoszulRegularSequences
-import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.RingHom.Smooth
 
@@ -122,20 +121,6 @@ def baseChangedList
   letI : Algebra A A' := g.toAlgebra
   exact xs.map (baseChangeAlgebraMap f g)
 
-/-- The source module of the canonical `H₁` base-change map, with its natural
-`B ⊗[A] A'`-module structure.  This is the project’s extension-of-scalars
-model for `H₁(K(B, f)) ⊗[A] A'`. -/
-noncomputable abbrev koszulHOneBaseChangeSource
-    {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
-    (f : A →+* B) (g : A →+* A') (xs : List B) :
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra A A' := g.toAlgebra
-    ModuleCat.{u} (B ⊗[A] A') :=
-  letI : Algebra A B := f.toAlgebra
-  letI : Algebra A A' := g.toAlgebra
-  (ModuleCat.extendScalars (baseChangeAlgebraMap f g)).obj
-    ((koszulComplexOnListWithCoefficients B B xs).homology 1)
-
 noncomputable abbrev koszulHOneBaseChangeTarget
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B) :
@@ -155,7 +140,8 @@ source-facing interface records that representative at the homology level. -/
 structure KoszulHOneBaseChangeData
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B) where
-  map : koszulHOneBaseChangeSource f g xs ⟶
+  map : (baseChangeModule
+      (M := (koszulComplexOnListWithCoefficients B B xs).homology 1) f g) ⟶
     koszulHOneBaseChangeTarget f g xs
   surjective : Function.Surjective (fun x => map x)
 
@@ -181,7 +167,8 @@ noncomputable def chosenKoszulHOneBaseChangeMap
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B)
     (hflat : quotientFlatOver f xs) :
-    koszulHOneBaseChangeSource f g xs ⟶
+    baseChangeModule
+      (M := (koszulComplexOnListWithCoefficients B B xs).homology 1) f g ⟶
       koszulHOneBaseChangeTarget f g xs :=
   (chosenKoszulHOneBaseChangeData f g xs hflat).map
 

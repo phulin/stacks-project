@@ -308,7 +308,7 @@ private theorem not_isFiniteLength_self
     [IsNoetherianRing R] (hdim : ringKrullDim R = 1) :
     ¬ IsFiniteLength R R := by
   intro h
-  letI : IsArtinianRing R := (isFiniteLength_iff_isNoetherian_isArtinian.mp h).2
+  let : IsArtinianRing R := (isFiniteLength_iff_isNoetherian_isArtinian.mp h).2
   have hfield : IsField R := IsArtinianRing.isField_of_isReduced_of_isLocalRing R
   have hz := ringKrullDim_eq_zero_of_isField (F := R) hfield
   rw [hdim] at hz
@@ -320,8 +320,8 @@ private theorem finiteLength_isTorsion
     [AddCommGroup Q] [Module R Q] (hdim : ringKrullDim R = 1)
     (hQ : IsFiniteLength R Q) : Module.IsTorsion R Q := by
   have hQ' := isFiniteLength_iff_isNoetherian_isArtinian.mp hQ
-  letI : IsNoetherian R Q := hQ'.1
-  letI : IsArtinian R Q := hQ'.2
+  let : IsNoetherian R Q := hQ'.1
+  let : IsArtinian R Q := hQ'.2
   intro q
   have hcyc : IsFiniteLength R (R ∙ q) := by
     rw [isFiniteLength_iff_isNoetherian_isArtinian]
@@ -351,7 +351,7 @@ private theorem latticeQuotient_finiteLength_of_finite
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
-    (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hMM' : M ≤ M')
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (_hMM' : M ≤ M')
     [Module.Finite R (M' : Type v)] :
     IsFiniteLength R (latticeQuotient R M M') := by
   classical
@@ -380,11 +380,11 @@ private theorem latticeQuotient_finiteLength_of_finite
     rw [← Module.isTorsionBySet_iff_is_torsion_by_span,
       Module.isTorsionBySet_singleton_iff]
     exact hQ
-  letI : Module.IsTorsionBySet R (latticeQuotient R M M')
+  let : Module.IsTorsionBySet R (latticeQuotient R M M')
       (Ideal.span ({a} : Set R)) := hQset
-  letI : Module (R ⧸ Ideal.span ({a} : Set R))
+  let : Module (R ⧸ Ideal.span ({a} : Set R))
       (latticeQuotient R M M') := hQset.module
-  letI : Module.Finite (R ⧸ Ideal.span ({a} : Set R))
+  let : Module.Finite (R ⧸ Ideal.span ({a} : Set R))
       (latticeQuotient R M M') :=
     Module.Finite.of_restrictScalars_finite R (R ⧸ Ideal.span ({a} : Set R)) _
   have hSart : IsArtinianRing (R ⧸ Ideal.span ({a} : Set R)) := by
@@ -393,7 +393,7 @@ private theorem latticeQuotient_finiteLength_of_finite
     exact (ringKrullDim_quotient_succ_le_of_nonZeroDivisor
       (mem_nonZeroDivisors_iff_ne_zero.mpr ha)).trans
         (Order.KrullDimLE.krullDim_le)
-  letI : IsArtinianRing (R ⧸ Ideal.span ({a} : Set R)) := hSart
+  let : IsArtinianRing (R ⧸ Ideal.span ({a} : Set R)) := hSart
   have hArtQ : IsArtinian R (latticeQuotient R M M') := by
     exact isArtinian_of_surjective_algebraMap
       (R := R ⧸ Ideal.span ({a} : Set R)) (S := R)
@@ -414,17 +414,17 @@ theorem lattice_comparison_upper
         Module.Finite R (M' : Type v) ] := by
   tfae_have 1 → 2 := by
     intro hM'
-    letI : Submodule.IsLattice K M' := hM'
+    let : Submodule.IsLattice K M' := hM'
     exact latticeQuotient_finiteLength_of_finite hdim M M' hM hMM'
   tfae_have 2 → 3 := by
     intro hQ
-    letI : Submodule.IsLattice K M := hM
-    letI : IsFiniteLength R (latticeQuotient R M M') := hQ
+    let : Submodule.IsLattice K M := hM
+    let : IsFiniteLength R (latticeQuotient R M M') := hQ
     let N : Submodule R (M' : Type v) := Submodule.comap M'.subtype M
-    letI : IsNoetherian R (M' ⧸ N) := by
+    let : IsNoetherian R (M' ⧸ N) := by
       change IsNoetherian R (latticeQuotient R M M')
       exact (isFiniteLength_iff_isNoetherian_isArtinian.mp hQ).1
-    letI : Module.Finite R (M' ⧸ N) := by
+    let : Module.Finite R (M' ⧸ N) := by
       constructor
       exact (isNoetherian_submodule.mp inferInstance) ⊤ le_top
     have hexact : Function.Exact (M.inclusion hMM') N.mkQ := by
@@ -450,7 +450,7 @@ theorem lattice_comparison_upper
     exact Module.Finite.of_exact hexact N.mkQ_surjective
   tfae_have 3 → 1 := by
     intro hM'
-    letI : Submodule.IsLattice K M := hM
+    let : Submodule.IsLattice K M := hM
     exact Submodule.IsLattice.of_le_of_isLattice_of_fg K hMM'
       ((Module.Finite.iff_fg).mp hM')
   tfae_finish
@@ -465,12 +465,12 @@ theorem lattice_comparison_lower
     Submodule.IsLattice K M' ↔ latticeQuotientHasFiniteLength R M' M := by
   constructor
   · intro hM'
-    letI : Submodule.IsLattice K M' := hM'
-    letI : Submodule.IsLattice K M := hM
+    let : Submodule.IsLattice K M' := hM'
+    let : Submodule.IsLattice K M := hM
     exact latticeQuotient_finiteLength_of_finite hdim M' M hM' hM'M
   · intro hQ
-    letI : Submodule.IsLattice K M := hM
-    letI : IsFiniteLength R (latticeQuotient R M' M) := hQ
+    let : Submodule.IsLattice K M := hM
+    let : IsFiniteLength R (latticeQuotient R M' M) := hQ
     have hfg : M'.FG := by
       exact (isNoetherian_submodule.mp inferInstance) M' hM'M
     have hspan : Submodule.span K (M' : Set V) = ⊤ := by
@@ -496,7 +496,7 @@ theorem lattice_comparison_lower
         calc
           x = 1 • x := by simp
           _ = ((algebraMap R K (a : R))⁻¹ * algebraMap R K (a : R)) • x := by
-            simp [inv_mul_cancel₀ hamap]
+            simp
           _ = (algebraMap R K (a : R))⁻¹ • (algebraMap R K (a : R) • x) := by
             rw [mul_smul]
           _ = (algebraMap R K (a : R))⁻¹ • ((a : R) • x) := by
@@ -514,8 +514,9 @@ theorem lattice_intersection_and_sum
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') :
     Submodule.IsLattice K (M ⊓ M') ∧ Submodule.IsLattice K (M ⊔ M') := by
-  letI : Submodule.IsLattice K M := hM
-  letI : Submodule.IsLattice K M' := hM'
+  have _ := hdim
+  let : Submodule.IsLattice K M := hM
+  let : Submodule.IsLattice K M' := hM'
   have hfg : (M ⊓ M').FG := by
     have hnoethI : IsNoetherian R ↥(M ⊓ M') := isNoetherian_of_le inf_le_left
     exact (isNoetherian_submodule.mp hnoethI) (M ⊓ M') le_rfl
@@ -556,9 +557,9 @@ theorem lattice_length_additive
     (hMM' : M ≤ M') (hM'M'' : M' ≤ M'') :
     latticeLengthNat R M M'' =
       latticeLengthNat R M M' + latticeLengthNat R M' M'' := by
-  letI : Submodule.IsLattice K M := hM
-  letI : Submodule.IsLattice K M' := hM'
-  letI : Submodule.IsLattice K M'' := hM''
+  let : Submodule.IsLattice K M := hM
+  let : Submodule.IsLattice K M' := hM'
+  let : Submodule.IsLattice K M'' := hM''
   let N : Submodule R (M' : Type v) := Submodule.comap M'.subtype M
   let N' : Submodule R (M'' : Type v) := Submodule.comap M''.subtype M
   let P : Submodule R (M'' : Type v) := Submodule.comap M''.subtype M'
@@ -693,6 +694,9 @@ theorem latticeDistance_of_le
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') (hM'M : M' ≤ M) :
     latticeDistance R M M' = latticeLengthInt R M' M := by
+  have _ := hdim
+  have _ := hM
+  have _ := hM'
   have hinf : M ⊓ M' = M' := inf_eq_right.mpr hM'M
   rw [latticeDistance, hinf]
   simp [latticeLengthInt, latticeLengthNat, latticeQuotient]

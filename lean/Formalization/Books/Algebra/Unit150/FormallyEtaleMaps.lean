@@ -128,6 +128,20 @@ abbrev associatedGraded
     {R : Type u} [CommRing R] (I : Ideal R) : Type u :=
   associatedGradedRing I
 
+/- The graded-ring operations are already constructed in Chapter 58.  This
+  named bridge is also useful to later files whose degreewise associated
+  graded notation unfolds to the same Chapter 58 construction. -/
+@[instance_reducible]
+noncomputable def associatedGradedRing_gcommRingCanonical
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    DirectSum.GCommRing (associatedGradedRingPiece I) :=
+  inferInstance
+
+theorem associatedGradedRing_gcommRing_exists
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) :=
+  ⟨associatedGradedRing_gcommRingCanonical I⟩
+
 /-- A graded ring equivalence between two external associated-graded rings.
 The component maps and the homogeneous-component equation retain the grading
 that is implicit in the textbook's displayed graded-ring isomorphism. -/
@@ -135,7 +149,7 @@ structure AssociatedGradedRingEquivalence
     {R S : Type u} [CommRing R] [CommRing S]
     (I : Ideal R) (J : Ideal S) where
   equiv : associatedGraded I ≃+* associatedGraded J
-  component : ∀ n, associatedGradedPiece I n →+ associatedGradedPiece J n
+  component : ∀ n, associatedGradedPiece I n ≃+ associatedGradedPiece J n
   equiv_homogeneous : ∀ (n : ℕ) (x : associatedGradedPiece I n),
     equiv (DirectSum.of (associatedGradedPiece I) n x) =
       DirectSum.of (associatedGradedPiece J) n (component n x)

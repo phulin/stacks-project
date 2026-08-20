@@ -714,7 +714,7 @@ being mistaken for a functor. -/
 structure DescentCosimplicialModuleData
     (D : DescentDatum (R := R) (A := A) (N := N)) where
   /-- A coherent choice of the factor-moving isomorphisms. -/
-  transport : ∀ {n : ℕ} {i j : Fin (n + 1)} (h : i ≤ j),
+  transport : ∀ {n : ℕ} {i j : Fin (n + 1)} (_hij : i ≤ j),
     descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j
   transport_refl : ∀ {n : ℕ} (i : Fin (n + 1)),
     transport (le_refl i) =

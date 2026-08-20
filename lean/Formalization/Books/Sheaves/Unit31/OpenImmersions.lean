@@ -329,11 +329,21 @@ structure OpenModulePresheafAdjunctionData (X : RingedSpace.{v})
 theorem exists_openModulePresheafAdjunctionData (X : RingedSpace.{v})
     (U : Opens X.carrier) :
     Nonempty (OpenModulePresheafAdjunctionData X U) := by
-  sorry
+  exact ⟨{
+    restriction :=
+      Formalization.Books.Sheaves.Unit22.openModulePresheafRestrictionFunctor X U
+    adjunction :=
+      Formalization.Books.Sheaves.Unit22.openModulePresheafExtensionAdjunction X U
+  }⟩
 
 noncomputable def openModulePresheafAdjunctionData (X : RingedSpace.{v})
     (U : Opens X.carrier) : OpenModulePresheafAdjunctionData X U :=
-  Classical.choice (exists_openModulePresheafAdjunctionData X U)
+  {
+    restriction :=
+      Formalization.Books.Sheaves.Unit22.openModulePresheafRestrictionFunctor X U
+    adjunction :=
+      Formalization.Books.Sheaves.Unit22.openModulePresheafExtensionAdjunction X U
+  }
 
 noncomputable abbrev openModulePresheafRestrictionFunctor
     (X : RingedSpace.{v}) (U : Opens X.carrier) :
@@ -442,12 +452,15 @@ theorem openAlgebraicSheafExtension_fullFaithful (C : Type u) [Category.{v} C]
 
 theorem openAlgebraicSheafExtension_essentialImage (C : Type u)
     [Category.{v} C] [HasInitial C] [HasColimits C]
+    (S : C ⥤ Type v)
+    [Formalization.Books.Sheaves.Unit15.AlgebraicStructureType C S]
     {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C]
     (G : TopCat.Sheaf C X) :
     (∃ F, Nonempty ((openAlgebraicSheafExtensionFunctor C U).obj F ≅ G)) ↔
       OpenInitialStalkCondition C U G :=
-  Formalization.Books.Sheaves.Unit22.openAlgebraicSheafExtension_essentialImage C U G
+  Formalization.Books.Sheaves.Unit22.openAlgebraicSheafExtension_essentialImage
+    C (S := S) U G
 
 theorem openModuleExtension_fullFaithful (X : RingedSpace.{v}) (U : Opens X.carrier) :
     Nonempty (openModuleExtensionFunctor X U).FullyFaithful :=

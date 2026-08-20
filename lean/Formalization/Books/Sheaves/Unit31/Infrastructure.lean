@@ -2312,6 +2312,8 @@ theorem openAlgebraicSheafExtension_fullFaithful (C : Type u) [Category.{v} C]
 
 theorem openAlgebraicSheafExtension_essentialImage (C : Type u)
     [Category.{v} C] [HasInitial C] [HasColimits C]
+    (S : C ⥤ Type v)
+    [Formalization.Books.Sheaves.Unit15.AlgebraicStructureType C S]
     {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C]
     (G : TopCat.Sheaf C X) :

@@ -79,6 +79,45 @@ abbrev conePower (P : ObjectProperty C) (n : ℕ) : ObjectProperty C :=
 def intervalLength (a b : ℤ) : ℕ :=
   Int.toNat (b - a + 1)
 
+private lemma add_prop_of_finite_biproduct {J : Type*} [Finite J]
+    (P : ObjectProperty C) (X : J → C) (hX : ∀ j, add P (X j)) :
+    add P (⨁ X) := by
+  letI := Fintype.ofFinite J
+  choose n A hA hX using hX
+  let e : ∀ j, (∐ A j) ≅ X j := fun j => Classical.choice (hX j)
+  let K := (Σ j, Fin (n j))
+  let eK : K ≃ Fin (Fintype.card K) := Fintype.equivFin K
+  let ASigma : K → C := fun p => A p.1 p.2
+  let B : Fin (Fintype.card K) → C := fun k => ASigma (eK.symm k)
+  have hB : ∀ k, P (B k) := by
+    intro k
+    exact hA (eK.symm k).1 (eK.symm k).2
+  let e₁ : (⨁ ASigma) ≅ (⨁ B) :=
+    biproduct.whiskerEquiv eK (fun p => eqToIso (by
+      dsimp [B]
+      exact congrArg ASigma (eK.symm_apply_apply p)))
+  let e₂ : (⨁ fun j => ⨁ A j) ≅ (⨁ ASigma) :=
+    by
+      dsimp [ASigma]
+      exact biproductBiproductIso (fun j => Fin (n j)) A
+  let e₃ : (⨁ fun j => ⨁ A j) ≅ (⨁ X) :=
+    biproduct.mapIso (fun j => biproduct.isoCoproduct (A j) ≪≫ e j)
+  refine ⟨Fintype.card K, B, hB, ⟨?_⟩⟩
+  exact (biproduct.isoCoproduct B).symm ≪≫ e₁.symm ≪≫ e₂.symm ≪≫ e₃
+
+private lemma add_isClosedUnderFiniteCoproducts (P : ObjectProperty C) :
+    (add P).IsClosedUnderFiniteCoproducts := by
+  refine ⟨fun J _ => ?_⟩
+  refine ⟨fun X ⟨h⟩ => ?_⟩
+  let F := h.diag
+  let f : J → C := F.obj ∘ Discrete.mk
+  let eF : F ≅ Discrete.functor f := Discrete.natIsoFunctor
+  let hc : IsColimit ((Cocone.precompose eF.hom).obj (biproduct.bicone f).toCocone) :=
+    (IsColimit.precomposeHomEquiv eF _).symm (biproduct.isColimit f)
+  have hB : add P (⨁ f) := add_prop_of_finite_biproduct P f (fun j => h.prop_diag_obj ⟨j⟩)
+  rcases hB with ⟨n, B, hB, ⟨eB⟩⟩
+  exact ⟨n, B, hB, ⟨eB ≪≫ (h.isColimit.coconePointUniqueUpToIso hc).symm⟩⟩
+
 end BasicOperations
 
 /-! ## Associativity and summand operations -/
@@ -107,14 +146,76 @@ theorem smd_smd_star_eq (P Q : ObjectProperty C) :
   ObjectProperty.retractClosure_extensionProduct_retractClosure_retractClosure P Q
 
 /-! `add(P) ⋆ add(Q)` is closed under finite direct sums. -/
+private lemma extensionProduct_isClosedUnderFiniteCoproducts
+    (P Q : ObjectProperty C) [P.IsClosedUnderFiniteCoproducts]
+    [Q.IsClosedUnderFiniteCoproducts] :
+    (star P Q).IsClosedUnderFiniteCoproducts := by
+  refine ⟨fun J _ => ?_⟩
+  refine ⟨fun X ⟨h⟩ => ?_⟩
+  let F := h.diag
+  let X' : J → C := F.obj ∘ Discrete.mk
+  let eF : F ≅ Discrete.functor X' := Discrete.natIsoFunctor
+  let hc : IsColimit ((Cocone.precompose eF.hom).obj
+      (biproduct.bicone X').toCocone) :=
+    (IsColimit.precomposeHomEquiv eF _).symm (biproduct.isColimit X')
+  choose Y Z f g k hT hP hQ using fun j => h.prop_diag_obj ⟨j⟩
+  let T : J → Triangle C := fun j => Triangle.mk (f j) (g j) (k j)
+  have hT' : ∀ j, T j ∈ distTriang C := hT
+  letI : P.IsClosedUnderIsomorphisms :=
+    ObjectProperty.IsClosedUnderBinaryCoproducts.closedUnderIsomorphisms P
+  letI : Q.IsClosedUnderIsomorphisms :=
+    ObjectProperty.IsClosedUnderBinaryCoproducts.closedUnderIsomorphisms Q
+  have hY : P (∏ᶜ Y) :=
+    P.prop_of_iso (biproduct.isoProduct Y)
+      (P.prop_of_isColimit (biproduct.isColimit Y) (fun j => hP j.as))
+  have hZ : Q (∏ᶜ Z) :=
+    Q.prop_of_iso (biproduct.isoProduct Z)
+      (Q.prop_of_isColimit (biproduct.isColimit Z) (fun j => hQ j.as))
+  have hprod : productTriangle T ∈ distTriang C := productTriangle_distinguished T hT'
+  have hstarProd : star P Q (∏ᶜ X') :=
+    ⟨_, _, _, _, _, hprod, hY, hZ⟩
+  have hstar : star P Q (⨁ X') :=
+    ObjectProperty.prop_of_iso (star P Q) (biproduct.isoProduct X').symm hstarProd
+  exact ObjectProperty.prop_of_iso (star P Q)
+    (h.isColimit.coconePointUniqueUpToIso hc).symm hstar
+
 theorem add_star_closedUnderDirectSums (P Q : ObjectProperty C) :
     (star (add P) (add Q)).IsClosedUnderFiniteCoproducts := by
-  sorry
+  letI : (add P).IsClosedUnderFiniteCoproducts := add_isClosedUnderFiniteCoproducts P
+  letI : (add Q).IsClosedUnderFiniteCoproducts := add_isClosedUnderFiniteCoproducts Q
+  exact extensionProduct_isClosedUnderFiniteCoproducts (add P) (add Q)
 
 /-! `smd(add(P))` is closed under finite direct sums. -/
+private lemma retractClosure_isClosedUnderFiniteCoproducts
+    (P : ObjectProperty C) [P.IsClosedUnderFiniteCoproducts] :
+    (smd P).IsClosedUnderFiniteCoproducts := by
+  refine ⟨fun J _ => ?_⟩
+  refine ⟨fun X ⟨h⟩ => ?_⟩
+  let F := h.diag
+  let X' : J → C := F.obj ∘ Discrete.mk
+  let eF : F ≅ Discrete.functor X' := Discrete.natIsoFunctor
+  let hc : IsColimit ((Cocone.precompose eF.hom).obj
+      (biproduct.bicone X').toCocone) :=
+    (IsColimit.precomposeHomEquiv eF _).symm (biproduct.isColimit X')
+  choose Y hY hr using fun j => h.prop_diag_obj ⟨j⟩
+  let r : ∀ j, Retract (X' j) (Y j) := fun j => Classical.choice (hr j)
+  have hY' : P (⨁ Y) :=
+    P.prop_of_isColimit (biproduct.isColimit Y) (fun j => hY j.as)
+  let hret : Retract (⨁ X') (⨁ Y) :=
+    { i := biproduct.map (fun j => (r j).i)
+      r := biproduct.map (fun j => (r j).r)
+      retract := by
+        apply biproduct.hom_ext
+        intro j
+        simp [Category.assoc, r] }
+  have hX' : smd P (⨁ X') := ObjectProperty.prop_retractClosure hY' hret
+  exact ObjectProperty.prop_of_iso (smd P)
+    (h.isColimit.coconePointUniqueUpToIso hc).symm hX'
+
 theorem smd_add_closedUnderDirectSums (P : ObjectProperty C) :
     (smd (add P)).IsClosedUnderFiniteCoproducts := by
-  sorry
+  letI : (add P).IsClosedUnderFiniteCoproducts := add_isClosedUnderFiniteCoproducts P
+  exact retractClosure_isClosedUnderFiniteCoproducts (add P)
 
 /-! `C_n` is strictly full. -/
 omit [CategoryTheory.IsTriangulated C] in
@@ -132,13 +233,40 @@ theorem conePower_isStableUnderRetracts (P : ObjectProperty C) {n : ℕ} :
 theorem conePower_closedUnderDirectSums (P : ObjectProperty C) {n : ℕ}
     (hn : 1 ≤ n) :
     (conePower P n).IsClosedUnderFiniteCoproducts := by
-  sorry
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hn)
+  have hstarPower : ∀ k : ℕ,
+      (starPower (add P) (Nat.succ k)).IsClosedUnderFiniteCoproducts := by
+    intro k
+    induction k with
+    | zero =>
+        simpa [starPower] using add_isClosedUnderFiniteCoproducts P
+    | succ k ih =>
+        have hEq : starPower (add P) (Nat.succ (Nat.succ k)) =
+            star (add P) (starPower (add P) (Nat.succ k)) := by
+          simp [starPower, ObjectProperty.extensionProductIter_succ]
+        rw [hEq]
+        letI : (add P).IsClosedUnderFiniteCoproducts :=
+          add_isClosedUnderFiniteCoproducts P
+        letI : (starPower (add P) (Nat.succ k)).IsClosedUnderFiniteCoproducts := ih
+        exact extensionProduct_isClosedUnderFiniteCoproducts
+          (add P) (starPower (add P) (Nat.succ k))
+  letI : (starPower (add P) (Nat.succ k)).IsClosedUnderFiniteCoproducts := hstarPower k
+  exact retractClosure_isClosedUnderFiniteCoproducts (starPower (add P) (Nat.succ k))
 
 /-! The source's concatenation law for the subcategories `C_n`. -/
 theorem conePower_add (P : ObjectProperty C) {n m : ℕ}
     (hn : 1 ≤ n) (hm : 1 ≤ m) :
     conePower P (n + m) = smd (star (conePower P n) (conePower P m)) := by
-  sorry
+  change smd ((add P).extensionProductIter ((n + m) - 1)) =
+    smd (star (smd ((add P).extensionProductIter (n - 1)))
+      (smd ((add P).extensionProductIter (m - 1))))
+  have hnm : (n + m) - 1 = n + (m - 1) := by omega
+  rw [hnm]
+  rw [ObjectProperty.extensionProductIter_add (P := add P)
+    (Nat.sub_add_cancel hn).symm]
+  exact (ObjectProperty.retractClosure_extensionProduct_retractClosure_retractClosure
+    ((add P).extensionProductIter (n - 1))
+    ((add P).extensionProductIter (m - 1))).symm
 
 end OperationsLaws
 
@@ -163,12 +291,33 @@ variable (F : C ⥤ D) [F.CommShift ℤ] [F.IsTriangulated]
 theorem functorImage_shiftWindow (P : ObjectProperty C) (a b : EInt) :
     functorImage F (shiftWindow P a b) =
       (shiftWindow (functorImage F P) a b).isoClosure := by
-  sorry
+  ext Y
+  unfold functorImage ObjectProperty.map ObjectProperty.isoClosure
+  constructor
+  · rintro ⟨X, hX, ⟨e⟩⟩
+    rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX
+    obtain ⟨i, ⟨Z, hZ⟩⟩ := hX
+    refine ⟨(shiftFunctor D (-(i : ℤ))).obj (F.obj Z), ?_, ⟨?_⟩⟩
+    · rw [shiftWindow]
+      exact (ObjectProperty.prop_iSup_iff _ _).2
+        ⟨i, ⟨F.obj Z, P.prop_map_obj F hZ⟩⟩
+    · exact e.symm ≪≫ asIso ((F.commShiftIso (-(i : ℤ))).hom.app Z)
+  · rintro ⟨X, hX, ⟨e⟩⟩
+    rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX
+    obtain ⟨i, ⟨A, hA⟩⟩ := hX
+    rcases hA with ⟨Z, hZ, ⟨eZ⟩⟩
+    refine ⟨(shiftFunctor C (-(i : ℤ))).obj Z, ?_, ⟨?_⟩⟩
+    · rw [shiftWindow]
+      exact (ObjectProperty.prop_iSup_iff _ _).2 ⟨i, ⟨Z, hZ⟩⟩
+    · exact asIso ((F.commShiftIso (-(i : ℤ))).hom.app Z) ≪≫
+        (shiftFunctor D (-(i : ℤ))).mapIso eZ ≪≫ e.symm
 
 /-! Exact functors preserve direct summands up to direct summands. -/
 theorem functorImage_smd (P : ObjectProperty C) :
     functorImage F (smd P) ≤ smd (functorImage F P) := by
-  sorry
+  rintro Y ⟨X, ⟨Z, hZ, ⟨r⟩⟩, ⟨e⟩⟩
+  refine ⟨F.obj Z, ⟨Z, hZ, ⟨Iso.refl _⟩⟩, ⟨?_⟩⟩
+  exact (Retract.ofIso e.symm).trans (r.map F)
 
 /-! Exact functors preserve finite direct sums up to finite direct sums. -/
 theorem functorImage_add (P : ObjectProperty C) :

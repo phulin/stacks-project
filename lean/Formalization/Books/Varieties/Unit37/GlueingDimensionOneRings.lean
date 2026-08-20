@@ -64,6 +64,19 @@ def tensorProductMapToField
   Algebra.TensorProduct.lift (algebraMap A K).toIntAlgHom B.val
     (fun _ _ => Commute.all _ _)
 
+/-- The canonical multiplication map `A ⊗[R] B → K` in the glueing
+situation, where `R = A ∩ B`.  The scalar algebra structures are the ones
+induced by the inclusions of the infimum subalgebra into `A` and `B`. -/
+def GlueingSituation.tensorProductMapOverR {K : Type u} [Field K]
+    (s : GlueingSituation K) :
+    (s.A : Type u) ⊗[s.R] (s.B : Type u) →ₐ[s.R] K :=
+  Algebra.TensorProduct.lift
+    { toRingHom := s.A.val
+      commutes' := by intro r; rfl }
+    { toRingHom := s.B.val
+      commutes' := by intro r; rfl }
+    (fun _ _ => Commute.all _ _)
+
 /-- The spectrum map induced by an inclusion of two `ℤ`-subalgebras. -/
 def specMapOfLe {K : Type u} [Field K]
     {S T : Subalgebra ℤ K} (h : S ≤ T) :
@@ -85,9 +98,9 @@ common field `K`.  The first clause says that the localization embeds in
 `B`; the second says that this embedding is local. -/
 def GlueingSituation.dominatesAtMaximal {K : Type u} [Field K]
     (s : GlueingSituation K) (m : MaximalSpectrum (s.A : Type u)) : Prop :=
-  (∀ a t : s.A, t ∉ m.asIdeal → (a : K) * (t : K)⁻¹ ∈ s.B) ∧
-    (∃ n : Ideal (s.B : Type u), n.IsMaximal ∧
-      ∀ a : s.A, a ∈ m.asIdeal →
+  ∃ n : Ideal (s.B : Type u), n.IsMaximal ∧
+    (∀ a t : s.A, t ∉ m.asIdeal → (a : K) * (t : K)⁻¹ ∈ s.B) ∧
+      (∀ a : s.A, a ∈ m.asIdeal ↔
         ∃ b : s.B, (b : K) = (a : K) ∧ b ∈ n)
 
 /-- Membership in the Jacobson radical of a subalgebra of `K`, for an element
@@ -130,7 +143,7 @@ abbrev minimalPrimeIntersection
 /-- Lemma `lemma-glue-valuation-ring`. -/
 theorem glue_valuation_ring
     {K : Type u} [Field K] (s : GlueingSituation K)
-    (hB : ValuationRing (s.B : Type u)) :
+    [ValuationRing (s.B : Type u)] :
     ∀ u : (s.A : Type u)ˣ,
       (u : K) ∈ s.R ∨ (u : K)⁻¹ ∈ s.R := by
   sorry
@@ -138,7 +151,7 @@ theorem glue_valuation_ring
 /-- Lemma `lemma-glue-separated`. -/
 theorem glue_separated
     {K : Type u} [Field K] (s : GlueingSituation K)
-    (hA_noetherian : IsNoetherianRing (s.A : Type u))
+    [IsNoetherianRing (s.A : Type u)]
     (hA_dimension : ringKrullDim (s.A : Type u) = 1) :
     (¬ Function.Surjective s.tensorProductMap) ↔
       ∃ O : Subalgebra ℤ K,
@@ -148,14 +161,14 @@ theorem glue_separated
 /-- Lemma `lemma-semi-local`. -/
 theorem semi_local
     {K : Type u} [Field K] (s : GlueingSituation K)
-    (hA_noetherian : IsNoetherianRing (s.A : Type u))
-    (hA_semilocal : Finite (MaximalSpectrum (s.A : Type u)))
+    [IsNoetherianRing (s.A : Type u)]
+    [Finite (MaximalSpectrum (s.A : Type u))]
     (hA_dimension : ringKrullDim (s.A : Type u) = 1)
-    (hB : IsDiscreteValuationRing (s.B : Type u)) :
+    [IsDiscreteValuationRing (s.B : Type u)] :
     ((¬ ∀ u : (s.A : Type u)ˣ, (u : K) ∈ s.R) ∧
       IsOpenImmersion s.specMapA ∧ IsOpenImmersion s.specMapB ∧
         Set.range s.specMapA.base ∪ Set.range s.specMapB.base = Set.univ ∧
-        Nonempty ((s.A : Type u) ⊗[s.R] (s.B : Type u) ≃ₐ[s.R] K)) ∨
+        Function.Bijective s.tensorProductMapOverR) ∨
     ((∀ u : (s.A : Type u)ˣ, (u : K) ∈ s.R) ∧
       (∃ m : MaximalSpectrum (s.A : Type u), s.dominatesAtMaximal m) ∧
       ¬ Function.Surjective s.tensorProductMap) := by
@@ -165,8 +178,7 @@ theorem semi_local
 theorem semi_local_dimension_one_conductor
     {B : Type u} [CommRing B] [IsDomain B]
     {K : Type v} [Field K] [Algebra B K] [IsFractionRing B K]
-    (hB_noetherian : IsNoetherianRing B)
-    (hB_semilocal : Finite (MaximalSpectrum B))
+    [IsNoetherianRing B] [Finite (MaximalSpectrum B)]
     (hB_dimension : ringKrullDim B = 1) :
     IsDedekindDomain (integralClosure B K) ∧
       Finite (MaximalSpectrum (integralClosure B K)) ∧
@@ -179,16 +191,16 @@ theorem semi_local_dimension_one_conductor
 /-- Lemma `lemma-semi-local-both-side`. -/
 theorem semi_local_both_side
     {K : Type u} [Field K] (s : GlueingSituation K)
-    (hA_noetherian : IsNoetherianRing (s.A : Type u))
-    (hA_semilocal : Finite (MaximalSpectrum (s.A : Type u)))
+    [IsNoetherianRing (s.A : Type u)]
+    [Finite (MaximalSpectrum (s.A : Type u))]
     (hA_dimension : ringKrullDim (s.A : Type u) = 1)
-    (hB_noetherian : IsNoetherianRing (s.B : Type u))
-    (hB_semilocal : Finite (MaximalSpectrum (s.B : Type u)))
+    [IsNoetherianRing (s.B : Type u)]
+    [Finite (MaximalSpectrum (s.B : Type u))]
     (hB_dimension : ringKrullDim (s.B : Type u) = 1)
     (h_surjective : Function.Surjective s.tensorProductMap) :
     IsOpenImmersion s.specMapA ∧ IsOpenImmersion s.specMapB ∧
       Set.range s.specMapA.base ∪ Set.range s.specMapB.base = Set.univ ∧
-      Nonempty ((s.A : Type u) ⊗[s.R] (s.B : Type u) ≃ₐ[s.R] K) := by
+      Function.Bijective s.tensorProductMapOverR := by
   sorry
 
 /-- Lemma `lemma-glue-a-bunch-of-local-rings`. -/

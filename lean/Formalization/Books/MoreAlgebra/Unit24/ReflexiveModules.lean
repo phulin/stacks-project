@@ -251,6 +251,151 @@ theorem dualEval_injective_iff_torsionFree
         g (Finsupp.lapply i ∘ₗ f)) hxy
     simpa [LinearMap.comp_apply, reflexivityMap_apply, Finsupp.lapply_apply] using hi
 
+private theorem exists_smul_dualMap_eq
+    {R M M' : Type*} [CommRing R] [IsDomain R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup M'] [Module R M'] [Module.Finite R M']
+    (f : M →ₗ[R] M') (hf : Function.Injective f)
+    (hM' : Module.IsTorsionFree R M') (φ : Module.Dual R M) :
+    ∃ a : nonZeroDivisors R, ∃ ψ : Module.Dual R M',
+      a • φ = f.dualMap ψ := by
+  obtain ⟨n, e, he⟩ :=
+    (Formalization.Books.MoreAlgebra.Unit22.finite_torsionFree_iff_embeds_finiteFree
+      (R := R) (M := M')).mp hM'
+  let i := e.comp f
+  have hi : Function.Injective i := he.comp hf
+  let N := LinearMap.range i
+  let eN : M ≃ₗ[R] N :=
+    LinearEquiv.ofBijective i.rangeRestrict
+      ⟨(i.injective_rangeRestrict_iff).2 hi, i.surjective_rangeRestrict⟩
+  let φN : N →ₗ[R] R := φ.comp eN.symm.toLinearMap
+  obtain ⟨a, ψ, hψ⟩ :=
+    exists_smul_dualRestrict (b := Finsupp.basisSingleOne) N φN
+  refine ⟨a, ψ.comp e, ?_⟩
+  ext x
+  have hx := congrArg (fun l : N →ₗ[R] R => l (eN x)) hψ
+  have heNx : (eN x : Fin n →₀ R) = i x := by
+    change ((i.rangeRestrict) x : Fin n →₀ R) = i x
+    rfl
+  change (a : R) • φ (eN.symm (eN x)) = ψ (eN x : Fin n →₀ R) at hx
+  rw [eN.symm_apply_apply, heNx] at hx
+  change (↑a : R) * φ x = ψ (e (f x))
+  simpa [i, LinearMap.dualMap_apply, LinearMap.comp_apply] using hx
+
+private theorem dualMap_dualMap_injective_of_injective_torsionFree
+    {R M M' : Type*} [CommRing R] [IsDomain R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup M'] [Module R M'] [Module.Finite R M']
+    (f : M →ₗ[R] M') (hf : Function.Injective f)
+    (hM' : Module.IsTorsionFree R M') :
+    Function.Injective f.dualMap.dualMap := by
+  intro z₁ z₂ hz
+  ext φ
+  obtain ⟨a, ψ, hψ⟩ := exists_smul_dualMap_eq f hf hM' φ
+  have hz' := congrArg (fun z : Module.Dual R (Module.Dual R M') => z ψ) hz
+  change z₁ (f.dualMap ψ) = z₂ (f.dualMap ψ) at hz'
+  have hz'' : z₁ (a • φ) = z₂ (a • φ) := by
+    rw [hψ]
+    exact hz'
+  have hz''' : (↑a : R) • z₁ φ = (↑a : R) • z₂ φ := by
+    calc
+      (↑a : R) • z₁ φ = z₁ ((↑a : R) • φ) := (z₁.map_smul _ _).symm
+      _ = z₁ (a • φ) := by rfl
+      _ = z₂ (a • φ) := hz''
+      _ = z₂ ((↑a : R) • φ) := by rfl
+      _ = (↑a : R) • z₂ φ := z₂.map_smul _ _
+  have hdiff : (↑a : R) • (z₁ φ - z₂ φ) = 0 := by
+    rw [smul_sub]
+    rw [sub_eq_zero]
+    exact hz'''
+  have hzero : z₁ φ - z₂ φ = 0 :=
+    ((Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance
+      (↑a : R) (z₁ φ - z₂ φ) hdiff).resolve_left
+      (nonZeroDivisors.ne_zero a.property))
+  exact sub_eq_zero.mp hzero
+
+private theorem dualMap_range_smul_mem_of_surjective
+    {R M F : Type*} [CommRing R] [IsDomain R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup F] [Module R F]
+    (p : F →ₗ[R] Module.Dual R M) (hp : Function.Surjective p)
+    (r : R) (z : Module.Dual R F)
+    (hrz : r • z ∈ LinearMap.range p.dualMap) :
+    r = 0 ∨ z ∈ LinearMap.range p.dualMap := by
+  by_cases hr : r = 0
+  · exact Or.inl hr
+  right
+  let K := LinearMap.ker p
+  obtain ⟨ψ, hψ⟩ := hrz
+  have hK : K ≤ LinearMap.ker z := by
+    intro x hx
+    apply LinearMap.mem_ker.mpr
+    have hkill : r • z x = 0 := by
+      change (r • z) x = 0
+      rw [← hψ]
+      change ψ (p x) = 0
+      rw [LinearMap.mem_ker.mp hx]
+      simp
+    exact (Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance r (z x)
+      hkill).resolve_left hr
+  let e := p.quotKerEquivOfSurjective hp
+  let zbar : (F ⧸ K) →ₗ[R] R := K.liftQ z hK
+  let ψ' : Module.Dual R (Module.Dual R M) := zbar.comp e.symm.toLinearMap
+  have hψ'z : ψ'.comp p = z := by
+    ext x
+    simp [ψ', zbar, e]
+  exact ⟨ψ', hψ'z⟩
+
+private theorem dualMap_cokernel_isTorsionFree_of_surjective
+    {R M F : Type*} [CommRing R] [IsDomain R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup F] [Module R F]
+    (p : F →ₗ[R] Module.Dual R M) (hp : Function.Surjective p) :
+    Module.IsTorsionFree R
+      (Module.Dual R F ⧸ LinearMap.range p.dualMap) := by
+  apply Module.IsTorsionFree.of_smul_eq_zero
+  intro r z hrz
+  let L := LinearMap.range p.dualMap
+  obtain ⟨z, rfl⟩ := (Submodule.Quotient.mk_surjective (p := L)) z
+  change L.mkQ (r • z) = 0 at hrz
+  rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hrz
+  obtain hzero | hz := dualMap_range_smul_mem_of_surjective p hp r z hrz
+  · exact Or.inl hzero
+  · exact Or.inr ((Submodule.Quotient.mk_eq_zero L).2 hz)
+
+private theorem linearEquiv_comp_dualMap_cokernel_isTorsionFree_of_surjective
+    {R M F G : Type*} [CommRing R] [IsDomain R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup F] [Module R F]
+    [AddCommGroup G] [Module R G]
+    (p : F →ₗ[R] Module.Dual R M) (hp : Function.Surjective p)
+    (d : Module.Dual R F ≃ₗ[R] G) :
+    Module.IsTorsionFree R
+      (G ⧸ LinearMap.range (d.toLinearMap.comp p.dualMap)) := by
+  apply Module.IsTorsionFree.of_smul_eq_zero
+  intro r z hrz
+  by_cases hr : r = 0
+  · exact Or.inl hr
+  right
+  let L := LinearMap.range (d.toLinearMap.comp p.dualMap)
+  obtain ⟨z, rfl⟩ := (Submodule.Quotient.mk_surjective (p := L)) z
+  change L.mkQ (r • z) = 0 at hrz
+  rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hrz
+  obtain ⟨ψ, hψ⟩ := hrz
+  have hmem : r • d.symm z ∈ LinearMap.range p.dualMap := by
+    refine ⟨ψ, ?_⟩
+    apply d.injective
+    rw [map_smul, d.apply_symm_apply]
+    exact hψ
+  obtain hzero | hz := dualMap_range_smul_mem_of_surjective p hp r (d.symm z) hmem
+  · exact (hr hzero).elim
+  · apply (Submodule.Quotient.mk_eq_zero L).2
+    obtain ⟨ψ, hψ⟩ := hz
+    refine ⟨ψ, ?_⟩
+    change d (p.dualMap ψ) = z
+    rw [hψ]
+    exact d.apply_symm_apply _
+
 /-- Over a discrete valuation ring, the natural map is surjective for every
 finite module, including modules with torsion. -/
 theorem dualEval_surjective_of_discreteValuationRing
@@ -258,9 +403,198 @@ theorem dualEval_surjective_of_discreteValuationRing
     [IsDiscreteValuationRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] :
     Function.Surjective (reflexivityMap (R := R) (M := M)) := by
-  sorry
+  let hpid :=
+    (IsDiscreteValuationRing.iff_pid_with_one_nonzero_prime R).mp
+      (inferInstance : IsDiscreteValuationRing R)
+  letI : IsPrincipalIdealRing R := hpid.1
+  let T := Submodule.torsion R M
+  let Q := M ⧸ T
+  let q : M →ₗ[R] Q := T.mkQ
+  have hq : Function.Surjective q := T.mkQ_surjective
+  have hQref : Reflexive R Q := inferInstance
+  have hqdual : Function.Injective q.dualMap :=
+    LinearMap.dualMap_injective_of_surjective hq
+  have hqdual_surj : Function.Surjective q.dualMap := by
+    intro φ
+    let hT : T ≤ LinearMap.ker φ := by
+      intro x hx
+      obtain ⟨a, ha⟩ := (Submodule.mem_torsion_iff (x := (x : M))).mp hx
+      apply LinearMap.mem_ker.mpr
+      have hax : (a : R) • φ (x : M) = 0 := by
+        calc
+          (a : R) • φ (x : M) = φ ((a : R) • (x : M)) :=
+            (φ.map_smul _ _).symm
+          _ = 0 := (congrArg φ ha).trans (map_zero φ)
+      exact ((Module.isTorsionFree_iff_smul_eq_zero.mp inferInstance
+        (a : R) (φ (x : M)) hax).resolve_left
+        (nonZeroDivisors.ne_zero a.property))
+    refine ⟨T.liftQ φ hT, ?_⟩
+    ext x
+    change (T.liftQ φ hT) (T.mkQ x) = φ x
+    exact congrArg (fun l : M →ₗ[R] R => l x) (T.liftQ_mkQ φ hT)
+  let e : Module.Dual R Q ≃ₗ[R] Module.Dual R M :=
+    LinearEquiv.ofBijective q.dualMap ⟨hqdual, hqdual_surj⟩
+  intro z
+  let zQ : Module.Dual R (Module.Dual R Q) := z.comp e.toLinearMap
+  obtain ⟨y, hy⟩ := hQref.bijective_dual_eval'.surjective zQ
+  obtain ⟨m, hm⟩ := hq y
+  refine ⟨m, ?_⟩
+  ext φ
+  obtain ⟨ψ, hψ⟩ := e.surjective φ
+  have hzQ := congrArg (fun z' : Module.Dual R (Module.Dual R Q) => z' ψ) hy
+  have hzQ' : ψ y = z (e ψ) := by
+    simpa [zQ] using hzQ
+  have hz : z φ = ψ y := by
+    rw [← hψ]
+    exact hzQ'.symm
+  calc
+    φ m = (e ψ) m := by rw [hψ]
+    _ = ψ (q m) := by rfl
+    _ = ψ y := by rw [hm]
+    _ = z φ := hz.symm
 
 /-! ## Locality and exact sequences -/
+
+private theorem localized_reflexivityMap_naturality
+    {R M : Type*} [CommRing R] [IsDomain R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Module.FinitePresentation R M]
+    [Module.FinitePresentation R (Module.Dual R M)] (S : Submonoid R) :
+    let A := Localization S
+    let L := LocalizedModule S M
+    let lM := LocalizedModule.mkLinearMap S M
+    let lDD := LocalizedModule.mkLinearMap S
+      (Module.Dual R (Module.Dual R M))
+    let eD : LocalizedModule S (Module.Dual R M) ≃ₗ[A]
+        Module.Dual A L :=
+      (Module.FinitePresentation.linearEquivMapExtendScalars
+        (M := M) (N := R) S).extendScalarsOfIsLocalization S A
+    let eDD : LocalizedModule S (Module.Dual R (Module.Dual R M)) ≃ₗ[A]
+        Module.Dual A (LocalizedModule S (Module.Dual R M)) :=
+      (Module.FinitePresentation.linearEquivMapExtendScalars
+        (M := Module.Dual R M) (N := R) S).extendScalarsOfIsLocalization S A
+    let e : LocalizedModule S (Module.Dual R (Module.Dual R M)) ≃ₗ[A]
+        Module.Dual A (Module.Dual A L) :=
+      eDD.trans eD.dualMap.symm
+    e.toLinearMap.comp
+          (IsLocalizedModule.mapExtendScalars S lM lDD A
+            (reflexivityMap (R := R) (M := M))) =
+      reflexivityMap (R := A) (M := L) := by
+  let A := Localization S
+  let L := LocalizedModule S M
+  let lM := LocalizedModule.mkLinearMap S M
+  let lDD := LocalizedModule.mkLinearMap S
+    (Module.Dual R (Module.Dual R M))
+  let eD : LocalizedModule S (Module.Dual R M) ≃ₗ[A]
+      Module.Dual A L :=
+    (Module.FinitePresentation.linearEquivMapExtendScalars
+      (M := M) (N := R) S).extendScalarsOfIsLocalization S A
+  let eDD : LocalizedModule S (Module.Dual R (Module.Dual R M)) ≃ₗ[A]
+      Module.Dual A (LocalizedModule S (Module.Dual R M)) :=
+    (Module.FinitePresentation.linearEquivMapExtendScalars
+      (M := Module.Dual R M) (N := R) S).extendScalarsOfIsLocalization S A
+  let e := eDD.trans eD.dualMap.symm
+  change e.toLinearMap.comp
+      (IsLocalizedModule.mapExtendScalars S lM lDD A
+        (reflexivityMap (R := R) (M := M))) =
+    reflexivityMap (R := A) (M := L)
+  apply LinearMap.restrictScalars_injective R
+  let eR := e.restrictScalars R
+  apply IsLocalizedModule.linearMap_ext S
+    (LocalizedModule.mkLinearMap S M)
+    (f' := eR.toLinearMap.comp (LocalizedModule.mkLinearMap S
+      (Module.Dual R (Module.Dual R M))))
+  ext m φ
+  let j := reflexivityMap (R := R) (M := M)
+  let lD := LocalizedModule.mkLinearMap S (Module.Dual R M)
+  let G : LocalizedModule S (Module.Dual R M) →ₗ[A] A :=
+    (reflexivityMap (R := A) (M := L) (lM m)).comp eD.toLinearMap
+  have hfun : eDD (lDD (j m)) = G := by
+    apply LinearMap.restrictScalars_injective R
+    apply IsLocalizedModule.linearMap_ext S lD
+      (f' := Algebra.linearMap R A)
+    ext ψ
+    have heD :
+        eD (lD ψ) =
+          IsLocalizedModule.mapExtendScalars S lM
+            (LocalizedModule.mkLinearMap S R) A ψ := by
+      change
+        (Module.FinitePresentation.linearEquivMapExtendScalars S)
+            (LocalizedModule.mkLinearMap S
+              (Module.Dual R M) ψ) =
+          IsLocalizedModule.mapExtendScalars S lM
+            (LocalizedModule.mkLinearMap S R) A ψ
+      rw [Module.FinitePresentation.linearEquivMapExtendScalars_apply]
+    have heDD :
+        eDD (lDD (j m)) =
+          IsLocalizedModule.mapExtendScalars S lD
+            (LocalizedModule.mkLinearMap S R) A (j m) := by
+      change
+        (Module.FinitePresentation.linearEquivMapExtendScalars S)
+            (LocalizedModule.mkLinearMap S
+              (Module.Dual R (Module.Dual R M)) (j m)) =
+          IsLocalizedModule.mapExtendScalars S lD
+            (LocalizedModule.mkLinearMap S R) A (j m)
+      rw [Module.FinitePresentation.linearEquivMapExtendScalars_apply]
+    rw [heDD]
+    change
+      (IsLocalizedModule.mapExtendScalars S lD
+        (LocalizedModule.mkLinearMap S R) A (j m)) (lD ψ) =
+        (reflexivityMap (R := A) (M := L) (lM m)) (eD (lD ψ))
+    rw [heD]
+    change
+      (IsLocalizedModule.map S lD (LocalizedModule.mkLinearMap S R) (j m))
+          (lD ψ) =
+        (IsLocalizedModule.map S lM (LocalizedModule.mkLinearMap S R) ψ)
+          (lM m)
+    rw [IsLocalizedModule.map_apply, IsLocalizedModule.map_apply]
+    rfl
+  simp only [LinearMap.comp_apply, LinearMap.coe_restrictScalars]
+  rw [IsLocalizedModule.mapExtendScalars_apply_apply]
+  rw [IsLocalizedModule.map_apply]
+  change (eD.dualMap.symm (eDD (lDD (j m)))) φ = φ (lM m)
+  rw [hfun]
+  rw [LinearEquiv.dualMap_symm]
+  simp [G]
+
+private theorem reflexive_localized_iff_map_bijective
+    {R M : Type*} [CommRing R] [IsDomain R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Module.FinitePresentation R M]
+    [Module.FinitePresentation R (Module.Dual R M)] (S : Submonoid R) :
+    Reflexive (Localization S) (LocalizedModule S M) ↔
+      Function.Bijective
+        (LocalizedModule.map S (reflexivityMap (R := R) (M := M))) := by
+  let A := Localization S
+  let L := LocalizedModule S M
+  let lM := LocalizedModule.mkLinearMap S M
+  let lDD := LocalizedModule.mkLinearMap S
+    (Module.Dual R (Module.Dual R M))
+  let eD : LocalizedModule S (Module.Dual R M) ≃ₗ[A]
+      Module.Dual A L :=
+    (Module.FinitePresentation.linearEquivMapExtendScalars
+      (M := M) (N := R) S).extendScalarsOfIsLocalization S A
+  let eDD : LocalizedModule S (Module.Dual R (Module.Dual R M)) ≃ₗ[A]
+      Module.Dual A (LocalizedModule S (Module.Dual R M)) :=
+    (Module.FinitePresentation.linearEquivMapExtendScalars
+      (M := Module.Dual R M) (N := R) S).extendScalarsOfIsLocalization S A
+  let e := eDD.trans eD.dualMap.symm
+  have hnat :
+      e.toLinearMap.comp
+          (IsLocalizedModule.mapExtendScalars S lM lDD A
+            (reflexivityMap (R := R) (M := M))) =
+        reflexivityMap (R := A) (M := L) :=
+    localized_reflexivityMap_naturality S
+  rw [reflexive_iff_bijective_reflexivityMap]
+  rw [← hnat]
+  change Function.Bijective
+      (e.toLinearMap.comp
+        (IsLocalizedModule.mapExtendScalars S lM lDD A
+          (reflexivityMap (R := R) (M := M)))) ↔
+    Function.Bijective
+      (IsLocalizedModule.mapExtendScalars S lM lDD A
+        (reflexivityMap (R := R) (M := M)))
+  exact Function.Bijective.of_comp_iff' e.bijective _
 
 /-- Reflexivity of a finite module over a Noetherian domain can be checked at
 all primes or at all maximal ideals. -/
@@ -275,7 +609,48 @@ theorem reflexive_localization_iff
        ∀ m : MaximalSpectrum R,
          Reflexive (Localization.AtPrime m.asIdeal)
            (LocalizedModule.AtPrime m.asIdeal M)] := by
-  sorry
+  letI : Module.FinitePresentation R M := finitePresentation_of_finite R M
+  letI : Module.FinitePresentation R (Module.Dual R M) :=
+    finitePresentation_of_finite R (Module.Dual R M)
+  apply List.tfae_of_forall (Reflexive R M)
+  intro a ha
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at ha
+  rcases ha with rfl | rfl | rfl
+  · exact Iff.rfl
+  · constructor
+    · intro hp
+      apply (reflexive_iff_bijective_reflexivityMap (R := R) (M := M)).2
+      apply bijective_of_localized_maximal
+      intro J hJ
+      apply (reflexive_localized_iff_map_bijective
+        (R := R) (M := M) J.primeCompl).mp
+      exact hp ⟨J, inferInstance⟩
+    · intro hM p
+      apply (reflexive_localized_iff_map_bijective
+        (R := R) (M := M) p.asIdeal.primeCompl).mpr
+      exact ⟨LocalizedModule.map_injective p.asIdeal.primeCompl
+          (reflexivityMap (R := R) (M := M))
+          hM.bijective_dual_eval'.injective,
+        LocalizedModule.map_surjective p.asIdeal.primeCompl
+          (reflexivityMap (R := R) (M := M))
+          hM.bijective_dual_eval'.surjective⟩
+  · constructor
+    · intro hm
+      apply (reflexive_iff_bijective_reflexivityMap (R := R) (M := M)).2
+      apply bijective_of_localized_maximal
+      intro J hJ
+      apply (reflexive_localized_iff_map_bijective
+        (R := R) (M := M) J.primeCompl).mp
+      exact hm ⟨J, hJ⟩
+    · intro hM m
+      apply (reflexive_localized_iff_map_bijective
+        (R := R) (M := M) m.asIdeal.primeCompl).mpr
+      exact ⟨LocalizedModule.map_injective m.asIdeal.primeCompl
+          (reflexivityMap (R := R) (M := M))
+          hM.bijective_dual_eval'.injective,
+        LocalizedModule.map_surjective m.asIdeal.primeCompl
+          (reflexivityMap (R := R) (M := M))
+          hM.bijective_dual_eval'.surjective⟩
 
 /-- In an exact sequence `0 → M → M' → M''`, reflexivity descends from the
 middle term when the right term is torsion free. -/
@@ -291,7 +666,58 @@ theorem reflexive_of_exact
     (hM' : Reflexive R M')
     (hM'' : Module.IsTorsionFree R M'') :
     Reflexive R M := by
-  sorry
+  let jM := reflexivityMap (R := R) (M := M)
+  let jM' := reflexivityMap (R := R) (M := M')
+  let jM'' := reflexivityMap (R := R) (M := M'')
+  have hgf : g.comp f = 0 := by
+    ext x
+    exact (hfg (f x)).mpr ⟨x, rfl⟩
+  have htop : Function.Injective f.dualMap.dualMap :=
+    dualMap_dualMap_injective_of_injective_torsionFree f hf
+      (reflexive_torsionFree hM')
+  have hinj : Function.Injective jM := by
+    intro x y hxy
+    apply hf
+    apply hM'.bijective_dual_eval'.injective
+    ext φ
+    have hφ := congrArg
+      (fun z : Module.Dual R (Module.Dual R M) => z (f.dualMap φ)) hxy
+    simpa [jM, jM', reflexivityMap_apply, LinearMap.dualMap_apply,
+      LinearMap.comp_apply] using hφ
+  have hsurj : Function.Surjective jM := by
+    intro z
+    obtain ⟨m', hm'⟩ := hM'.bijective_dual_eval'.surjective
+      (f.dualMap.dualMap z)
+    have hgzero : g m' = 0 := by
+      apply (dualEval_injective_iff_torsionFree (R := R) (M := M'')).mpr hM''
+      ext φ
+      have hφ := congrArg
+        (fun z' : Module.Dual R (Module.Dual R M') => z' (g.dualMap φ)) hm'
+      have hleft : φ (g m') =
+          (f.dualMap.dualMap z) (g.dualMap φ) := by
+        simpa [jM', reflexivityMap_apply, LinearMap.dualMap_apply] using hφ
+      have htarget : φ (g m') = 0 := by
+        rw [hleft]
+        change z (f.dualMap (g.dualMap φ)) = 0
+        rw [show f.dualMap (g.dualMap φ) = 0 by
+          ext x
+          change φ (g (f x)) = 0
+          rw [← LinearMap.comp_apply]
+          simpa [LinearMap.comp_apply] using
+            congrArg φ (congrArg (fun k : M →ₗ[R] M'' => k x) hgf)]
+        simp
+      simpa [jM'', reflexivityMap_apply] using htarget
+    obtain ⟨m, hm⟩ := (hfg m').mp hgzero
+    refine ⟨m, ?_⟩
+    apply htop
+    calc
+      f.dualMap.dualMap (jM m) = jM' (f m) := by
+        ext φ
+        rfl
+      _ = jM' m' := by rw [hm]
+      _ = f.dualMap.dualMap z := hm'
+  exact (reflexive_iff_bijective_reflexivityMap (R := R) (M := M)).2
+    ⟨hinj, hsurj⟩
 
 /-- Characterization of finite reflexive modules by a finite-free presentation
 whose cokernel is torsion free. -/
@@ -303,7 +729,43 @@ theorem reflexive_iff_finiteFree_presentation
         Function.Injective f ∧
           Module.IsTorsionFree R
             ((Fin n →₀ R) ⧸ LinearMap.range f) := by
-  sorry
+  constructor
+  · intro hM
+    obtain ⟨n, p₀, hp₀⟩ := Module.Finite.exists_fin' R (Module.Dual R M)
+    let u := Finsupp.linearEquivFunOnFinite R R (Fin n)
+    let p : (Fin n →₀ R) →ₗ[R] Module.Dual R M := p₀.comp u.toLinearMap
+    have hp : Function.Surjective p := by
+      intro φ
+      obtain ⟨v, hv⟩ := hp₀ φ
+      refine ⟨u.symm v, ?_⟩
+      simpa [p, u] using hv
+    let b := (Finsupp.basisSingleOne (R := R) (ι := Fin n)).dualBasis
+    let d : Module.Dual R (Fin n →₀ R) ≃ₗ[R] (Fin n →₀ R) :=
+      b.equivFun.trans u.symm
+    let j := reflexivityMap (R := R) (M := M)
+    let q := d.toLinearMap.comp p.dualMap
+    let f := q.comp j
+    have hf : Function.Injective f := by
+      exact (d.injective.comp (LinearMap.dualMap_injective_of_surjective hp)).comp
+        hM.bijective_dual_eval'.injective
+    have hrange : LinearMap.range f = LinearMap.range q := by
+      apply le_antisymm
+      · rintro _ ⟨m, rfl⟩
+        exact ⟨j m, rfl⟩
+      · rintro _ ⟨z, rfl⟩
+        obtain ⟨m, hm⟩ := hM.bijective_dual_eval'.surjective z
+        refine ⟨m, ?_⟩
+        rw [← hm]
+        rfl
+    refine ⟨n, f, hf, ?_⟩
+    rw [hrange]
+    exact linearEquiv_comp_dualMap_cokernel_isTorsionFree_of_surjective p hp d
+  · rintro ⟨n, f, hf, hQ⟩
+    apply reflexive_of_exact f (LinearMap.range f).mkQ hf
+    · exact LinearMap.exact_iff.mpr (by
+        rw [Submodule.ker_mkQ])
+    · exact ⟨Module.bijective_dual_eval R (Fin n →₀ R)⟩
+    · exact hQ
 
 /-- Flat base change of a finite reflexive module between Noetherian domains
 is finite and reflexive. -/

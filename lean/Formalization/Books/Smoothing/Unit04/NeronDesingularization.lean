@@ -1,7 +1,6 @@
-import Formalization.Books.Smoothing.Unit03
+import Formalization.Books.Smoothing.Unit03.Presentations
 import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
 import Formalization.Books.Algebra.Unit134.NaiveCotangentComplex
-import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 import Formalization.Books.MoreAlgebra.Unit112
 import Mathlib.LinearAlgebra.Dimension.Finite
 import Mathlib.RingTheory.Ideal.Quotient.Operations
@@ -22,7 +21,6 @@ proving stage.
 namespace Formalization.Books.Smoothing.Unit04
 
 open Set
-open Formalization.Books.Algebra.Unit127
 open Formalization.Books.Algebra.Unit131
 open Formalization.Books.Algebra.Unit137
 open Formalization.Books.MoreAlgebra.Unit112
@@ -92,6 +90,20 @@ def NeronSituation.qPrime
     (S : NeronSituation R A Λ) : PrimeSpectrum A :=
   ⟨S.q, RingHom.ker_isPrime S.mapToLambda⟩
 
+/- The kernel of the generic-point map is contained in the prime above the
+   closed point, as in the source's notation `𝔮 ⊂ 𝔭`. -/
+theorem NeronSituation.q_le_p
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    (S : NeronSituation R A Λ) : S.q ≤ S.p := by
+  intro x hx
+  change S.mapToLambda x ∈ IsLocalRing.maximalIdeal Λ
+  change S.mapToLambda x = 0 at hx
+  rw [hx]
+  exact (IsLocalRing.maximalIdeal Λ).zero_mem
+
 /-- The canonical affine Néron blowup chart `A[p/π]`. -/
 abbrev neronBlowupAlgebra
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
@@ -149,7 +161,11 @@ theorem NeronBlowupData.q'_le_p'
     [Algebra R A] [Algebra R Λ]
     {S : NeronSituation R A Λ} {π : R} (D : NeronBlowupData S π) :
     D.q' ≤ D.p' := by
-  sorry
+  intro x hx
+  change D.mapToLambda x ∈ IsLocalRing.maximalIdeal Λ
+  change D.mapToLambda x = 0 at hx
+  rw [hx]
+  exact (IsLocalRing.maximalIdeal Λ).zero_mem
 
 /-- The affine blowup is regular in the selected denominator. -/
 theorem neronBlowup_denominator_isRegular
@@ -273,12 +289,13 @@ theorem neronBlowup_functorial
 
 /-! ## Smoothness of one blowup -/
 
-/-- A short exact sequence interface retaining the zero, injective, exact,
-and surjective assertions in the displayed source sequence. -/
+/- The displayed sequence is a sequence of modules, so its maps are recorded
+   as additive homomorphisms.  This retains the exactness interface without
+   inventing a coefficient-ring action on the localized quotient term. -/
 structure ShortExactSequence
-    {M N P : Type u} [Zero P] where
-  left : M → N
-  right : N → P
+    {M N P : Type u} [AddCommGroup M] [AddCommGroup N] [AddCommGroup P] where
+  left : M →+ N
+  right : N →+ P
   left_injective : Function.Injective left
   exact : Function.Exact left right
   right_surjective : Function.Surjective right
@@ -475,14 +492,6 @@ theorem dvr_extension_regular_iff
             Algebra.IsSeparable K L) := by
   sorry
 
-/-- A ring map is an ind-smooth map when it is a filtered colimit of smooth
-finite-type stages, expressed with the canonical under-category colimit data.
--/
-def IsFilteredColimitOfSmoothAlgebras
-    {R A : Type u} [CommRing R] [CommRing A] (f : R →+* A) : Prop :=
-  Nonempty (FilteredAlgebraColimitIn f
-    {X | RingHom.Smooth X.hom.hom})
-
 /-- Unramified extensions of DVRs are filtered colimits of smooth algebras. -/
 theorem neron_colimit
     {R Λ K L : Type u} [CommRing R] [CommRing Λ] [Field K] [Field L]
@@ -494,7 +503,8 @@ theorem neron_colimit
     (hres : letI := residueFieldAlgebra E
       Algebra.IsSeparable (DVRResidueField R) (DVRResidueField Λ))
     (hfrac : Algebra.IsSeparable K L) :
-    IsFilteredColimitOfSmoothAlgebras (algebraMap R Λ) := by
+    Formalization.Books.Smoothing.Unit03.IsFilteredColimitOfSmooth
+      (algebraMap R Λ) := by
   sorry
 
 end

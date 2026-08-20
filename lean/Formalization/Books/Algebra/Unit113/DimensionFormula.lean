@@ -263,7 +263,113 @@ theorem finite_in_codimension_one
      `I.minimalPrimes` by step 3, which proves the first conjunct.  Pair it with
      the height statement from step 2.
   -/
-  sorry
+  let : Algebra A B := f.toAlgebra
+  let : Algebra.FiniteType A B := hfinite
+  let : IsNoetherianRing B := Algebra.FiniteType.isNoetherianRing A B
+
+  have htrdeg : Algebra.trdeg A B = 0 := by
+    let : Algebra (FractionRing A) (FractionRing B) :=
+      (fractionFieldMap f hinj).toAlgebra
+    let : FiniteDimensional (FractionRing A) (FractionRing B) := hfraction
+    let : Algebra A (FractionRing B) :=
+      ((algebraMap B (FractionRing B)).comp f).toAlgebra
+    let : SMul A (FractionRing B) := Algebra.toSMul
+    let : SMul B (FractionRing B) := Algebra.toSMul
+    let : SMul (FractionRing A) (FractionRing B) := Algebra.toSMul
+    let : IsScalarTower A B (FractionRing B) :=
+      IsScalarTower.of_algebraMap_eq' rfl
+    let : IsScalarTower A (FractionRing A) (FractionRing B) :=
+      IsScalarTower.of_algebraMap_eq' (by
+        ext x
+        change algebraMap B (FractionRing B) (f x) =
+          IsLocalization.map (M := nonZeroDivisors A) (T := nonZeroDivisors B)
+            (FractionRing B) f (nonZeroDivisors_le_comap_nonZeroDivisors_of_injective f hinj)
+            (algebraMap A (FractionRing A) x)
+        rw [IsLocalization.map_eq])
+    let : Algebra.IsAlgebraic A (FractionRing A) :=
+      IsLocalization.isAlgebraic (FractionRing A) (nonZeroDivisors A)
+    let : Algebra.IsAlgebraic (FractionRing A) (FractionRing B) :=
+      Algebra.IsAlgebraic.of_finite (FractionRing A) (FractionRing B)
+    let : Algebra.IsAlgebraic A (FractionRing B) :=
+      Algebra.IsAlgebraic.trans A (FractionRing A) (FractionRing B)
+    let : Algebra.IsAlgebraic A B :=
+      Algebra.IsAlgebraic.of_injective
+        (IsScalarTower.toAlgHom A B (FractionRing B))
+        (FaithfulSMul.algebraMap_injective B (FractionRing B))
+    exact trdeg_eq_zero
+
+  have hpne : p.asIdeal ≠ (⊥ : Ideal A) :=
+    Ideal.ne_bot_of_height_eq_one hp
+
+  have hheight : ∀ q : PrimeSpectrum B,
+      PrimeSpectrum.comap f q = p → q.asIdeal.height = 1 := by
+    intro q hq
+    let : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+      (residueFieldMapAt f p q hq).toAlgebra
+    have hdim := (dimension_formula f hfinite hinj p q hq).1
+    have hdim' : q.asIdeal.height ≤ 1 := by
+      have hdim'' : q.asIdeal.height ≤ 1 -
+          Cardinal.toENat (Algebra.trdeg p.asIdeal.ResidueField q.asIdeal.ResidueField) := by
+        simpa [htrdeg, hp] using hdim
+      exact hdim''.trans tsub_le_self
+    have hqne : q.asIdeal ≠ (⊥ : Ideal B) := by
+      intro hqbot
+      have hpc : q.asIdeal.comap f = p.asIdeal := by
+        simpa [PrimeSpectrum.comap_asIdeal] using
+          congrArg PrimeSpectrum.asIdeal hq
+      apply hpne
+      rw [← hpc, hqbot, Ideal.comap_bot_of_injective f hinj]
+    apply le_antisymm hdim'
+    exact (Order.one_le_iff_ne_zero.mpr (by
+      simpa [Ideal.height_eq_zero_iff_eq_bot] using hqne))
+
+  obtain ⟨a, ha, ha0⟩ :=
+    Submodule.exists_mem_ne_zero_of_ne_bot hpne
+  let I : Ideal B := Ideal.span {f a}
+  have hfa0 : f a ≠ 0 := by
+    intro h
+    apply ha0
+    apply hinj
+    simpa using h
+  have hfa_mem (q : PrimeSpectrum B) (hq : PrimeSpectrum.comap f q = p) :
+      f a ∈ q.asIdeal := by
+    have hpc : q.asIdeal.comap f = p.asIdeal := by
+      simpa [PrimeSpectrum.comap_asIdeal] using
+        congrArg PrimeSpectrum.asIdeal hq
+    exact Ideal.mem_comap.mp (hpc.symm ▸ ha)
+  by_cases hunit : IsUnit (f a)
+  · have hfinite_fibre : {q : PrimeSpectrum B | PrimeSpectrum.comap f q = p} = ∅ := by
+      ext q
+      constructor
+      · intro hq
+        have hIq : I ≤ q.asIdeal := by
+          apply Ideal.span_le.2
+          simpa [I] using hfa_mem q hq
+        have hItop : I = ⊤ := by
+          simpa [I] using (Ideal.span_singleton_eq_top.mpr hunit)
+        exact q.isPrime.ne_top (top_unique (hItop ▸ hIq))
+      · simp
+    exact ⟨hfinite_fibre ▸ Set.finite_empty, hheight⟩
+  · have hIheight : I.height = 1 := by
+      dsimp [I]
+      exact Ideal.height_span_singleton_eq_one_of_mem_nonZeroDivisors
+        (mem_nonZeroDivisors_of_ne_zero hfa0) hunit
+    have hminimal (q : PrimeSpectrum B)
+        (hq : PrimeSpectrum.comap f q = p) : q.asIdeal ∈ I.minimalPrimes := by
+      let := q.isPrime
+      apply Ideal.mem_minimalPrimes_of_height_le
+        (Ideal.span_le.2 (by simpa [I] using hfa_mem q hq))
+      rw [hheight q hq, hIheight]
+    have himage : (fun q : PrimeSpectrum B => q.asIdeal) ''
+        {q : PrimeSpectrum B | PrimeSpectrum.comap f q = p} ⊆ I.minimalPrimes := by
+      rintro _ ⟨q, hq, rfl⟩
+      exact hminimal q hq
+    have himage_finite : ((fun q : PrimeSpectrum B => q.asIdeal) ''
+        {q : PrimeSpectrum B | PrimeSpectrum.comap f q = p}).Finite :=
+      I.finite_minimalPrimes_of_isNoetherianRing.subset himage
+    refine ⟨Set.Finite.of_finite_image himage_finite ?_, hheight⟩
+    intro q hq q' hq' heq
+    exact PrimeSpectrum.ext heq
 
 end
 

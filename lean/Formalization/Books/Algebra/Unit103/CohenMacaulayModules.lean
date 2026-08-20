@@ -844,6 +844,33 @@ abbrev polynomialModuleExtension
     [AddCommGroup M] [Module R M] (n : ℕ) : Type max u v :=
   MvPolynomial (Fin n) R ⊗[R] M
 
+/-- Full support is preserved by polynomial extension.  Keeping this next to
+`polynomialModuleExtension` isolates the support calculation from the depth
+argument in `isCohenMacaulayModule_polynomialModuleExtension`. -/
+theorem support_polynomialModuleExtension_eq_univ
+    {R : Type u} {M : Type v} [CommRing R]
+    [IsNoetherianRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M] (hsupp : Module.support R M = Set.univ) (n : ℕ) :
+    (letI : Module (MvPolynomial (Fin n) R)
+        (polynomialModuleExtension R M n) := TensorProduct.leftModule
+     Module.support (MvPolynomial (Fin n) R)
+       (polynomialModuleExtension R M n) = Set.univ) := by
+  /-
+  Roadmap.  It is enough to prove that the localization at every prime `q`
+  of the polynomial ring is nonzero.  Put `p := q.comap (algebraMap R _)`.
+  The hypothesis says `M_p ≠ 0`.  Identify the localization of
+  `R[X] ⊗[R] M` at `q` with
+
+      (R[X]_q) ⊗[R_p] M_p.
+
+  The local map `R_p → R[X]_q` is faithfully flat, so the latter tensor
+  product is nonzero.  The reusable missing pieces should be stated for an
+  arbitrary flat algebra: localization commutes with scalar extension, and
+  faithful scalar extension reflects a zero finite module.  Neither piece
+  is specific to Cohen--Macaulay modules.
+  -/
+  sorry
+
 theorem isCohenMacaulayModule_polynomialModuleExtension
     {R : Type u} {M : Type v} [CommRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]

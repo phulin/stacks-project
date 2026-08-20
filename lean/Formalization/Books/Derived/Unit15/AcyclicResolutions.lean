@@ -1,5 +1,6 @@
 import Formalization.Books.Derived.Unit15.ClassicalDerivedFunctors
 import Formalization.Books.Homology.Unit07.AdditiveFunctors
+import Mathlib.CategoryTheory.Preadditive.Projective.Basic
 
 /-!
 # Derived Categories, Chapter 15: resolutions and acyclic objects
@@ -71,6 +72,29 @@ theorem subcategory_left_resolution_cohomology
     ∃ (P : BookComplex A) (p : P ⟶ K),
       QuasiIso p ∧ (∀ n : ℤ, P.X n ∈ Pset) ∧ P.IsStrictlyLE a := by
   sorry
+
+/-- Enough projectives turn the cohomological left-resolution criterion into a
+bounded-above, termwise-projective resolution. -/
+theorem projective_left_resolution_cohomology
+    {A : Type u} [Category.{v} A] [Abelian A] [EnoughProjectives A]
+    (K : BookComplex A)
+    (hK : ∃ a : ℤ, ∀ n : ℤ, a < n → IsZero (K.homology n)) :
+    ∃ (P : BookComplex A) (p : P ⟶ K),
+      QuasiIso p ∧ IsBoundedAbove P ∧
+        (∀ n : ℤ, Projective (P.X n)) := by
+  let Pset : Set A := {P : A | Projective P}
+  have hzero : (0 : A) ∈ Pset := by
+    exact (isZero_zero A).projective
+  have hcover : QuotientCovering Pset := by
+    intro X
+    obtain ⟨R⟩ := EnoughProjectives.presentation X
+    exact ⟨R.p, R.projective, R.f, R.epi⟩
+  obtain ⟨a, ha⟩ := hK
+  obtain ⟨P, p, hp, hP, hbound⟩ :=
+    subcategory_left_resolution_cohomology Pset hzero hcover a K ha
+  refine ⟨P, p, hp, ⟨a, hbound⟩, ?_⟩
+  intro n
+  simpa [Pset] using hP n
 
 end LeftResolutions
 

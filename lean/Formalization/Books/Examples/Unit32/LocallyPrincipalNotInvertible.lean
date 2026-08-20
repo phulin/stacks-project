@@ -7,6 +7,8 @@ import Mathlib.LinearAlgebra.SymmetricAlgebra.Basis
 import Mathlib.RingTheory.Ideal.Prime
 import Mathlib.RingTheory.Localization.Algebra
 import Mathlib.RingTheory.Localization.FractionRing
+import Mathlib.RingTheory.Localization.LocalizationLocalization
+import Mathlib.RingTheory.Localization.Submodule
 import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.PicardGroup
 import Mathlib.RingTheory.Polynomial.Basic
@@ -1407,7 +1409,43 @@ theorem exampleAlgebra_prime_localizations_noetherian :
     ∀ (q : Ideal exampleAlgebra) (hq : q.IsPrime),
       letI : q.IsPrime := hq
       IsNoetherianRing (Localization q.primeCompl) := by
-  sorry
+  intro q hq
+  let _ : q.IsPrime := hq
+  let p : Ideal exampleBaseRing :=
+    q.comap (algebraMap exampleBaseRing exampleAlgebra)
+  let _ : p.IsPrime := by
+    dsimp [p]
+    exact Ideal.comap_isPrime (algebraMap exampleBaseRing exampleAlgebra) q
+  let M : Submonoid exampleAlgebra :=
+    Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl
+  have hMN : M ≤ q.primeCompl := by
+    intro s hs
+    rcases hs with ⟨r, hr, rfl⟩
+    change algebraMap exampleBaseRing exampleAlgebra r ∉ q
+    intro hq'
+    exact hr (by simpa [p] using hq')
+  let _ : IsNoetherianRing (exampleBaseRingAtPrime p) :=
+    IsLocalization.isNoetherianRing p.primeCompl
+      (Localization p.primeCompl) inferInstance
+  obtain ⟨e⟩ := exampleAlgebraAtBasePrime_equiv_polynomial p
+  let _ : IsNoetherianRing (exampleAlgebraAtBasePrime p) :=
+    isNoetherianRing_of_ringEquiv _ e.symm.toRingEquiv
+  let _ : Algebra (exampleAlgebraAtBasePrime p) (Localization q.primeCompl) :=
+    IsLocalization.localizationAlgebraOfSubmonoidLe
+      (exampleAlgebraAtBasePrime p) (Localization q.primeCompl) M q.primeCompl hMN
+  let _ : IsScalarTower exampleAlgebra (exampleAlgebraAtBasePrime p)
+      (Localization q.primeCompl) :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le
+      (exampleAlgebraAtBasePrime p) (Localization q.primeCompl) M q.primeCompl hMN
+  let _ : IsLocalization (q.primeCompl.map
+      (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)))
+      (Localization q.primeCompl) :=
+    IsLocalization.isLocalization_of_submonoid_le
+      (exampleAlgebraAtBasePrime p) (Localization q.primeCompl) M q.primeCompl hMN
+  exact IsLocalization.isNoetherianRing
+    (q.primeCompl.map (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)))
+    (Localization q.primeCompl)
+    (inferInstance : IsNoetherianRing (exampleAlgebraAtBasePrime p))
 
 /-! ## A source-facing predicate and the final example -/
 
@@ -1432,6 +1470,7 @@ but not invertible as a module. -/
 theorem exists_domain_nonzeroIdeal_principalAtEveryPrime_not_invertible :
     ∃ (A : Type) (_ : CommRing A) (_ : IsDomain A) (I : Ideal A),
       I ≠ ⊥ ∧ PrincipalAtEveryPrime I ∧ ¬ Module.Invertible A I := by
-  sorry
+  refine ⟨exampleAlgebra, inferInstance, exampleAlgebra_isDomain, exampleIdeal,
+    exampleIdeal_ne_bot, exampleIdeal_principalAtEveryPrime, exampleIdeal_not_invertible⟩
 
 end Formalization.Books.Examples.Unit32

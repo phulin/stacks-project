@@ -168,6 +168,7 @@ def strictTransformViaOpen {A : Type u} [CommRing A] {I : Ideal A}
    exercises and is the special case `Z = V(p)`. -/
 structure PrimeStrictTransformData {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) (p : Ideal A) (hp : p.IsPrime) where
+  prime_mem_baseOpen : (⟨p, hp⟩ : PrimeSpectrum A) ∈ blowupBaseOpen I
   lift : blowupProjPoints P
   lift_over_prime : (blowupMap P).base lift = ⟨p, hp⟩
   lift_unique : ∀ y : blowupProjPoints P,

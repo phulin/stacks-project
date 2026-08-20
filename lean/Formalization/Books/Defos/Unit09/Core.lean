@@ -221,7 +221,36 @@ theorem moduleSharp_is_epi
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
     (i : Thickening X Y) : Epi i.hom.moduleSharp := by
-  sorry
+  let hLocal : Sheaf.IsLocallySurjective
+      ((SheafOfModules.toSheaf Y.structureSheaf).map i.hom.moduleSharp) := by
+    change Presheaf.IsLocallySurjective Y.topology
+      (((SheafOfModules.toSheaf Y.structureSheaf).map i.hom.moduleSharp).hom)
+    rw [Presheaf.isLocallySurjective_iff_whisker_forget]
+    refine ⟨?_⟩
+    intro U s
+    have h := i.sharp_is_locally_surjective.imageSieve_mem (U := U) s
+    rw [i.hom.moduleSharp_underlying]
+    change Presheaf.imageSieve
+      ((sheafCompose Y.topology (forget₂ RingCat AddCommGrpCat)).map i.hom.sharp).hom s ∈
+        Y.topology U
+    convert h using 1
+    ext V f
+    constructor
+    · rintro ⟨t, ht⟩
+      exact ⟨t, ht⟩
+    · rintro ⟨t, ht⟩
+      exact ⟨t, ht⟩
+  have hEpi : Epi
+      ((SheafOfModules.toSheaf Y.structureSheaf).map i.hom.moduleSharp) := by
+    exact @Sheaf.epi_of_isLocallySurjective _ _ _ _ _ _ _ _ _ _ _
+      ((SheafOfModules.toSheaf Y.structureSheaf).map i.hom.moduleSharp)
+      inferInstance hLocal
+  constructor
+  intro Z f g h
+  apply (SheafOfModules.toSheaf Y.structureSheaf).map_injective
+  apply hEpi.left_cancellation
+  simpa only [Functor.map_comp] using
+    congrArg ((SheafOfModules.toSheaf Y.structureSheaf).map) h
 
 /-- The additive-sheaf map induced by the map on structure sheaves. -/
 noncomputable abbrev underlyingSharp

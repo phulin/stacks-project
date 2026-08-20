@@ -826,7 +826,7 @@ theorem restrictedMorphismProperty_compatible
       simp only [Functor.map_comp, Functor.comp_obj, Category.assoc,
         Functor.commShiftIso_hom_naturality]
       rw [show P.ι.map (ObjectProperty.homMk c) = c by rfl]
-      convert hc₃' using 1 <;> simp only [Category.assoc] <;> rfl
+      convert hc₃' using 1; simp only [Category.assoc]; rfl
 
 noncomputable def fullSubcategoryLocalizationFunctor
     (S : MorphismProperty C) (P : ObjectProperty C) :
@@ -999,7 +999,7 @@ theorem fullSubcategoryLocalization_isEquivalence
       calc
         F.map g' = F.map eX.inv ≫ F.map g ≫ F.map eY.hom := by
           dsimp [g']
-          simp only [Functor.map_comp, Category.assoc]
+          simp only [Functor.map_comp]
         _ = F.map eX.inv ≫ f' ≫ F.map eY.hom := by rw [hg]
         _ = f := by
           dsimp [f']

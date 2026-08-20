@@ -1854,10 +1854,32 @@ structure GradedNondegeneratePairing (F : Type u) [Field F]
 total degree and evaluation gives nondegenerate opposite-degree pairings. -/
 /- Proof roadmap.
 
-`ExactPairing V W` is sufficient for both conclusions: its two fields are the
-snake identities needed below, so the statement should not be strengthened.
-The missing bridge is the concrete model of the degree-zero coproduct, not an
-extra finiteness hypothesis.
+Instance check: the statement already enforces the required instance identity.
+`ExactPairing` has a hidden `[MonoidalCategory C]` argument, but there is no
+local monoidal-category variable here.  Consequently Lean elaborates the
+binder as `@ExactPairing _ _ (@GradedObject.monoidalCategory ...) V W`, the
+canonical direct-sum tensor instance from
+`Mathlib/CategoryTheory/GradedObject/Monoidal.lean`.  The hidden pairing
+argument of `GradedNondegeneratePairing F V W` in the conclusion is the same
+local instance introduced by that binder.  Do not add a new
+`[MonoidalCategory (GradedVectorSpace F)]` parameter or a `letI`: either would
+reintroduce the ambiguity reported by the failed attempt.
+
+At the start of the proof, expose the definitional instance bridge with typed
+local abbreviations
+
+    let η : gradedTensorUnit F ⟶ gradedTensor F V W :=
+      ExactPairing.coevaluation V W
+    let ε : gradedTensor F W V ⟶ gradedTensorUnit F :=
+      ExactPairing.evaluation V W
+
+These type annotations should close by definitional equality because the
+`tensorObj` and `tensorUnit` fields of `GradedObject.monoidalCategory` are
+`GradedObject.Monoidal.tensorObj` and `.tensorUnit`.  Thus
+`ExactPairing V W` is sufficient for both conclusions: its two snake-identity
+fields are precisely the identities used below.  The remaining bridge is the
+concrete model of the degree-zero coproduct, not an extra finiteness
+hypothesis.
 
 1. Add the focused imports
    `Mathlib.Algebra.Category.ModuleCat.Products` and
@@ -1875,23 +1897,29 @@ extra finiteness hypothesis.
    `GradedObject.Monoidal.ιTensorObj V W p q 0 h` with
    `DirectSum.lof F I₀ (fun pq => (P pq : Type u)) ⟨(p, q), h⟩`.
 
-2. Let `c` be the image in that direct sum of
+2. In universe `u`, let `c : ⨁ pq : I₀, (P pq : Type u)` be
 
-       (ExactPairing.coevaluation V W 0)
-         ((gradedTensorUnitZeroIso F).inv (1 : F)).
+       (ModuleCat.coprodIsoDirectSum P).hom
+         ((η 0) ((gradedTensorUnitZeroIso F).inv (1 : F))).
 
    The finset `c.support` contains all degrees occurring in coevaluation.  For
    every supported `pq`, apply `TensorProduct.exists_finset` (from
    `Mathlib/LinearAlgebra/TensorProduct/Finiteness.lean`) to `c pq`.  Collect
-   the first entries of those finitely many pure tensors, inserted into
+   the resulting finsets with `Finset.biUnion`, taking the first entries of
+   their pure tensors and inserting them into
    `⨁ n : ℤ, (V n : Type u)` by
    `DirectSum.lof F ℤ (fun n => (V n : Type u)) pq.1`, into one finset `G`.
 
-3. Normalize the `V` snake identity
-   `ExactPairing.evaluation_coevaluation V W` from
-   `Mathlib/CategoryTheory/Monoidal/Rigid/Basic.lean` by precomposing with the
-   left-unitor inverse and postcomposing with the right-unitor hom.  At degree
-   `n`, apply the resulting equality to `v : V n`, expand `c` with
+3. First derive the normalized `V` snake identity
+
+       (λ_ V).inv ≫ η ▷ V ≫ (α_ V W V).hom ≫ V ◁ ε ≫ (ρ_ V).hom = 𝟙 V
+
+   from `ExactPairing.evaluation_coevaluation V W` in
+   `Mathlib/CategoryTheory/Monoidal/Rigid/Basic.lean`, by precomposing with
+   the left-unitor inverse and postcomposing with the right-unitor hom.  This
+   is an equality in the canonical graded category, so unfold only `η` and
+   `ε`; no transport between monoidal instances is required.  At degree `n`,
+   apply it to `v : V n`, expand `c` with
    `DirectSum.sum_support_of`, and expand each tensor with the decompositions
    from step 2.  The required component calculations are exactly
    `GradedObject.Monoidal.leftUnitor_inv_apply`,
@@ -1924,7 +1952,7 @@ extra finiteness hypothesis.
    linear map of
 
        GradedObject.Monoidal.ιTensorObj W V (-n) n 0 (neg_add_cancel n) ≫
-         ExactPairing.evaluation V W 0 ≫
+         ε 0 ≫
            (gradedTensorUnitZeroIso F).hom.
 
    Set `pairing n` to `TensorProduct.curry` of this map; the result has the
@@ -1932,18 +1960,34 @@ extra finiteness hypothesis.
    `(W (-n) : Type u) →ₗ[F] Module.Dual F (V n : Type u)`, and
    `TensorProduct.curry_apply` is its evaluation formula.
 
-5. Prove `Function.Injective (pairing n)` by the `W` snake identity
-   `ExactPairing.coevaluation_evaluation V W`, evaluated in degree `-n`: if
-   `pairing n w = 0`, every contraction in the expanded snake is zero, hence
-   `w = 0`.  Prove injectivity of `LinearMap.flip (pairing n)` identically
-   from the `V` snake identity in degree `n`.  Normalize these calculations
-   with `GradedObject.Monoidal.rightUnitor_inv_apply`,
-   `GradedObject.Monoidal.ιTensorObj₃_associator_inv`, the corresponding
-   generic left-unitor inclusion lemma from `GradedObject/Unitor.lean`, and
-   `LinearMap.ker_eq_bot'` (or an explicit zero-kernel argument).  As in step
-   3, explicitly split the evaluation degree: `IsInitial.isZero` and
-   `IsZero.eq_zero_of_tgt` remove every off-diagonal term, while the remaining
-   equalities force the opposite-degree indices `(-n, n)`.  Assemble
+5. Also normalize `ExactPairing.coevaluation_evaluation V W` to the precise
+   `W` identity
+
+       (ρ_ W).inv ≫ W ◁ η ≫ (α_ W V W).inv ≫ ε ▷ W ≫ (λ_ W).hom = 𝟙 W.
+
+   For `w : W (-n)`, expand this equality using
+   `GradedObject.Monoidal.rightUnitor_inv_apply`,
+   `GradedObject.Monoidal.ιTensorObj₃_associator_inv`, and
+   `GradedObject.ι_mapBifunctorLeftUnitor_hom_apply` from
+   `Mathlib/CategoryTheory/GradedObject/Unitor.lean`.  The evaluation degree is
+   `-n + p`; use `(gradedTensorUnitNonzeroInitial F _ h).isZero` and
+   `IsZero.eq_zero_of_tgt` when it is nonzero.  In the zero case `p = n`, so
+   `pairing n w = 0` kills every remaining contraction and the normalized
+   snake gives `w = 0`.  This proves `Function.Injective (pairing n)` via
+   `LinearMap.ker_eq_bot'` or directly.
+
+   For `v : V n`, reuse the normalized `V` identity from step 3.  Its
+   evaluation degree is `q + n`; nonzero degrees vanish as above, while the
+   zero case has `q = -n`, so
+   `LinearMap.flip (pairing n) v = 0` kills all remaining contractions and
+   yields `v = 0`.  This proves injectivity of the flipped map.  The component
+   formulae are `GradedObject.Monoidal.leftUnitor_inv_apply`,
+   `GradedObject.Monoidal.ιTensorObj₃'_associator_hom`,
+   `GradedObject.ι_mapBifunctorRightUnitor_hom_apply`, and, on underlying
+   `ModuleCat.{u} F` elements, `MonoidalCategory.tensorHom_tmul`,
+   `associator_hom_apply`, `associator_inv_apply`,
+   `leftUnitor_hom_apply`, and `rightUnitor_hom_apply` from
+   `Mathlib/Algebra/Category/ModuleCat/Monoidal/Basic.lean`.  Assemble
    `⟨pairing, left_nondegenerate, right_nondegenerate⟩`, wrap it in
    `Nonempty.intro`, and pair it with the finiteness result from step 3.
 -/

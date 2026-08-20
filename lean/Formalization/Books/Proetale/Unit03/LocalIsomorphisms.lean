@@ -5,6 +5,7 @@ import Mathlib.RingTheory.LocalIso
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.TensorProduct.Basic
+import Mathlib.Topology.Sheaves.Sheafify
 
 /-!
 # Pro-étale Cohomology, Chapter 3: Local isomorphisms
@@ -593,19 +594,206 @@ theorem IsLocalIsomorphism.isEtale
     {A B : Type u} [CommRing A] [CommRing B]
     {φ : A →+* B} (hφ : IsLocalIsomorphism φ) :
     RingHom.Etale φ := by
-  sorry
+  let _ : Algebra A B := φ.toAlgebra
+  change Algebra.IsLocalIso A B at hφ
+  let s : Set B := {g : B | Algebra.IsStandardOpenImmersion A (Localization.Away g)}
+  apply RingHom.Etale.ofLocalizationSpanTarget φ s
+    (Algebra.IsLocalIso.span_isStandardOpenImmersion_eq_top A B)
+  intro g
+  letI : Algebra A (Localization.Away (g : B)) := inferInstance
+  obtain ⟨f, hf⟩ := g.property.exists_away
+  let alg0 : Algebra A (Localization.Away (g : B)) := inferInstance
+  have hf0 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _ alg0 := hf
+  have heq0 : (algebraMap A (Localization.Away (g : B))).toAlgebra = alg0 := by
+    apply IsScalarTower.Algebra.ext
+    intro a x
+    change (algebraMap A (Localization.Away (g : B))) a * x = a • x
+    rw [Algebra.smul_def]
+  have heq : (algebraMap A (Localization.Away (g : B))).toAlgebra =
+      ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
+    apply IsScalarTower.Algebra.ext
+    intro a x
+    simp only [Algebra.smul_def]
+  have heq' : alg0 =
+      ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra :=
+    heq0.symm.trans heq
+  letI : Algebra A (Localization.Away (g : B)) :=
+    ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra
+  have hf1 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _
+      ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
+    rw [← heq']
+    exact hf0
+  letI : IsLocalization.Away f (Localization.Away (g : B)) := hf1
+  exact Algebra.Etale.of_isLocalizationAway f
+
+private theorem localRingHom_bijective_of_isLocalization
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (M : Submonoid R) [IsLocalization M S] (q : PrimeSpectrum S)
+    {I : Ideal R} [I.IsPrime] (hI0 : I = q.asIdeal.comap (algebraMap R S)) :
+    Function.Bijective
+      (Localization.localRingHom I q.asIdeal (algebraMap R S) hI0) := by
+  let e : Localization M ≃ₐ[R] S := IsLocalization.algEquiv M _ _
+  let p : PrimeSpectrum (Localization M) :=
+    ⟨q.asIdeal.comap e.toRingHom, inferInstance⟩
+  have he : e.toRingHom.comp (algebraMap R (Localization M)) = algebraMap R S := by
+    ext x
+    exact e.commutes x
+  have hI : p.asIdeal.comap (algebraMap R (Localization M)) =
+      q.asIdeal.comap (algebraMap R S) := by
+    dsimp [p]
+    exact congrArg (fun k : R →+* S => q.asIdeal.comap k) he
+  have hI' : I = (p.asIdeal.comap (algebraMap R (Localization M))).comap
+      (RingEquiv.refl R) := by
+    rw [hI0, ← hI]
+    rfl
+  let a₀ : Localization.AtPrime I ≃+* Localization.AtPrime
+      (p.asIdeal.comap (algebraMap R (Localization M))) :=
+    Localization.localRingEquiv I
+      (p.asIdeal.comap (algebraMap R (Localization M))) (RingEquiv.refl R) hI'
+  let a₁ : Localization.AtPrime (p.asIdeal.comap (algebraMap R (Localization M))) ≃ₐ[R]
+      Localization.AtPrime p.asIdeal :=
+    IsLocalization.localizationLocalizationAtPrimeIsoLocalization M p.asIdeal
+  let a : Localization.AtPrime I ≃+* Localization.AtPrime p.asIdeal :=
+    a₀.trans a₁.toRingEquiv
+  let b : Localization.AtPrime p.asIdeal ≃+* Localization.AtPrime q.asIdeal :=
+    Localization.localRingEquiv p.asIdeal q.asIdeal e.toRingEquiv rfl
+  let c : Localization.AtPrime I →+* Localization.AtPrime q.asIdeal :=
+    Localization.localRingHom I q.asIdeal (algebraMap R S) hI0
+  have hc : c = b.toRingHom.comp a.toRingHom := by
+    apply Localization.localRingHom_unique
+    intro x
+    have ha : a (algebraMap R (Localization.AtPrime I) x) =
+        algebraMap R (Localization.AtPrime p.asIdeal) x := by
+      simp [a, a₀, a₁, Localization.localRingEquiv]
+    change b (a (algebraMap R (Localization.AtPrime I) x)) =
+      (algebraMap S (Localization.AtPrime q.asIdeal)) ((algebraMap R S) x)
+    rw [ha]
+    rw [IsScalarTower.algebraMap_apply R (Localization M)
+      (Localization.AtPrime p.asIdeal)]
+    change Localization.localRingHom p.asIdeal q.asIdeal e.toRingHom (by rfl) _ = _
+    rw [Localization.localRingHom_to_map]
+    exact congrArg (algebraMap S (Localization.AtPrime q.asIdeal))
+      (DFunLike.congr_fun he x)
+  change Function.Bijective c
+  rw [hc]
+  exact b.bijective.comp a.bijective
 
 theorem IsLocalIsomorphism.identifiesLocalRings
     {A B : Type u} [CommRing A] [CommRing B]
     {φ : A →+* B} (hφ : IsLocalIsomorphism φ) :
     IdentifiesLocalRings φ := by
-  sorry
+  let _ : Algebra A B := φ.toAlgebra
+  change Algebra.IsLocalIso A B at hφ
+  intro q
+  let I : Ideal A := q.asIdeal.comap φ
+  obtain ⟨g, hg, hstd⟩ := hφ.exists_notMem_isStandardOpenImmersion q.asIdeal
+  have hqbasic : q ∈ PrimeSpectrum.basicOpen g := hg
+  rw [← SetLike.mem_coe, ← PrimeSpectrum.localization_away_comap_range
+    (Localization.Away g) g] at hqbasic
+  obtain ⟨q', hq'⟩ := hqbasic
+  have hqideal : q'.asIdeal.comap (algebraMap B (Localization.Away g)) = q.asIdeal := by
+    simpa using congrArg (fun r : PrimeSpectrum B => r.asIdeal) hq'
+  let T := Localization.Away g
+  letI : Algebra A T := inferInstance
+  obtain ⟨f, hf⟩ := hstd.exists_away
+  let alg0 : Algebra A T := inferInstance
+  have hf0 : @IsLocalization.Away A _ f T _ alg0 := hf
+  have heq0 : (algebraMap A T).toAlgebra = alg0 := by
+    apply IsScalarTower.Algebra.ext
+    intro a z
+    change (algebraMap A T) a * z = a • z
+    rw [Algebra.smul_def]
+  have heq : (algebraMap A T).toAlgebra =
+      ((algebraMap B T).comp φ).toAlgebra := by
+    apply IsScalarTower.Algebra.ext
+    intro a z
+    simp only [Algebra.smul_def]
+  have heq' : alg0 = ((algebraMap B T).comp φ).toAlgebra :=
+    heq0.symm.trans heq
+  letI : Algebra A T := ((algebraMap B T).comp φ).toAlgebra
+  have hf1 : @IsLocalization.Away A _ f T _
+      ((algebraMap B T).comp φ).toAlgebra := by
+    rw [← heq']
+    exact hf0
+  letI : IsLocalization.Away f T := hf1
+  have hcomp : (algebraMap B T).comp φ = algebraMap A T := by rfl
+  have hIT : I = q'.asIdeal.comap (algebraMap A T) := by
+    calc
+      I = q.asIdeal.comap φ := rfl
+      _ = (q'.asIdeal.comap (algebraMap B T)).comap φ := by rw [hqideal]
+      _ = q'.asIdeal.comap ((algebraMap B T).comp φ) := by
+        rw [Ideal.comap_comap]
+      _ = q'.asIdeal.comap (algebraMap A T) := by rw [hcomp]
+  let c : Localization.AtPrime I →+* Localization.AtPrime q.asIdeal :=
+    Localization.localRingHom I q.asIdeal φ rfl
+  let b : Localization.AtPrime q.asIdeal →+* Localization.AtPrime q'.asIdeal :=
+    Localization.localRingHom q.asIdeal q'.asIdeal (algebraMap B T) hqideal.symm
+  let d : Localization.AtPrime I →+* Localization.AtPrime q'.asIdeal :=
+    Localization.localRingHom I q'.asIdeal (algebraMap A T) hIT
+  have hb : Function.Bijective b := by
+    exact localRingHom_bijective_of_isLocalization
+      (R := B) (S := T) (Submonoid.powers g) q' hqideal.symm
+  have hd : Function.Bijective d := by
+    exact localRingHom_bijective_of_isLocalization
+      (R := A) (S := T) (Submonoid.powers f) q' hIT
+  have hdc : d = b.comp c := by
+    apply Localization.localRingHom_unique
+    intro a
+    simp [b, c, d, hcomp, Localization.localRingHom_to_map]
+    exact congrArg (algebraMap T (Localization.AtPrime q'.asIdeal))
+      (DFunLike.congr_fun hcomp a)
+  change Function.Bijective c
+  constructor
+  · intro x y hxy
+    apply hd.1
+    rw [hdc]
+    exact congrArg b hxy
+  · intro y
+    obtain ⟨x, hx⟩ := hd.2 (b y)
+    refine ⟨x, ?_⟩
+    apply hb.1
+    rw [← hx, hdc]
+    rfl
 
 theorem IsLocalIsomorphism.isQuasiFinite
     {A B : Type u} [CommRing A] [CommRing B]
     {φ : A →+* B} (hφ : IsLocalIsomorphism φ) :
     RingHom.QuasiFinite φ := by
-  sorry
+  let _ : Algebra A B := φ.toAlgebra
+  change Algebra.IsLocalIso A B at hφ
+  let s : Set B := {g : B | Algebra.IsStandardOpenImmersion A (Localization.Away g)}
+  apply RingHom.QuasiFinite.ofLocalizationSpanTarget φ s
+    (Algebra.IsLocalIso.span_isStandardOpenImmersion_eq_top A B)
+  intro g
+  letI : Algebra A (Localization.Away (g : B)) := inferInstance
+  obtain ⟨f, hf⟩ := g.property.exists_away
+  let alg0 : Algebra A (Localization.Away (g : B)) := inferInstance
+  have hf0 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _ alg0 := hf
+  have heq0 : (algebraMap A (Localization.Away (g : B))).toAlgebra = alg0 := by
+    apply IsScalarTower.Algebra.ext
+    intro a x
+    change (algebraMap A (Localization.Away (g : B))) a * x = a • x
+    rw [Algebra.smul_def]
+  have heq : (algebraMap A (Localization.Away (g : B))).toAlgebra =
+      ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
+    apply IsScalarTower.Algebra.ext
+    intro a x
+    simp only [Algebra.smul_def]
+  have heq' : alg0 =
+      ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra :=
+    heq0.symm.trans heq
+  letI : Algebra A (Localization.Away (g : B)) :=
+    ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra
+  have hf1 : @IsLocalization.Away A _ f (Localization.Away (g : B)) _
+      ((algebraMap B (Localization.Away (g : B))).comp φ).toAlgebra := by
+    rw [← heq']
+    exact hf0
+  letI : IsLocalization.Away f (Localization.Away (g : B)) := hf1
+  let _ : SMul A (Localization.Away (g : B)) :=
+    (inferInstance : Algebra A (Localization.Away (g : B))).toSMul
+  letI : IsScalarTower A A (Localization.Away (g : B)) :=
+    IsScalarTower.of_algebraMap_eq' rfl
+  exact Algebra.QuasiFinite.of_isLocalization (Submonoid.powers f)
 
 /-! ## A finite standard-open presentation -/
 
@@ -617,7 +805,70 @@ theorem IsLocalIsomorphism.exists_finite_standardOpen_cover
         ∀ i, ∃ e : Localization.Away (f i) ≃+* Localization.Away (g i),
           e.toRingHom.comp (algebraMap A (Localization.Away (f i))) =
             (algebraMap B (Localization.Away (g i))).comp φ := by
-  sorry
+  classical
+  let _ : Algebra A B := φ.toAlgebra
+  change Algebra.IsLocalIso A B at hφ
+  let s : Set B := {g : B | Algebra.IsStandardOpenImmersion A (Localization.Away g)}
+  have hs := Algebra.IsLocalIso.span_isStandardOpenImmersion_eq_top A B
+  obtain ⟨t, ht, ht_top⟩ := (Ideal.span_eq_top_iff_finite s).mp hs
+  let eFin : t ≃ Fin t.card := t.equivFin
+  let g : Fin t.card → B := fun i => (eFin.symm i).1
+  have haway : ∀ x : t, ∃ f : A, IsLocalization.Away f (Localization.Away x.1) := by
+    intro x
+    have hx : Algebra.IsStandardOpenImmersion A (Localization.Away x.1) := ht x.2
+    exact hx.exists_away
+  choose f hf using haway
+  let f' : Fin t.card → A := fun i => f (eFin.symm i)
+  refine ⟨t.card, g, f', ?_, ?_⟩
+  · apply le_antisymm
+    · rw [← ht_top]
+      apply Ideal.span_mono
+      intro x hx
+      obtain ⟨i, rfl⟩ := hx
+      exact (eFin.symm i).property
+    · rw [← ht_top]
+      apply Ideal.span_le.mpr
+      intro x hx
+      let y : t := ⟨x, hx⟩
+      have hy : y.1 ∈ Ideal.span (Set.range g) := by
+        apply Ideal.subset_span
+        refine ⟨eFin y, ?_⟩
+        simp [g, eFin]
+      exact hy
+  · intro i
+    let x : t := eFin.symm i
+    letI : Algebra A (Localization.Away x.1) := inferInstance
+    let alg0 : Algebra A (Localization.Away x.1) := inferInstance
+    have hf0 : @IsLocalization.Away A _ (f x) (Localization.Away x.1) _ alg0 := hf x
+    have heq0 : (algebraMap A (Localization.Away x.1)).toAlgebra = alg0 := by
+      apply IsScalarTower.Algebra.ext
+      intro a z
+      change (algebraMap A (Localization.Away x.1)) a * z = a • z
+      rw [Algebra.smul_def]
+    have heq : (algebraMap A (Localization.Away x.1)).toAlgebra =
+        ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra := by
+      apply IsScalarTower.Algebra.ext
+      intro a z
+      simp only [Algebra.smul_def]
+    have heq' : alg0 = ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra :=
+      heq0.symm.trans heq
+    letI : Algebra A (Localization.Away x.1) :=
+      ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra
+    have hf1 : @IsLocalization.Away A _ (f x) (Localization.Away x.1) _
+        ((algebraMap B (Localization.Away x.1)).comp φ).toAlgebra := by
+      rw [← heq']
+      exact hf0
+    letI : IsLocalization.Away (f x) (Localization.Away x.1) := hf1
+    let e : Localization.Away (f x) ≃ₐ[A] Localization.Away x.1 :=
+      IsLocalization.algEquiv (Submonoid.powers (f x)) _ _
+    refine ⟨e.toRingEquiv, ?_⟩
+    ext a
+    change e (algebraMap A (Localization.Away (f x)) a) =
+      (algebraMap B (Localization.Away x.1)) (φ a)
+    calc
+      e (algebraMap A (Localization.Away (f x)) a) =
+          algebraMap A (Localization.Away x.1) a := e.commutes a
+      _ = (algebraMap B (Localization.Away x.1)) (φ a) := rfl
 
 /-! ## Locally ringed spaces over a fixed base -/
 
@@ -659,7 +910,723 @@ theorem fullyFaithfulSpacesOverX
     {X Y Z : LocallyRingedSpace.{u}} (p : Y ⟶ X) (q : Z ⟶ X)
     (hp : IsPullbackStructureSheaf p) :
     Function.Bijective (lrsOverHomToTopOverHom p q) := by
-  sorry
+  letI : IsIso (structureSheafPullbackMap p) := hp
+  have hpstalk (y : Y) : IsIso (p.stalkMap y) := by
+    let P := structureSheafPullbackMap p
+    let ePull := (TopCat.Sheaf.pullbackIso CommRingCat p.base).app X.𝒪
+    let eUnit := CategoryTheory.toSheafify (Opens.grothendieckTopology
+      (Y.toPresheafedSpace : TopCat))
+      ((TopCat.Sheaf.forget CommRingCat X.toTopCat ⋙
+        TopCat.Presheaf.pullback CommRingCat p.base).obj X.𝒪)
+    haveI : IsIso
+        (TopCat.Presheaf.stalkPullbackIso CommRingCat p.base X.𝒪.1 y).hom := by
+      infer_instance
+    haveI : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit) :=
+      TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso y CommRingCat
+        ((TopCat.Presheaf.pullback CommRingCat p.base).obj X.𝒪.1)
+    haveI : IsIso ePull.inv.1 := by
+      exact (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_isIso ePull.inv
+    haveI : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.1) := by
+      infer_instance
+    haveI : IsIso P.hom := by
+      exact (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_isIso P
+    haveI : IsIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom) := by
+      exact (TopCat.Presheaf.stalkFunctor CommRingCat y).map_isIso P.hom
+    haveI : IsIso
+        ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit ≫
+          (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.1) := by
+      infer_instance
+    let vIso := asIso
+      ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit ≫
+        (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.1)
+    let uIso :=
+      (TopCat.Presheaf.stalkPullbackIso CommRingCat p.base X.𝒪.1 y).trans vIso
+    let u := uIso.hom
+    haveI : IsIso u := by
+      infer_instance
+    have heq : u ≫ (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom =
+        p.stalkMap y := by
+      apply TopCat.Presheaf.stalk_hom_ext X.𝒪.1
+      intro U hy
+      dsimp [u, uIso, vIso, Iso.trans, TopCat.Presheaf.stalkPullbackIso]
+      change
+        ((TopCat.Presheaf.germ X.𝒪.1 U ((ConcreteCategory.hom p.base) y) hy ≫
+            TopCat.Presheaf.stalkPullbackHom CommRingCat p.base X.𝒪.1 y) ≫
+          (asIso
+              ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit ≫
+                (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.hom)).hom ≫
+        (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom) =
+          TopCat.Presheaf.germ X.𝒪.1 U ((ConcreteCategory.hom p.base) y) hy ≫
+            LocallyRingedSpace.Hom.stalkMap p y
+      rw [TopCat.Presheaf.germ_stalkPullbackHom]
+      dsimp [asIso]
+      have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+        (C := CommRingCat) ((TopologicalSpace.Opens.map p.base).obj U) y hy eUnit
+      have hmap' :
+          ((TopCat.Presheaf.pullback CommRingCat p.base).obj
+              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).germ
+              ((TopologicalSpace.Opens.map p.base).obj U) y hy ≫
+            (TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit =
+          eUnit.app (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+            TopCat.Presheaf.germ
+              (sheafify (Opens.grothendieckTopology
+                (Y.toPresheafedSpace : TopCat))
+                ((TopCat.Presheaf.pullback CommRingCat p.base).obj
+                  ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)))
+              ((TopologicalSpace.Opens.map p.base).obj U) y hy := by
+        simpa only [Functor.comp_obj] using hmap
+      change
+        (((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+            (Opposite.op U) ≫
+          ((TopCat.Presheaf.pullback CommRingCat p.base).obj
+              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).germ
+            ((TopologicalSpace.Opens.map p.base).obj U) y hy ≫
+          ((TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit ≫
+              (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.hom) ≫
+            (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom) =
+          TopCat.Presheaf.germ X.𝒪.1 U ((ConcreteCategory.hom p.base) y) hy ≫
+            LocallyRingedSpace.Hom.stalkMap p y
+      calc
+        _ = ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+              (Opposite.op U) ≫
+            (((TopCat.Presheaf.pullback CommRingCat p.base).obj
+                ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).germ
+                ((TopologicalSpace.Opens.map p.base).obj U) y hy ≫
+              (TopCat.Presheaf.stalkFunctor CommRingCat y).map eUnit) ≫
+            ((TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.hom ≫
+              (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom) := by
+          rfl
+        _ = _ := by
+          rw [hmap']
+          have hmap2 := TopCat.Presheaf.stalkFunctor_map_germ
+            (C := CommRingCat) ((TopologicalSpace.Opens.map p.base).obj U) y hy
+            ePull.inv.hom
+          have hmap3 := TopCat.Presheaf.stalkFunctor_map_germ
+            (C := CommRingCat) ((TopologicalSpace.Opens.map p.base).obj U) y hy P.hom
+          have hmap2' :
+              TopCat.Presheaf.germ
+                  (sheafify (Opens.grothendieckTopology (Y.toTopCat : Type _))
+                    ((TopCat.Presheaf.pullback CommRingCat p.base).obj
+                      ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)))
+                  ((TopologicalSpace.Opens.map p.base).obj U) y hy ≫
+                (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.hom =
+              ePull.inv.hom.app (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                TopCat.Presheaf.germ ((TopCat.Sheaf.pullback CommRingCat p.base).obj X.𝒪).obj
+                  ((TopologicalSpace.Opens.map p.base).obj U) y hy := by
+            convert hmap2 using 1 <;> rfl
+          calc
+            _ = ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+                  ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+                  (Opposite.op U) ≫
+                (eUnit.app (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                  (TopCat.Presheaf.germ
+                    (sheafify (Opens.grothendieckTopology (Y.toTopCat : Type _))
+                      ((TopCat.Presheaf.pullback CommRingCat p.base).obj
+                        ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)))
+                    ((TopologicalSpace.Opens.map p.base).obj U) y hy ≫
+                    (TopCat.Presheaf.stalkFunctor CommRingCat y).map ePull.inv.hom)) ≫
+                (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom := by
+              rfl
+            _ = _ := by
+              rw [hmap2']
+              calc
+                _ = ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+                      ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+                      (Opposite.op U) ≫
+                    (eUnit.app (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                      ePull.inv.hom.app
+                        (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                      (TopCat.Presheaf.germ
+                        ((TopCat.Sheaf.pullback CommRingCat p.base).obj X.𝒪).obj
+                        ((TopologicalSpace.Opens.map p.base).obj U) y hy ≫
+                        (TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom)) := by
+                  rfl
+                _ = _ := by
+                  rw [hmap3]
+                  let c : X.𝒪 ⟶
+                      (TopCat.Sheaf.pushforward CommRingCat p.base).obj Y.𝒪 :=
+                    (TopCat.Sheaf.forget CommRingCat X.toTopCat).preimage
+                      (LocallyRingedSpace.Hom.toShHom p).hom.c
+                  let adj := TopCat.Sheaf.pullbackPushforwardAdjunction
+                    CommRingCat p.base
+                  let J := Opens.grothendieckTopology (X.toPresheafedSpace : TopCat)
+                  let K := Opens.grothendieckTopology (Y.toPresheafedSpace : TopCat)
+                  let adj' := Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+                    (TopologicalSpace.Opens.map p.base) CommRingCat J K
+                  have hunit :
+                      adj.unit.app X.𝒪 ≫
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map ePull.hom =
+                        adj'.unit.app X.𝒪 := by
+                    convert Adjunction.unit_leftAdjointUniq_hom_app
+                      (Functor.sheafAdjunctionContinuous
+                        (TopologicalSpace.Opens.map p.base) CommRingCat J K)
+                      adj' X.𝒪 using 1 <;> rfl
+                  have hP : adj.homEquiv X.𝒪 Y.𝒪 P = c := by
+                    dsimp [P, structureSheafPullbackMap, c, adj]
+                    exact (adj.homEquiv X.𝒪 Y.𝒪).apply_symm_apply _
+                  rw [Adjunction.homEquiv_unit] at hP
+                  have hPapp := congrArg (fun f => f.hom.app (Opposite.op U)) hP
+                  have hfactor :
+                      adj.unit.app X.𝒪 ≫
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map P =
+                        adj'.unit.app X.𝒪 ≫
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map ePull.inv ≫
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map P := by
+                    calc
+                      _ = (adj.unit.app X.𝒪 ≫
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map ePull.hom) ≫
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map
+                            (ePull.inv ≫ P) := by
+                        simp only [Functor.map_comp, Category.assoc]
+                        rw [← Category.assoc
+                            ((TopCat.Sheaf.pushforward CommRingCat p.base).map ePull.hom)
+                            ((TopCat.Sheaf.pushforward CommRingCat p.base).map ePull.inv)
+                            ((TopCat.Sheaf.pushforward CommRingCat p.base).map P),
+                          ← (TopCat.Sheaf.pushforward CommRingCat p.base).map_comp
+                            ePull.hom ePull.inv,
+                          Iso.hom_inv_id,
+                          (TopCat.Sheaf.pushforward CommRingCat p.base).map_id]
+                        simp only [Category.id_comp, Category.comp_id]
+                      _ = _ := by
+                        rw [hunit, (TopCat.Sheaf.pushforward CommRingCat p.base).map_comp]
+                        rfl
+                  have hfactor_app :=
+                    congrArg (fun f => f.hom.app (Opposite.op U)) hfactor
+                  have hunit' :
+                      (adj'.unit.app X.𝒪).hom.app (Opposite.op U) =
+                        ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+                              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+                            (Opposite.op U) ≫
+                          eUnit.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) := by
+                    rfl
+                  have hfactor_app' :
+                      (adj.unit.app X.𝒪).hom.app (Opposite.op U) ≫
+                          P.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) =
+                        (adj'.unit.app X.𝒪).hom.app (Opposite.op U) ≫
+                          ePull.inv.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                          P.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) := by
+                    change
+                      ((adj.unit.app X.𝒪).hom.app (Opposite.op U) ≫
+                        P.hom.app
+                          (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U))) =
+                        ((adj'.unit.app X.𝒪).hom.app (Opposite.op U) ≫
+                          ePull.inv.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                          P.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)))
+                    exact hfactor_app
+                  have hunit_app :
+                      ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+                              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+                            (Opposite.op U) ≫
+                          eUnit.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                          ePull.inv.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                          P.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) =
+                        (adj'.unit.app X.𝒪).hom.app (Opposite.op U) ≫
+                          ePull.inv.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                          P.hom.app
+                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) := by
+                    rw [hunit']
+                    rfl
+                  have hchain :
+                      ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
+                              ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
+                            (Opposite.op U) ≫
+                        eUnit.app (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                        ePull.inv.hom.app
+                          (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
+                        P.hom.app
+                          (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) =
+                      c.hom.app (Opposite.op U) := by
+                    exact hunit_app.trans (hfactor_app'.symm.trans hPapp)
+                  have hprefix := congrArg
+                    (fun k => k ≫ TopCat.Presheaf.germ Y.𝒪.obj
+                      ((TopologicalSpace.Opens.map p.base).obj U) y hy)
+                    hchain
+                  have hobj :
+                      X.𝒪.obj.obj =
+                        ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪).obj := by
+                    rfl
+                  have hobjU :
+                      X.𝒪.obj.obj (Opposite.op U) =
+                        ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪).obj
+                          (Opposite.op U) := by
+                    rfl
+                  have hc_app :
+                      c.hom.app (Opposite.op U) =
+                        (LocallyRingedSpace.Hom.toShHom p).hom.c.app
+                          (Opposite.op U) := by
+                    have hc :
+                        (TopCat.Sheaf.forget CommRingCat X.toTopCat).map c =
+                          (LocallyRingedSpace.Hom.toShHom p).hom.c := by
+                      dsimp [c]
+                      apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_preimage
+                    exact congrArg (fun f => f.app (Opposite.op U)) hc
+                  have hbase :
+                      (TopologicalSpace.Opens.map
+                          (LocallyRingedSpace.Hom.toShHom p).hom.base).obj U =
+                        (TopologicalSpace.Opens.map p.base).obj U := by
+                    rfl
+                  calc
+                    _ = c.hom.app (Opposite.op U) ≫
+                        TopCat.Presheaf.germ Y.𝒪.obj
+                          ((TopologicalSpace.Opens.map p.base).obj U) y hy := by
+                      convert hprefix using 1
+                      exact Iff.rfl
+                    _ = _ := by
+                      rw [hc_app]
+                      dsimp only [LocallyRingedSpace.Hom.stalkMap,
+                        TopCat.Sheaf.forget, LocallyRingedSpace.𝒪,
+                        SheafedSpace.sheaf, Functor.id_obj, Functor.comp_obj,
+                        LocallyRingedSpace.Hom.toShHom, InducedCategory.homMk,
+                        hbase]
+                      exact
+                        (PresheafedSpace.stalkMap_germ
+                          (LocallyRingedSpace.Hom.toShHom p).hom U y hy).symm
+    rw [← heq]
+    let wIso := uIso.trans
+      (asIso ((TopCat.Presheaf.stalkFunctor CommRingCat y).map P.hom))
+    change IsIso wIso.hom
+    infer_instance
+  classical
+  refine ⟨?_, ?_⟩
+  · intro f g hfg
+    have hbase : f.left.base = g.left.base :=
+      congrArg (fun k => k.left) hfg
+    apply CostructuredArrow.hom_ext
+    · apply LocallyRingedSpace.Hom.ext'
+      apply PresheafedSpace.Hom.ext
+      · let Sf := (TopCat.Sheaf.pushforward CommRingCat f.left.base).obj Z.𝒪
+        let Sg := (TopCat.Sheaf.pushforward CommRingCat g.left.base).obj Z.𝒪
+        let cp : X.𝒪 ⟶
+            (TopCat.Sheaf.pushforward CommRingCat p.base).obj Y.𝒪 :=
+          (TopCat.Sheaf.forget CommRingCat X.toTopCat).preimage
+            (LocallyRingedSpace.Hom.toShHom p).hom.c
+        let cf : Y.𝒪 ⟶ Sf :=
+          (TopCat.Sheaf.forget CommRingCat Y.toTopCat).preimage
+            f.left.toShHom.hom.c
+        let cg : Y.𝒪 ⟶ Sg :=
+          (TopCat.Sheaf.forget CommRingCat Y.toTopCat).preimage
+            g.left.toShHom.hom.c
+        let qMap : X.𝒪 ⟶
+            (TopCat.Sheaf.pushforward CommRingCat q.base).obj Z.𝒪 :=
+          (TopCat.Sheaf.forget CommRingCat X.toTopCat).preimage
+            q.toShHom.hom.c
+        have hfcomp :
+            (f.left.toHom ≫ p.toHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace) =
+              q.toHom := by
+          rw [← LocallyRingedSpace.comp_toHom]
+          exact congrArg (fun h : Z ⟶ X => h.toHom) (CostructuredArrow.w f)
+        have hgcomp :
+            (g.left.toHom ≫ p.toHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace) =
+              q.toHom := by
+          rw [← LocallyRingedSpace.comp_toHom]
+          exact congrArg (fun h : Z ⟶ X => h.toHom) (CostructuredArrow.w g)
+        have hfbase : f.left.base ≫ p.base = q.base := by
+          change (f.left ≫ p).base = q.base
+          exact congrArg (fun h : Z ⟶ X => h.base) (CostructuredArrow.w f)
+        have hgbase : g.left.base ≫ p.base = q.base := by
+          change (g.left ≫ p).base = q.base
+          exact congrArg (fun h : Z ⟶ X => h.base) (CostructuredArrow.w g)
+        have hfpush :
+            (TopCat.Sheaf.pushforward CommRingCat p.base).obj Sf =
+              (TopCat.Sheaf.pushforward CommRingCat q.base).obj Z.𝒪 := by
+          dsimp [Sf]
+          exact congrArg
+            (fun b => (TopCat.Sheaf.pushforward CommRingCat b).obj Z.𝒪) hfbase
+        have hgpush :
+            (TopCat.Sheaf.pushforward CommRingCat p.base).obj Sg =
+              (TopCat.Sheaf.pushforward CommRingCat q.base).obj Z.𝒪 := by
+          dsimp [Sg]
+          exact congrArg
+            (fun b => (TopCat.Sheaf.pushforward CommRingCat b).obj Z.𝒪) hgbase
+        let hfHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace :=
+          f.left.toHom ≫ p.toHom
+        let hgHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace :=
+          g.left.toHom ≫ p.toHom
+        have hfbase' :
+            (TopologicalSpace.Opens.map hfHom.base).op =
+              (TopologicalSpace.Opens.map q.toHom.base).op := by
+          exact congrArg (fun h : Z.toPresheafedSpace ⟶ X.toPresheafedSpace =>
+            (TopologicalSpace.Opens.map h.base).op) hfcomp
+        have hgbase' :
+            (TopologicalSpace.Opens.map hgHom.base).op =
+              (TopologicalSpace.Opens.map q.toHom.base).op := by
+          exact congrArg (fun h : Z.toPresheafedSpace ⟶ X.toPresheafedSpace =>
+            (TopologicalSpace.Opens.map h.base).op) hgcomp
+        have hfcomp_c :
+            (f.left.toHom ≫ p.toHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace).c ≫
+                Functor.whiskerRight
+                  (eqToHom (by
+                    exact hfbase')) Z.presheaf =
+              q.toHom.c := by
+          apply NatTrans.ext
+          funext U
+          rw [NatTrans.comp_app, Functor.whiskerRight_app]
+          rw [PresheafedSpace.congr_app hfcomp U]
+          rw [Category.assoc, ← Z.presheaf.map_comp]
+          rw [eqToHom_app]
+          simp only [eqToHom_trans, eqToHom_refl, Functor.map_id, Z.presheaf.map_id,
+            Category.comp_id]
+          exact Category.comp_id _
+        have hgcomp_c :
+            (g.left.toHom ≫ p.toHom : Z.toPresheafedSpace ⟶ X.toPresheafedSpace).c ≫
+                Functor.whiskerRight
+                  (eqToHom (by
+                    exact hgbase')) Z.presheaf =
+              q.toHom.c := by
+          apply NatTrans.ext
+          funext U
+          rw [NatTrans.comp_app, Functor.whiskerRight_app]
+          rw [PresheafedSpace.congr_app hgcomp U]
+          rw [Category.assoc, ← Z.presheaf.map_comp]
+          rw [eqToHom_app]
+          simp only [eqToHom_trans, eqToHom_refl, Functor.map_id, Z.presheaf.map_id,
+            Category.comp_id]
+          exact Category.comp_id _
+        have hfpush_map :
+            (TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hfpush) =
+              Functor.whiskerRight (eqToHom hfbase') Z.presheaf := by
+          apply NatTrans.ext
+          funext U
+          simpa [TopCat.Sheaf.forget, TopCat.Sheaf.pushforward,
+            TopCat.Sheaf.pushforward_map, TopCat.Sheaf.pushforward_obj_val,
+            TopCat.Presheaf.pushforward_map_app',
+            TopCat.Presheaf.pushforwardEq_hom_app,
+            Functor.whiskerRight_app, eqToHom_app, eqToHom_map,
+            eqToHom_trans, hfHom, Category.assoc] using
+            (TopCat.Presheaf.pushforwardEq_hom_app (C := CommRingCat)
+              (f := hfHom) (g := q.toHom) hfcomp Z.presheaf U)
+        have hfc : cp ≫
+              (TopCat.Sheaf.pushforward CommRingCat p.base).map cf =
+            qMap ≫ eqToHom hfpush.symm := by
+          apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_injective
+          rw [Functor.map_comp]
+          have hcp :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map cp =
+                (LocallyRingedSpace.Hom.toShHom p).hom.c := by
+            dsimp [cp, TopCat.Sheaf.forget]
+            apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_preimage
+          have hcf :
+              (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cf =
+                (LocallyRingedSpace.Hom.toShHom f.left).hom.c := by
+            dsimp [cf, TopCat.Sheaf.forget]
+            apply (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_preimage
+          have hFcf :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map
+                  ((TopCat.Sheaf.pushforward CommRingCat p.base).map cf) =
+                (TopCat.Presheaf.pushforward CommRingCat p.base).map
+                  ((TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cf) := by
+            rfl
+          have hq :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map qMap =
+                (LocallyRingedSpace.Hom.toShHom q).hom.c := by
+            dsimp [qMap, TopCat.Sheaf.forget]
+            apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_preimage
+          have hqcomp :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map
+                  (qMap ≫ eqToHom hfpush.symm) =
+                (TopCat.Sheaf.forget CommRingCat X.toTopCat).map qMap ≫
+                  (TopCat.Sheaf.forget CommRingCat X.toTopCat).map
+                    (eqToHom hfpush.symm) := by
+            rw [Functor.map_comp]
+          rw [hcp, hFcf, hcf, hqcomp, hq]
+          apply (cancel_mono
+            ((TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hfpush))).1
+          simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
+            Category.comp_id, Category.id_comp, Category.assoc]
+          apply NatTrans.ext
+          funext U
+          rw [NatTrans.comp_app]
+          change
+            (p.toHom.c.app U ≫
+              f.left.toHom.c.app
+                (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U.unop))) ≫ _ = _
+          have hfcomp_c' := hfcomp_c
+          erw [PresheafedSpace.comp_c] at hfcomp_c'
+          have hfcomp_app := congrArg (fun k => k.app U) hfcomp_c'
+          erw [NatTrans.comp_app, Functor.whiskerRight_app] at hfcomp_app
+          erw [NatTrans.comp_app]
+          convert hfcomp_app using 1 <;>
+            simp [TopCat.Sheaf.forget, LocallyRingedSpace.𝒪, SheafedSpace.sheaf,
+              LocallyRingedSpace.Hom.toShHom, InducedCategory.homMk,
+              TopCat.Sheaf.pushforward_map, TopCat.Sheaf.pushforward_obj_val,
+              TopCat.Presheaf.pushforward_map_app', NatTrans.comp_app,
+              Functor.whiskerRight_app, eqToHom_app, eqToHom_map, eqToHom_trans,
+              Category.assoc]
+          constructor
+          · intro _
+            exact hfcomp_app
+          · intro h
+            erw [NatTrans.comp_app]
+            simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
+              Category.comp_id, Category.id_comp, Category.assoc]
+            convert h using 1 <;>
+              try rfl
+            all_goals
+              rename_i htype
+              cases htype <;>
+              exact eqRec_heq _ _
+        have hgc : cp ≫
+              (TopCat.Sheaf.pushforward CommRingCat p.base).map cg =
+            qMap ≫ eqToHom hgpush.symm := by
+          apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_injective
+          rw [Functor.map_comp]
+          have hcp :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map cp =
+                (LocallyRingedSpace.Hom.toShHom p).hom.c := by
+            dsimp [cp, TopCat.Sheaf.forget]
+            apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_preimage
+          have hcg :
+              (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cg =
+                (LocallyRingedSpace.Hom.toShHom g.left).hom.c := by
+            dsimp [cg, TopCat.Sheaf.forget]
+            apply (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_preimage
+          have hFcg :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map
+                  ((TopCat.Sheaf.pushforward CommRingCat p.base).map cg) =
+                (TopCat.Presheaf.pushforward CommRingCat p.base).map
+                  ((TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cg) := by
+            rfl
+          have hq :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map qMap =
+                (LocallyRingedSpace.Hom.toShHom q).hom.c := by
+            dsimp [qMap, TopCat.Sheaf.forget]
+            apply (TopCat.Sheaf.forget CommRingCat X.toTopCat).map_preimage
+          have hqcomp :
+              (TopCat.Sheaf.forget CommRingCat X.toTopCat).map
+                  (qMap ≫ eqToHom hgpush.symm) =
+                (TopCat.Sheaf.forget CommRingCat X.toTopCat).map qMap ≫
+                  (TopCat.Sheaf.forget CommRingCat X.toTopCat).map
+                    (eqToHom hgpush.symm) := by
+            rw [Functor.map_comp]
+          rw [hcp, hFcg, hcg, hqcomp, hq]
+          apply (cancel_mono
+            ((TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hgpush))).1
+          simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
+            Category.comp_id, Category.id_comp, Category.assoc]
+          apply NatTrans.ext
+          funext U
+          rw [NatTrans.comp_app]
+          change
+            (p.toHom.c.app U ≫
+              g.left.toHom.c.app
+                (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U.unop))) ≫ _ = _
+          have hgcomp_c' := hgcomp_c
+          erw [PresheafedSpace.comp_c] at hgcomp_c'
+          have hgcomp_app := congrArg (fun k => k.app U) hgcomp_c'
+          erw [NatTrans.comp_app, Functor.whiskerRight_app] at hgcomp_app
+          erw [NatTrans.comp_app]
+          convert hgcomp_app using 1 <;>
+            simp [TopCat.Sheaf.forget, LocallyRingedSpace.𝒪, SheafedSpace.sheaf,
+              LocallyRingedSpace.Hom.toShHom, InducedCategory.homMk,
+              TopCat.Sheaf.pushforward_map, TopCat.Sheaf.pushforward_obj_val,
+              TopCat.Presheaf.pushforward_map_app', NatTrans.comp_app,
+              Functor.whiskerRight_app, eqToHom_app, eqToHom_map, eqToHom_trans,
+              Category.assoc]
+          constructor
+          · intro _
+            exact hgcomp_app
+          · intro h
+            erw [NatTrans.comp_app]
+            simp only [eqToHom_map, eqToHom_trans, eqToHom_refl, Functor.map_id,
+              Category.comp_id, Category.id_comp, Category.assoc]
+            convert h using 1 <;>
+              try rfl
+            all_goals
+              rename_i htype
+              cases htype <;>
+              exact eqRec_heq _ _
+        let eS : Sf ⟶ Sg := eqToHom (congrArg
+          (fun b => (TopCat.Sheaf.pushforward CommRingCat b).obj Z.𝒪) hbase)
+        have htransport :
+            qMap ≫ eqToHom hfpush.symm ≫
+                (TopCat.Sheaf.pushforward CommRingCat p.base).map eS =
+              qMap ≫ eqToHom hgpush.symm := by
+          simp only [eS, eqToHom_map, eqToHom_trans]
+        have hcompS : cp ≫
+              (TopCat.Sheaf.pushforward CommRingCat p.base).map (cf ≫ eS) =
+            cp ≫ (TopCat.Sheaf.pushforward CommRingCat p.base).map cg := by
+          let F := TopCat.Sheaf.pushforward CommRingCat p.base
+          calc
+            cp ≫ F.map (cf ≫ eS) =
+                (cp ≫ F.map cf) ≫ F.map eS := by
+              rw [F.map_comp, Category.assoc]
+            _ = (qMap ≫ eqToHom hfpush.symm) ≫ F.map eS := by rw [hfc]
+            _ = qMap ≫ eqToHom hgpush.symm := htransport
+            _ = cp ≫ F.map cg := hgc.symm
+        let adj := TopCat.Sheaf.pullbackPushforwardAdjunction CommRingCat p.base
+        let P := structureSheafPullbackMap p
+        have hP : adj.homEquiv X.𝒪 Y.𝒪 P = cp := by
+          dsimp [P, structureSheafPullbackMap, cp, adj]
+          exact (adj.homEquiv X.𝒪 Y.𝒪).apply_symm_apply _
+        rw [Adjunction.homEquiv_unit] at hP
+        have hAdj :
+            adj.homEquiv X.𝒪 Sg (P ≫ (cf ≫ eS)) =
+              adj.homEquiv X.𝒪 Sg (P ≫ cg) := by
+          rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]
+          have hcompS' := hcompS
+          rw [← hP] at hcompS'
+          simpa only [Functor.map_comp, Category.assoc] using hcompS'
+        have hsheaf : cf ≫ eS = cg := by
+          apply (cancel_epi P).1
+          exact (adj.homEquiv X.𝒪 Sg).injective hAdj
+        have hcf' :
+            (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cf = f.left.c := by
+          dsimp [cf]
+          apply (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_preimage
+        have hcg' :
+            (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map cg = g.left.c := by
+          dsimp [cg]
+          apply (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map_preimage
+        have hsheaf_map := congrArg
+          (fun k => (TopCat.Sheaf.forget CommRingCat Y.toTopCat).map k) hsheaf
+        rw [Functor.map_comp, hcf', hcg'] at hsheaf_map
+        apply NatTrans.ext
+        funext U
+        rw [NatTrans.comp_app]
+        have hsheaf_app := congrArg (fun k => k.app U) hsheaf_map
+        erw [NatTrans.comp_app] at hsheaf_app
+        convert hsheaf_app using 1 <;>
+          simp [eS, hbase, TopCat.Sheaf.forget, LocallyRingedSpace.𝒪,
+          SheafedSpace.sheaf, LocallyRingedSpace.Hom.toShHom,
+          InducedCategory.homMk, Functor.whiskerRight_app, NatTrans.comp_app,
+          eqToHom_app, eqToHom_map, eqToHom_trans, Category.assoc]
+      · exact hbase
+  · intro f
+    let fbase := f.left
+    have hf : fbase ≫ p.base = q.base := CostructuredArrow.w f
+    let S := (TopCat.Sheaf.pushforward CommRingCat fbase).obj Z.𝒪
+    have hpush :
+        (TopCat.Sheaf.pushforward CommRingCat p.base).obj S =
+          (TopCat.Sheaf.pushforward CommRingCat q.base).obj Z.𝒪 := by
+      rw [← hf]
+      rfl
+    let qMap : X.𝒪 ⟶
+        (TopCat.Sheaf.pushforward CommRingCat q.base).obj Z.𝒪 :=
+      (TopCat.Sheaf.forget CommRingCat X.toTopCat).preimage
+        (LocallyRingedSpace.Hom.toShHom q).hom.c
+    let cq : X.𝒪 ⟶
+        (TopCat.Sheaf.pushforward CommRingCat p.base).obj S :=
+      qMap ≫ eqToHom hpush.symm
+    let adj := TopCat.Sheaf.pullbackPushforwardAdjunction CommRingCat p.base
+    let P := structureSheafPullbackMap p
+    let d := (adj.homEquiv X.𝒪 S).symm cq
+    let d' := (asIso P).inv ≫ d
+    let gSh : Z.toSheafedSpace ⟶ Y.toSheafedSpace :=
+      InducedCategory.homMk
+        { base := fbase
+          c := d'.1 }
+    have hgcomp : gSh.hom ≫ (LocallyRingedSpace.Hom.toShHom p).hom =
+        (LocallyRingedSpace.Hom.toShHom q).hom := by
+      let cp : X.𝒪 ⟶
+          (TopCat.Sheaf.pushforward CommRingCat p.base).obj Y.𝒪 :=
+        (TopCat.Sheaf.forget CommRingCat X.toTopCat).preimage
+          (LocallyRingedSpace.Hom.toShHom p).hom.c
+      have hP : adj.homEquiv X.𝒪 Y.𝒪 P = cp := by
+        dsimp [P, structureSheafPullbackMap, cp, adj]
+        exact (adj.homEquiv X.𝒪 Y.𝒪).apply_symm_apply _
+      rw [Adjunction.homEquiv_unit] at hP
+      have hd :
+          adj.unit.app X.𝒪 ≫
+              (TopCat.Sheaf.pushforward CommRingCat p.base).map d = cq := by
+        have hd0 : adj.homEquiv X.𝒪 S d = cq := by
+          dsimp [d]
+          exact (adj.homEquiv X.𝒪 S).apply_symm_apply _
+        rw [Adjunction.homEquiv_unit] at hd0
+        exact hd0
+      have hcomp :
+          cp ≫ (TopCat.Sheaf.pushforward CommRingCat p.base).map d' = cq := by
+        let F := TopCat.Sheaf.pushforward CommRingCat p.base
+        calc
+          cp ≫ F.map d' =
+              (adj.unit.app X.𝒪 ≫ F.map P) ≫
+                F.map ((asIso P).inv ≫ d) := by
+            rw [hP]
+          _ = (adj.unit.app X.𝒪 ≫ F.map P) ≫
+                (F.map (asIso P).inv ≫ F.map d) := by
+            simp only [d', Functor.map_comp]
+          _ = adj.unit.app X.𝒪 ≫ F.map d := by
+            have hPinv : P ≫ (asIso P).inv = 𝟙 _ := by
+              change (asIso P).hom ≫ (asIso P).inv = _
+              exact (asIso P).hom_inv_id
+            calc
+              _ = adj.unit.app X.𝒪 ≫
+                    (F.map P ≫ F.map (asIso P).inv) ≫ F.map d := by
+                simp only [Category.assoc]
+              _ = adj.unit.app X.𝒪 ≫
+                    F.map (P ≫ (asIso P).inv) ≫ F.map d := by
+                rw [F.map_comp]
+              _ = _ := by
+                rw [hPinv, F.map_id]
+                rw [← Category.assoc]
+                change (adj.unit.app X.𝒪 ≫ 𝟙 _) ≫ F.map d = _
+                rw [Category.comp_id]
+          _ = cq := hd
+      apply PresheafedSpace.Hom.ext
+      · dsimp [gSh, InducedCategory.homMk]
+        erw [PresheafedSpace.comp_c]
+        have hcomp_map := congrArg
+          (fun k => (TopCat.Sheaf.forget CommRingCat X.toTopCat).map k) hcomp
+        rw [Functor.map_comp] at hcomp_map
+        apply NatTrans.ext
+        funext U
+        have hcomp_app := congrArg (fun k => k.app U) hcomp_map
+        erw [NatTrans.comp_app] at hcomp_app
+        simpa [gSh, InducedCategory.homMk, LocallyRingedSpace.comp_c,
+          PresheafedSpace.comp_c, TopCat.Sheaf.forget, LocallyRingedSpace.𝒪,
+          SheafedSpace.sheaf, TopCat.Sheaf.pushforward_map,
+          cp, cq, qMap, d', hpush, hf, Category.assoc,
+          TopCat.Presheaf.pushforward_map_app',
+          PresheafedSpace.comp_c_app, NatTrans.comp_app,
+          Functor.whiskerRight_app, eqToHom_app, eqToHom_map, eqToHom_trans] using
+          hcomp_app
+      · change fbase ≫ p.base = q.base
+        exact hf
+    let g : Z ⟶ Y := LocallyRingedSpace.homMk gSh (by
+      intro z
+      have hz : p.base (fbase z) = q.base z := by
+        exact congrArg (fun h : Z.toTopCat ⟶ X.toTopCat => h z) hf
+      let e := eqToIso (congrArg (fun x : X => X.presheaf.stalk x) hz)
+      let qz :=
+        e.hom ≫ q.stalkMap z
+      have hcomp :
+          p.stalkMap (fbase z) ≫ gSh.hom.stalkMap z = qz := by
+        have hstalk := PresheafedSpace.stalkMap.congr_hom
+          (gSh.hom ≫ (LocallyRingedSpace.Hom.toShHom p).hom)
+          (LocallyRingedSpace.Hom.toShHom q).hom hgcomp z
+        simpa [qz, e, gSh, PresheafedSpace.stalkMap.comp,
+          LocallyRingedSpace.Hom.toShHom, InducedCategory.homMk,
+          LocallyRingedSpace.Hom.stalkMap] using hstalk
+      let pIso := asIso (p.stalkMap (fbase z))
+      have hsolve :
+          gSh.hom.stalkMap z = pIso.inv ≫ qz := by
+        apply (cancel_epi (p.stalkMap (fbase z))).1
+        rw [hcomp]
+        dsimp [pIso]
+        simp
+      rw [hsolve]
+      dsimp [qz]
+      letI : IsLocalHom pIso.symm.hom.hom := isLocalHom_of_iso pIso.symm
+      letI : IsLocalHom e.hom.hom := isLocalHom_of_iso e
+      change IsLocalHom (pIso.symm.hom ≫ (e.hom ≫ q.stalkMap z)).hom
+      infer_instance)
+    refine ⟨CostructuredArrow.homMk g ?_, ?_⟩
+    · change g ≫ p = q
+      apply LocallyRingedSpace.Hom.ext'
+      simpa [g] using hgcomp
+    · apply CostructuredArrow.hom_ext
+      rfl
 
 /-! ## The affine local-isomorphism functor -/
 

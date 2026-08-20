@@ -212,11 +212,12 @@ def adicLiftingQuotient_ITransition
   adicLiftingQuotientMap (R := R)
     (sup_le_sup le_rfl (Ideal.pow_le_pow_right (Nat.le_succ m)))
 
-/-- The quotient-system assertion used in the proof of continuous lifting: each elementary square
-has a surjective map to its fibre product with square-zero kernel. -/
+/-- The quotient-system assertion used in the proof of continuous lifting: for square-zero `J`
+and positive indices, each elementary square has a surjective map to its fibre product with
+square-zero kernel. -/
 theorem exists_adicLiftingQuotient_square_zero
     {R : Type v} [CommRing R] {A : Type u} [CommRing A] [Algebra R A]
-    (J I : Ideal A) (n m : ℕ) :
+    (J I : Ideal A) (hJ : J ^ 2 = ⊥) (n m : ℕ) (hn : 1 ≤ n) (hm : 1 ≤ m) :
     ∃ q : adicLiftingQuotient J I (n + 1) (m + 1) →ₐ[R]
         AlgHom.pullback
           (adicLiftingQuotient_ITransition (R := R) J I n m)

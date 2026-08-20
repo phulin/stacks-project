@@ -52,7 +52,7 @@ theorem isolated_point_criteria
             ringKrullDim (Localization.AtPrime q.asIdeal) = 0,
           Module.Finite k q.asIdeal.ResidueField ∧
             ringKrullDim (Localization.AtPrime q.asIdeal) = 0 ] ∧
-      (∀ hq : IsolatedPoint q,
+      (∀ _hq : IsolatedPoint q,
         ∃ (S' : Type u) (hS' : CommRing S') (hA' : Algebra k S'),
           letI : CommRing S' := hS'
           letI : Algebra k S' := hA'
@@ -71,19 +71,19 @@ theorem isolated_point_criteria
     rw [Ideal.eq_top_iff_one]
     rw [← h]
     exact q.asIdeal.zero_mem
-  letI : Nontrivial S := ⟨⟨0, 1, hne⟩⟩
-  haveI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
-  haveI : IsJacobsonRing S := isJacobsonRing_of_finiteType (A := k)
+  let : Nontrivial S := ⟨⟨0, 1, hne⟩⟩
+  have : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  have : IsJacobsonRing S := isJacobsonRing_of_finiteType (A := k)
   constructor
   · tfae_have 1 ↔ 2 := by
       constructor
       · intro hq
-        haveI : Algebra.QuasiFiniteAt k q.asIdeal :=
+        have : Algebra.QuasiFiniteAt k q.asIdeal :=
           Algebra.QuasiFiniteAt.of_isOpen_singleton (R := k) q hq
         exact (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
           (S := Localization.AtPrime q.asIdeal)).mp inferInstance
       · intro hq
-        haveI : Algebra.QuasiFiniteAt k q.asIdeal :=
+        have : Algebra.QuasiFiniteAt k q.asIdeal :=
           (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
             (S := Localization.AtPrime q.asIdeal)).mpr hq
         change IsOpen ({q} : Set (PrimeSpectrum S))
@@ -91,14 +91,14 @@ theorem isolated_point_criteria
     tfae_have 2 ↔ 3 := by
       constructor
       · intro hq
-        haveI : Algebra.QuasiFiniteAt k q.asIdeal :=
+        have : Algebra.QuasiFiniteAt k q.asIdeal :=
           (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
             (S := Localization.AtPrime q.asIdeal)).mpr hq
         obtain ⟨g, hg, hq'⟩ :=
           Algebra.QuasiFiniteAt.exists_basicOpen_eq_singleton (R := k) q.asIdeal
         exact ⟨g, hg, by simpa using hq'⟩
       · rintro ⟨g, hg, hq⟩
-        haveI : Algebra.QuasiFiniteAt k q.asIdeal :=
+        have : Algebra.QuasiFiniteAt k q.asIdeal :=
           Algebra.QuasiFiniteAt.of_isOpen_singleton (R := k) q
             (by rw [← hq]; exact PrimeSpectrum.isOpen_basicOpen)
         exact (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
@@ -111,12 +111,12 @@ theorem isolated_point_criteria
             0 2).mp hq
           exact h.1
         have hdim : ringKrullDim (Localization.AtPrime q.asIdeal) = 0 := by
-          haveI : Algebra.QuasiFiniteAt k q.asIdeal :=
+          have : Algebra.QuasiFiniteAt k q.asIdeal :=
             Algebra.QuasiFiniteAt.of_isOpen_singleton (R := k) q hq
-          haveI : Module.Finite k (Localization.AtPrime q.asIdeal) :=
+          have : Module.Finite k (Localization.AtPrime q.asIdeal) :=
             (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
               (S := Localization.AtPrime q.asIdeal)).mp inferInstance
-          letI : IsArtinianRing (Localization.AtPrime q.asIdeal) :=
+          let : IsArtinianRing (Localization.AtPrime q.asIdeal) :=
             IsArtinianRing.of_finite k (Localization.AtPrime q.asIdeal)
           exact Formalization.Books.Algebra.Unit60.noetherian_ringKrullDim_eq_zero_iff_artinian.mpr
             inferInstance
@@ -142,21 +142,21 @@ theorem isolated_point_criteria
             0 2).mp hq
           exact h.1
         have hdim : ringKrullDim (Localization.AtPrime q.asIdeal) = 0 := by
-          haveI : Algebra.QuasiFiniteAt k q.asIdeal :=
+          have : Algebra.QuasiFiniteAt k q.asIdeal :=
             Algebra.QuasiFiniteAt.of_isOpen_singleton (R := k) q hq
-          haveI : Module.Finite k (Localization.AtPrime q.asIdeal) :=
+          have : Module.Finite k (Localization.AtPrime q.asIdeal) :=
             (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
               (S := Localization.AtPrime q.asIdeal)).mp inferInstance
-          letI : IsArtinianRing (Localization.AtPrime q.asIdeal) :=
+          let : IsArtinianRing (Localization.AtPrime q.asIdeal) :=
             IsArtinianRing.of_finite k (Localization.AtPrime q.asIdeal)
           exact Formalization.Books.Algebra.Unit60.noetherian_ringKrullDim_eq_zero_iff_artinian.mpr
             inferInstance
-        letI : Algebra.QuasiFiniteAt k q.asIdeal :=
+        let : Algebra.QuasiFiniteAt k q.asIdeal :=
           Algebra.QuasiFiniteAt.of_isOpen_singleton (R := k) q hq
-        letI : Module.Finite k (Localization.AtPrime q.asIdeal) :=
+        let : Module.Finite k (Localization.AtPrime q.asIdeal) :=
           (Algebra.QuasiFinite.iff_of_isArtinianRing (R := k)
             (S := Localization.AtPrime q.asIdeal)).mp inferInstance
-        haveI : Module.Finite k q.asIdeal.ResidueField := by
+        have : Module.Finite k q.asIdeal.ResidueField := by
           exact Module.Finite.of_surjective
             (IsScalarTower.toAlgHom k (Localization.AtPrime q.asIdeal)
               q.asIdeal.ResidueField).toLinearMap
@@ -164,7 +164,7 @@ theorem isolated_point_criteria
               (IsLocalRing.residue_surjective (R := Localization.AtPrime q.asIdeal)))
         exact ⟨inferInstance, hdim⟩
       · rintro ⟨hfinite, hdim⟩
-        haveI : Module.Finite k q.asIdeal.ResidueField := hfinite
+        have : Module.Finite k q.asIdeal.ResidueField := hfinite
         have halg : Algebra.IsAlgebraic k q.asIdeal.ResidueField := inferInstance
         have hmax : q.asIdeal.IsMaximal := by
           have hcomap : (⊥ : Ideal k) = q.asIdeal.comap (algebraMap k S) := by
@@ -180,10 +180,10 @@ theorem isolated_point_criteria
             exact (Ideal.eq_bot_or_top _).resolve_right hnot
           exact Formalization.Books.Algebra.Unit35.maximal_residueField_isMaximal_of_algebraic
             (algebraMap k S) ⟨⊥, Ideal.bot_isMaximal⟩ q hcomap (by
-              letI : Algebra (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField :=
+              let : Algebra (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField :=
                 Formalization.Books.Algebra.Unit35.residueFieldAlgebraOfMap
                   (⊥ : Ideal k) q.asIdeal (algebraMap k S) hcomap
-              letI : IsScalarTower k (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField := by
+              let : IsScalarTower k (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField := by
                 constructor
                 intro r x y
                 obtain ⟨x, rfl⟩ :=
@@ -199,7 +199,7 @@ theorem isolated_point_criteria
                 simp only [Algebra.smul_def]
                 rw [map_mul, hmap r]
                 ring
-              letI : Algebra.IsAlgebraic k q.asIdeal.ResidueField := halg
+              let : Algebra.IsAlgebraic k q.asIdeal.ResidueField := halg
               exact Algebra.IsAlgebraic.extendScalars
                 (Ideal.algEquivResidueFieldOfField (⊥ : Ideal k)).injective)
         have hclosed : IsClosed ({q} : Set (PrimeSpectrum S)) :=
@@ -225,7 +225,7 @@ theorem isolated_point_criteria
         · unfold Formalization.Books.Topology.Unit10.krullDimensionAt
           exact le_iInf fun U => by
             let x : U := ⟨q, U.mem⟩
-            letI : Nonempty (TopologicalSpace.IrreducibleCloseds (U : Set _)) :=
+            let : Nonempty (TopologicalSpace.IrreducibleCloseds (U : Set _)) :=
               let s : Set U := closure ({x} : Set U)
               ⟨⟨s, by
                 exact (isIrreducible_singleton : IsIrreducible ({x} : Set U)).closure,
@@ -241,7 +241,7 @@ theorem isolated_point_criteria
               ((Cardinal.toENat (Algebra.trdeg k q.asIdeal.ResidueField) : ℕ∞) :
                 WithBot ℕ∞) := (WithBot.coe_nonneg).2 bot_le
           have hdim_nonneg : 0 ≤ ringKrullDim (Localization.AtPrime q.asIdeal) := by
-            letI : Nonempty (PrimeSpectrum (Localization.AtPrime q.asIdeal)) :=
+            let : Nonempty (PrimeSpectrum (Localization.AtPrime q.asIdeal)) :=
               ⟨IsLocalRing.closedPoint _⟩
             exact Order.krullDim_nonneg
           apply le_antisymm
@@ -258,7 +258,7 @@ theorem isolated_point_criteria
               ((Cardinal.toENat (Algebra.trdeg k q.asIdeal.ResidueField) : ℕ∞) :
                 WithBot ℕ∞) = 0 := by
             have hdim_nonneg : 0 ≤ ringKrullDim (Localization.AtPrime q.asIdeal) := by
-              letI : Nonempty (PrimeSpectrum (Localization.AtPrime q.asIdeal)) :=
+              let : Nonempty (PrimeSpectrum (Localization.AtPrime q.asIdeal)) :=
                 ⟨IsLocalRing.closedPoint _⟩
               exact Order.krullDim_nonneg
             apply le_antisymm
@@ -274,7 +274,7 @@ theorem isolated_point_criteria
                 _ = 0 := hformula.symm
             · exact (WithBot.coe_nonneg).2 bot_le
           exact Cardinal.toENat_eq_zero.mp (WithBot.coe_eq_zero.mp hcast)
-        haveI : Algebra.IsAlgebraic k q.asIdeal.ResidueField :=
+        have : Algebra.IsAlgebraic k q.asIdeal.ResidueField :=
           (trdeg_eq_zero_iff.mp htrdeg)
         have hmax : q.asIdeal.IsMaximal := by
           have hcomap : (⊥ : Ideal k) = q.asIdeal.comap (algebraMap k S) := by
@@ -290,10 +290,10 @@ theorem isolated_point_criteria
             exact (Ideal.eq_bot_or_top _).resolve_right hnot
           exact Formalization.Books.Algebra.Unit35.maximal_residueField_isMaximal_of_algebraic
             (algebraMap k S) ⟨⊥, Ideal.bot_isMaximal⟩ q hcomap (by
-              letI : Algebra (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField :=
+              let : Algebra (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField :=
                 Formalization.Books.Algebra.Unit35.residueFieldAlgebraOfMap
                   (⊥ : Ideal k) q.asIdeal (algebraMap k S) hcomap
-              letI : IsScalarTower k (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField := by
+              let : IsScalarTower k (⊥ : Ideal k).ResidueField q.asIdeal.ResidueField := by
                 constructor
                 intro r x y
                 obtain ⟨x, rfl⟩ :=
@@ -309,7 +309,7 @@ theorem isolated_point_criteria
                 simp only [Algebra.smul_def]
                 rw [map_mul, hmap r]
                 ring
-              letI : Algebra.IsAlgebraic k q.asIdeal.ResidueField := inferInstance
+              let : Algebra.IsAlgebraic k q.asIdeal.ResidueField := inferInstance
               exact Algebra.IsAlgebraic.extendScalars
                 (Ideal.algEquivResidueFieldOfField (⊥ : Ideal k)).injective)
         have hclosed : IsClosed ({q} : Set (PrimeSpectrum S)) :=
@@ -338,15 +338,15 @@ theorem isolated_point_criteria
     have haway : IsLocalization.Away e (Localization.AtPrime q.asIdeal) :=
       (PrimeSpectrum.isLocalization_away_iff_atPrime_of_basicOpen_eq_singleton
         (p := q) (S := Localization.AtPrime q.asIdeal) heq.symm).mpr inferInstance
-    letI : IsLocalization.Away e (Localization.AtPrime q.asIdeal) := haway
+    let : IsLocalization.Away e (Localization.AtPrime q.asIdeal) := haway
     refine ⟨Localization.Away (1 - e), inferInstance, inferInstance, ?_, ?_, ?_⟩
     · let eLoc : Localization.Away e ≃+* Localization.AtPrime q.asIdeal :=
         (IsLocalization.algEquiv (Submonoid.powers e) (Localization.Away e)
           (Localization.AtPrime q.asIdeal)).toRingEquiv
-      letI : IsLocalization.Away e
+      let : IsLocalization.Away e
           (S ⧸ Ideal.span ({1 - e} : Set S)) :=
         IsLocalization.Away.quotient_of_isIdempotentElem he
-      letI : IsLocalization.Away (1 - e)
+      let : IsLocalization.Away (1 - e)
           (S ⧸ Ideal.span ({e} : Set S)) := by
         have h := IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
         rw [sub_sub_cancel] at h
@@ -373,7 +373,7 @@ theorem isolated_point_criteria
       have hawayg : IsLocalization.Away g (Localization.AtPrime q.asIdeal) :=
         (PrimeSpectrum.isLocalization_away_iff_atPrime_of_basicOpen_eq_singleton
           (p := q) (S := Localization.AtPrime q.asIdeal) hgb).mpr inferInstance
-      letI : IsLocalization.Away g (Localization.AtPrime q.asIdeal) := hawayg
+      let : IsLocalization.Away g (Localization.AtPrime q.asIdeal) := hawayg
       exact ⟨(IsLocalization.algEquiv (Submonoid.powers g)
         (Localization.AtPrime q.asIdeal) (Localization.Away g)).toRingEquiv⟩
 
@@ -428,11 +428,11 @@ theorem isolated_point_fibre_criteria
           ringKrullDim
               (Formalization.Books.Algebra.Unit112.tensorLocalRingOfFibre f p q hq) = 0 ] := by
   classical
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+  let : Algebra R S := f.toAlgebra
+  let : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField :=
     (Formalization.Books.Algebra.Unit113.residueFieldMapAt f p q hq).toAlgebra
-  letI : Algebra.FiniteType R S := hfinite
-  letI : Algebra.FiniteType p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+  let : Algebra.FiniteType R S := hfinite
+  let : Algebra.FiniteType p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
     by infer_instance
   let qF := Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hq
   let T := Formalization.Books.Algebra.Unit112.tensorLocalRingOfFibre f p q hq
@@ -444,7 +444,7 @@ theorem isolated_point_fibre_criteria
     have hleft' := congrArg
       (fun z : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p} => z.1.asIdeal) hleft
     exact hleft'
-  letI : q.asIdeal.LiesOver p.asIdeal := by
+  let : q.asIdeal.LiesOver p.asIdeal := by
     rw [Ideal.liesOver_iff]
     rw [Ideal.under_def]
     simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
@@ -452,13 +452,13 @@ theorem isolated_point_fibre_criteria
   have hqF_of_hq : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal →
       RingHom.QuasiFiniteAt f q.asIdeal := by
     intro hqFq
-    letI : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal := hqFq
+    let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal := hqFq
     exact Algebra.QuasiFiniteAt.of_quasiFiniteAt_residueField p.asIdeal q.asIdeal
       qF.asIdeal hqF
   have hq_of_hqF : RingHom.QuasiFiniteAt f q.asIdeal →
       Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal := by
     intro hqf
-    letI : Algebra.QuasiFiniteAt R q.asIdeal := hqf
+    let : Algebra.QuasiFiniteAt R q.asIdeal := hqf
     exact Algebra.QuasiFiniteAt.baseChange q.asIdeal qF.asIdeal hqF.symm
   have hcrit := isolated_point_criteria
     (k := p.asIdeal.ResidueField) (S := p.asIdeal.Fiber S) qF
@@ -474,12 +474,12 @@ theorem isolated_point_fibre_criteria
         have hlocal : Module.Finite p.asIdeal.ResidueField
             (Localization.AtPrime qF.asIdeal) :=
           (hcrit.1.out 0 1).mp hqiso
-        letI : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal :=
+        let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal :=
           (Algebra.QuasiFinite.iff_of_isArtinianRing
             (R := p.asIdeal.ResidueField) (S := Localization.AtPrime qF.asIdeal)).mpr
             hlocal
         have hqR : RingHom.QuasiFiniteAt f q.asIdeal := hqF_of_hq inferInstance
-        letI : Algebra.QuasiFiniteAt R q.asIdeal := hqR
+        let : Algebra.QuasiFiniteAt R q.asIdeal := hqR
         obtain ⟨g, hg, hmem⟩ :=
           Ideal.exists_not_mem_forall_mem_of_ne_of_liesOver
             p.asIdeal q.asIdeal
@@ -521,9 +521,9 @@ theorem isolated_point_fibre_criteria
           have hqR : Algebra.QuasiFiniteAt R q.asIdeal := by
             cases hq
             exact Algebra.QuasiFiniteAt.of_isOpen_singleton_fiber q hopen
-          letI : Algebra.QuasiFiniteAt R q.asIdeal := hqR
+          let : Algebra.QuasiFiniteAt R q.asIdeal := hqR
           exact Algebra.QuasiFiniteAt.baseChange q.asIdeal qF.asIdeal hqF.symm
-        letI : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal := hqf
+        let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal := hqf
         exact (hcrit.1.out 0 1).mpr
           ((Algebra.QuasiFinite.iff_of_isArtinianRing
             (R := p.asIdeal.ResidueField) (S := T)).mp inferInstance)
@@ -532,15 +532,15 @@ theorem isolated_point_fibre_criteria
       · intro hqiso
         have hlocal : Module.Finite p.asIdeal.ResidueField T :=
           tfae_1_iff_2.mp hqiso
-        haveI : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal :=
+        have : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal :=
           (Algebra.QuasiFinite.iff_of_isArtinianRing
             (R := p.asIdeal.ResidueField) (S := T)).mpr hlocal
         have hqR : RingHom.QuasiFiniteAt f q.asIdeal := hqF_of_hq inferInstance
-        letI : Algebra.QuasiFiniteAt R q.asIdeal := hqR
+        let : Algebra.QuasiFiniteAt R q.asIdeal := hqR
         have hbase : p.asIdeal = q.asIdeal.comap (algebraMap R S) := by
           simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
             (congrArg PrimeSpectrum.asIdeal hq).symm
-        letI : IsScalarTower R p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+        let : IsScalarTower R p.asIdeal.ResidueField q.asIdeal.ResidueField :=
           IsScalarTower.of_algebraMap_eq' (by
             ext r
             change algebraMap S q.asIdeal.ResidueField (algebraMap R S r) =
@@ -548,13 +548,13 @@ theorem isolated_point_fibre_criteria
                 (algebraMap R p.asIdeal.ResidueField r)
             exact (Ideal.ResidueField.map_algebraMap
               p.asIdeal q.asIdeal (algebraMap R S) hbase r).symm)
-        haveI : Module.Finite p.asIdeal.ResidueField T := hlocal
+        have : Module.Finite p.asIdeal.ResidueField T := hlocal
         have hfinite_residue : Module.Finite p.asIdeal.ResidueField
             q.asIdeal.ResidueField := by
-          letI : Algebra (Localization.AtPrime p.asIdeal)
+          let : Algebra (Localization.AtPrime p.asIdeal)
               (Localization.AtPrime q.asIdeal) :=
             Localization.AtPrime.algebraOfLiesOver p.asIdeal q.asIdeal
-          letI : Localization.AtPrime.IsLiesOverAlgebra p.asIdeal q.asIdeal :=
+          let : Localization.AtPrime.IsLiesOverAlgebra p.asIdeal q.asIdeal :=
             ⟨rfl⟩
           convert Algebra.WeaklyQuasiFiniteAt.finite_residueField
             p.asIdeal q.asIdeal using 1
@@ -565,7 +565,7 @@ theorem isolated_point_fibre_criteria
             Ideal.Quotient.algebraOfLiesOver
               (IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal))
               (IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal))
-          letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField := canonicalAlg
+          let : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField := canonicalAlg
           obtain ⟨x, rfl⟩ := IsLocalRing.residue_surjective x
           change IsLocalRing.residue (Localization.AtPrime q.asIdeal)
               ((algebraMap (Localization.AtPrime p.asIdeal)
@@ -580,7 +580,7 @@ theorem isolated_point_fibre_criteria
         have hbase : p.asIdeal = q.asIdeal.comap (algebraMap R S) := by
           simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
             (congrArg PrimeSpectrum.asIdeal hq).symm
-        letI : IsScalarTower R p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+        let : IsScalarTower R p.asIdeal.ResidueField q.asIdeal.ResidueField :=
           IsScalarTower.of_algebraMap_eq' (by
             ext r
             change algebraMap S q.asIdeal.ResidueField (algebraMap R S r) =
@@ -596,7 +596,7 @@ theorem isolated_point_fibre_criteria
           (Ideal.ResidueField.mapₐ p.asIdeal q.asIdeal (Algebra.ofId R S) hbase)
           (IsScalarTower.toAlgHom R S q.asIdeal.ResidueField) (fun _ _ ↦ .all _ _)
         have hφ : φ.toRingHom = φR.toRingHom := by
-          ext <;> simp [φ, φR, IsScalarTower.algebraMap_apply]
+          ext <;> simp [φ, φR]
         have hkerR : qF.asIdeal = RingHom.ker φR.toRingHom := by
           change (PrimeSpectrum.preimageEquivFiber R S p
             (⟨q, by simpa [RingHom.algebraMap_toAlgebra] using hq⟩ :
@@ -605,7 +605,7 @@ theorem isolated_point_fibre_criteria
         have hker : qF.asIdeal = RingHom.ker φ.toRingHom := by
           rw [hφ]
           exact hkerR
-        letI : Algebra p.asIdeal.ResidueField qF.asIdeal.ResidueField :=
+        let : Algebra p.asIdeal.ResidueField qF.asIdeal.ResidueField :=
           IsLocalRing.ResidueField.algebra (Localization.AtPrime qF.asIdeal)
         let ψ : qF.asIdeal.ResidueField →ₐ[p.asIdeal.ResidueField]
             q.asIdeal.ResidueField :=
@@ -621,10 +621,10 @@ theorem isolated_point_fibre_criteria
             exact isUnit_iff_ne_zero.mpr hx0)
         have hψ : Function.Injective ψ := by
           exact RingHom.injective ψ.toRingHom
-        letI : Module.Finite p.asIdeal.ResidueField q.asIdeal.ResidueField := hfiniteq
-        letI : Algebra.IsAlgebraic p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+        let : Module.Finite p.asIdeal.ResidueField q.asIdeal.ResidueField := hfiniteq
+        let : Algebra.IsAlgebraic p.asIdeal.ResidueField q.asIdeal.ResidueField :=
           Algebra.IsAlgebraic.of_finite _ _
-        letI : Algebra.IsAlgebraic p.asIdeal.ResidueField qF.asIdeal.ResidueField :=
+        let : Algebra.IsAlgebraic p.asIdeal.ResidueField qF.asIdeal.ResidueField :=
           Algebra.IsAlgebraic.of_injective ψ hψ
         have hcomap : (⊥ : Ideal p.asIdeal.ResidueField) =
             qF.asIdeal.comap (algebraMap p.asIdeal.ResidueField (p.asIdeal.Fiber S)) := by
@@ -647,12 +647,12 @@ theorem isolated_point_fibre_criteria
           exact Formalization.Books.Algebra.Unit35.maximal_residueField_isMaximal_of_algebraic
             (algebraMap p.asIdeal.ResidueField (p.asIdeal.Fiber S))
             ⟨⊥, Ideal.bot_isMaximal⟩ qF hcomap (by
-              letI : Algebra (⊥ : Ideal p.asIdeal.ResidueField).ResidueField
+              let : Algebra (⊥ : Ideal p.asIdeal.ResidueField).ResidueField
                   qF.asIdeal.ResidueField :=
                 Formalization.Books.Algebra.Unit35.residueFieldAlgebraOfMap
                   (⊥ : Ideal p.asIdeal.ResidueField) qF.asIdeal
                   (algebraMap p.asIdeal.ResidueField (p.asIdeal.Fiber S)) hcomap
-              letI : IsScalarTower p.asIdeal.ResidueField
+              let : IsScalarTower p.asIdeal.ResidueField
                   (⊥ : Ideal p.asIdeal.ResidueField).ResidueField
                   qF.asIdeal.ResidueField := by
                 constructor
@@ -714,12 +714,12 @@ theorem quasiFiniteAt_above_prime_criteria
         Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S),
         Finite (PrimeSpectrum (p.asIdeal.Fiber S)) ] := by
   classical
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra.FiniteType R S := hfinite
-  letI : Algebra.FiniteType p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+  let : Algebra R S := f.toAlgebra
+  let : Algebra.FiniteType R S := hfinite
+  let : Algebra.FiniteType p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
     by infer_instance
   let p0 : PrimeSpectrum p.asIdeal.ResidueField := ⟨⊥, inferInstance⟩
-  letI : Subsingleton (PrimeSpectrum p.asIdeal.ResidueField) := by
+  let : Subsingleton (PrimeSpectrum p.asIdeal.ResidueField) := by
     constructor
     intro x y
     apply PrimeSpectrum.ext
@@ -732,8 +732,8 @@ theorem quasiFiniteAt_above_prime_criteria
       Finite (PrimeSpectrum (p.asIdeal.Fiber S)) →
         Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := by
     intro hspec
-    letI : Finite (PrimeSpectrum (p.asIdeal.Fiber S)) := hspec
-    letI : Algebra.QuasiFinite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+    let : Finite (PrimeSpectrum (p.asIdeal.Fiber S)) := hspec
+    let : Algebra.QuasiFinite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
       (Algebra.QuasiFinite.iff_finite_comap_preimage_singleton).mpr (by
         intro x
         have hx : x = p0 := Subsingleton.elim _ _
@@ -752,8 +752,8 @@ theorem quasiFiniteAt_above_prime_criteria
       Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) →
         Finite (PrimeSpectrum (p.asIdeal.Fiber S)) := by
     intro hmodule
-    letI : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := hmodule
-    letI : Algebra.QuasiFinite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+    let : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := hmodule
+    let : Algebra.QuasiFinite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
       inferInstance
     have hpre := Algebra.QuasiFinite.finite_comap_preimage_singleton
       (R := p.asIdeal.ResidueField) (S := p.asIdeal.Fiber S) p0
@@ -782,8 +782,8 @@ theorem quasiFiniteAt_above_prime_criteria
       have heq : (e z).asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom =
           z.1.asIdeal := by
         exact congr($(e.symm_apply_apply z).1.asIdeal)
-      letI : Algebra.QuasiFiniteAt R z.1.asIdeal := hzq
-      letI : Algebra.QuasiFiniteAt p.asIdeal.ResidueField (e z).asIdeal :=
+      let : Algebra.QuasiFiniteAt R z.1.asIdeal := hzq
+      let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField (e z).asIdeal :=
         Algebra.QuasiFiniteAt.baseChange z.1.asIdeal (e z).asIdeal heq.symm
       have hlocal : Module.Finite p.asIdeal.ResidueField
           (Localization.AtPrime (e z).asIdeal) :=
@@ -795,9 +795,9 @@ theorem quasiFiniteAt_above_prime_criteria
           (k := p.asIdeal.ResidueField) (S := p.asIdeal.Fiber S) (e z)).1.out
           0 1 |>.mpr hlocal
       exact ⟨{e z}, hiso, by simp⟩
-    letI : DiscreteTopology (PrimeSpectrum (p.asIdeal.Fiber S)) :=
+    let : DiscreteTopology (PrimeSpectrum (p.asIdeal.Fiber S)) :=
       isDiscrete_univ_iff.mp hdisc
-    letI : CompactSpace (PrimeSpectrum (p.asIdeal.Fiber S)) :=
+    let : CompactSpace (PrimeSpectrum (p.asIdeal.Fiber S)) :=
       PrimeSpectrum.compactSpace
     exact finite_of_compact_of_discrete
   tfae_have 1 ↔ 2 := by
@@ -805,8 +805,8 @@ theorem quasiFiniteAt_above_prime_criteria
     · intro hall
       exact hmodule_of_finite_spec (hfinite_spec_of_local hall)
     · intro hmodule q hq
-      haveI : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := hmodule
-      letI : Algebra.QuasiFinite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+      have : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := hmodule
+      let : Algebra.QuasiFinite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
         inferInstance
       have hqz : PrimeSpectrum.comap (algebraMap R S) q = p := by
         simpa [RingHom.algebraMap_toAlgebra] using hq
@@ -819,14 +819,14 @@ theorem quasiFiniteAt_above_prime_criteria
         have hleft' := congrArg
           (fun z : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p} => z.1.asIdeal) hleft
         exact hleft'
-      letI : q.asIdeal.LiesOver p.asIdeal := by
+      let : q.asIdeal.LiesOver p.asIdeal := by
         rw [Ideal.liesOver_iff, Ideal.under_def]
         simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
           (congrArg PrimeSpectrum.asIdeal hqz).symm
-      letI : Algebra.QuasiFiniteAt p.asIdeal.ResidueField
+      let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField
           (Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hq).asIdeal := by
-        letI : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := hmodule
-        letI : IsArtinianRing (p.asIdeal.Fiber S) :=
+        let : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := hmodule
+        let : IsArtinianRing (p.asIdeal.Fiber S) :=
           IsArtinianRing.of_finite p.asIdeal.ResidueField (p.asIdeal.Fiber S)
         have hloc_finite : Module.Finite (p.asIdeal.Fiber S)
           (Localization.AtPrime
@@ -836,7 +836,7 @@ theorem quasiFiniteAt_above_prime_criteria
             exact IsArtinianRing.localization_surjective
               (Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hq).asIdeal.primeCompl
               _
-        letI : Module.Finite (p.asIdeal.Fiber S)
+        let : Module.Finite (p.asIdeal.Fiber S)
             (Localization.AtPrime
               (Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hq).asIdeal) :=
           hloc_finite
@@ -871,7 +871,7 @@ theorem isQuasiFinite_iff_finite_fibres
       ∀ p : PrimeSpectrum R,
         Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) := by
   classical
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   constructor
   · rintro ⟨hft, hq⟩ p
     have hall : ∀ q : PrimeSpectrum S,

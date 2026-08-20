@@ -177,7 +177,35 @@ theorem isGeometricallyIntegral_any_integral_base_change
   let : (⊥ : Ideal (R ⊗[k] S)).IsPrime := hp
   exact IsDomain.of_bot_isPrime _
   -/
-  sorry
+  let F := FractionRing R
+  let : Algebra k F :=
+    ((algebraMap R F).comp (algebraMap k R)).toAlgebra
+  let : SMul k F := Algebra.toSMul
+  let : Module k F := Algebra.toModule
+  let : IsScalarTower k k R := IsScalarTower.left k
+  let : IsScalarTower k k S := IsScalarTower.left k
+  let : IsScalarTower k k F := IsScalarTower.of_algebraMap_eq' rfl
+  let : IsScalarTower k F F := IsScalarTower.of_algebraMap_eq' rfl
+  let : SMulCommClass k F F := Algebra.to_smulCommClass
+  let f : R →ₐ[k] F :=
+    { toFun := algebraMap R F
+      map_one' := map_one _
+      map_mul' := map_mul _
+      map_zero' := map_zero _
+      map_add' := map_add _
+      commutes' := by
+        intro r
+        rfl }
+  let g : S →ₐ[k] S := AlgHom.id k S
+  let : IsDomain (F ⊗[k] S) := hS F
+  let e : R ⊗[k] S →ₐ[k] F ⊗[k] S :=
+    Algebra.TensorProduct.map f g
+  have he : Function.Injective e := by
+    apply TensorProduct.map_injective_of_flat_flat f.toLinearMap g.toLinearMap
+    · simpa [f] using (IsFractionRing.injective R F)
+    · intro x y hxy
+      exact hxy
+  exact he.isDomain e.toRingHom
 
 end
 

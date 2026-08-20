@@ -80,10 +80,36 @@ def LeftDifferentialGradedModule.SatisfiesLeibniz
             (M.actionOnHomogeneous p (q + 1) a
               ((M.complex.d q (q + 1)).hom x))
 
+private theorem leftDifferentialGradedModule_homogeneousAction_transport
+    {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
+    (M : LeftDifferentialGradedModule A) (p q r : ℤ)
+    (h : p + q = r) (a : A.complex.X p) (x : M.complex.X q) :
+    transportComponent (C := M.complex) h
+        (M.actionOnHomogeneous p q a x) =
+      (M.action.f r).hom
+        ((HomologicalComplex.ιTensorObj A.complex M.complex p q r h).hom
+          (a ⊗ₜ[R] x)) := by
+  subst r
+  rfl
+
 theorem LeftDifferentialGradedModule.satisfiesLeibniz
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
     (M : LeftDifferentialGradedModule A) : M.SatisfiesLeibniz := by
-  sorry
+  intro p q a x
+  change ((M.action.f (p + q) ≫ M.complex.d (p + q) (p + q + 1)).hom
+    ((HomologicalComplex.ιTensorObj A.complex M.complex p q (p + q) rfl).hom
+      (a ⊗ₜ[R] x))) = _
+  rw [M.action.comm]
+  change ((HomologicalComplex.ιTensorObj A.complex M.complex p q (p + q) rfl ≫
+      (tensorProductComplex R A.complex M.complex).d (p + q) (p + q + 1) ≫
+        M.action.f (p + q + 1)).hom (a ⊗ₜ[R] x)) = _
+  rw [← Category.assoc, tensorProductComplex_differential_formula]
+  simp
+  rw [leftDifferentialGradedModule_homogeneousAction_transport,
+    leftDifferentialGradedModule_homogeneousAction_transport]
+  have hp : (p.negOnePow : R) = (-1 : R) ^ p.natAbs :=
+    Int.coe_negOnePow R p
+  simp only [Units.smul_def, ← Int.cast_smul_eq_zsmul R, hp]
 
 /-! ## Morphisms and the left-module category -/
 
@@ -93,13 +119,58 @@ def LeftDifferentialGradedModuleHomSubgroup
     AddSubgroup (M.complex ⟶ N.complex) where
   carrier := {f |
     M.action ≫ f = tensorHomComplex (𝟙 A.complex) f ≫ N.action}
-  zero_mem' := by sorry
+  zero_mem' := by
+    change M.action ≫ (0 : M.complex ⟶ N.complex) =
+      tensorHomComplex (𝟙 A.complex) 0 ≫ N.action
+    have hzero :
+        tensorHomComplex (𝟙 A.complex) (0 : M.complex ⟶ N.complex) = 0 := by
+      apply HomologicalComplex.hom_ext
+      intro i
+      apply HomologicalComplex₂.total.hom_ext
+      intro p q h
+      simp [HomologicalComplex₂.ιTotal_map, tensorHomComplex,
+        HomologicalComplex.tensorHom, HomologicalComplex.mapBifunctorMap]
+      exact CategoryTheory.Limits.zero_comp
+    rw [hzero]
+    simp
   add_mem' := by
     intro f g hf hg
-    sorry
+    change M.action ≫ (f + g) =
+      tensorHomComplex (𝟙 A.complex) (f + g) ≫ N.action
+    change M.action ≫ f = tensorHomComplex (𝟙 A.complex) f ≫ N.action at hf
+    change M.action ≫ g = tensorHomComplex (𝟙 A.complex) g ≫ N.action at hg
+    rw [Preadditive.comp_add, hf, hg]
+    rw [← Preadditive.add_comp]
+    congr 1
+    apply HomologicalComplex.hom_ext
+    intro i
+    apply HomologicalComplex₂.total.hom_ext
+    intro p q h
+    simp [HomologicalComplex₂.ιTotal_map, tensorHomComplex,
+      HomologicalComplex.tensorHom, HomologicalComplex.mapBifunctorMap,
+      MonoidalPreadditive.whiskerLeft_add]
+    exact (Preadditive.add_comp _ _ _ _ _ _).symm
   neg_mem' := by
     intro f hf
-    sorry
+    change M.action ≫ (-f) =
+      tensorHomComplex (𝟙 A.complex) (-f) ≫ N.action
+    change M.action ≫ f = tensorHomComplex (𝟙 A.complex) f ≫ N.action at hf
+    rw [Preadditive.comp_neg, hf]
+    rw [← Preadditive.neg_comp]
+    congr 1
+    apply HomologicalComplex.hom_ext
+    intro i
+    apply HomologicalComplex₂.total.hom_ext
+    intro p q h
+    have hneg :
+        A.complex.X p ◁ (-f.f q) = -(A.complex.X p ◁ f.f q) := by
+      rw [eq_neg_iff_add_eq_zero, ← MonoidalPreadditive.whiskerLeft_add,
+        neg_add_cancel, MonoidalPreadditive.whiskerLeft_zero]
+    simp [HomologicalComplex₂.ιTotal_map, tensorHomComplex,
+      HomologicalComplex.tensorHom, HomologicalComplex.mapBifunctorMap, hneg]
+    change -(A.complex.X p ◁ f.f q ≫ _) =
+      (-(A.complex.X p ◁ f.f q)) ≫ _
+    exact (Preadditive.neg_comp _ _).symm
 
 /-- A morphism of left differential graded modules. -/
 abbrev LeftDifferentialGradedModuleHom

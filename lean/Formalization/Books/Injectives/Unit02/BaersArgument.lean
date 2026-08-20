@@ -813,7 +813,7 @@ theorem baer_grothendieck
     intro X Y f hf
     change Mono (ev.map f)
     have hto : Mono ((baerSuccStruct R).toSucc X) := by
-      letI : ∀ M, Mono (((baerSuccStruct R).toSucc X).app M) := by
+      have : ∀ M, Mono (((baerSuccStruct R).toSucc X).app M) := by
         intro M
         change Mono ((baerStepEmbedding R).app (X.obj M))
         exact baerStepEmbedding_mono _
@@ -824,20 +824,20 @@ theorem baer_grothendieck
   let t :=
     (baerSuccStruct R).transfiniteCompositionOfShapeιIteration (Set.Iic α)
   have htop (i : Set.Iic α) : Mono (ev.map (t.incl.app i)) := by
-    letI : HasColimitsOfShape (Set.Ici i) (ModuleCat.{u} R) := by
+    have : HasColimitsOfShape (Set.Ici i) (ModuleCat.{u} R) := by
       infer_instance
-    letI : HasIterationOfShape (Set.Ici i) (ModuleCat.{u} R) := by
+    have : HasIterationOfShape (Set.Ici i) (ModuleCat.{u} R) := by
       constructor <;> infer_instance
-    letI : IsGrothendieckAbelian.{u} (ModuleCat.{u} R) := by
+    have : IsGrothendieckAbelian.{u} (ModuleCat.{u} R) := by
       infer_instance
-    letI : MorphismProperty.IsStableUnderFilteredColimits.{u, u}
+    have : MorphismProperty.IsStableUnderFilteredColimits.{u, u}
         (MorphismProperty.monomorphisms (ModuleCat.{u} R)) := by
       infer_instance
     let hfiltered : MorphismProperty.IsStableUnderFilteredColimits.{u, u}
         (MorphismProperty.monomorphisms (ModuleCat.{u} R)) := by
       infer_instance
-    letI := hfiltered
-    letI : (MorphismProperty.monomorphisms (ModuleCat.{u} R)).IsStableUnderTransfiniteCompositionOfShape
+    have := hfiltered
+    have : (MorphismProperty.monomorphisms (ModuleCat.{u} R)).IsStableUnderTransfiniteCompositionOfShape
         (Shrink.{u} (Set.Ici i)) := by
       exact
         MorphismProperty.IsStableUnderTransfiniteCompositionOfShape.of_isStableUnderColimitsOfShape
@@ -1020,10 +1020,9 @@ theorem baer_grothendieck
                 (homOfLE hjs)).app N := by
           simp only [q', Functor.map_comp]
           rw [CategoryTheory.eqToHom_map, CategoryTheory.eqToHom_map]
-          simp only [NatTrans.comp_app, Category.assoc,
+          simp only [NatTrans.comp_app,
             CategoryTheory.eqToHom_app,
-            CategoryTheory.eqToHom_comp_heq_iff,
-            CategoryTheory.heq_comp_eqToHom_iff]
+            CategoryTheory.eqToHom_comp_heq_iff]
           symm
           rw [CategoryTheory.heq_comp_eqToHom_iff]
         simpa [F, baerIterationDiagram, baerIterationFunctor, ev, q] using
@@ -1054,7 +1053,7 @@ theorem baer_grothendieck
     simpa [g0, Category.assoc, hfactor, φ'] using hfinal
   · have hmono : Mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥)) := by
       rw [Functor.map_comp]
-      letI : Mono (ev.map (t.incl.app ⊥)) := htop ⊥
+      have : Mono (ev.map (t.incl.app ⊥)) := htop ⊥
       infer_instance
     have hι :
         ((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
@@ -1067,8 +1066,7 @@ theorem baer_grothendieck
         t.isoBot.inv ≫ t.F.map (homOfLE bot_le) ≫
             t.incl.app (⟨α, by simp⟩ : Set.Iic α) =
           t.isoBot.inv ≫ t.incl.app ⊥ := by
-      simpa [Category.assoc] using
-        congrArg (fun m => t.isoBot.inv ≫ m) hnat
+      convert congrArg (fun m => t.isoBot.inv ≫ m) hnat using 1; simp
     have hcomp :
         ev.map (((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
           (⟨α, by simp⟩ : Set.Iic α)) ≫
@@ -1106,7 +1104,7 @@ theorem baer_grothendieck
     have hm0 : Mono (ev.map (t.isoBot.inv ≫
         t.F.map (homOfLE (bot_le :
           (⊥ : Set.Iic α) ≤ (⟨α, by simp⟩ : Set.Iic α))))) := by
-      letI : Mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥)) := hmono
+      have : Mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥)) := hmono
       constructor
       intro Z g h e
       apply (cancel_mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥))).mp

@@ -2,8 +2,10 @@ import Formalization.Books.Simplicial.Unit12.TruncatedSimplicialObjects
 import Mathlib.AlgebraicTopology.SimplicialObject.Coskeletal
 import Mathlib.AlgebraicTopology.SimplicialSet.FiniteProd
 import Mathlib.CategoryTheory.Functor.KanExtension.Pointwise
+import Mathlib.CategoryTheory.Functor.KanExtension.Preserves
 import Mathlib.CategoryTheory.Adjunction.Unique
 import Mathlib.CategoryTheory.Limits.Constructions.Over.Connected
+import Mathlib.CategoryTheory.Limits.Constructions.Over.Basic
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 import Mathlib.CategoryTheory.RepresentedBy
@@ -2424,7 +2426,7 @@ theorem has_coskeleton_of_has_finite_connected_limits
     (hC : HasFiniteConnectedLimits C)
     (U : SimplicialObject.Truncated C k) :
     HasCoskeleton k U := by
-  let : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
+  letI : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
   let : (truncInclusion k).HasPointwiseRightKanExtension U := by
     intro X
     have : Finite (SimplexCategory.Truncated k) :=
@@ -2509,9 +2511,12 @@ theorem has_coskeleton_functor_of_has_finite_connected_limits
   exact has_coskeleton_of_has_finite_connected_limits k hk hC U
 
 theorem coskeleton_index_is_connected (k n : ℕ) (hk : 1 ≤ k)
-    (hkn : k + 1 ≤ n) :
+    (_hkn : k + 1 ≤ n) :
     IsConnected (coskeletonIndex k n) := by
-  sorry
+  let : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
+  exact isConnected_of_equivalent
+    (costructuredArrowOpEquivalence (SimplexCategory.Truncated.inclusion k)
+      (SimplexCategory.mk n))
 
 /-! ## Products and fibre products -/
 
@@ -2524,7 +2529,10 @@ theorem coskeleton_product_iso {C : Type u} [Category.{v} C] (n : ℕ)
     Nonempty ((SimplicialObject.Truncated.cosk n).obj (U ⨯ V) ≅
       (SimplicialObject.Truncated.cosk n).obj U ⨯
         (SimplicialObject.Truncated.cosk n).obj V) := by
-  sorry
+  let F := SimplicialObject.Truncated.cosk (C := C) n
+  let : PreservesLimitsOfSize F :=
+    (cosk_up_right_adjoint n).rightAdjoint_preservesLimits
+  exact ⟨asIso (prodComparison F U V)⟩
 
 theorem coskeleton_fibre_product_iso {C : Type u} [Category.{v} C] (n : ℕ)
     [∀ U : SimplicialObject.Truncated C n, HasCoskeleton n U]
@@ -2536,9 +2544,65 @@ theorem coskeleton_fibre_product_iso {C : Type u} [Category.{v} C] (n : ℕ)
     Nonempty ((SimplicialObject.Truncated.cosk n).obj (pullback a b) ≅
       pullback ((SimplicialObject.Truncated.cosk n).map a)
         ((SimplicialObject.Truncated.cosk n).map b)) := by
-  sorry
+  let F := SimplicialObject.Truncated.cosk (C := C) n
+  let : PreservesLimitsOfSize F :=
+    (cosk_up_right_adjoint n).rightAdjoint_preservesLimits
+  exact ⟨asIso (pullbackComparison F a b)⟩
 
 /-! ## Coskeletons over an object -/
+
+private theorem has_pointwise_coskeleton_of_has_finite_limits
+    {D : Type u} [Category.{v} D] [HasFiniteLimits D] (k : ℕ)
+    (U : SimplicialObject.Truncated D k) :
+    (truncInclusion k).HasPointwiseRightKanExtension U := by
+  intro X
+  have : Finite (SimplexCategory.Truncated k) :=
+    Finite.of_injective
+      (fun x => ⟨x.1.len, Nat.lt_succ_of_le x.2⟩ :
+        SimplexCategory.Truncated k → Fin (k + 1))
+      (by
+        intro x y h
+        cases x with
+        | mk x hx =>
+          cases y with
+          | mk y hy =>
+            congr
+            exact SimplexCategory.ext (Fin.ext_iff.mp h))
+  let : Fintype (SimplexCategory.Truncated k) := Fintype.ofFinite _
+  let : Fintype ((SimplexCategory.Truncated k)ᵒᵖ) :=
+    Fintype.ofEquiv _ equivToOpposite
+  let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+      Finite (X ⟶ (truncInclusion k).obj T) := fun T =>
+    Finite.of_injective (fun f => f.unop.toOrderHom.toFun)
+      (by
+        intro f g h
+        apply Opposite.unop_injective
+        apply SimplexCategory.Hom.ext
+        exact DFunLike.ext _ _ (fun i => congrFun h i))
+  let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+      Fintype (X ⟶ (truncInclusion k).obj T) := fun T => Fintype.ofFinite _
+  let : Fintype (StructuredArrow X (truncInclusion k)) :=
+    Fintype.ofInjective
+      (fun j : StructuredArrow X (truncInclusion k) =>
+        (⟨j.right, j.hom⟩ : Σ T, X ⟶ (truncInclusion k).obj T))
+      (by
+        rintro ⟨⟨⟩, jr, jh⟩ ⟨⟨⟩, kr, kh⟩ h
+        cases h
+        rfl)
+  let : ∀ j k : StructuredArrow X (truncInclusion k), Finite (j ⟶ k) :=
+    fun j k =>
+      Finite.of_injective (fun f => f.right.unop.hom.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Comma.hom_ext f g
+          · exact Subsingleton.elim _ _
+          · apply Opposite.unop_injective
+            apply SimplexCategory.Truncated.Hom.ext
+            exact DFunLike.ext _ _ (fun i => congrFun h i))
+  let : FinCategory (StructuredArrow X (truncInclusion k)) :=
+    { fintypeObj := inferInstance
+      fintypeHom := fun j k => Fintype.ofFinite _ }
+  infer_instance
 
 theorem coskeleton_over_forget_commutes {C : Type u} [Category.{v} C]
     [HasFiniteLimits C] (X : C) (k : ℕ) (hk : 1 ≤ k)
@@ -2552,7 +2616,70 @@ theorem coskeleton_over_forget_commutes {C : Type u} [Category.{v} C]
       (SimplicialObject.Truncated.cosk (C := C) k).obj
         (((SimplicialObject.Truncated.whiskering (Over X) C).obj
           (Over.forget X)).obj U)) := by
-  sorry
+  let : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
+  let (Y : SimplexCategoryᵒᵖ) :
+      IsConnected (StructuredArrow Y (truncInclusion k)) := by
+    exact isConnected_of_equivalent
+        (costructuredArrowOpEquivalence (SimplexCategory.Truncated.inclusion k)
+        Y.unop)
+  let : HasFiniteLimits (Over X) := by infer_instance
+  let hpointOver := has_pointwise_coskeleton_of_has_finite_limits k U
+  let := hpointOver
+  let Fover := SimplicialObject.Truncated.cosk (C := Over X) k
+  let q := Over.forget X
+  let Uq := ((SimplicialObject.Truncated.whiskering (Over X) C).obj q).obj U
+  let Fq := ((SimplicialObject.whiskering (Over X) C).obj q).obj (Fover.obj U)
+  let : Functor.PreservesPointwiseRightKanExtension q U (truncInclusion k) := by
+    intro Y
+    infer_instance
+  let : (Fover.obj U).IsRightKanExtension
+      ((Functor.ranCounit (truncInclusion k)).app U) := by
+    dsimp [Fover]
+    infer_instance
+  let : (truncInclusion k).HasPointwiseRightKanExtension
+      ((𝟭 ((SimplexCategory.Truncated k)ᵒᵖ ⥤ Over X)).obj U) := by
+    simpa using hpointOver
+  let : (((SimplicialObject.whiskering (Over X) C).obj q).obj (Fover.obj U)).IsRightKanExtension
+      ((Functor.associator _ _ _).inv ≫
+        Functor.whiskerRight ((Functor.ranCounit (truncInclusion k)).app U) q) := by
+    exact (Functor.RightExtension.isPointwiseRightKanExtensionEquivOfIso
+      (Functor.RightExtension.postcompose₂ObjMkIso q
+        ((Functor.ranCounit (truncInclusion k)).app U)) <|
+        (Functor.isPointwiseRightKanExtensionOfIsRightKanExtension
+          (Fover.obj U) ((Functor.ranCounit (truncInclusion k)).app U)).postcompose q).isRightKanExtension
+  let hpointC := has_pointwise_coskeleton_of_has_finite_limits k
+    Uq
+  let := hpointC
+  let : (truncInclusion k).HasPointwiseRightKanExtension
+      ((𝟭 ((SimplexCategory.Truncated k)ᵒᵖ ⥤ C)).obj
+        Uq) := by
+    simpa using hpointC
+  let : ((SimplicialObject.Truncated.cosk (C := C) k).obj
+      Uq).IsRightKanExtension
+      ((Functor.ranCounit (truncInclusion k)).app
+        Uq) := by
+    exact (Functor.isPointwiseRightKanExtensionRanCounit (truncInclusion k)
+      Uq).isRightKanExtension
+  let αq : truncInclusion k ⋙ (SimplicialObject.Truncated.cosk (C := C) k).obj Uq ⟶ Uq := by
+    simpa [Uq] using (Functor.ranCounit (truncInclusion k)).app Uq
+  let : ((SimplicialObject.Truncated.cosk (C := C) k).obj Uq).IsRightKanExtension αq := by
+    change ((truncInclusion k).ran.obj Uq).IsRightKanExtension
+      ((Functor.ranCounit (truncInclusion k)).app Uq)
+    exact (Functor.isPointwiseRightKanExtensionRanCounit (truncInclusion k) Uq).isRightKanExtension
+  let αover : truncInclusion k ⋙ Fq ⟶ Uq := by
+    simpa [Fq, Uq, Fover, SimplicialObject.whiskering,
+      SimplicialObject.Truncated.whiskering] using
+      ((Functor.associator _ _ _).inv ≫
+        Functor.whiskerRight ((Functor.ranCounit (truncInclusion k)).app U) q)
+  let : Fq.IsRightKanExtension αover := by
+    simpa [αover, Fq, Uq, Fover, SimplicialObject.whiskering,
+      SimplicialObject.Truncated.whiskering] using
+      (show Fq.IsRightKanExtension
+          ((Functor.associator _ _ _).inv ≫
+            Functor.whiskerRight ((Functor.ranCounit (truncInclusion k)).app U) q) from inferInstance)
+  let e := Functor.rightKanExtensionUnique
+    Fq αover ((SimplicialObject.Truncated.cosk (C := C) k).obj Uq) αq
+  exact ⟨e⟩
 
 /-! ## The standard simplex -/
 

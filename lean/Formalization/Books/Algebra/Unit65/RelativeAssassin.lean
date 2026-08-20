@@ -1042,6 +1042,199 @@ theorem compare_relative_assassins
   -/
   sorry
 
+private def leftTensorMap
+    {R : Type u} {S : Type v} {N : Type w} {M M' : Type u}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module R N] [Module S N]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup M'] [Module R M']
+    [IsScalarTower R S N] (f : M →ₗ[R] M') :
+    (N ⊗[R] M) →ₗ[S] (N ⊗[R] M') :=
+  { f.lTensor N with
+    map_smul' := by
+      intro s z
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · simp
+      · intro n m
+        simp [TensorProduct.smul_tmul']
+      · intro z z' hz hz'
+        rw [smul_add]
+        change f.lTensor N (s • z + s • z') = s • f.lTensor N (z + z')
+        change f.lTensor N (s • z) = s • f.lTensor N z at hz
+        change f.lTensor N (s • z') = s • f.lTensor N z' at hz'
+        rw [map_add, map_add, hz, hz', smul_add] }
+
+private theorem associatedPrimes_subset_of_injective
+    {S M M' : Type*} [CommRing S]
+    [AddCommGroup M] [Module S M]
+    [AddCommGroup M'] [Module S M']
+    (f : M →ₗ[S] M') (hf : Function.Injective f) :
+    Formalization.Books.Algebra.Unit63.associatedPrimes S M ⊆
+      Formalization.Books.Algebra.Unit63.associatedPrimes S M' := by
+  intro q hq
+  change ∃ x, (⊥ : Submodule S M).colon ({x} : Set M) = q.asIdeal at hq
+  obtain ⟨x, hx⟩ := hq
+  refine ⟨f x, ?_⟩
+  ext s
+  rw [Submodule.mem_colon_singleton, ← hx, Submodule.mem_colon_singleton]
+  constructor
+  · intro hs
+    apply hf
+    rw [map_smul, hs, map_zero]
+  · intro hs
+    rw [← map_smul, hs, map_zero]
+    exact Submodule.zero_mem _
+
+private theorem relativeAssassinB_subset_BFin_of_flat
+    {R : Type u} {S : Type v} {N : Type w}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module S N]
+    (hN : letI : Module R N := Module.compHom N (algebraMap R S)
+      Module.Flat R N) :
+    relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) ⊆
+      relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) := by
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : Module.Flat R N := hN
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  intro q hq
+  simp only [relativeAssassinB, Set.mem_ofPred_eq] at hq
+  rcases hq with ⟨M, hMadd, hMmodule, hq⟩
+  letI := hMadd
+  letI := hMmodule
+  letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+  change ∃ x, (⊥ : Submodule S (N ⊗[R] M)).colon ({x} : Set _) = q.asIdeal at hq
+  obtain ⟨x, hx⟩ := hq
+  obtain ⟨M', hMfinite, hM'⟩ :=
+    TensorProduct.exists_finite_submodule_right_of_setFinite
+      ({x} : Set (N ⊗[R] M)) (Set.finite_singleton x)
+  letI : Module.Finite R M' := hMfinite
+  let gR : (N ⊗[R] M') →ₗ[R] (N ⊗[R] M) := M'.subtype.lTensor N
+  have hgR : Function.Injective gR :=
+    Module.Flat.lTensor_preserves_injective_linearMap (M := N)
+      M'.subtype M'.subtype_injective
+  let g : (N ⊗[R] M') →ₗ[S] (N ⊗[R] M) :=
+    { gR with
+      map_smul' := by
+        intro s z
+        refine TensorProduct.induction_on z ?_ ?_ ?_
+        · simp
+        · intro n m
+          simp [gR, TensorProduct.smul_tmul']
+        · intro z z' hz hz'
+          rw [smul_add]
+          change gR (s • z + s • z') = s • gR (z + z')
+          change gR (s • z) = s • gR z at hz
+          change gR (s • z') = s • gR z' at hz'
+          rw [map_add, map_add, hz, hz', smul_add] }
+  obtain ⟨x', hx'⟩ := hM' (by exact Set.mem_singleton x)
+  have hgx : g x' = x := by
+    exact hx'
+  refine ⟨M', inferInstance, inferInstance, inferInstance, x', ?_⟩
+  ext s
+  rw [Submodule.mem_colon_singleton, ← hx, Submodule.mem_colon_singleton]
+  constructor
+  · intro hs
+    change s • x' = 0 at hs
+    change s • x = 0
+    calc
+      s • x = g (s • x') := by rw [map_smul, hgx]
+      _ = 0 := by rw [hs, map_zero]
+  · intro hs
+    change s • x = 0 at hs
+    change s • x' = 0
+    apply hgR
+    change g (s • x') = 0
+    simp only [map_smul, hgx, hs, map_zero]
+
+private theorem relativeAssassinBFin_subset_AFin'_of_noetherian_of_flat
+    {R : Type u} {S : Type v} {N : Type w}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module S N] [IsNoetherianRing R]
+    (hN : letI : Module R N := Module.compHom N (algebraMap R S)
+      Module.Flat R N) :
+    relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ⊆
+      relativeAssassinAFin' (R := R) (S := S) (N := N) := by
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : Module.Flat R N := hN
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  intro q hq
+  simp only [relativeAssassinBFin, Set.mem_ofPred_eq] at hq
+  rcases hq with ⟨M, hMadd, hMmodule, hMfinite, hq⟩
+  letI := hMadd
+  letI := hMmodule
+  letI := hMfinite
+  letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+  change q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+    (N ⊗[R] M) at hq
+  have hPall : ∀ (M : Type u) [AddCommGroup M] [Module R M]
+      [Module.Finite R M],
+      Formalization.Books.Algebra.Unit63.associatedPrimes S (N ⊗[R] M) ⊆
+        relativeAssassinAFin' (R := R) (S := S) (N := N) := by
+    intro M hAdd hMod hFin
+    letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+    induction ‹Module.Finite R M› using
+      IsNoetherianRing.induction_on_isQuotientEquivQuotientPrime R with
+    | subsingleton M =>
+        intro q hq
+        change ∃ x, (⊥ : Submodule S (N ⊗[R] M)).colon
+          ({x} : Set _) = q.asIdeal at hq
+        obtain ⟨x, hx⟩ := hq
+        have hx0 : x = 0 := Subsingleton.elim _ _
+        have htop : q.asIdeal = (⊤ : Ideal S) := by
+          rw [← hx, hx0, Submodule.colon_singleton_zero]
+        exact (q.isPrime.ne_top htop).elim
+    | quotient M p e =>
+        letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+        let fT : (N ⊗[R] M) →ₗ[S]
+            (N ⊗[R] (R ⧸ p.asIdeal)) := leftTensorMap e.toLinearMap
+        have hfT : Function.Bijective fT := by
+          constructor
+          · simpa [fT, leftTensorMap] using
+              (Module.Flat.lTensor_preserves_injective_linearMap
+                (M := N) e.toLinearMap e.injective)
+          · simpa [fT, leftTensorMap] using
+              (LinearMap.lTensor_surjective (Q := N) e.surjective)
+        let eT : (N ⊗[R] M) ≃ₗ[S]
+            (N ⊗[R] (R ⧸ p.asIdeal)) := LinearEquiv.ofBijective fT hfT
+        intro q hq
+        have hqT := associatedPrimes_subset_of_injective eT.toLinearMap
+          eT.injective hq
+        let eQ := quotientTensorEquiv (R := R) (S := S) (N := N) p
+        have hqQ := associatedPrimes_subset_of_injective eQ.toLinearMap
+          eQ.injective hqT
+        change ∃ p : PrimeSpectrum R,
+          q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+            (N ⧸ (p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)))
+        exact ⟨p, hqQ⟩
+    | exact M₁ M₂ M₃ f g hf hg hfg h₁ h₃ =>
+        letI : Module S (N ⊗[R] M₁) := TensorProduct.leftModule
+        letI : Module S (N ⊗[R] M₂) := TensorProduct.leftModule
+        letI : Module S (N ⊗[R] M₃) := TensorProduct.leftModule
+        let fS : (N ⊗[R] M₁) →ₗ[S] (N ⊗[R] M₂) :=
+          leftTensorMap f
+        let gS : (N ⊗[R] M₂) →ₗ[S] (N ⊗[R] M₃) :=
+          leftTensorMap g
+        have hfS : Function.Injective fS := by
+          simpa [fS, leftTensorMap] using
+            (Module.Flat.lTensor_preserves_injective_linearMap
+              (M := N) f hf)
+        have hgS : Function.Surjective gS := by
+          simpa [gS, leftTensorMap] using
+            (LinearMap.lTensor_surjective (Q := N) hg)
+        have hfgS : Function.Exact fS gS := by
+          simpa [fS, gS, leftTensorMap] using
+            (Module.Flat.lTensor_exact (M := N) hfg)
+        have hs :=
+          Formalization.Books.Algebra.Unit63.ass_subset_ass_of_short_exact
+            fS gS hfS hgS hfgS
+        intro q hq
+        rcases (hs.2 hq) with hq | hq
+        · exact h₁ hq
+        · exact h₃ hq
+  exact hPall M hq
+
 theorem relative_assassins_eq_of_noetherian_target
     {R : Type u} {S : Type v} {N : Type w}
     [CommRing R] [CommRing S] [Algebra R S]
@@ -1082,7 +1275,31 @@ theorem relative_assassins_all_eq_of_noetherian_of_flat
         relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) =
         relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) := by
-  sorry
+  let hf := relative_assassins_eq_of_flat (R := R) (S := S) (N := N) hN
+  let hc := compare_relative_assassins (R := R) (S := S) (N := N)
+  have hBFinA' :=
+    relativeAssassinBFin_subset_AFin'_of_noetherian_of_flat
+      (R := R) (S := S) (N := N) hN
+  have hAB :
+      relativeAssassinA (R := R) (S := S) (N := N) =
+        relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) := by
+    apply Set.Subset.antisymm
+    · exact hc.2.2.2.2
+    · intro q hq
+      have hqfin : q ∈ relativeAssassinBFin.{u, v, w, u}
+          (R := R) (S := S) (N := N) := by
+        rw [← hf.2.2]
+        exact hq
+      have hqA' : q ∈ relativeAssassinAFin'
+          (R := R) (S := S) (N := N) := by
+        exact hBFinA' hqfin
+      have hqAfin : q ∈ relativeAssassinAFin
+          (R := R) (S := S) (N := N) := by
+        rw [hf.2.1]
+        exact hqA'
+      exact hc.1 hqAfin
+  refine ⟨relativeAssassinA_eq_A', hf.1, hf.1.trans hf.2.1,
+    hAB, hAB.trans hf.2.2⟩
 
 /-! ## Bourbaki's lemma and its fibre form -/
 
@@ -1102,7 +1319,60 @@ theorem bourbaki_associatedPrimes
       Formalization.Books.Algebra.Unit63.associatedPrimes S
         (N ⧸ (p.1.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)))) ⊆
       Formalization.Books.Algebra.Unit63.associatedPrimes S (N ⊗[R] M) := by
-  sorry
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+  intro q hq
+  simp only [Set.mem_iUnion] at hq
+  rcases hq with ⟨p, x, hx⟩
+  have hp := p.2
+  change ∃ m : M, (⊥ : Submodule R M).colon ({m} : Set M) = p.1.asIdeal at hp
+  obtain ⟨m, hm⟩ := hp
+  let f : R →ₗ[R] M := LinearMap.toSpanSingleton R M m
+  have hfker : LinearMap.ker f = p.1.asIdeal := by
+    ext r
+    change r • m = 0 ↔ r ∈ p.1.asIdeal
+    rw [← hm, Submodule.mem_colon_singleton]
+    rfl
+  have hfker_le : p.1.asIdeal ≤ LinearMap.ker f := hfker.symm.le
+  let fQ : (R ⧸ p.1.asIdeal) →ₗ[R] M :=
+    p.1.asIdeal.liftQ f hfker_le
+  have hfQ : Function.Injective fQ := by
+    apply LinearMap.ker_eq_bot.mp
+    exact Submodule.ker_liftQ_eq_bot p.1.asIdeal f hfker_le hfker.le
+  let gR := fQ.lTensor N
+  have hgR : Function.Injective (fQ.lTensor N) :=
+    Module.Flat.lTensor_preserves_injective_linearMap (M := N) fQ hfQ
+  let g : (N ⊗[R] (R ⧸ p.1.asIdeal)) →ₗ[S] (N ⊗[R] M) :=
+    { gR with
+      map_smul' := by
+        intro s x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp
+        · intro n a
+          simp [gR, TensorProduct.smul_tmul']
+        · intro x y hx hy
+          rw [smul_add]
+          change gR (s • x + s • y) = s • gR (x + y)
+          change gR (s • x) = s • gR x at hx
+          change gR (s • y) = s • gR y at hy
+          rw [map_add, map_add, hx, hy, smul_add] }
+  let eS := quotientTensorEquiv (R := R) (S := S) (N := N) p.1
+  let gS := g.comp eS.symm.toLinearMap
+  have he : Function.Injective gS := hgR.comp eS.symm.injective
+  change ∃ y, (⊥ : Submodule S (N ⊗[R] M)).colon ({y} : Set _) = q.asIdeal
+  refine ⟨gS x, ?_⟩
+  ext s
+  rw [Submodule.mem_colon_singleton, ← hx, Submodule.mem_colon_singleton]
+  constructor
+  · intro hs
+    apply he
+    rw [map_smul, hs, map_zero]
+  · intro hs
+    change s • gS x = 0
+    change s • x = 0 at hs
+    rw [← map_smul, hs, map_zero]
 
 theorem bourbaki_associatedPrimes_eq_of_noetherian
     {R : Type u} {S : Type v} {M : Type z} {N : Type w}

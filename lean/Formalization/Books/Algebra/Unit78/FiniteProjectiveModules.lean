@@ -190,6 +190,114 @@ theorem finiteLocallyFree_rank_unique
   have hsv' := rank_at b hbI (hsv b hbv)
   exact hru'.symm.trans hsv'
 
+/-- A finite free presentation with injective residue-field maps has a locally
+free cokernel.  The stalk-rank hypothesis records the rank of that cokernel;
+the presentation itself is localized before applying the local criterion. -/
+theorem finiteLocallyFreeOfRank_cokernel_of_fiber_injective
+    {R P₁ P₂ : Type*} [CommRing R]
+    [AddCommGroup P₁] [Module R P₁] [Module.Finite R P₁] [Module.Free R P₁]
+    [AddCommGroup P₂] [Module R P₂] [Module.Finite R P₂] [Module.Free R P₂]
+    (φ : P₁ →ₗ[R] P₂) (d : ℕ)
+    (hφ : ∀ p : PrimeSpectrum R,
+      Function.Injective
+        ((LocalizedModule.map p.asIdeal.primeCompl φ).lTensor
+          (IsLocalRing.ResidueField (Localization.AtPrime p.asIdeal))))
+    (hrank : ∀ p : PrimeSpectrum R,
+      Module.finrank (Localization.AtPrime p.asIdeal)
+        (LocalizedModule p.asIdeal.primeCompl
+          (P₂ ⧸ LinearMap.range φ)) = d) :
+    FiniteLocallyFreeOfRank R (P₂ ⧸ LinearMap.range φ) d := by
+  let C := P₂ ⧸ LinearMap.range φ
+  have hrange : Module.Finite R (LinearMap.range φ) := by
+    apply Module.Finite.of_surjective φ.rangeRestrict
+    intro y
+    rcases y with ⟨y, x, rfl⟩
+    exact ⟨x, rfl⟩
+  let : Module.Finite R (LinearMap.range φ) := hrange
+  let : Module.Projective R P₂ := Module.Projective.of_free
+  let : Module.FinitePresentation R P₂ := Module.finitePresentation_of_projective R P₂
+  have hfp : Module.FinitePresentation R C := by
+    apply Module.finitePresentation_of_surjective (LinearMap.range φ).mkQ
+      (Submodule.mkQ_surjective _)
+    rw [Submodule.ker_mkQ]
+    exact Module.Finite.iff_fg.mp (inferInstance : Module.Finite R (LinearMap.range φ))
+  have hfree_at_prime (p : PrimeSpectrum R) :
+      Module.Free (Localization.AtPrime p.asIdeal)
+        (LocalizedModule p.asIdeal.primeCompl C) := by
+    let A := Localization.AtPrime p.asIdeal
+    let l := LocalizedModule.map p.asIdeal.primeCompl φ
+    let : Module.Finite A
+        (LocalizedModule p.asIdeal.primeCompl P₁) :=
+      Module.Finite.of_isLocalizedModule p.asIdeal.primeCompl
+        (Rₚ := A) (LocalizedModule.mkLinearMap p.asIdeal.primeCompl P₁)
+    let : Module.Finite A
+        (LocalizedModule p.asIdeal.primeCompl P₂) :=
+      Module.Finite.of_isLocalizedModule p.asIdeal.primeCompl
+        (Rₚ := A) (LocalizedModule.mkLinearMap p.asIdeal.primeCompl P₂)
+    let : Module.Free A
+        (LocalizedModule p.asIdeal.primeCompl P₂) :=
+      Module.free_of_isLocalizedModule p.asIdeal.primeCompl
+        (LocalizedModule.mkLinearMap p.asIdeal.primeCompl P₂)
+    have hlt : Function.Injective
+        (l.lTensor (IsLocalRing.ResidueField A)) := by
+      simpa [l, A] using hφ p
+    have hfreeQ : Module.Free A
+        (LocalizedModule p.asIdeal.primeCompl P₂ ⧸ LinearMap.range l) :=
+      Module.free_of_lTensor_residueField_injective l
+        (LinearMap.range l).mkQ (Submodule.mkQ_surjective _)
+        l.exact_map_mkQ_range hlt
+    let e₂ := localizedQuotientEquiv p.asIdeal.primeCompl
+      (LinearMap.range φ)
+    let : Module.Free A
+        (LocalizedModule p.asIdeal.primeCompl P₂ ⧸
+          (LinearMap.range φ).localized p.asIdeal.primeCompl) := by
+      rw [← show LinearMap.range l =
+          (LinearMap.range φ).localized p.asIdeal.primeCompl by
+        simpa [l, A, LocalizedModule.map, IsLocalizedModule.mapExtendScalars] using
+          (LinearMap.localized'_range_eq_range_localizedMap
+            (S := A) (p := p.asIdeal.primeCompl)
+            (f := LocalizedModule.mkLinearMap p.asIdeal.primeCompl P₁)
+            (f' := LocalizedModule.mkLinearMap p.asIdeal.primeCompl P₂) φ).symm]
+      exact hfreeQ
+    exact Module.Free.of_equiv e₂
+  have hlocal (p : PrimeSpectrum R) :
+      ∃ a ∉ p.asIdeal,
+        Nonempty
+          (LocalizedModule.Away a C ≃ₗ[Localization.Away a]
+            (Fin d →₀ Localization.Away a)) := by
+    let : Module.FinitePresentation R C := hfp
+    obtain ⟨a, ha, hfree, hdim⟩ :=
+      Module.FinitePresentation.exists_free_localizedModule_powers
+        p.asIdeal.primeCompl (LocalizedModule.mkLinearMap p.asIdeal.primeCompl C)
+        (Localization.AtPrime p.asIdeal)
+    have hdim' : Module.finrank (Localization.Away a)
+        (LocalizedModule.Away a C) = d := by
+      exact hdim.trans (hrank p)
+    let : Nontrivial (Localization.Away a) :=
+      (IsLocalization.toLocalizationMap (Submonoid.powers a)
+        (Localization.Away a)).nontrivial (by
+        rintro ⟨k, hk⟩
+        exact (p.asIdeal.primeCompl.pow_mem ha k) (by
+          change a ^ k = 0 at hk
+          rw [hk]
+          exact p.asIdeal.zero_mem))
+    let b := Module.finBasisOfFinrankEq (Localization.Away a)
+      (LocalizedModule.Away a C) hdim'
+    exact ⟨a, ha, ⟨b.repr⟩⟩
+  let s : Set R := {a |
+    Nonempty
+      (LocalizedModule.Away a C ≃ₗ[Localization.Away a]
+        (Fin d →₀ Localization.Away a))}
+  have hs : Ideal.span s = ⊤ := by
+    by_contra hst
+    obtain ⟨I, hI, hIs⟩ := Ideal.ne_top_iff_exists_maximal.mp hst
+    let p : PrimeSpectrum R := ⟨I, hI.isPrime⟩
+    obtain ⟨a, ha, has⟩ := hlocal p
+    exact ha (hIs (Ideal.subset_span has))
+  refine ⟨s, hs, ?_⟩
+  intro a ha
+  exact ha
+
 /-! ## The finite projective characterization -/
 
 /- `Module.Finite` and `Module.Projective` are the canonical finiteness and

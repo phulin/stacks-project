@@ -8,15 +8,15 @@ import Mathlib.Algebra.Category.Grp.Basic
 This file formalizes the source section `Presheaves` in
 `books/etale-cohomology.tex`.  Presheaves, representables, and the Yoneda
 equivalence are reused from the canonical category-theory interfaces already
-formalized in `Formalization.Books.Categories.Unit03.Opposite`; the local
-aliases and formulas below keep this chapter's terminology and statements
-available from its own namespace.
+formalized in earlier chapters; the local aliases and formulas below keep
+this chapter's terminology and statements available from its own namespace.
 
-The source's final warning that representable presheaves need not be sheaves
-for an arbitrary topology is recorded by the interface boundary here: the
-notion of a site and its sheaf condition is introduced in the following source
-section, so no forward chapter import is used to manufacture a second sheaf
-definition in this file.
+The source's smallness convention for `PSh(C)` and `PAb(C)` is represented by
+Lean's universe-bounded functor categories.  The source's warning that a
+representable presheaf need not be a sheaf for an arbitrary topology is
+recorded at the interface boundary below, since the sheaf condition is
+introduced in the following source section.
+
 -/
 
 namespace Formalization.Books.EtaleCohomology.Unit09
@@ -33,7 +33,7 @@ abbrev Presheaf (C : Type u) [Category.{v} C] :=
 
 /-- An abelian presheaf on `C`, namely a functor to abelian groups. -/
 abbrev AbelianPresheaf (C : Type u) [Category.{v} C] :=
-  Cᵒᵖ ⥤ AddCommGrpCat.{v}
+  Formalization.Books.Sites.Unit02.PresheafWithValues C AddCommGrpCat
 
 /-- The sections of a presheaf over an object `U`. -/
 abbrev Sections {C : Type u} [Category.{v} C] (F : Presheaf C) (U : C) :=

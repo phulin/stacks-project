@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Colimit.DirectLimit
+import Mathlib.Algebra.Module.FinitePresentation
+import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.RingTheory.Flat.EquationalCriterion
@@ -964,6 +966,57 @@ theorem flat_short_exact
     simpa using hx0
 
 end ExactSequences
+
+section FinitePresentationAndFreeExtensions
+
+/-- Localization preserves the injectivity, exactness, and surjectivity of a short exact
+sequence.  This packages the `LocalizedModule` maps used for the `Away` model. -/
+theorem localizedModule_away_short_exact
+    {R M₁ M₂ M₃ : Type*} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M₂] [AddCommGroup M₃]
+    [Module R M₁] [Module R M₂] [Module R M₃]
+    (a : R) (f : M₁ →ₗ[R] M₂) (g : M₂ →ₗ[R] M₃)
+    (hinjective : Function.Injective f)
+    (hexact : Function.Exact f g)
+    (hsurjective : Function.Surjective g) :
+    Function.Injective (LocalizedModule.map (Submonoid.powers a) f) ∧
+      Function.Exact (LocalizedModule.map (Submonoid.powers a) f)
+        (LocalizedModule.map (Submonoid.powers a) g) ∧
+      Function.Surjective (LocalizedModule.map (Submonoid.powers a) g) := by
+  exact ⟨LocalizedModule.map_injective _ f hinjective,
+    LocalizedModule.map_exact _ f g hexact,
+    LocalizedModule.map_surjective _ g hsurjective⟩
+
+/-- Finite presentation is stable under a short exact extension.  The conclusion is stated for
+arbitrary modules so it can be instantiated over a localized ring. -/
+theorem finitePresentation_of_short_exact
+    {R M₁ M₂ M₃ : Type*} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M₂] [AddCommGroup M₃]
+    [Module R M₁] [Module R M₂] [Module R M₃]
+    [Module.FinitePresentation R M₁] [Module.FinitePresentation R M₃]
+    (f : M₁ →ₗ[R] M₂) (g : M₂ →ₗ[R] M₃)
+    (hinjective : Function.Injective f)
+    (hexact : Function.Exact f g)
+    (hsurjective : Function.Surjective g) :
+    Module.FinitePresentation R M₂ := by
+  let f' : M₁ →ₗ[R] LinearMap.ker g :=
+    LinearMap.codRestrict (LinearMap.ker g) f (fun x =>
+      (hexact (f x)).mpr ⟨x, rfl⟩)
+  have hf' : Function.Injective f' := by
+    intro x y hxy
+    apply hinjective
+    exact congrArg Subtype.val hxy
+  have hf'surjective : Function.Surjective f' := by
+    intro y
+    obtain ⟨x, hx⟩ := (hexact y).mp y.property
+    refine ⟨x, Subtype.ext ?_⟩
+    exact hx
+  let e : M₁ ≃ₗ[R] LinearMap.ker g := LinearEquiv.ofBijective f' ⟨hf', hf'surjective⟩
+  let : Module.FinitePresentation R (LinearMap.ker g) :=
+    Module.FinitePresentation.of_equiv e
+  exact Module.finitePresentation_of_ker g hsurjective
+
+end FinitePresentationAndFreeExtensions
 
 section FaithfulFlatness
 

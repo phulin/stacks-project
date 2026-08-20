@@ -178,17 +178,57 @@ theorem formallySmooth_iff_presentation_section
       (IsScalarTower.toAlgHom R P.toExtension.Ring S)
       P.toExtension.algebraMap_surjective)
 
+private theorem formallySmooth_iff_extension_split_exact
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (P : Algebra.Extension R S)
+    [Algebra.FormallySmooth R P.Ring] :
+    Algebra.FormallySmooth R S ↔ extensionDifferentialSplitExact P := by
+  rw [P.formallySmooth_iff_split_injection]
+  simp only [extensionDifferentialSplitExact]
+  have hExact : Function.Exact P.cotangentComplex P.toKaehler :=
+    P.exact_cotangentComplex_toKaehler
+  have hSurj : Function.Surjective P.toKaehler := P.toKaehler_surjective
+  constructor
+  · rintro ⟨l, hl⟩
+    have hinj : Function.Injective P.cotangentComplex := by
+      intro x y hxy
+      have hleft : ∀ z, l (P.cotangentComplex z) = z := LinearMap.congr_fun hl
+      exact (hleft x).symm.trans ((congrArg l hxy).trans (hleft y))
+    have hsplit := hExact.split_tfae hinj hSurj
+    have hright : ∃ s, P.toKaehler ∘ₗ s = LinearMap.id :=
+      (hsplit.out 1 0).mp
+        (show ∃ l, l ∘ₗ P.cotangentComplex = LinearMap.id from ⟨l, hl⟩)
+    exact ⟨hinj, hExact, hSurj, hright⟩
+  · rintro ⟨hinj, hexact, hsurj, ⟨s, hs⟩⟩
+    have hsplit := hexact.split_tfae hinj hsurj
+    exact (hsplit.out 0 1).mp
+      (show ∃ s, P.toKaehler ∘ₗ s = LinearMap.id from ⟨s, hs⟩)
+
 theorem formallySmooth_iff_presentation_split_exact
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (P : Formalization.Books.Algebra.Unit134.Presentation R S ι)
     [Algebra.FormallySmooth R P.Ring] :
     Algebra.FormallySmooth R S ↔ extensionDifferentialSplitExact P.toExtension := by
-  sorry
+  let oldAlg : Algebra R P.Ring := inferInstance
+  let oldFormal : Algebra.FormallySmooth R P.Ring := inferInstance
+  have alg_eq : oldAlg = P.toExtension.algebra₁ := by
+    apply Algebra.algebra_ext
+    intro r
+    rfl
+  let : Algebra R P.toExtension.Ring := P.toExtension.algebra₁
+  let : @Algebra.FormallySmooth R P.toExtension.Ring _ _ P.toExtension.algebra₁ := by
+    exact alg_eq ▸ oldFormal
+  exact formallySmooth_iff_extension_split_exact P.toExtension
 
 theorem formallySmooth_iff_cotangent_criterion
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.FormallySmooth R S ↔ formalSmoothCotangentCriterion (R := R) (S := S) := by
-  sorry
+  rw [Algebra.formallySmooth_iff]
+  constructor
+  · rintro ⟨hprojective, hsubsingleton⟩
+    exact ⟨hsubsingleton, hprojective⟩
+  · rintro ⟨hsubsingleton, hprojective⟩
+    exact ⟨hprojective, hsubsingleton⟩
 
 theorem formallySmooth_presentation_characterization
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S] :
@@ -203,7 +243,53 @@ theorem formallySmooth_presentation_characterization
         ∀ P : Algebra.Extension.{u} R S,
           Algebra.FormallySmooth R P.Ring → extensionDifferentialSplitExact P,
         formalSmoothCotangentCriterion (R := R) (S := S) ] := by
-  sorry
+  let Q : Formalization.Books.Algebra.Unit134.Presentation R S S :=
+    Algebra.Generators.self R S
+  have hQ : Algebra.FormallySmooth R Q.Ring := inferInstance
+  have hQsection :
+      Algebra.FormallySmooth R S ↔ extensionHasSection Q.toExtension :=
+    formallySmooth_iff_presentation_section Q
+  have hQsplit :
+      Algebra.FormallySmooth R S ↔ extensionDifferentialSplitExact Q.toExtension :=
+    formallySmooth_iff_presentation_split_exact Q
+  let oldAlg : Algebra R Q.Ring := inferInstance
+  have alg_eq : oldAlg = Q.toExtension.algebra₁ := by
+    apply Algebra.algebra_ext
+    intro r
+    rfl
+  have hQformal :
+      @Algebra.FormallySmooth R Q.toExtension.Ring _ _ Q.toExtension.algebra₁ := by
+    exact alg_eq ▸ hQ
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · intro h
+      exact ⟨Q.toExtension, hQformal, hQsection.mp h⟩
+    · rintro ⟨P, hP, hsection⟩
+      letI : Algebra.FormallySmooth R P.Ring := hP
+      exact (formallySmooth_iff_extension_section P).mpr hsection
+  tfae_have 1 ↔ 3 := by
+    constructor
+    · intro h P hP
+      letI : Algebra.FormallySmooth R P.Ring := hP
+      exact (formallySmooth_iff_extension_section P).mp h
+    · intro h
+      exact hQsection.mpr (h Q.toExtension hQformal)
+  tfae_have 1 ↔ 4 := by
+    constructor
+    · intro h
+      exact ⟨Q.toExtension, hQformal, hQsplit.mp h⟩
+    · rintro ⟨P, hP, hsplit⟩
+      letI : Algebra.FormallySmooth R P.Ring := hP
+      exact (formallySmooth_iff_extension_split_exact P).mpr hsplit
+  tfae_have 1 ↔ 5 := by
+    constructor
+    · intro h P hP
+      letI : Algebra.FormallySmooth R P.Ring := hP
+      exact (formallySmooth_iff_extension_split_exact P).mp h
+    · intro h
+      exact hQsplit.mpr (h Q.toExtension hQformal)
+  tfae_have 1 ↔ 6 := formallySmooth_iff_cotangent_criterion
+  tfae_finish
 
 /-! ## Differential sequences -/
 
@@ -214,7 +300,29 @@ theorem ses_formallySmooth
     IsSplitExactLinearSequence
       (KaehlerDifferential.mapBaseChange A B C)
       (KaehlerDifferential.map A B C C) := by
-  sorry
+  letI : Algebra.FormallySmooth B C := hBC
+  have hExact : Function.Exact
+      (KaehlerDifferential.mapBaseChange A B C)
+      (KaehlerDifferential.map A B C C) :=
+    Formalization.Books.Algebra.Unit131.exact_sequence_of_differentials
+      (A := A) (B := B) (C := C)
+  have hSurj : Function.Surjective (KaehlerDifferential.map A B C C) :=
+    Formalization.Books.Algebra.Unit131.exact_sequence_of_differentials_surjective
+      (A := A) (B := B) (C := C)
+  obtain ⟨s, hs⟩ := Module.projective_lifting_property
+    (KaehlerDifferential.map A B C C) (LinearMap.id)
+    hSurj
+  have hinj : Function.Injective (KaehlerDifferential.mapBaseChange A B C) := by
+    intro x y hxy
+    have hzero : KaehlerDifferential.mapBaseChange A B C (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    obtain ⟨z, hz⟩ :=
+      (Algebra.H1Cotangent.exact_δ_mapBaseChange A B C (x - y)).mp hzero
+    have hz' : z = 0 := Subsingleton.elim _ _
+    have hxy' : x - y = 0 := by
+      rw [← hz, hz', map_zero]
+    exact sub_eq_zero.mp hxy'
+  exact ⟨hinj, hExact, hSurj, ⟨s, hs⟩⟩
 
 theorem differential_seq_formallySmooth
     {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]

@@ -46,7 +46,6 @@ theorem smooth_iff_cotangent_criterion
     exact ⟨hcriterion.1, hcriterion.2⟩
   · intro h
     have hfinite := h.1
-    have hfiniteModule := h.2.1
     have hprojective := h.2.2.1
     have hH1 := h.2.2.2
     have hformal : Algebra.FormallySmooth R S :=
@@ -95,7 +94,7 @@ theorem smooth_is_syntomic_and_flat
       RingHom.Flat (algebraMap R S) := by
   have h := Formalization.Books.Algebra.Unit137.smooth_is_syntomic
     (R := R) (S := S)
-  exact ⟨h, h.1⟩
+  exact ⟨h, h.flat⟩
 
 /-! ## Smooth fibres and formal smoothness -/
 

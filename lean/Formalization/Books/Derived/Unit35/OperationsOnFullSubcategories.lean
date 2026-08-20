@@ -7,6 +7,7 @@ import Mathlib.CategoryTheory.ObjectProperty.Retract
 import Mathlib.CategoryTheory.Triangulated.Subcategory
 import Mathlib.Order.WithBotTop
 import Formalization.Books.Derived.Unit11.DerivedCategories
+import Formalization.Books.Homology.Unit15.TruncationOfComplexes
 
 /-!
 # Derived Categories, Chapter 35: operations on full subcategories
@@ -983,6 +984,257 @@ theorem derived_mem_conePower_of_cohomology_smd_add
   exact conePower_one_mono (derivedWindowProperty E a b)
     (intervalLength a b) K hK'
 
+private noncomputable def stupidTruncLE_iso_of_termwise_isZero
+    (L : BookComplex C) (b : ℤ)
+    (hL : ∀ i : ℤ, b < i → IsZero (L.X i)) :
+    Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE L b ≅ L := by
+  classical
+  let e := ComplexShape.embeddingUpIntLE b
+  change HomologicalComplex.stupidTrunc L e ≅ L
+  have hmem : ∀ {i : ℤ}, i ≤ b → ∃ k : ℕ, e.f k = i := by
+    intro i hi
+    refine ⟨Int.toNat (b - i), ?_⟩
+    dsimp [e, ComplexShape.embeddingUpIntLE, ComplexShape.Embedding.mk']
+    rw [Int.toNat_of_nonneg (by omega : 0 ≤ b - i)]
+    omega
+  let f : ∀ i : ℤ,
+      (HomologicalComplex.stupidTrunc L e).X i ≅
+        L.X i := fun i => by
+    by_cases hi : ∃ k, e.f k = i
+    · exact L.stupidTruncXIso e hi.choose_spec
+    · have hib : b < i := by
+        by_contra h
+        exact hi (hmem (by omega))
+      exact IsZero.iso
+        (HomologicalComplex.isZero_stupidTrunc_X L e i (by
+          intro k hk
+          exact hi ⟨k, hk⟩))
+        (hL i hib)
+  refine HomologicalComplex.Hom.isoOfComponents f ?_
+  · intro i j hij
+    by_cases hi : ∃ k, e.f k = i
+    · obtain ⟨k, rfl⟩ := hi
+      by_cases hj : ∃ l, e.f l = j
+      · obtain ⟨l, rfl⟩ := hj
+        have hι (t : ℕ) :
+            (f (e.f t)).hom =
+              (L.stupidTruncXIso e (rfl : e.f t = e.f t)).hom := by
+          by_cases h : ∃ q, e.f q = e.f t
+          · dsimp [f]
+            rw [dif_pos h]
+            change (L.stupidTruncXIso e h.choose_spec).hom = _
+            have hp : e.f h.choose = e.f t := h.choose_spec
+            have hst : h.choose = t := e.injective_f hp
+            simp only [hst]
+          · simp only [f, dif_neg h]
+            exact (h ⟨t, rfl⟩).elim
+        have hd (r s : ℕ) :
+            (HomologicalComplex.stupidTrunc L e).d (e.f r) (e.f s) =
+              (L.stupidTruncXIso e (rfl : e.f r = e.f r)).hom ≫
+                L.d (e.f r) (e.f s) ≫
+                (L.stupidTruncXIso e (rfl : e.f s = e.f s)).inv := by
+          change ((L.restriction e).extend e).d (e.f r) (e.f s) = _
+          dsimp [HomologicalComplex.stupidTrunc]
+          rw [HomologicalComplex.extend_d_eq (L.restriction e) e rfl rfl,
+            HomologicalComplex.restriction_d_eq L e rfl rfl]
+          have hstupid (t : ℕ) :
+              (L.stupidTruncXIso e (rfl : e.f t = e.f t)).hom =
+                ((L.restriction e).extendXIso e
+                  (rfl : e.f t = e.f t)).hom ≫
+                  (L.restrictionXIso e
+                    (rfl : e.f t = e.f t)).hom := by
+            dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
+              HomologicalComplex.restrictionXIso,
+              HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+            rfl
+          have hstupid_inv (t : ℕ) :
+              (L.stupidTruncXIso e (rfl : e.f t = e.f t)).inv =
+                (L.restrictionXIso e
+                  (rfl : e.f t = e.f t)).inv ≫
+                  ((L.restriction e).extendXIso e
+                    (rfl : e.f t = e.f t)).inv := by
+            dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_inv,
+              HomologicalComplex.restrictionXIso,
+              HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+            rfl
+          rw [hstupid r, hstupid_inv s]
+          simp [Category.assoc]
+        rw [hι k, hι l, hd k l]
+        simp [Category.assoc]
+      · have hz : IsZero (L.X j) := by
+          apply hL j
+          by_contra h
+          exact hj (hmem (by omega))
+        exact hz.eq_of_tgt _ _
+    · have hzi := HomologicalComplex.isZero_stupidTrunc_X L e i (by
+        intro k hk
+        exact hi ⟨k, hk⟩)
+      exact hzi.eq_of_src _ _
+
+private lemma derived_degreeConcentrated_mem_conePower_one
+    (E : ObjectProperty C) (a b n : ℤ) (hai : a ≤ n) (hib : n ≤ b)
+    (X : C) (hX : smd (add E) X) :
+    conePower (derivedWindowProperty E a b) 1
+      ((DerivedCategory.Q (C := C)).obj
+        (Formalization.Books.Homology.Unit15.CochainComplex.degreeConcentrated X n)) := by
+  have hshift := shifted_smd_add_mem E a b n hai hib X hX
+  let eQ :
+      (DerivedCategory.Q (C := C)).obj
+          (Formalization.Books.Homology.Unit15.CochainComplex.degreeConcentrated X n) ≅
+        (shiftFunctor (DerivedCategory C) (-n)).obj
+          ((DerivedCategory.singleFunctor C 0).obj X) := by
+    simpa [Formalization.Books.Homology.Unit15.CochainComplex.degreeConcentrated,
+      Formalization.Books.Homology.Unit14.CochainComplex.concentrated,
+      Formalization.Books.Homology.Unit13.cochainComplexSingle] using
+      (DerivedCategory.Q.commShiftIso (-n)).app
+        ((HomologicalComplex.single C (ComplexShape.up ℤ) 0).obj X)
+  exact ObjectProperty.prop_of_iso
+    (conePower (derivedWindowProperty E a b) 1) eQ.symm hshift
+
+private lemma derived_mem_conePower_of_complex_aux
+    (E : ObjectProperty C) (a b : ℤ) (hab : a ≤ b)
+    (L : BookComplex C)
+    (hL : complexTermwiseInWindow (smd (add E)) a b L) :
+    conePower (derivedWindowProperty E a b) (intervalLength a b)
+      ((DerivedCategory.Q (C := C)).obj L) := by
+  have hrec : ∀ d : ℕ, ∀ (a b : ℤ), a ≤ b → ∀ (L : BookComplex C),
+      complexTermwiseInWindow (smd (add E)) a b L →
+      intervalLength a b = d + 1 →
+      conePower (derivedWindowProperty E a b) (intervalLength a b)
+        ((DerivedCategory.Q (C := C)).obj
+          (Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE L b)) := by
+    intro d
+    induction d with
+    | zero =>
+        intro a b hab L hL hlen
+        have hab' : a = b := by
+          simp [intervalLength] at hlen
+          omega
+        subst b
+        let T :=
+          Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE L a
+        let hcomp :=
+          Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE_components L a
+        have hGE : T.IsStrictlyGE a :=
+          (CochainComplex.isStrictlyGE_iff T a).2 (by
+            intro i hi
+            exact (hL.1 i (Or.inl hi)).of_iso
+              (Classical.choice (hcomp.1 i (by omega))))
+        have hLE : T.IsStrictlyLE a :=
+          (CochainComplex.isStrictlyLE_iff T a).2 (by
+            intro i hi
+            exact hcomp.2 i hi)
+        have hpiece : smd (add E) (T.X a) := by
+          obtain ⟨e⟩ := hcomp.1 a (by omega)
+          exact ObjectProperty.prop_of_iso (smd (add E)) e.symm
+            (hL.2 a (by omega) (by omega))
+        obtain ⟨M, ⟨eT⟩⟩ :=
+          @CochainComplex.exists_iso_single C _ _ T _ a hGE hLE
+        have eM : T.X a ≅ M := by
+          simpa using HomologicalComplex.Hom.isoApp eT a
+        have hM : smd (add E) M :=
+          ObjectProperty.prop_of_iso (smd (add E)) eM hpiece
+        have hs := shifted_smd_add_mem E a a a (by omega) (by omega)
+          M hM
+        obtain ⟨eShift⟩ := shift_singleFunctor_iso M a
+        have hsingle : conePower (derivedWindowProperty E a a) 1
+            ((DerivedCategory.singleFunctor C a).obj M) :=
+          ObjectProperty.prop_of_iso (conePower (derivedWindowProperty E a a) 1)
+            eShift hs
+        have hQT : conePower (derivedWindowProperty E a a) 1
+            ((DerivedCategory.Q (C := C)).obj T) := by
+          apply ObjectProperty.prop_of_iso (conePower (derivedWindowProperty E a a) 1)
+            ((DerivedCategory.Q (C := C)).mapIso eT).symm
+          simpa only [DerivedCategory.Q_obj_single_obj] using hsingle
+        simpa [T, intervalLength] using hQT
+    | succ d ih =>
+        intro a b hab L hL hlen
+        have habne : a ≠ b := by
+          intro heq
+          subst b
+          simp [intervalLength] at hlen
+        have hab' : a ≤ b - 1 := by omega
+        let T :=
+          Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE L b
+        let Tprev :=
+          Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE L (b - 1)
+        let hcomp :=
+          Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE_components L (b - 1)
+        have hT : complexTermwiseInWindow (smd (add E)) a (b - 1) Tprev := by
+          constructor
+          · intro i hi
+            rcases hi with hi | hi
+            · by_cases hil : i ≤ b - 1
+              · exact (hL.1 i (Or.inl hi)).of_iso
+                  (Classical.choice (hcomp.1 i hil))
+              · exact hcomp.2 i (by omega)
+            · by_cases hil : i ≤ b - 1
+              · omega
+              · exact hcomp.2 i (by omega)
+          · intro i hai hil
+            obtain ⟨e⟩ := hcomp.1 i hil
+            exact ObjectProperty.prop_of_iso (smd (add E)) e.symm
+              (hL.2 i hai (by omega))
+        have hlenprev : intervalLength a (b - 1) = d + 1 := by
+          simp [intervalLength] at hlen ⊢
+          omega
+        have hprev0 := ih a (b - 1) hab' Tprev hT hlenprev
+        have hprev : conePower (derivedWindowProperty E a (b - 1))
+            (intervalLength a (b - 1))
+            ((DerivedCategory.Q (C := C)).obj Tprev) := by
+          exact ObjectProperty.prop_of_iso
+            (conePower (derivedWindowProperty E a (b - 1))
+              (intervalLength a (b - 1)))
+            ((DerivedCategory.Q (C := C)).mapIso
+              (stupidTruncLE_iso_of_termwise_isZero Tprev (b - 1)
+                (fun i hi => hT.1 i (Or.inr hi)))) hprev0
+        have hprev' : conePower (derivedWindowProperty E a b) (d + 1)
+            ((DerivedCategory.Q (C := C)).obj Tprev) := by
+          rw [← hlenprev]
+          exact conePower_mono (derivedWindowProperty_mono E a b hab)
+            (intervalLength a (b - 1)) _ hprev
+        obtain ⟨f, hf, ⟨eK⟩⟩ :=
+          Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE_transition L b
+        let S := ShortComplex.mk (kernel.ι f) f (kernel.condition f)
+        have hS : S.ShortExact :=
+          ShortComplex.ShortExact.mk' (ShortComplex.exact_kernel f) inferInstance hf
+        let Ttri := DerivedCategory.triangleOfSES hS
+        have hkernel : conePower (derivedWindowProperty E a b) 1
+            ((DerivedCategory.Q (C := C)).obj (kernel f)) := by
+          have hdeg := derived_degreeConcentrated_mem_conePower_one E a b b
+            (by omega) (by omega) (L.X b)
+            (hL.2 b (by omega) (by omega))
+          exact ObjectProperty.prop_of_iso
+            (conePower (derivedWindowProperty E a b) 1)
+            ((DerivedCategory.Q (C := C)).mapIso eK).symm hdeg
+        have hstar : star (conePower (derivedWindowProperty E a b) 1)
+            (conePower (derivedWindowProperty E a b) (d + 1))
+            ((DerivedCategory.Q (C := C)).obj T) := by
+          refine ⟨(DerivedCategory.Q (C := C)).obj (kernel f),
+            (DerivedCategory.Q (C := C)).obj Tprev, Ttri.mor₁, Ttri.mor₂,
+            Ttri.mor₃, ?_, hkernel, hprev'⟩
+          exact DerivedCategory.triangleOfSES_distinguished hS
+        have hd : 1 ≤ d + 1 := by omega
+        have hcone : conePower (derivedWindowProperty E a b) ((d + 1) + 1)
+            ((DerivedCategory.Q (C := C)).obj T) := by
+          rw [show (d + 1) + 1 = 1 + (d + 1) by omega]
+          rw [conePower_add (derivedWindowProperty E a b) (by omega) hd]
+          exact ObjectProperty.prop_retractClosure hstar (Retract.refl _)
+        rw [hlen]
+        exact hcone
+  have htop := hrec (intervalLength a b - 1) a b hab L hL (by
+    simp [intervalLength]
+    omega)
+  have htop' : conePower (derivedWindowProperty E a b) (intervalLength a b)
+      ((DerivedCategory.Q (C := C)).obj
+        (Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncLE L b)) :=
+    htop
+  exact ObjectProperty.prop_of_iso
+    (conePower (derivedWindowProperty E a b) (intervalLength a b))
+    ((DerivedCategory.Q (C := C)).mapIso
+      (stupidTruncLE_iso_of_termwise_isZero L b
+        (fun i hi => hL.1 i (Or.inr hi)))) htop'
+
 /-! A bounded complex with terms in `E` gives the stated cone bound. -/
 theorem derived_mem_conePower_of_complex
     (E : ObjectProperty C) (a b : ℤ) (hab : a ≤ b)
@@ -990,7 +1242,18 @@ theorem derived_mem_conePower_of_complex
     (hK : ∃ L : BookComplex C,
       representedByComplex K L ∧ complexTermwiseInWindow E a b L) :
     conePower (derivedWindowProperty E a b) (intervalLength a b) K := by
-  sorry
+  rcases hK with ⟨L, ⟨eK⟩, hL⟩
+  have hL' : complexTermwiseInWindow (smd (add E)) a b L := by
+    refine ⟨hL.1, ?_⟩
+    intro i hai hib
+    let f : Fin 1 → C := fun _ => L.X i
+    have hadd : add E (L.X i) := by
+      refine ⟨1, f, fun _ => hL.2 i hai hib, ?_⟩
+      exact ⟨(biproduct.isoCoproduct f).symm ≪≫ biproductUniqueIso f⟩
+    exact ObjectProperty.prop_retractClosure hadd (Retract.refl _)
+  exact ObjectProperty.prop_of_iso
+    (conePower (derivedWindowProperty E a b) (intervalLength a b)) eK
+    (derived_mem_conePower_of_complex_aux E a b hab L hL')
 
 /-! A bounded complex with terms in `smd(add(E))` gives the same bound. -/
 theorem derived_mem_conePower_of_complex_smd_add
@@ -999,7 +1262,10 @@ theorem derived_mem_conePower_of_complex_smd_add
     (hK : ∃ L : BookComplex C,
       representedByComplex K L ∧ complexTermwiseInWindow (smd (add E)) a b L) :
     conePower (derivedWindowProperty E a b) (intervalLength a b) K := by
-  sorry
+  rcases hK with ⟨L, ⟨eK⟩, hL⟩
+  exact ObjectProperty.prop_of_iso
+    (conePower (derivedWindowProperty E a b) (intervalLength a b)) eK
+    (derived_mem_conePower_of_complex_aux E a b hab L hL)
 
 end DerivedConeBounds
 
@@ -1012,11 +1278,125 @@ variable {T : Type u} [Category.{v} T] [AdditiveCategory T]
   [Pretriangulated T] [CategoryTheory.IsTriangulated T]
   {A : Type u'} [Category.{v'} A] [Abelian A]
 
+omit [CategoryTheory.IsTriangulated T] in
+private lemma homological_forward_shiftWindow
+    (H : T ⥤ A) [H.IsHomological]
+    (a b : ℤ) (m : ℕ) (E : ObjectProperty T)
+    (hE : ∀ ⦃X : T⦄, E X → ∀ i : ℤ, i < a ∨ b < i →
+      IsZero ((homologicalDegree H i).obj X))
+    {i : ℤ} {Y : T}
+    (hY : shiftWindow E (((-(m : ℤ)) : ℤ) : EInt)
+      (((m : ℤ) : ℤ) : EInt) Y)
+    (hi : i < -(m : ℤ) + a ∨ (m : ℤ) + b < i) :
+    IsZero ((homologicalDegree H i).obj Y) := by
+  simp only [shiftWindow, ObjectProperty.prop_iSup_iff] at hY
+  rcases hY with ⟨j, hY⟩
+  rcases (ObjectProperty.strictMap_iff _ _ _).1 hY with ⟨Z, hZ, rfl⟩
+  have hjlo : -(m : ℤ) ≤ (j : ℤ) := by
+    simpa using j.property.1
+  have hjhi : (j : ℤ) ≤ (m : ℤ) := by
+    simpa using j.property.2
+  have hbase : i - (j : ℤ) < a ∨ b < i - (j : ℤ) := by
+    rcases hi with hi | hi
+    · left
+      omega
+    · right
+      omega
+  change IsZero (H.obj ((shiftFunctor T i).obj
+    ((shiftFunctor T (-(j : ℤ))).obj Z)))
+  simpa [homologicalDegree] using
+    IsZero.of_iso (hE hZ (i - (j : ℤ)) hbase)
+      (H.mapIso ((shiftFunctorAdd' T (-(j : ℤ)) i (i - (j : ℤ))
+        (by omega)).app Z)).symm
+
+omit [HasShift T ℤ] [∀ n : ℤ, (shiftFunctor T n).Additive]
+  [Pretriangulated T] [CategoryTheory.IsTriangulated T] in
+private lemma homological_isZero_of_additive_coproduct
+    (F : T ⥤ A) [F.Additive] {r : ℕ} (A' : Fin r → T)
+    (hA : ∀ j, IsZero (F.obj (A' j))) :
+    IsZero (F.obj (∐ A')) := by
+  have hB : IsZero (⨁ fun j => F.obj (A' j)) := by
+    rw [IsZero.iff_id_eq_zero]
+    apply biproduct.hom_ext
+    intro j
+    exact (hA j).eq_of_tgt _ _
+  have hsum : IsZero (F.obj (⨁ A')) :=
+    hB.of_iso (F.mapBiproduct A')
+  exact hsum.of_iso (F.mapIso (biproduct.isoCoproduct A').symm)
+
+omit [CategoryTheory.IsTriangulated T] in
+private lemma homological_forward_conePower_aux
+    (H : T ⥤ A) [H.IsHomological]
+    (a b : ℤ) (E : ObjectProperty T)
+    (hE : ∀ ⦃X : T⦄, E X → ∀ i : ℤ, i < a ∨ b < i →
+      IsZero ((homologicalDegree H i).obj X))
+    {m n : ℕ} (X : T)
+    (hX : conePower (shiftWindow E (((-(m : ℤ)) : ℤ) : EInt)
+      (((m : ℤ) : ℤ) : EInt)) n X) :
+    ∀ i : ℤ, i < -(m : ℤ) + a ∨ (m : ℤ) + b < i →
+      IsZero ((homologicalDegree H i).obj X) := by
+  let P : ObjectProperty T := shiftWindow E (((-(m : ℤ)) : ℤ) : EInt)
+    (((m : ℤ) : ℤ) : EInt)
+  let ZP : ObjectProperty T := fun Y =>
+    ∀ i : ℤ, i < -(m : ℤ) + a ∨ (m : ℤ) + b < i →
+      IsZero ((homologicalDegree H i).obj Y)
+  have hP : P ≤ ZP := by
+    intro Y hY i hi
+    exact homological_forward_shiftWindow H a b m E hE hY hi
+  have hadd : add P ≤ ZP := by
+    intro Y hY i hi
+    rcases hY with ⟨r, A', hA, ⟨e⟩⟩
+    have hF : (homologicalDegree H i).Additive := by
+      dsimp [homologicalDegree]
+      infer_instance
+    have hcoprod : IsZero ((homologicalDegree H i).obj (∐ A')) := by
+      exact @homological_isZero_of_additive_coproduct T _ _ A _ _
+        (homologicalDegree H i) hF r A'
+          (fun j => (hP _ (hA j) i hi))
+    exact hcoprod.of_iso ((homologicalDegree H i).mapIso e).symm
+  have hstar : star ZP ZP ≤ ZP := by
+    intro Y hY i hi
+    rcases hY with ⟨Y₁, Y₃, f, g, h, hT, h₁, h₃⟩
+    let T' := Triangle.mk f g h
+    let Tshift := (Triangle.shiftFunctor T i).obj T'
+    have hex := H.map_distinguished_exact Tshift
+      (Triangle.shift_distinguished T' hT i)
+    change IsZero (H.obj ((shiftFunctor T i).obj Y))
+    simpa [T', Tshift] using
+      hex.isZero_of_both_isZero (h₁ i hi) (h₃ i hi)
+  have hret : ZP.retractClosure ≤ ZP := by
+    intro Y hY i hi
+    rcases hY with ⟨Y', hY', ⟨r⟩⟩
+    let F := homologicalDegree H i
+    change IsZero (F.obj Y)
+    have hr : F.map r.i ≫ F.map r.r = 𝟙 _ := by
+      rw [← F.map_comp, r.retract, F.map_id]
+    have hri : F.map r.i = 0 := by
+      simpa [F, homologicalDegree] using (hY' i hi).eq_of_tgt _ _
+    apply (IsZero.iff_id_eq_zero _).2
+    rw [← hr]
+    rw [hri]
+    simp
+  have hiter : ∀ k : ℕ, (add P).extensionProductIter k ≤ ZP := by
+    intro k
+    induction k with
+    | zero => simpa only [ObjectProperty.extensionProductIter_zero] using hadd
+    | succ k ih =>
+        rw [ObjectProperty.extensionProductIter_succ]
+        exact (ObjectProperty.monotone_extensionProduct_left _ hadd).trans
+          ((ObjectProperty.monotone_extensionProduct_right _ ih).trans hstar)
+  have hcone : conePower P n ≤ ZP := by
+    change smd ((add P).extensionProductIter (n - 1)) ≤ ZP
+    exact (ObjectProperty.monotone_retractClosure (hiter (n - 1))).trans hret
+  intro i hi
+  exact hcone X (by simpa [P] using hX) i hi
+
 /-!
 The printed source bound incorrectly multiplies the support endpoints by the
 number of extension factors.  Homological exactness preserves a common
 support interval under extensions, so the correct interval is `[-m + a, m + b]`.
 -/
+omit [CategoryTheory.IsTriangulated T] in
 theorem homological_forward_conePower
     (H : T ⥤ A) [H.IsHomological]
     (a b : ℤ) (hab : a ≤ b) (E : ObjectProperty T)
@@ -1024,12 +1404,14 @@ theorem homological_forward_conePower
       IsZero ((homologicalDegree H i).obj X))
     {m n : ℕ} (hn : 1 ≤ n) (X : T)
     (hX : conePower (shiftWindow E (((-(m : ℤ)) : ℤ) : EInt)
-      (((m : ℤ) : ℤ) : EInt)) n X) :
+    (((m : ℤ) : ℤ) : EInt)) n X) :
     ∀ i : ℤ,
       i < -(m : ℤ) + a ∨
-        (m : ℤ) + b < i →
+      (m : ℤ) + b < i →
       IsZero ((homologicalDegree H i).obj X) := by
-  sorry
+  have _hn : 1 ≤ n := hn
+  have _hab : a ≤ b := hab
+  exact homological_forward_conePower_aux H a b E hE X hX
 
 end ForwardConeBound
 

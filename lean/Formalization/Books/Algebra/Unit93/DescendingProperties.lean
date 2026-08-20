@@ -17,6 +17,7 @@ namespace Formalization.Books.Algebra.Unit93
 
 open Formalization.Books.Algebra.Unit84
 open Formalization.Books.Algebra.Unit88
+open Formalization.Books.Algebra.Unit82
 open scoped DirectSum TensorProduct
 
 universe u v w
@@ -48,6 +49,143 @@ def selectedDirectSumSubmodule
       {x | ∃ i, i ∈ I' ∧ ∃ q : (Q i : Type w),
         DirectSum.lof S I (fun i => (Q i : Type w)) i q = x}
 
+private theorem countablyGenerated_of_surjective
+    {R : Type u} {X Y : Type v} [CommRing R]
+    [AddCommGroup X] [Module R X] [AddCommGroup Y] [Module R Y]
+    (f : X →ₗ[R] Y) (hf : Function.Surjective f)
+    (hX : Module.IsCountablyGenerated R X) :
+    Module.IsCountablyGenerated R Y := by
+  rcases hX with ⟨s, hs, hspan⟩
+  refine ⟨f '' s, hs.image f, ?_⟩
+  rw [← Submodule.map_span, hspan]
+  apply top_unique
+  rintro y -
+  rcases hf y with ⟨x, rfl⟩
+  exact ⟨x, trivial, rfl⟩
+
+private theorem countableTensorGenerators
+    {R S : Type u} {M : Type v} [CommRing R] [CommRing S]
+    [Algebra R S] [AddCommGroup M] [Module R M]
+    (s : Set (S ⊗[R] M)) (hs : s.Countable) :
+    ∃ t : Set M, t.Countable ∧
+      ∀ z ∈ s, z ∈ Set.range
+        (baseChangeSubmoduleMap (Submodule.span R t)) := by
+  let _ : Countable s := hs.to_subtype
+  choose k a b hab using
+    (fun z : s => TensorProduct.exists_sum_tmul_eq (R := R) z.1)
+  let t : Set M := Set.range
+    (fun z : Σ y : s, Fin (k y) => b (Sigma.fst z) (Sigma.snd z))
+  have ht : t.Countable := Set.countable_range _
+  refine ⟨t, ht, ?_⟩
+  intro z hz
+  let z' : s := ⟨z, hz⟩
+  let P : Submodule R M := Submodule.span R t
+  refine ⟨∑ i, a z' i ⊗ₜ[R]
+      ⟨b z' i, Submodule.subset_span
+        (show b z' i ∈ t from ⟨⟨z', i⟩, rfl⟩)⟩, ?_⟩
+  change (TensorProduct.map (LinearMap.id : S →ₗ[R] S) P.subtype)
+      (∑ i, a z' i ⊗ₜ[R]
+        ⟨b z' i, Submodule.subset_span
+          (show b z' i ∈ t from ⟨⟨z', i⟩, rfl⟩)⟩) = z
+  rw [map_sum]
+  simp only [TensorProduct.map_tmul]
+  simpa [P] using (hab z').symm
+
+private theorem countablyGenerated_span_submodule
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (t : Set M) (ht : t.Countable) :
+    Module.IsCountablyGenerated R (Submodule.span R t : Type v) := by
+  let P : Submodule R M := Submodule.span R t
+  let lift : t → P := fun x => ⟨x, Submodule.subset_span x.property⟩
+  let tP : Set P := Set.range lift
+  let _ : Countable t := ht.to_subtype
+  have htP : tP.Countable := Set.countable_range _
+  have himage : P.subtype '' tP = t := by
+    ext x
+    constructor
+    · rintro ⟨y, ⟨z, rfl⟩, rfl⟩
+      exact z.property
+    · intro hx
+      refine ⟨lift ⟨x, hx⟩, ⟨⟨x, hx⟩, rfl⟩, ?_⟩
+      rfl
+  have hmap : (Submodule.span R tP).map P.subtype = P := by
+    rw [Submodule.map_span, himage]
+  refine ⟨tP, htP, ?_⟩
+  apply top_unique
+  intro x _
+  have hxmap : (x : M) ∈ (Submodule.span R tP).map P.subtype := by
+    rw [hmap]
+    exact x.property
+  rcases Submodule.mem_map.mp hxmap with ⟨y, hy, hxy⟩
+  have hyx : y = x := by
+    apply Subtype.ext
+    exact hxy
+  simpa [hyx] using hy
+
+private theorem exists_countablyGenerated_submodule_lifting_aux
+    {R S : Type u} {M : Type v} [CommRing R] [CommRing S]
+    [Algebra R S] [AddCommGroup M] [Module R M]
+    (Q : Submodule S (S ⊗[R] M))
+    (hQ : Module.IsCountablyGenerated S (Q : Type (max u v))) :
+    ∃ P : Submodule R M,
+      Module.IsCountablyGenerated R (P : Type v) ∧
+        (Q : Set (S ⊗[R] M)) ≤ Set.range (baseChangeSubmoduleMap P) := by
+  rcases hQ with ⟨u, hu, hspan⟩
+  let s : Set (S ⊗[R] M) := (fun x : Q => (x : S ⊗[R] M)) '' u
+  have hs : s.Countable := hu.image (fun x : Q => (x : S ⊗[R] M))
+  obtain ⟨t, ht, hst⟩ :=
+    countableTensorGenerators (R := R) (S := S) (M := M) s hs
+  let P : Submodule R M := Submodule.span R t
+  let rangeS : Submodule S (S ⊗[R] M) :=
+    { carrier := Set.range (baseChangeSubmoduleMap P)
+      zero_mem' := by
+        exact ⟨0, (baseChangeSubmoduleMap P).map_zero⟩
+      add_mem' := by
+        rintro x y ⟨x', rfl⟩ ⟨y', rfl⟩
+        refine ⟨x' + y', ?_⟩
+        exact LinearMap.map_add (baseChangeSubmoduleMap P) x' y'
+      smul_mem' := by
+        rintro c x ⟨x', rfl⟩
+        refine ⟨c • x', ?_⟩
+        induction x' using TensorProduct.induction_on with
+        | zero => simp [baseChangeSubmoduleMap]
+        | tmul s p =>
+          change (TensorProduct.map (LinearMap.id : S →ₗ[R] S) P.subtype)
+              ((c • s) ⊗ₜ[R] p) =
+            c • (TensorProduct.map (LinearMap.id : S →ₗ[R] S) P.subtype)
+              (s ⊗ₜ[R] p)
+          rw [TensorProduct.map_tmul]
+          simp [TensorProduct.smul_tmul', smul_eq_mul]
+        | add x y hx hy =>
+          rw [smul_add, map_add, hx, hy, map_add, smul_add]
+    }
+  have hsle : Submodule.span S s ≤ rangeS := by
+    apply Submodule.span_le.2
+    intro z hz
+    obtain ⟨x, hx, rfl⟩ := hz
+    change ∃ y : TensorProduct R S (Submodule.span R t : Type v),
+      (baseChangeSubmoduleMap (R := R) (S := S) (M := M)
+        (Submodule.span R t)) y = (x : S ⊗[R] M)
+    simpa [P] using hst (x : S ⊗[R] M) ⟨x, hx, rfl⟩
+  refine ⟨P, countablyGenerated_span_submodule t ht, ?_⟩
+  intro x hx
+  have hxspan : x ∈ Submodule.span S s := by
+    have hx' : (⟨x, hx⟩ : Q) ∈ Submodule.span S u := by
+      rw [hspan]
+      trivial
+    have hmap : (Submodule.span S u).map Q.subtype ≤
+        Submodule.span S s := by
+      rw [Submodule.map_span]
+      exact Submodule.span_le.2 (by
+        rintro y ⟨q, hq, rfl⟩
+        exact Submodule.subset_span ⟨q, hq, rfl⟩)
+    have hxmap : x ∈ (Submodule.span S u).map Q.subtype := by
+      apply Submodule.mem_map.mpr
+      exact ⟨⟨x, hx⟩, hx', rfl⟩
+    exact hmap hxmap
+  exact hsle hxspan
+
 /-! ## Faithfully flat descent of the basic properties -/
 
 /-- Mittag--Lefflerness descends along faithfully flat base change. -/
@@ -67,7 +205,52 @@ theorem countablyGenerated_descends_of_faithfullyFlat
     [Module.FaithfullyFlat R S]
     (hcountable : Module.IsCountablyGenerated S (S ⊗[R] M)) :
     Module.IsCountablyGenerated R M := by
-  sorry
+  rcases hcountable with ⟨s, hs, hspan⟩
+  obtain ⟨t, ht, hst⟩ :=
+    countableTensorGenerators (R := R) (S := S) (M := M) s hs
+  let P : Submodule R M := Submodule.span R t
+  let rangeS : Submodule S (S ⊗[R] M) :=
+    { carrier := Set.range (baseChangeSubmoduleMap P)
+      zero_mem' := by
+        exact ⟨0, (baseChangeSubmoduleMap P).map_zero⟩
+      add_mem' := by
+        rintro x y ⟨x', rfl⟩ ⟨y', rfl⟩
+        refine ⟨x' + y', ?_⟩
+        exact LinearMap.map_add (baseChangeSubmoduleMap P) x' y'
+      smul_mem' := by
+        rintro c x ⟨x', rfl⟩
+        refine ⟨c • x', ?_⟩
+        induction x' using TensorProduct.induction_on with
+        | zero => simp [baseChangeSubmoduleMap]
+        | tmul s p =>
+          change (TensorProduct.map (LinearMap.id : S →ₗ[R] S) P.subtype)
+              ((c • s) ⊗ₜ[R] p) =
+            c • (TensorProduct.map (LinearMap.id : S →ₗ[R] S) P.subtype)
+              (s ⊗ₜ[R] p)
+          rw [TensorProduct.map_tmul]
+          simp [TensorProduct.smul_tmul', smul_eq_mul]
+        | add x y hx hy =>
+          rw [smul_add, map_add, hx, hy, map_add, smul_add]
+    }
+  have hrange : rangeS = ⊤ := by
+    apply top_unique
+    rw [← hspan]
+    exact Submodule.span_le.2 (by
+      intro z hz
+      change z ∈ Set.range
+        (baseChangeSubmoduleMap (R := R) (S := S) (M := M) P)
+      change z ∈ Set.range
+        (baseChangeSubmoduleMap (R := R) (S := S) (M := M)
+          (Submodule.span R t))
+      exact hst z hz)
+  have hsurj : Function.Surjective (baseChangeSubmoduleMap P) := by
+    intro z
+    have hz : z ∈ rangeS := by rw [hrange]; trivial
+    exact hz
+  have hsurj' : Function.Surjective P.subtype :=
+    (Module.FaithfullyFlat.lTensor_surjective_iff_surjective R S P.subtype).mp
+      (by simpa [baseChangeSubmoduleMap] using hsurj)
+  exact countablyGenerated_of_surjective P.subtype hsurj' ⟨t, ht, rfl⟩
 
 /-- Countably generated projectivity descends along faithfully flat base
 change. -/
@@ -78,7 +261,22 @@ theorem countablyGenerated_projective_descends_of_faithfullyFlat
     (hcountable : Module.IsCountablyGenerated S (S ⊗[R] M))
     (hprojective : Module.Projective S (S ⊗[R] M)) :
     Module.IsCountablyGenerated R M ∧ Module.Projective R M := by
-  sorry
+  have hflatS : Module.Flat S (S ⊗[R] M) :=
+    @Module.Flat.of_projective S (S ⊗[R] M) _ _ _ hprojective
+  have hflatR : Module.Flat R M :=
+    (Module.Flat.iff_flat_tensorProduct (R := R) (M := M) S).mp hflatS
+  have hMLR : IsMittagLefflerModule (ModuleCat.of R M) :=
+    by
+    exact mittagLeffler_descends_of_faithfullyFlat
+      (show IsMittagLefflerModule
+        (ModuleCat.of S (S ⊗[R] M)) from
+        Formalization.Books.Algebra.Unit91.isMittagLefflerModule_of_projective
+          (ModuleCat.of S (S ⊗[R] M)) hprojective)
+  have hcountableR : Module.IsCountablyGenerated R M :=
+    countablyGenerated_descends_of_faithfullyFlat hcountable
+  exact ⟨hcountableR,
+    projective_of_flat_of_mittagLeffler_of_countablyGenerated
+      hflatR hMLR hcountableR⟩
 
 /-! ## Lifting and adapting countably generated submodules -/
 
@@ -92,7 +290,7 @@ theorem exists_countablyGenerated_submodule_lifting
     ∃ P : Submodule R M,
       Module.IsCountablyGenerated R (P : Type v) ∧
         (Q : Set (S ⊗[R] M)) ≤ Set.range (baseChangeSubmoduleMap P) := by
-  sorry
+  exact exists_countablyGenerated_submodule_lifting_aux Q hQ
 
 /-- The adapted-submodule lemma from the source, with a chosen direct-sum
 decomposition and the canonical base-change image made explicit. -/

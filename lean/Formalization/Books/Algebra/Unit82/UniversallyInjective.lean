@@ -1152,10 +1152,10 @@ theorem universallyInjective_of_projective_of_finite_stages
     universallyInjective f := by
   obtain ⟨F, hAddF, hModF, hFreeF, i, s, his⟩ :=
     (Module.Projective.iff_split (R := R) (P := N)).mp inferInstance
-  letI : AddCommMonoid F := hAddF
-  letI : AddCommGroup F := Module.addCommMonoidToAddCommGroup R
-  letI : Module R F := hModF
-  letI : Module.Free R F := hFreeF
+  let : AddCommMonoid F := hAddF
+  let : AddCommGroup F := Module.addCommMonoidToAddCommGroup R
+  let : Module R F := hModF
+  let : Module.Free R F := hFreeF
   let U : F →ₗ[R] M × F :=
     LinearMap.prod (f.comp s)
       ((LinearMap.id : F →ₗ[R] F) - i.comp s)

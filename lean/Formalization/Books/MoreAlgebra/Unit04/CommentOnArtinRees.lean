@@ -488,13 +488,13 @@ stage supplies the quotient-compatibility calculations. -/
 theorem associatedGradedRing_gcommRing_exists
     {R : Type u} [CommRing R] (I : Ideal R) :
     Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) := by
-  exact Formalization.Books.Algebra.Unit150.associatedGradedRing_gcommRing_exists I
+  exact Formalization.Books.Algebra.Unit58.associatedGradedRing_gcommRing_exists I
 
 @[instance_reducible]
 noncomputable instance associatedGradedRing_gcommRing
     {R : Type u} [CommRing R] (I : Ideal R) :
     DirectSum.GCommRing (associatedGradedRingPiece I) :=
-  Formalization.Books.Algebra.Unit150.associatedGradedRing_gcommRingCanonical I
+  Formalization.Books.Algebra.Unit58.associatedGradedRing_gcommRing I
 
 /-- The canonical graded-module action of `Gr_I(A)` on `Gr_I(M)`.
 

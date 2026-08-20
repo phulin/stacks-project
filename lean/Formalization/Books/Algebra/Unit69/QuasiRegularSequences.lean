@@ -10,6 +10,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Basis
 import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.AdicCompletion.Basic
+import Mathlib.RingTheory.Ideal.Cotangent
 import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial
@@ -61,6 +62,40 @@ abbrev quasiRegularTarget
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) :=
   ⨁ n, quasiRegularPiece R M I n
+
+/-! ## Degree one and the conormal module -/
+
+/-- The degree-one associated-graded piece is canonically the conormal module.
+
+The quotient module structure on the source is the one induced by its annihilation by `I`.
+This identification does not require quasi-regularity; quasi-regularity is used later to
+identify the whole associated graded object with its polynomial model. -/
+noncomputable def quasiRegularPiece_one_cotangentEquiv
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    let hN := Module.isTorsionBySet_quotient_ideal_smul
+      (M := ↥(I ^ 1 • (⊤ : Submodule R R))) (I := I)
+    letI := hN.module
+    quasiRegularPiece R R I 1 ≃ₗ[R ⧸ I] I.Cotangent := by
+  dsimp
+  let P : Submodule R R := I ^ 1 • (⊤ : Submodule R R)
+  let hP : P = (I : Submodule R R) := by
+    change I ^ 1 • (⊤ : Submodule R R) = (I : Submodule R R)
+    rw [pow_one, Ideal.smul_eq_mul, Ideal.mul_top]
+  let eP : (↥P) ≃ₗ[R] I := LinearEquiv.ofEq P (I : Submodule R R) hP
+  let eQ :
+      (↥P ⧸ (I • (⊤ : Submodule R ↥P))) ≃ₗ[R] I.Cotangent :=
+    Submodule.Quotient.equiv _ _ eP (by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr eP.surjective])
+  let hN := Module.isTorsionBySet_quotient_ideal_smul
+    (M := ↥(I ^ 1 • (⊤ : Submodule R R))) (I := I)
+  letI := hN.module
+  exact { eQ with
+    map_smul' := by
+      intro s x
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective s
+      induction x using Submodule.Quotient.induction_on with
+      | _ x => rfl }
 
 /-! ## The associated graded ring and adic lifting -/
 

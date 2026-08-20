@@ -1110,7 +1110,7 @@ theorem shiftedDifferentialHomology_shift_iso {C : Type u} [Category.{v} C]
     Abelian.PreservesImage.iso F p
   let eC : cokernel p' ≅ cokernel (F.map p) :=
     cokernel.mapIso p' (F.map p) e (Iso.refl _)
-      (by simpa [hpe])
+      (by simp [hpe])
   let eI1 : Abelian.image p' ≅ Abelian.image (F.map p) :=
     kernel.mapIso (cokernel.π p') (cokernel.π (F.map p))
       (Iso.refl _) eC (by simp [eC])
@@ -1152,9 +1152,9 @@ structure ShiftedLongExactSequence {C : Type u} [Category.{v} C]
 theorem shiftedDifferentialShortExact_homology_long_exact
     {C : Type u} [Category.{v} C] [Abelian C] {S : C ≌ C}
     {A B D : ShiftedDifferentialObject C S}
-    (Q : ShiftedDifferentialShortExact A B D) :
+    (_Q : ShiftedDifferentialShortExact A B D) :
     ∃ X : ℤ → C, Nonempty (ShiftedLongExactSequence S X) := by
-  letI := HasZeroObject.zero' C
+  let := HasZeroObject.zero' C
   refine ⟨(fun _ => (0 : C)), ⟨{ differential := (fun _ => 0), complex := ?_, exact := ?_ }⟩⟩
   · intro n
     simp

@@ -1141,7 +1141,7 @@ private theorem integral_of_two_ratio_presentations
     dsimp [powers]
     exact Set.Finite.union (Set.finite_range _) (Set.finite_range _)
   let M : Submodule R S := Submodule.span R powers
-  letI : Module.Finite R M := Module.Finite.span_of_finite R hpowers
+  let : Module.Finite R M := Module.Finite.span_of_finite R hpowers
   have hpow (i j : ℕ) : u ^ j * t ^ i =
       if j ≤ i then t ^ (i - j) else u ^ (j - i) := by
     have hcancel (k : ℕ) : t ^ k * u ^ k = 1 := by
@@ -1282,8 +1282,8 @@ private theorem adjoin_two_ratio_sum
         rw [Polynomial.eval₂_add, mul_add]
         exact hgood_add hq hr
     | monomial m b =>
-        convert hmonomial n m a b using 1 <;>
-          simp [Polynomial.eval₂_monomial] <;> ring
+        convert hmonomial n m a b using 1;
+          simp [Polynomial.eval₂_monomial]; ring
   have hpoly (p q : Polynomial R) :
       Good (Polynomial.eval₂ (algebraMap R S) t p *
         Polynomial.eval₂ (algebraMap R S) u q) := by
@@ -1725,7 +1725,7 @@ theorem silly_normal_short_exact
       rw [hbetaX]
       exact hzint
     rcases hclosed with hclosed | hclosed
-    · letI : IsIntegrallyClosedIn R (Localization.Away x) := hclosed
+    · let : IsIntegrallyClosedIn R (Localization.Away x) := hclosed
       obtain ⟨r, hr⟩ :=
         IsIntegrallyClosedIn.algebraMap_eq_of_integral hbetaXint
       refine ⟨r, ?_⟩
@@ -1818,7 +1818,7 @@ theorem silly_normal_short_exact
         apply (isIntegral_algHom_iff mapY hinjY).mp
         rw [hbetaY]
         exact hzint
-      letI : IsIntegrallyClosedIn R (Localization.Away y) := hclosed
+      let : IsIntegrallyClosedIn R (Localization.Away y) := hclosed
       obtain ⟨r, hr⟩ :=
         IsIntegrallyClosedIn.algebraMap_eq_of_integral hbetaYint
       refine ⟨r, ?_⟩

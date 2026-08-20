@@ -903,7 +903,38 @@ theorem first_totalization_respects_homotopy
         ((firstDoubleComplexTotalizationFunctor C).map f) =
       (homotopyQuotient C).map
         ((firstDoubleComplexTotalizationFunctor C).map g) := by
-  sorry
+  apply HomotopyCategory.eq_of_homotopy
+  let hv : VerticalHomotopy (firstDoubleComplexMap f) (firstDoubleComplexMap g) :=
+    { h := fun p q => (h.hom q (q - 1)).f p
+      homotopy := by
+        intro p q
+        have hY :
+            (Y.d (q - 1) (q - 1 + 1)).f p ≫ eqToHom (by congr 1; lia) =
+              (Y.d (q - 1) q).f p := by
+          simpa using
+            (eqToHom_naturality (fun r : ℤ => (Y.d (q - 1) r).f p)
+              (show q - 1 + 1 = q by ring))
+        have hX :
+            (h.hom (q + 1) (q + 1 - 1)).f p ≫ eqToHom (by congr 1; lia) =
+              (h.hom (q + 1) q).f p := by
+          simpa using
+            (eqToHom_naturality (fun r : ℤ => (h.hom (q + 1) r).f p)
+              (show q + 1 - 1 = q by ring))
+        have hnext : (ComplexShape.up ℤ).Rel q (q + 1) := by simp
+        have hprev : (ComplexShape.up ℤ).Rel (q - 1) q := by simp
+        have hc := h.comm q
+        rw [dNext_eq h.hom hnext, prevD_eq h.hom hprev] at hc
+        rw [sub_eq_iff_eq_add]
+        convert congrArg (fun k => k.f p) hc using 1 <;>
+          simp [firstDoubleComplexMap, firstDoubleComplexOfComplexes,
+            HomologicalComplex.comp_f, hY, hX]
+        have reorder (a b c : (X.X q).X p ⟶ (Y.X q).X p) :
+            a + b + c = b + a + c := by rw [add_comm a b]
+        exact reorder _ _ _
+      map := by
+        intro p q
+        exact (h.hom q (q - 1)).comm' p (p + 1) (by simp) }
+  exact Classical.choice (totalMap_homotopic_of_vertical hv)
 
 theorem second_totalization_respects_homotopy
     (C : Type u) [Category.{v} C] [AdditiveCategory C]
@@ -914,7 +945,38 @@ theorem second_totalization_respects_homotopy
         ((secondDoubleComplexTotalizationFunctor C).map f) =
       (homotopyQuotient C).map
         ((secondDoubleComplexTotalizationFunctor C).map g) := by
-  sorry
+  apply HomotopyCategory.eq_of_homotopy
+  let hh : HorizontalHomotopy (secondDoubleComplexMap f) (secondDoubleComplexMap g) :=
+    { h := fun p q => (h.hom p (p - 1)).f q
+      homotopy := by
+        intro p q
+        have hY :
+            (Y.d (p - 1) (p - 1 + 1)).f q ≫ eqToHom (by congr 1; lia) =
+              (Y.d (p - 1) p).f q := by
+          simpa using
+            (eqToHom_naturality (fun r : ℤ => (Y.d (p - 1) r).f q)
+              (show p - 1 + 1 = p by ring))
+        have hX :
+            (h.hom (p + 1) (p + 1 - 1)).f q ≫ eqToHom (by congr 1; lia) =
+              (h.hom (p + 1) p).f q := by
+          simpa using
+            (eqToHom_naturality (fun r : ℤ => (h.hom (p + 1) r).f q)
+              (show p + 1 - 1 = p by ring))
+        have hnext : (ComplexShape.up ℤ).Rel p (p + 1) := by simp
+        have hprev : (ComplexShape.up ℤ).Rel (p - 1) p := by simp
+        have hc := h.comm p
+        rw [dNext_eq h.hom hnext, prevD_eq h.hom hprev] at hc
+        rw [sub_eq_iff_eq_add]
+        convert congrArg (fun k => k.f q) hc using 1 <;>
+          simp [secondDoubleComplexMap, secondDoubleComplexOfComplexes,
+            HomologicalComplex.comp_f, hY, hX]
+        have reorder (a b c : (X.X p).X q ⟶ (Y.X p).X q) :
+            a + b + c = b + a + c := by rw [add_comm a b]
+        exact reorder _ _ _
+      map := by
+        intro p q
+        exact (h.hom p (p - 1)).comm' q (q + 1) (by simp) }
+  exact Classical.choice (totalMap_homotopic_of_horizontal hh)
 
 def firstDoubleHomotopyTotalizationFunctor
     (C : Type u) [Category.{v} C] [AdditiveCategory C]
@@ -1093,7 +1155,92 @@ theorem tensorProductLeft_respects_homotopy
     (h : Homotopy f g) :
     (tensorProductLeftTotalizationFunctor T X).map f =
       (tensorProductLeftTotalizationFunctor T X).map g := by
-  sorry
+  apply HomotopyCategory.eq_of_homotopy
+  let hv :
+      VerticalHomotopy
+        ((tensorProductDoubleComplexLeftFunctor T X).map f)
+        ((tensorProductDoubleComplexLeftFunctor T X).map g) :=
+    { h := fun p q => (T.functor.map
+        (Prod.mkHom (𝟙 (X.X p)) (h.hom q (q - 1))))
+      homotopy := by
+        intro p q
+        have hY :
+            T.functor.map
+                (Prod.mkHom (𝟙 (X.X p))
+                  (Y'.d (q - 1) (q - 1 + 1))) ≫
+                eqToHom (by congr 1; lia) =
+              T.functor.map
+                (Prod.mkHom (𝟙 (X.X p)) (Y'.d (q - 1) q)) := by
+          simpa using
+            (eqToHom_naturality
+              (fun r : ℤ =>
+                T.functor.map
+                  (Prod.mkHom (𝟙 (X.X p)) (Y'.d (q - 1) r)))
+              (show q - 1 + 1 = q by ring))
+        have hX :
+            T.functor.map
+                (Prod.mkHom (𝟙 (X.X p))
+                  (h.hom (q + 1) (q + 1 - 1))) ≫
+                eqToHom (by congr 1; lia) =
+              T.functor.map
+                (Prod.mkHom (𝟙 (X.X p)) (h.hom (q + 1) q)) := by
+          simpa using
+            (eqToHom_naturality
+              (fun r : ℤ =>
+                T.functor.map
+                  (Prod.mkHom (𝟙 (X.X p)) (h.hom (q + 1) r)))
+              (show q + 1 - 1 = q by ring))
+        have hnext : (ComplexShape.up ℤ).Rel q (q + 1) := by simp
+        have hprev : (ComplexShape.up ℤ).Rel (q - 1) q := by simp
+        have hc := h.comm q
+        rw [dNext_eq h.hom hnext, prevD_eq h.hom hprev] at hc
+        have hcomp₁ :
+            T.functor.map
+                (Prod.mkHom (𝟙 (X.X p))
+                  (Y.d q (q + 1) ≫ h.hom (q + 1) q)) =
+              T.functor.map
+                  (Prod.mkHom (𝟙 (X.X p)) (Y.d q (q + 1))) ≫
+                T.functor.map
+                  (Prod.mkHom (𝟙 (X.X p)) (h.hom (q + 1) q)) := by
+          rw [← T.functor.map_comp]
+          congr 1
+          ext <;> simp
+        have hcomp₂ :
+            T.functor.map
+                (Prod.mkHom (𝟙 (X.X p))
+                  (h.hom q (q - 1) ≫ Y'.d (q - 1) q)) =
+              T.functor.map
+                  (Prod.mkHom (𝟙 (X.X p)) (h.hom q (q - 1))) ≫
+                T.functor.map
+                  (Prod.mkHom (𝟙 (X.X p)) (Y'.d (q - 1) q)) := by
+          rw [← T.functor.map_comp]
+          congr 1
+          ext <;> simp
+        rw [sub_eq_iff_eq_add]
+        convert congrArg
+          (fun k => T.functor.map (Prod.mkHom (𝟙 (X.X p)) k)) hc using 1 <;>
+          simp [tensorProductDoubleComplex, tensorProductDoubleComplexLeftFunctor,
+            HomologicalComplex.comp_f, hY, hX, T.map_add_right,
+            T.functor.map_comp, hcomp₁, hcomp₂]
+        have reorder (a b c :
+            ((tensorProductDoubleComplexLeftFunctor T X).obj Y).obj p q ⟶
+              ((tensorProductDoubleComplexLeftFunctor T X).obj Y').obj p q) :
+            a + b + c = b + a + c := by rw [add_comm a b]
+        exact reorder _ _ _
+      map := by
+        intro p q
+        change
+          T.functor.map (Prod.mkHom (𝟙 (X.X p)) (h.hom q (q - 1))) ≫
+              T.functor.map
+                (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y'.X (q - 1)))) =
+            T.functor.map
+                (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X q))) ≫
+              T.functor.map
+                (Prod.mkHom (𝟙 (X.X (p + 1))) (h.hom q (q - 1)))
+        rw [← T.functor.map_comp, ← T.functor.map_comp]
+        congr 1
+        ext <;> simp }
+  exact Classical.choice (totalMap_homotopic_of_vertical hv)
 
 theorem tensorProductRight_respects_homotopy
     {A B C : Type u} [Category.{v} A] [Category.{v} B] [Category.{v} C]
@@ -1104,7 +1251,92 @@ theorem tensorProductRight_respects_homotopy
     (h : Homotopy f g) :
     (tensorProductRightTotalizationFunctor T Y).map f =
       (tensorProductRightTotalizationFunctor T Y).map g := by
-  sorry
+  apply HomotopyCategory.eq_of_homotopy
+  let hh :
+      HorizontalHomotopy
+        ((tensorProductDoubleComplexRightFunctor T Y).map f)
+        ((tensorProductDoubleComplexRightFunctor T Y).map g) :=
+    { h := fun p q => (T.functor.map
+        (Prod.mkHom (h.hom p (p - 1)) (𝟙 (Y.X q))))
+      homotopy := by
+        intro p q
+        have hY :
+            T.functor.map
+                (Prod.mkHom
+                  (X'.d (p - 1) (p - 1 + 1)) (𝟙 (Y.X q))) ≫
+                eqToHom (by congr 1; lia) =
+              T.functor.map
+                (Prod.mkHom (X'.d (p - 1) p) (𝟙 (Y.X q))) := by
+          simpa using
+            (eqToHom_naturality
+              (fun r : ℤ =>
+                T.functor.map
+                  (Prod.mkHom (X'.d (p - 1) r) (𝟙 (Y.X q))))
+              (show p - 1 + 1 = p by ring))
+        have hX :
+            T.functor.map
+                (Prod.mkHom
+                  (h.hom (p + 1) (p + 1 - 1)) (𝟙 (Y.X q))) ≫
+                eqToHom (by congr 1; lia) =
+              T.functor.map
+                (Prod.mkHom (h.hom (p + 1) p) (𝟙 (Y.X q))) := by
+          simpa using
+            (eqToHom_naturality
+              (fun r : ℤ =>
+                T.functor.map
+                  (Prod.mkHom (h.hom (p + 1) r) (𝟙 (Y.X q))))
+              (show p + 1 - 1 = p by ring))
+        have hnext : (ComplexShape.up ℤ).Rel p (p + 1) := by simp
+        have hprev : (ComplexShape.up ℤ).Rel (p - 1) p := by simp
+        have hc := h.comm p
+        rw [dNext_eq h.hom hnext, prevD_eq h.hom hprev] at hc
+        have hcomp₁ :
+            T.functor.map
+                (Prod.mkHom
+                  (X.d p (p + 1) ≫ h.hom (p + 1) p) (𝟙 (Y.X q))) =
+              T.functor.map
+                  (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X q))) ≫
+                T.functor.map
+                  (Prod.mkHom (h.hom (p + 1) p) (𝟙 (Y.X q))) := by
+          rw [← T.functor.map_comp]
+          congr 1
+          ext <;> simp
+        have hcomp₂ :
+            T.functor.map
+                (Prod.mkHom
+                  (h.hom p (p - 1) ≫ X'.d (p - 1) p) (𝟙 (Y.X q))) =
+              T.functor.map
+                  (Prod.mkHom (h.hom p (p - 1)) (𝟙 (Y.X q))) ≫
+                T.functor.map
+                  (Prod.mkHom (X'.d (p - 1) p) (𝟙 (Y.X q))) := by
+          rw [← T.functor.map_comp]
+          congr 1
+          ext <;> simp
+        rw [sub_eq_iff_eq_add]
+        convert congrArg
+          (fun k => T.functor.map (Prod.mkHom k (𝟙 (Y.X q)))) hc using 1 <;>
+          simp [tensorProductDoubleComplex, tensorProductDoubleComplexRightFunctor,
+            HomologicalComplex.comp_f, hY, hX, T.map_add_left,
+            T.functor.map_comp, hcomp₁, hcomp₂]
+        have reorder (a b c :
+            ((tensorProductDoubleComplexRightFunctor T Y).obj X).obj p q ⟶
+              ((tensorProductDoubleComplexRightFunctor T Y).obj X').obj p q) :
+            a + b + c = b + a + c := by rw [add_comm a b]
+        exact reorder _ _ _
+      map := by
+        intro p q
+        change
+          T.functor.map (Prod.mkHom (h.hom p (p - 1)) (𝟙 (Y.X q))) ≫
+              T.functor.map
+                (Prod.mkHom (𝟙 (X'.X (p - 1))) (Y.d q (q + 1))) =
+            T.functor.map
+                (Prod.mkHom (𝟙 (X.X p)) (Y.d q (q + 1))) ≫
+              T.functor.map
+                (Prod.mkHom (h.hom p (p - 1)) (𝟙 (Y.X (q + 1))))
+        rw [← T.functor.map_comp, ← T.functor.map_comp]
+        congr 1
+        ext <;> simp }
+  exact Classical.choice (totalMap_homotopic_of_horizontal hh)
 
 /-- The exact functor `Y ↦ Tot(X ⊗ Y)` on homotopy categories. -/
 def tensorProductLeftHomotopyFunctor

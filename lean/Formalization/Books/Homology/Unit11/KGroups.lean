@@ -1065,9 +1065,6 @@ theorem kZero_serre_kernel
     (AddMonoidHom.ker (serreSubcategoryKZeroMap P) : Set (KZero P.FullSubcategory)) =
       {x | ∃ (K : CyclicComplex C) (h₀ : P K.H0) (h₁ : P K.H1),
         x = KZero.classOf ⟨K.H0, h₀⟩ - KZero.classOf ⟨K.H1, h₁⟩} := by
-  sorry
-
-/-
   ext x
   constructor
   · intro hx
@@ -1546,6 +1543,43 @@ theorem kZero_serre_kernel
           (ShortComplex.π₃.mapBiproduct Frev).inv ≫ eqToHom hR₃.symm := by
       dsimp [r₃]
       simp only [Category.assoc]
+    have hrw₁_hom : rw₁.hom =
+        biproduct.desc (fun j =>
+          (hr₁ j).hom ≫
+            biproduct.ι (fun j => ShortComplex.π₁.obj (Frev j)) j) := by
+      rfl
+    have hrw₂_inv : rw₂.inv =
+        biproduct.lift (fun j =>
+          biproduct.π (fun j => ShortComplex.π₂.obj (Frev j)) j ≫
+            (hr₂ j).inv) := by
+      simpa [rw₂] using
+        (biproduct.whiskerEquiv_inv_eq_lift
+          (f := fun j => ⨁ fun i : Fin (n₁ j) => g₁ ⟨j, i⟩)
+          (g := fun j => ShortComplex.π₂.obj (Frev j))
+          (Equiv.refl J) (fun j => (hr₂ j).symm))
+    have hw₂_hom : w₂.hom =
+        biproduct.desc (fun j =>
+          (hg₂ j).hom ≫
+            biproduct.ι (fun j => ShortComplex.π₂.obj (F j)) j) := by
+      rfl
+    have hw₂_inv : w₂.inv =
+        biproduct.lift (fun j =>
+          biproduct.π (fun j => ShortComplex.π₂.obj (F j)) j ≫
+            (hg₂ j).inv) := by
+      simpa [w₂] using
+        (biproduct.whiskerEquiv_inv_eq_lift
+          (f := fun j => ⨁ fun i : Fin (n₂ j) => g₂ ⟨j, i⟩)
+          (g := fun j => ShortComplex.π₂.obj (F j))
+          (Equiv.refl J) (fun j => (hg₂ j).symm))
+    have hw₃_inv : w₃.inv =
+        biproduct.lift (fun j =>
+          biproduct.π (fun j => ShortComplex.π₃.obj (F j)) j ≫
+            (hg₃ j).inv) := by
+      simpa [w₃] using
+        (biproduct.whiskerEquiv_inv_eq_lift
+          (f := fun j => ⨁ fun i : Fin (n₁ j) => g₁ ⟨j, i⟩)
+          (g := fun j => ShortComplex.π₃.obj (F j))
+          (Equiv.refl J) (fun j => (hg₃ j).symm))
     have hSg' : S.g ≫ eqToHom hS₃ ≫
         (ShortComplex.π₃.mapBiproduct F).hom =
         biproduct.lift (fun j => (biproduct.π F j).τ₂ ≫ (F j).g) := by
@@ -1590,6 +1624,92 @@ theorem kZero_serre_kernel
           (g' := (ShortComplex.π₃.mapBiproduct Frev).hom)
           rfl rfl rfl (CategoryTheory.comp_eqToHom_heq R.g hR₃)
           (heq_of_eq rfl)).trans (heq_of_eq hRg))
+    have hRf₂ :
+        (R.f ≫ eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom) ≫
+            rw₂.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₁ j))
+                (fun j i => g₁ ⟨j, i⟩)).hom =
+          (biproduct.lift (fun j => (biproduct.π Frev j).τ₁ ≫ (Frev j).f)) ≫
+            rw₂.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₁ j))
+                (fun j i => g₁ ⟨j, i⟩)).hom := by
+      exact congrArg (fun q => q ≫ rw₂.inv ≫
+        (biproductBiproductIso (fun j : J => Fin (n₁ j))
+          (fun j i => g₁ ⟨j, i⟩)).hom) hRf'
+    have hRf₂r : R.f ≫ eqToHom hR₂ ≫
+        (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+          (biproductBiproductIso (fun j : J => Fin (n₁ j))
+            (fun j i => g₁ ⟨j, i⟩)).hom =
+        biproduct.lift (fun j => (biproduct.π Frev j).τ₁ ≫ (Frev j).f) ≫
+          rw₂.inv ≫
+            (biproductBiproductIso (fun j : J => Fin (n₁ j))
+              (fun j i => g₁ ⟨j, i⟩)).hom := by
+      simpa only [Category.assoc] using hRf₂
+    have hSg₂ :
+        (S.g ≫ eqToHom hS₃ ≫ (ShortComplex.π₃.mapBiproduct F).hom) ≫
+            w₃.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₁ j))
+                (fun j i => g₁ ⟨j, i⟩)).hom ≫ u₁.inv ≫
+              eqToHom hS₁.symm ≫ eqToHom hS₁ ≫ u₁.hom ≫ r₂.inv ≫
+              eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₁ j))
+                (fun j i => g₁ ⟨j, i⟩)).hom =
+          (biproduct.lift (fun j => (biproduct.π F j).τ₂ ≫ (F j).g)) ≫
+            w₃.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₁ j))
+                (fun j i => g₁ ⟨j, i⟩)).hom ≫ u₁.inv ≫
+              eqToHom hS₁.symm ≫ eqToHom hS₁ ≫ u₁.hom ≫ r₂.inv ≫
+              eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₁ j))
+                (fun j i => g₁ ⟨j, i⟩)).hom := by
+      exact congrArg (fun q => q ≫ w₃.inv ≫
+        (biproductBiproductIso (fun j : J => Fin (n₁ j))
+          (fun j i => g₁ ⟨j, i⟩)).hom ≫ u₁.inv ≫
+        eqToHom hS₁.symm ≫ eqToHom hS₁ ≫ u₁.hom ≫ r₂.inv ≫
+        eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+        (biproductBiproductIso (fun j : J => Fin (n₁ j))
+          (fun j i => g₁ ⟨j, i⟩)).hom) hSg'
+    have hSg₂r : S.g ≫ eqToHom hS₃ ≫
+        (ShortComplex.π₃.mapBiproduct F).hom ≫ w₃.inv ≫
+          (biproductBiproductIso (fun j : J => Fin (n₁ j))
+            (fun j i => g₁ ⟨j, i⟩)).hom ≫ u₁.inv ≫
+        eqToHom hS₁.symm ≫ eqToHom hS₁ ≫ u₁.hom ≫ r₂.inv ≫
+          eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+          (biproductBiproductIso (fun j : J => Fin (n₁ j))
+            (fun j i => g₁ ⟨j, i⟩)).hom =
+        biproduct.lift (fun j => (biproduct.π F j).τ₂ ≫ (F j).g) ≫
+          w₃.inv ≫
+            (biproductBiproductIso (fun j : J => Fin (n₁ j))
+              (fun j i => g₁ ⟨j, i⟩)).hom ≫ u₁.inv ≫
+          eqToHom hS₁.symm ≫ eqToHom hS₁ ≫ u₁.hom ≫ r₂.inv ≫
+          eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+          (biproductBiproductIso (fun j : J => Fin (n₁ j))
+            (fun j i => g₁ ⟨j, i⟩)).hom := by
+      simpa only [Category.assoc] using hSg₂
+    have hRg₂ :
+        (R.g ≫ eqToHom hR₃ ≫ (ShortComplex.π₃.mapBiproduct Frev).hom) ≫
+            rw₃.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₂ j))
+                (fun j i => g₂ ⟨j, i⟩)).hom =
+          (biproduct.lift (fun j => (biproduct.π Frev j).τ₂ ≫ (Frev j).g)) ≫
+            rw₃.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₂ j))
+                (fun j i => g₂ ⟨j, i⟩)).hom := by
+      exact congrArg (fun q => q ≫ rw₃.inv ≫
+        (biproductBiproductIso (fun j : J => Fin (n₂ j))
+          (fun j i => g₂ ⟨j, i⟩)).hom) hRg'
+    have hSf₂ :
+        (S.f ≫ eqToHom hS₂ ≫ (ShortComplex.π₂.mapBiproduct F).hom) ≫
+            w₂.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₂ j))
+                (fun j i => g₂ ⟨j, i⟩)).hom =
+          (biproduct.lift (fun j => (biproduct.π F j).τ₁ ≫ (F j).f)) ≫
+            w₂.inv ≫
+              (biproductBiproductIso (fun j : J => Fin (n₂ j))
+                (fun j i => g₂ ⟨j, i⟩)).hom := by
+      exact congrArg (fun q => q ≫ w₂.inv ≫
+        (biproductBiproductIso (fun j : J => Fin (n₂ j))
+          (fun j i => g₂ ⟨j, i⟩)).hom) hSf'
     have hcomm₁ : c₁.hom ≫ R.f = S.g ≫ e₃.hom ≫ c₂.hom := by
       apply (cancel_mono r₂.hom).1
       apply (cancel_epi (eqToIso hS₂).inv).1
@@ -1599,22 +1719,197 @@ theorem kZero_serre_kernel
       dsimp [e₃]
       rw [hu₂_inv, hu₂_hom, hu₃_hom]
       simp only [Category.assoc, Iso.inv_hom_id_assoc]
-      rw [hRf', hSg']
-      apply biproduct.hom_ext
+      rw [hRf₂r, hSg₂r]
+      simp only [Category.assoc, Iso.hom_inv_id_assoc]
+      rw [cancel_epi
+        (biproductBiproductIso (fun j : J => Fin (n₂ j))
+          (fun j i => g₂ ⟨j, i⟩)).inv]
+      clear hSg₂r hSg₂ hRf₂r hRf₂ hSg' hSf' hRf' hRg' hSg hSf hRf hRg
+      clear hRg₂ hSf₂ hr₃_inv hr₃_hom hr₂_hom hr₁_inv hr₁_hom
+        hu₃_inv hu₃_hom hu₂_inv hu₂_hom hu₁_inv hu₁_hom
+      try clear hx
+      try clear hBin
+      try clear hFinite
+      try clear hAB
+      try clear hmap
+      try clear hAB'
+      try clear hrel
+      try clear hFiniteBiproductsC
+      try clear hBinaryBiproductsC
+      try clear hFiniteProductsShortComplex
+      try clear hFiniteBiproductsShortComplex
+      try clear hAdditivePi₁
+      try clear hAdditivePi₂
+      try clear hAdditivePi₃
+      try clear hF
+      try clear hFrev
+      try clear hzF
+      try clear hzFrev
+      try clear eA
+      try clear eB
+      try clear eS
+      try clear eT
+      try clear hSA
+      try clear hTB
+      try clear T
+      try clear x
+      try clear hFinite
+      try clear hF
+      try clear hFrev
+      try clear hzF
+      try clear hzFrev
+      try clear eA
+      try clear eB
+      try clear eS
+      try clear eT
+      try clear hSA
+      try clear hTB
+      try clear T
+      try clear hs₁
+      try clear hs₂
+      try clear hminus
+      try clear hplus
+      try clear hgen
+      try clear hsum
+      try clear hp
+      try clear e₁
+      try clear e₂
+      try clear e
+      try clear hS₁
+      try clear hS₃
+      try clear e₃
+      try clear ht₁
+      try clear ht₂
+      try clear ht₃
+      try clear rw₂
+      try clear rw₃
+      try clear r₁
+      try clear r₂
+      try clear r₃
+      try clear c₁
+      try clear c₂
+      try clear c₃
+      try clear fR
+      try clear gR
+      apply biproduct.hom_ext'
       intro j
-      rcases j with ⟨j, k⟩
       rcases j with _ | j
-      · simp [F, Frev, shortComplex_zero, shortComplex_biproduct_pos,
-          shortComplex_biproduct_neg, Functor.mapBiproduct_hom,
-          Functor.mapBiproduct_inv, biproduct.whiskerEquiv_hom_eq_lift,
-          biproduct.whiskerEquiv_inv_eq_lift, biproductBiproductIso,
-          Category.assoc]
-      · rcases j with i | i
-        · simp [F, Frev, shortComplex_zero, shortComplex_biproduct_pos,
-            shortComplex_biproduct_neg, Functor.mapBiproduct_hom,
-            Functor.mapBiproduct_inv, biproduct.whiskerEquiv_hom_eq_lift,
-            biproduct.whiskerEquiv_inv_eq_lift, biproductBiproductIso,
+      · apply biproduct.hom_ext'
+        intro q
+        fin_cases q
+        apply biproduct.hom_ext
+        intro p
+        rcases p with ⟨j, k⟩
+        rcases j with none | j
+        · fin_cases k
+          try rw [hw₂_hom]
+          try rw [hw₂_inv]
+          try rw [hrw₁_hom]
+          try rw [hrw₂_inv]
+          try rw [hw₃_inv]
+          dsimp [Functor.mapBicone]
+          try rw [hr₂_inv]
+          simp [F, Frev, hr₂_inv, shortComplex_zero,
+            shortComplex_biproduct_pos, shortComplex_biproduct_neg,
+            ShortComplex.π₁, ShortComplex.π₂, ShortComplex.π₃,
+            Functor.mapBicone_ι, Functor.mapBicone_π,
+            biproduct.bicone_ι, biproduct.bicone_π,
+            Functor.mapBiproduct_hom, Functor.mapBiproduct_inv,
+            biproductBiproductIso, biproduct.whiskerEquiv,
+            biproduct.whiskerEquiv_hom_eq_lift,
+            biproduct.whiskerEquiv_inv_eq_lift, biproduct.lift_π,
+            biproduct.ι_desc, biproduct.ι_π_assoc, Preadditive.comp_sum,
+            Preadditive.sum_comp, eqToHom_trans, eqToHom_trans_assoc,
+            eqToHom_refl, Category.assoc, Iso.inv_hom_id_assoc]
+          dsimp [Functor.mapBicone, ShortComplex.π₁, ShortComplex.π₂,
+            ShortComplex.π₃]
+          simp [F, Frev, shortComplex_zero, shortComplex_biproduct_pos,
+            shortComplex_biproduct_neg, biproduct.lift_π, biproduct.ι_desc,
             Category.assoc]
+        · rcases j with i | i
+          · try rw [hw₂_hom]
+            try rw [hw₂_inv]
+            try rw [hrw₁_hom]
+            try rw [hrw₂_inv]
+            try rw [hw₃_inv]
+            dsimp [Functor.mapBicone]
+            try rw [hr₂_inv]
+            simp [F, Frev, hr₂_inv, shortComplex_zero,
+              shortComplex_biproduct_pos, shortComplex_biproduct_neg,
+              ShortComplex.π₁, ShortComplex.π₂, ShortComplex.π₃,
+              Functor.mapBicone_ι, Functor.mapBicone_π,
+              biproduct.bicone_ι, biproduct.bicone_π,
+              Functor.mapBiproduct_hom, Functor.mapBiproduct_inv,
+              biproductBiproductIso, biproduct.whiskerEquiv,
+              biproduct.whiskerEquiv_hom_eq_lift,
+              biproduct.whiskerEquiv_inv_eq_lift, biproduct.lift_π,
+              biproduct.ι_desc, biproduct.ι_π_assoc, Preadditive.comp_sum,
+              Preadditive.sum_comp, eqToHom_trans, eqToHom_trans_assoc,
+              eqToHom_refl, Category.assoc, Iso.inv_hom_id_assoc]
+          · try rw [hw₂_hom]
+            try rw [hw₂_inv]
+            try rw [hrw₁_hom]
+            try rw [hrw₂_inv]
+            try rw [hw₃_inv]
+            dsimp [Functor.mapBicone]
+            try rw [hr₂_inv]
+            simp [F, Frev, hr₂_inv, shortComplex_zero,
+              shortComplex_biproduct_pos, shortComplex_biproduct_neg,
+              ShortComplex.π₁, ShortComplex.π₂, ShortComplex.π₃,
+              Functor.mapBicone_ι, Functor.mapBicone_π,
+              biproduct.bicone_ι, biproduct.bicone_π,
+              Functor.mapBiproduct_hom, Functor.mapBiproduct_inv,
+              biproductBiproductIso, biproduct.whiskerEquiv,
+              biproduct.whiskerEquiv_hom_eq_lift,
+              biproduct.whiskerEquiv_inv_eq_lift, biproduct.lift_π,
+              biproduct.ι_desc, biproduct.ι_π_assoc, Preadditive.comp_sum,
+              Preadditive.sum_comp, eqToHom_trans, eqToHom_trans_assoc,
+              eqToHom_refl, Category.assoc, Iso.inv_hom_id_assoc]
+      · rcases j with i | i
+        · apply biproduct.hom_ext'
+          intro q
+          fin_cases q
+          apply biproduct.hom_ext
+          intro p
+          rcases p with ⟨j, k⟩
+          rcases j with none | j
+          · rw [hw₂_hom, hw₂_inv, hrw₁_hom, hrw₂_inv, hw₃_inv]
+            dsimp [Functor.mapBicone]
+            simp [F, Frev, hr₂_inv, shortComplex_zero,
+              shortComplex_biproduct_pos, shortComplex_biproduct_neg,
+              ShortComplex.π₁, ShortComplex.π₂, ShortComplex.π₃,
+              Functor.mapBicone_ι, Functor.mapBicone_π,
+              Functor.mapBiproduct_hom, Functor.mapBiproduct_inv,
+              biproductBiproductIso, biproduct.whiskerEquiv,
+              biproduct.whiskerEquiv_hom_eq_lift,
+              biproduct.whiskerEquiv_inv_eq_lift, biproduct.lift_π,
+              biproduct.ι_desc, biproduct.ι_π_assoc, Preadditive.comp_sum,
+              Preadditive.sum_comp, Category.assoc, Iso.inv_hom_id_assoc]
+          · rcases j with i | i
+            · rw [hw₂_hom, hw₂_inv, hrw₁_hom, hrw₂_inv, hw₃_inv]
+              dsimp [Functor.mapBicone]
+              simp [F, Frev, hr₂_inv, shortComplex_zero,
+                shortComplex_biproduct_pos, shortComplex_biproduct_neg,
+                ShortComplex.π₁, ShortComplex.π₂, ShortComplex.π₃,
+                Functor.mapBicone_ι, Functor.mapBicone_π,
+                Functor.mapBiproduct_hom, Functor.mapBiproduct_inv,
+                biproductBiproductIso, biproduct.whiskerEquiv,
+                biproduct.whiskerEquiv_hom_eq_lift,
+                biproduct.whiskerEquiv_inv_eq_lift, biproduct.lift_π,
+                biproduct.ι_desc, biproduct.ι_π_assoc, Preadditive.comp_sum,
+                Preadditive.sum_comp, Category.assoc, Iso.inv_hom_id_assoc]
+            · rw [hw₂_hom, hw₂_inv, hrw₁_hom, hrw₂_inv, hw₃_inv]
+              dsimp [Functor.mapBicone]
+              simp [F, Frev, hr₂_inv, shortComplex_zero,
+                shortComplex_biproduct_pos, shortComplex_biproduct_neg,
+                ShortComplex.π₁, ShortComplex.π₂, ShortComplex.π₃,
+                Functor.mapBicone_ι, Functor.mapBicone_π,
+                Functor.mapBiproduct_hom, Functor.mapBiproduct_inv,
+                biproductBiproductIso, biproduct.whiskerEquiv,
+                biproduct.whiskerEquiv_hom_eq_lift,
+                biproduct.whiskerEquiv_inv_eq_lift, biproduct.lift_π,
+                biproduct.ι_desc, biproduct.ι_π_assoc, Preadditive.comp_sum,
+                Preadditive.sum_comp, Category.assoc, Iso.inv_hom_id_assoc]
         · simp [F, Frev, shortComplex_zero, shortComplex_biproduct_pos,
             shortComplex_biproduct_neg, Functor.mapBiproduct_hom,
             Functor.mapBiproduct_inv, biproduct.whiskerEquiv_hom_eq_lift,
@@ -1628,7 +1923,7 @@ theorem kZero_serre_kernel
       rw [hr₂_inv, hr₃_hom]
       rw [hu₁_inv, hu₂_hom]
       simp only [Category.assoc, Iso.inv_hom_id_assoc]
-      rw [hRg', hSf']
+      rw [hRg₂, hSf₂]
       apply biproduct.hom_ext
       intro j
       rcases j with ⟨j, k⟩
@@ -1702,6 +1997,4 @@ theorem kZero_serre_kernel
     rw [hAB, hclass₀, hclass₁]
   · rintro ⟨K, h₀, h₁, rfl⟩
     exact kZero_serreSubcategoryMap_classOf_cyclic_sub P K h₀ h₁
--/
-
 end Formalization.Books.Homology.Unit11

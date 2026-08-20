@@ -47,10 +47,6 @@ def principalQuotientLength
     (R : Type u) [CommRing R] (a : R) : ℕ :=
   (Ring.ord R a).toNat
 
-def principalQuotientHasFiniteLength
-    (R : Type u) [CommRing R] (a : R) : Prop :=
-  IsFiniteLength R (R ⧸ Ideal.span ({a} : Set R))
-
 theorem principal_smul_span_eq
     {R : Type u} [CommRing R] (a b : R) :
     (({b} : Set R) • Ideal.span ({a} : Set R)) =
@@ -62,7 +58,7 @@ theorem principal_smul_span_eq
    providing the source's identification with `R/(ab)`. -/
 theorem principal_quotient_short_exact
     {R : Type u} [CommRing R] {a b : R}
-    (_ha : a ∈ nonZeroDivisors R) (hb : b ∈ nonZeroDivisors R) :
+    (hb : b ∈ nonZeroDivisors R) :
     Function.Injective (Ideal.mulQuot b (Ideal.span ({a} : Set R))) ∧
       Function.Surjective (Ideal.quotOfMul b (Ideal.span ({a} : Set R))) ∧
         Function.Exact (Ideal.mulQuot b (Ideal.span ({a} : Set R)))
@@ -79,18 +75,18 @@ theorem principal_quotient_length_additive
     (_hsemilocal : Formalization.Books.Algebra.Unit03.IsSemilocalRing R)
     (hdim : ringKrullDim R = 1) (a b : R)
     (ha : a ∈ nonZeroDivisors R) (hb : b ∈ nonZeroDivisors R) :
-    principalQuotientHasFiniteLength R a ∧
-      principalQuotientHasFiniteLength R b ∧
-        principalQuotientHasFiniteLength R (a * b) ∧
+    IsFiniteLength R (R ⧸ Ideal.span ({a} : Set R)) ∧
+      IsFiniteLength R (R ⧸ Ideal.span ({b} : Set R)) ∧
+        IsFiniteLength R (R ⧸ Ideal.span ({a * b} : Set R)) ∧
           Module.length R (R ⧸ Ideal.span ({a * b} : Set R)) =
             Module.length R (R ⧸ Ideal.span ({a} : Set R)) +
               Module.length R (R ⧸ Ideal.span ({b} : Set R)) := by
   let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
-  have hfa : principalQuotientHasFiniteLength R a :=
+  have hfa : IsFiniteLength R (R ⧸ Ideal.span ({a} : Set R)) :=
     isFiniteLength_quotient_span_singleton R ha
-  have hfb : principalQuotientHasFiniteLength R b :=
+  have hfb : IsFiniteLength R (R ⧸ Ideal.span ({b} : Set R)) :=
     isFiniteLength_quotient_span_singleton R hb
-  have hab : principalQuotientHasFiniteLength R (a * b) :=
+  have hab : IsFiniteLength R (R ⧸ Ideal.span ({a * b} : Set R)) :=
     isFiniteLength_quotient_span_singleton R ((mul_mem_nonZeroDivisors).2 ⟨ha, hb⟩)
   refine ⟨hfa, hfb, hab, ?_⟩
   have hlen := Module.length_eq_add_of_exact
@@ -210,12 +206,6 @@ def latticeLengthNat
     [AddCommGroup V] [Module R V]
     (N M : Submodule R V) : ℕ :=
   (Module.length R (latticeQuotient R N M)).toNat
-
-def latticeQuotientHasFiniteLength
-    (R : Type u) {V : Type v} [CommRing R]
-    [AddCommGroup V] [Module R V]
-    (N M : Submodule R V) : Prop :=
-  IsFiniteLength R (latticeQuotient R N M)
 
 def latticeLengthInt
     (R : Type u) {V : Type v} [CommRing R]
@@ -410,7 +400,7 @@ theorem lattice_comparison_upper
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hMM' : M ≤ M') :
     List.TFAE
       [ Submodule.IsLattice K M',
-        latticeQuotientHasFiniteLength R M M',
+        IsFiniteLength R (latticeQuotient R M M'),
         Module.Finite R (M' : Type v) ] := by
   tfae_have 1 → 2 := by
     intro hM'
@@ -462,7 +452,8 @@ theorem lattice_comparison_lower
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hM'M : M' ≤ M) :
-    Submodule.IsLattice K M' ↔ latticeQuotientHasFiniteLength R M' M := by
+    Submodule.IsLattice K M' ↔
+      IsFiniteLength R (latticeQuotient R M' M) := by
   constructor
   · intro hM'
     let : Submodule.IsLattice K M' := hM'

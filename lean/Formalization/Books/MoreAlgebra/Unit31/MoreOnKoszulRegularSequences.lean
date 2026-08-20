@@ -106,7 +106,7 @@ def baseChangedList
   letI : Algebra A A' := g.toAlgebra
   exact xs.map (baseChangeAlgebraMap f g)
 
-/-- The source and target modules of the canonical `H₁` base-change map. -/
+/-- The source and target modules of the `H₁` base-change map. -/
 noncomputable abbrev koszulHOneBaseChangeSource
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B) : ModuleCat.{u} A' :=
@@ -125,7 +125,13 @@ noncomputable abbrev koszulHOneBaseChangeTarget
     ((koszulComplexOnListWithCoefficients (B ⊗[A] A') (B ⊗[A] A')
         (baseChangedList f g xs)).homology 1)
 
-/-- Data for the canonical `H₁` base-change map. -/
+/-- Data for a surjective `H₁` base-change map.
+
+The source calls this map canonical.  The current project does not yet expose
+the chain-level base-change morphism whose induced map on homology would give
+that canonical representative, so this interface records the map and the
+surjectivity assertion without making an arbitrary choice part of the
+mathematical statement. -/
 structure KoszulHOneBaseChangeData
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B) where
@@ -133,7 +139,7 @@ structure KoszulHOneBaseChangeData
     koszulHOneBaseChangeTarget f g xs
   surjective : Function.Surjective (fun x => map x)
 
-/-- If `B/(f)` is flat over `A`, the canonical `H₁` base-change map is
+/-- If `B/(f)` is flat over `A`, a source-level `H₁` base-change map is
 surjective. -/
 theorem base_change_HOne_surjective
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
@@ -142,30 +148,30 @@ theorem base_change_HOne_surjective
     Nonempty (KoszulHOneBaseChangeData f g xs) := by
   sorry
 
-/-- A chosen representative of the canonical `H₁` base-change map. -/
-noncomputable def canonicalKoszulHOneBaseChangeData
+/-- A chosen representative of the surjective `H₁` base-change map. -/
+noncomputable def chosenKoszulHOneBaseChangeData
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B)
     (hflat : quotientFlatOver f xs) :
     KoszulHOneBaseChangeData f g xs :=
   Classical.choice (base_change_HOne_surjective f g xs hflat)
 
-/-- The canonical surjective `H₁` base-change map. -/
-noncomputable def canonicalKoszulHOneBaseChangeMap
+/-- The chosen surjective `H₁` base-change map. -/
+noncomputable def chosenKoszulHOneBaseChangeMap
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B)
     (hflat : quotientFlatOver f xs) :
     koszulHOneBaseChangeSource f g xs ⟶
       koszulHOneBaseChangeTarget f g xs :=
-  (canonicalKoszulHOneBaseChangeData f g xs hflat).map
+  (chosenKoszulHOneBaseChangeData f g xs hflat).map
 
-theorem canonicalKoszulHOneBaseChangeMap_surjective
+theorem chosenKoszulHOneBaseChangeMap_surjective
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B)
     (hflat : quotientFlatOver f xs) :
     Function.Surjective
-      (fun x => canonicalKoszulHOneBaseChangeMap f g xs hflat x) :=
-  (canonicalKoszulHOneBaseChangeData f g xs hflat).surjective
+      (fun x => chosenKoszulHOneBaseChangeMap f g xs hflat x) :=
+  (chosenKoszulHOneBaseChangeData f g xs hflat).surjective
 
 /-! ## Relative regularity after base change -/
 

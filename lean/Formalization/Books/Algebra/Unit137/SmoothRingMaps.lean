@@ -845,13 +845,16 @@ theorem submersive_presentation_relative_dimension
     (P : Algebra.SubmersivePresentation R S ι σ) :
     Module.rank S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) =
       P.dimension := by
-  sorry
+  exact P.rank_kaehlerDifferential
 
 theorem standard_smooth_localization
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.IsStandardSmooth R S] (g : S) :
     Algebra.IsStandardSmooth R (Localization.Away g) := by
-  sorry
+  let _ : Algebra.IsStandardSmooth S (Localization.Away g) :=
+    Algebra.IsStandardSmooth.localization_away (R := S) g
+  exact Algebra.IsStandardSmooth.trans (R := R) (S := S)
+    (T := Localization.Away g)
 
 theorem standard_smooth_base_change
     {R S R' : Type*} [CommRing R] [CommRing S] [CommRing R']
@@ -866,7 +869,31 @@ theorem standard_smooth_localization_of_base
     (hunit : IsUnit (algebraMap R S r))
     [Algebra.IsStandardSmooth R S] :
     Algebra.IsStandardSmooth (Localization.Away r) S := by
-  sorry
+  let _ : IsLocalization.Away (algebraMap R S r) S :=
+    IsLocalization.away_of_isUnit_of_bijective S hunit Function.bijective_id
+  let _ : Algebra S (Localization.Away r ⊗[R] S) :=
+    Algebra.TensorProduct.rightAlgebra
+  let _ : IsScalarTower (Localization.Away r) S
+      (Localization.Away r ⊗[R] S) := by
+    apply IsScalarTower.of_algebraMap_eq
+    have hmap :
+        (algebraMap (Localization.Away r) (Localization.Away r ⊗[R] S)) =
+          (algebraMap S (Localization.Away r ⊗[R] S)).comp
+            (algebraMap (Localization.Away r) S) := by
+      apply IsLocalization.ringHom_ext (Submonoid.powers r)
+      ext x
+      simp [← IsScalarTower.algebraMap_apply]
+    intro x
+    exact DFunLike.congr_fun hmap x
+  let e : (Localization.Away r ⊗[R] S) ≃ₐ[S] S :=
+    IsLocalization.algEquiv (Submonoid.powers (algebraMap R S r))
+      (Localization.Away r ⊗[R] S) S
+  let _ : Algebra.IsStandardSmooth (Localization.Away r)
+      (Localization.Away r ⊗[R] S) :=
+    standard_smooth_base_change (R := R) (S := S)
+      (R' := Localization.Away r)
+  exact Algebra.IsStandardSmooth.of_algEquiv
+    (R := Localization.Away r) (e.restrictScalars (Localization.Away r))
 
 theorem standard_smooth_is_relative_global_complete_intersection
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
@@ -907,7 +934,212 @@ theorem jacobian_inversion_is_standard_smooth
     {R : Type u} [CommRing R] {n c : ℕ} (hcn : c ≤ n)
     (fs : Fin c → MvPolynomial (Fin n) R) :
     Algebra.IsStandardSmooth R (jacobianInversionRing hcn fs) := by
-  sorry
+  classical
+  let a : Fin (c + 1) → Fin (n + 1) :=
+    Fin.lastCases (Fin.last n)
+      (fun i => Fin.castLE (Nat.le_succ n) (Fin.castLE hcn i))
+  have ha : Function.Injective a := by
+    intro i j hij
+    cases i using Fin.lastCases with
+    | last =>
+        cases j using Fin.lastCases with
+        | last => rfl
+        | cast j =>
+            have hv := congrArg Fin.val hij
+            simp [a] at hv
+            exfalso
+            omega
+    | cast i =>
+        cases j using Fin.lastCases with
+        | last =>
+            have hv := congrArg Fin.val hij
+            simp [a] at hv
+            exfalso
+            omega
+        | cast j =>
+            apply Fin.ext
+            have hv := congrArg Fin.val hij
+            simpa [a] using hv
+  let v : Fin (c + 1) → MvPolynomial (Fin (n + 1)) R :=
+    Fin.lastCases
+      (MvPolynomial.X (Fin.last n) *
+        liftPolynomialToSucc (jacobianDeterminant hcn fs) - 1)
+      (fun i => liftPolynomialToSucc (fs i))
+  let P₀ : Algebra.PreSubmersivePresentation R
+      (MvPolynomial (Fin (n + 1)) R ⧸ Ideal.span (Set.range v))
+      (Fin (n + 1)) (Fin (c + 1)) :=
+    Algebra.PreSubmersivePresentation.naive
+      (R := R) (v := v) a ha
+  have hzero (p : MvPolynomial (Fin n) R) :
+      MvPolynomial.pderiv (Fin.last n) (liftPolynomialToSucc p) = 0 := by
+    apply MvPolynomial.pderiv_eq_zero_of_notMem_vars
+    intro h
+    rcases MvPolynomial.mem_vars_rename
+      (Fin.castLE (Nat.le_succ n)) p h with ⟨i, hi, hEq⟩
+    have hv : i.val = n := by
+      exact congrArg Fin.val hEq
+    omega
+  have hrename (i : Fin n) (p : MvPolynomial (Fin n) R) :
+      MvPolynomial.pderiv (Fin.castLE (Nat.le_succ n) i)
+          (liftPolynomialToSucc p) =
+        liftPolynomialToSucc (MvPolynomial.pderiv i p) := by
+    rw [liftPolynomialToSucc, MvPolynomial.pderiv_rename]
+    · rfl
+    · intro x y h
+      apply Fin.ext
+      simpa using congrArg Fin.val h
+  have hX (i : Fin n) :
+      MvPolynomial.pderiv (Fin.castLE (Nat.le_succ n) i)
+          (MvPolynomial.X (Fin.last n) : MvPolynomial (Fin (n + 1)) R) = 0 := by
+    apply MvPolynomial.pderiv_X_of_ne
+    intro h
+    have hv : n = i.val := by
+      exact congrArg Fin.val h
+    omega
+  have hfinal (p : MvPolynomial (Fin n) R) :
+      MvPolynomial.pderiv (Fin.last n)
+        ((MvPolynomial.X (Fin.last n) : MvPolynomial (Fin (n + 1)) R) *
+          liftPolynomialToSucc p - 1) =
+        liftPolynomialToSucc p := by
+    simp [hzero]
+  have hfirst (i : Fin n) (p : MvPolynomial (Fin n) R) :
+      MvPolynomial.pderiv (Fin.castLE (Nat.le_succ n) i)
+        ((MvPolynomial.X (Fin.last n) : MvPolynomial (Fin (n + 1)) R) *
+          liftPolynomialToSucc p - 1) =
+      MvPolynomial.X (Fin.last n) *
+        liftPolynomialToSucc (MvPolynomial.pderiv i p) := by
+    simp [hX, hrename]
+  have hj (i j : Fin (c + 1)) :
+      P₀.jacobiMatrix i j = (v j).pderiv (a i) := by
+    rw [P₀.jacobiMatrix_apply]
+    rfl
+  let B : Matrix (Fin c) (Fin 1) (MvPolynomial (Fin (n + 1)) R) :=
+    fun i _ => MvPolynomial.X (Fin.last n) *
+      liftPolynomialToSucc
+        (MvPolynomial.pderiv (Fin.castLE hcn i)
+          (jacobianDeterminant hcn fs))
+  let J : Matrix (Fin c) (Fin c) (MvPolynomial (Fin (n + 1)) R) :=
+    fun i j => liftPolynomialToSucc
+      (MvPolynomial.pderiv (Fin.castLE hcn i) (fs j))
+  let D := liftPolynomialToSucc (jacobianDeterminant hcn fs)
+  let E : Matrix (Fin 1) (Fin 1) (MvPolynomial (Fin (n + 1)) R) :=
+    fun _ _ => D
+  have hleft (i : Fin c) :
+      finSumFinEquiv (Sum.inl i) = i.castSucc := by
+    rfl
+  have hright (i : Fin 1) :
+      finSumFinEquiv (Sum.inr i) = Fin.last c := by
+    have hi : i = 0 := Fin.eq_zero i
+    subst i
+    rfl
+  have hmatrix :
+      P₀.jacobiMatrix.submatrix
+          (finSumFinEquiv : Fin c ⊕ Fin 1 ≃ Fin (c + 1))
+          (finSumFinEquiv : Fin c ⊕ Fin 1 ≃ Fin (c + 1)) =
+        Matrix.fromBlocks J B 0 E := by
+    apply Matrix.ext
+    intro i j
+    rcases i with i | i
+    · rcases j with j | j
+      · simp only [Matrix.submatrix_apply]
+        rw [hleft, hleft]
+        rw [hj]
+        simpa [Matrix.fromBlocks, a, v, J, liftPolynomialToSucc] using
+          hrename (Fin.castLE hcn i) (fs j)
+      · simp only [Matrix.submatrix_apply]
+        rw [hleft, hright]
+        rw [hj]
+        simpa [Matrix.fromBlocks, a, v, B, D, E, liftPolynomialToSucc] using
+          hfirst (Fin.castLE hcn i) (jacobianDeterminant hcn fs)
+    · rcases j with j | j
+      · simp only [Matrix.submatrix_apply]
+        rw [hright, hleft]
+        rw [hj]
+        simpa [Matrix.fromBlocks, a, v, B, E, liftPolynomialToSucc] using
+          hzero (fs j)
+      · simp only [Matrix.submatrix_apply]
+        rw [hright, hright]
+        rw [hj]
+        simpa [Matrix.fromBlocks, a, v, B, D, E, liftPolynomialToSucc] using
+          hfinal (jacobianDeterminant hcn fs)
+  have hdet :
+      P₀.jacobiMatrix.det = J.det * D := by
+    have hE : E.det = D := by
+      rw [Matrix.det_fin_one]
+    rw [← Matrix.det_submatrix_equiv_self
+      (finSumFinEquiv : Fin c ⊕ Fin 1 ≃ Fin (c + 1))
+      P₀.jacobiMatrix]
+    rw [hmatrix]
+    rw [Matrix.det_fromBlocks_zero₂₁ J B E, hE]
+  let ρ : MvPolynomial (Fin n) R →+* MvPolynomial (Fin (n + 1)) R :=
+    (MvPolynomial.rename (R := R) (Fin.castLE (Nat.le_succ n))).toRingHom
+  let M : Matrix (Fin c) (Fin c) (MvPolynomial (Fin n) R) :=
+    fun i j => MvPolynomial.pderiv (Fin.castLE hcn i) (fs j)
+  have hJdet : J.det = D := by
+    change Matrix.det (fun i j => ρ (M i j)) = ρ (Matrix.det M)
+    exact (RingHom.map_det ρ M).symm
+  have hdet' : P₀.jacobiMatrix.det = D * D := by
+    rw [hdet, hJdet]
+  have hrel :
+      MvPolynomial.aeval P₀.val
+        (MvPolynomial.X (Fin.last n) * D - 1) = 0 := by
+    have hrel0 := P₀.aeval_val_relation (Fin.last c)
+    change MvPolynomial.aeval P₀.val (v (Fin.last c)) = 0 at hrel0
+    rw [show v (Fin.last c) =
+        MvPolynomial.X (Fin.last n) * D - 1 by simp [v, D]] at hrel0
+    exact hrel0
+  have hmul :
+      MvPolynomial.aeval P₀.val
+          (MvPolynomial.X (Fin.last n) : MvPolynomial (Fin (n + 1)) R) *
+          MvPolynomial.aeval P₀.val D = 1 := by
+    have hh := sub_eq_zero.mp (show
+        MvPolynomial.aeval P₀.val
+              ((MvPolynomial.X (Fin.last n) : MvPolynomial (Fin (n + 1)) R) * D) -
+            MvPolynomial.aeval P₀.val 1 = 0 by
+      simpa only [map_sub] using hrel)
+    simpa only [map_sub, map_mul, map_one] using hh
+  have hunitD : IsUnit (MvPolynomial.aeval P₀.val D) := by
+    exact IsUnit.of_mul_eq_one_right
+      (MvPolynomial.aeval P₀.val
+        (MvPolynomial.X (Fin.last n) : MvPolynomial (Fin (n + 1)) R)) hmul
+  have hjacunit : IsUnit P₀.jacobian := by
+    rw [P₀.jacobian_eq_jacobiMatrix_det, hdet']
+    rw [map_mul]
+    simpa only [Algebra.Generators.algebraMap_apply] using hunitD.mul hunitD
+  have hrange :
+      Set.range v =
+        insert (MvPolynomial.X (Fin.last n) * D - 1)
+        (Set.range (fun i : Fin c => liftPolynomialToSucc (fs i))) := by
+    ext x
+    constructor
+    · rintro ⟨i, rfl⟩
+      cases i using Fin.lastCases with
+      | last => left; simp [v, D]
+      | cast i => right; exact ⟨i, by simp [v]⟩
+    · intro hx
+      rcases hx with rfl | ⟨i, rfl⟩
+      · exact ⟨Fin.last c, by simp [v, D]⟩
+      · exact ⟨i.castSucc, by simp [v]⟩
+  have hset :
+      insert (MvPolynomial.X (Fin.last n) * D - 1)
+          (Set.range (fun i : Fin c => liftPolynomialToSucc (fs i))) =
+        Set.range (fun i : Fin c => liftPolynomialToSucc (fs i)) ∪
+          {MvPolynomial.X (Fin.last n) *
+              liftPolynomialToSucc (jacobianDeterminant hcn fs) - 1} := by
+    ext x
+    simp [or_comm, D]
+  have hspan :
+      Ideal.span (Set.range v) = jacobianInversionIdeal hcn fs := by
+    unfold jacobianInversionIdeal
+    rw [hrange, hset]
+  let Q : Algebra.SubmersivePresentation R
+      (MvPolynomial (Fin (n + 1)) R ⧸ Ideal.span (Set.range v))
+      (Fin (n + 1)) (Fin (c + 1)) :=
+    { P₀ with jacobian_isUnit := hjacunit }
+  let e : (MvPolynomial (Fin (n + 1)) R ⧸ Ideal.span (Set.range v)) ≃ₐ[R]
+      jacobianInversionRing hcn fs :=
+    Ideal.quotientEquivAlgOfEq R hspan
+  exact (Algebra.SubmersivePresentation.ofAlgEquiv Q e).isStandardSmooth
 
 theorem standard_smooth_comp
     {R S T : Type*} [CommRing R] [CommRing S] [CommRing T]

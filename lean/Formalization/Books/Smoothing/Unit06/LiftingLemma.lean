@@ -365,7 +365,9 @@ theorem liftingAuxiliary_modPi_localized_equiv
           (Localization.Away (liftingPresentationModPiElement d k))) := by
   sorry
 
-/-- The localized mod-`π` auxiliary ring is smooth over the presentation model. -/
+/-- The polynomial algebra in the localized mod-`π` presentation is smooth
+over its coefficient ring; the preceding equivalence identifies it with the
+localized auxiliary quotient. -/
 theorem liftingAuxiliary_modPi_localized_smooth
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r) :
@@ -406,24 +408,36 @@ theorem liftingRing_smoothAt_of_pi_not_mem
     Formalization.Books.Algebra.Unit137.IsSmoothAt R (liftingRing d) q := by
   sorry
 
-/-- The source's local smoothness conclusion for the auxiliary ring. -/
+/-- The source's local smoothness conclusion for the auxiliary ring, assuming
+the selected basic open of the presented `\bar C` is smooth. -/
 theorem liftingAuxiliaryRing_smoothAt_of_good_prime
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r)
     (q : PrimeSpectrum (liftingAuxiliaryRing d k))
+    (hbase :
+      Algebra.Smooth (piQuotient R (π ^ 2))
+        (Localization.Away (liftingPresentationElement d k)))
     (hπ : algebraMap R (liftingAuxiliaryRing d k) π ∈ q.asIdeal)
     (ha : liftingAuxiliaryElement d k ∉ q.asIdeal) :
     Formalization.Books.Algebra.Unit137.IsSmoothAt R
       (liftingAuxiliaryRing d k) q := by
   sorry
 
-/-- The final local-ring identification `D_{q} = (D_k)_{q_k}`. -/
+/-- The final local-ring identification `D_{q} = (D_k)_{q_k}`.  The
+annihilator equality and smoothness of `Dₖ` supply the flatness used in the
+source's cancellation argument. -/
 theorem liftingAuxiliary_localRing_equiv
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r)
     (q : PrimeSpectrum (liftingRing d))
     (qk : PrimeSpectrum (liftingAuxiliaryRing d k))
     (hcomap : PrimeSpectrum.comap (liftingAuxiliaryToLiftingRing d k) q = qk)
+    (hAnnR :
+      annihilatorOf (R := R) (M := R) π =
+        annihilatorOf (R := R) (M := R) (π ^ 2))
+    (hSmoothK :
+      Formalization.Books.Algebra.Unit137.IsSmoothAt R
+        (liftingAuxiliaryRing d k) qk)
     (hπ : algebraMap R (liftingRing d) π ∈ q.asIdeal)
     (ha : liftingElement d (d.a k) ∉ q.asIdeal) :
     Nonempty

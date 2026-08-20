@@ -2337,11 +2337,444 @@ def NonflatLocalizationKernelExpansion (k : Type u) [CommRing k]
       ∑ m ∈ (c n).support,
         nonflatLocalizationZPolynomialMap k (c n m) * nonflatLocalizationA k m
 
+private lemma nonflatLocalization_mvPolynomial_ker_constantCoeff
+    (k : Type u) [CommRing k] :
+    RingHom.ker (MvPolynomial.constantCoeff : MvPolynomial ℕ k →+* k) =
+      Ideal.span (Set.range (MvPolynomial.X : ℕ → MvPolynomial ℕ k)) := by
+  ext p
+  have hset : Set.range (MvPolynomial.X : ℕ → MvPolynomial ℕ k) =
+      MvPolynomial.X '' (Set.univ : Set ℕ) := by
+    ext q
+    simp
+  rw [RingHom.mem_ker, hset, MvPolynomial.mem_ideal_span_X_image]
+  constructor
+  · intro hp m hm
+    have hm0 : m ≠ 0 := by
+      intro hm0
+      subst hm0
+      exact (MvPolynomial.mem_support_iff.mp hm)
+        (by simpa [MvPolynomial.constantCoeff_eq] using hp)
+    obtain ⟨i, hi⟩ := Finsupp.support_nonempty_iff.mpr hm0
+    exact ⟨i, trivial, Finsupp.mem_support_iff.mp hi⟩
+  · intro hp
+    have hzero : (0 : ℕ →₀ ℕ) ∉ p.support := by
+      intro hz
+      obtain ⟨i, hi, hmi⟩ := hp 0 hz
+      exact hmi (by simp)
+    have hcoeff : MvPolynomial.coeff 0 p = 0 := by
+      by_contra hcoeff
+      exact hzero (MvPolynomial.mem_support_iff.mpr hcoeff)
+    simpa [MvPolynomial.constantCoeff_eq] using hcoeff
+
+private def nonflatLocalizationAVarIdeal (k : Type u) [CommRing k] :
+    Ideal (MvPolynomial NonflatLocalizationVariables k) :=
+  Ideal.span (Set.range (fun n =>
+    MvPolynomial.X (nonflatLocalizationAVar n)))
+
+private def nonflatLocalizationPolynomialEval (k : Type u) [CommRing k] :
+    MvPolynomial NonflatLocalizationVariables k →+* MvPolynomial (Fin 2) k :=
+  MvPolynomial.eval₂Hom (MvPolynomial.C : k →+* MvPolynomial (Fin 2) k)
+    (fun i => match i with
+    | Sum.inl j => MvPolynomial.X j
+    | Sum.inr _ => 0)
+
+private def nonflatLocalizationZPolynomialEval (k : Type u) [CommRing k] :
+    MvPolynomial NonflatLocalizationVariables k →+* Polynomial k :=
+  MvPolynomial.eval₂Hom (Polynomial.C : k →+* Polynomial k)
+    (fun i => match i with
+    | Sum.inl 0 => 0
+    | Sum.inl 1 => Polynomial.X
+    | Sum.inr _ => 0)
+
+private lemma nonflatLocalization_y_mul_a
+    (k : Type u) [CommRing k] (n : ℕ) :
+    nonflatLocalizationY k * nonflatLocalizationA k n = 0 := by
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  change MvPolynomial.X nonflatLocalizationYVar *
+    MvPolynomial.X (nonflatLocalizationAVar n) ∈
+      nonflatLocalizationRelationsIdeal k
+  exact Ideal.subset_span (Or.inl ⟨n, rfl⟩)
+
+private lemma nonflatLocalization_a_mul_a
+    (k : Type u) [CommRing k] (i j : ℕ) :
+    nonflatLocalizationA k i * nonflatLocalizationA k j = 0 := by
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  change MvPolynomial.X (nonflatLocalizationAVar i) *
+    MvPolynomial.X (nonflatLocalizationAVar j) ∈
+      nonflatLocalizationRelationsIdeal k
+  exact Ideal.subset_span (Or.inr ⟨(i, j), rfl⟩)
+
+private lemma nonflatLocalization_mk_mul_a
+    (k : Type u) [CommRing k]
+    (p : MvPolynomial NonflatLocalizationVariables k) (n : ℕ) :
+    Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+        (p * MvPolynomial.X (nonflatLocalizationAVar n)) =
+      nonflatLocalizationZPolynomialMap k
+        (nonflatLocalizationZPolynomialEval k p) * nonflatLocalizationA k n := by
+  induction p using MvPolynomial.induction_on with
+  | C c =>
+      simp [nonflatLocalizationZPolynomialEval,
+        nonflatLocalizationZPolynomialMap, nonflatLocalizationA]
+      change (algebraMap k (nonflatLocalizationRing k)) c *
+          nonflatLocalizationA k n = _
+      rfl
+  | add p q hp hq =>
+      simp only [add_mul, map_add, map_add, hp, hq, add_mul]
+  | mul_X p i hp =>
+      cases i with
+      | inl i =>
+          fin_cases i
+          · calc
+              Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+                  (p * MvPolynomial.X nonflatLocalizationYVar *
+                    MvPolynomial.X (nonflatLocalizationAVar n)) =
+                  Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+                    (nonflatLocalizationY k * nonflatLocalizationA k n) := by
+                simp [map_mul, nonflatLocalizationY, nonflatLocalizationA,
+                  mul_assoc]
+              _ = 0 := by rw [nonflatLocalization_y_mul_a, mul_zero]
+              _ = nonflatLocalizationZPolynomialMap k
+                    (nonflatLocalizationZPolynomialEval k
+                      (p * MvPolynomial.X nonflatLocalizationYVar)) *
+                    nonflatLocalizationA k n := by
+                simp [nonflatLocalizationZPolynomialEval,
+                  nonflatLocalizationZPolynomialMap,
+                  nonflatLocalizationYVar, nonflatLocalizationZVar,
+                  nonflatLocalizationAVar]
+          · calc
+              Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+                  (p * MvPolynomial.X nonflatLocalizationZVar *
+                    MvPolynomial.X (nonflatLocalizationAVar n)) =
+                  Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+                    (p * MvPolynomial.X (nonflatLocalizationAVar n)) *
+                    Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+                      (MvPolynomial.X nonflatLocalizationZVar) := by
+                simp [map_mul, mul_assoc, mul_comm, mul_left_comm]
+              _ = nonflatLocalizationZPolynomialMap k
+                    (nonflatLocalizationZPolynomialEval k p) *
+                    nonflatLocalizationA k n *
+                    Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+                      (MvPolynomial.X nonflatLocalizationZVar) := by rw [hp]
+              _ = nonflatLocalizationZPolynomialMap k
+                    (nonflatLocalizationZPolynomialEval k
+                      (p * MvPolynomial.X nonflatLocalizationZVar)) *
+                    nonflatLocalizationA k n := by
+                simp [nonflatLocalizationZPolynomialEval,
+                  nonflatLocalizationZPolynomialMap, mul_assoc, mul_comm,
+                  mul_left_comm, nonflatLocalizationYVar,
+                  nonflatLocalizationZVar, nonflatLocalizationAVar,
+                  nonflatLocalizationF]
+      | inr i =>
+          calc
+            Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+                (p * MvPolynomial.X (nonflatLocalizationAVar i) *
+                  MvPolynomial.X (nonflatLocalizationAVar n)) =
+                Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+                  (nonflatLocalizationA k i * nonflatLocalizationA k n) := by
+              simp [map_mul, nonflatLocalizationA, mul_assoc]
+            _ = 0 := by rw [nonflatLocalization_a_mul_a, mul_zero]
+            _ = nonflatLocalizationZPolynomialMap k
+                  (nonflatLocalizationZPolynomialEval k
+                    (p * MvPolynomial.X (nonflatLocalizationAVar i))) *
+                  nonflatLocalizationA k n := by
+              simp [nonflatLocalizationZPolynomialEval,
+                nonflatLocalizationZPolynomialMap, nonflatLocalizationYVar,
+                nonflatLocalizationZVar, nonflatLocalizationAVar]
+
+private def nonflatLocalizationExpansionSum
+    (k : Type u) [CommRing k] (c : ℕ →₀ Polynomial k) :
+    nonflatLocalizationRing k :=
+  c.sum (fun m p => nonflatLocalizationZPolynomialMap k p *
+    nonflatLocalizationA k m)
+
+private lemma nonflatLocalizationExpansionSum_add
+    (k : Type u) [CommRing k] (c d : ℕ →₀ Polynomial k) :
+    nonflatLocalizationExpansionSum k (c + d) =
+      nonflatLocalizationExpansionSum k c +
+        nonflatLocalizationExpansionSum k d := by
+  classical
+  unfold nonflatLocalizationExpansionSum
+  rw [Finsupp.sum_add_index' (fun _ => by simp)
+    (fun _ _ _ => by simp [map_add, add_mul])]
+
+private lemma nonflatLocalizationExpansionSum_zero
+    (k : Type u) [CommRing k] :
+    nonflatLocalizationExpansionSum k 0 = 0 := by
+  simp [nonflatLocalizationExpansionSum]
+
+private lemma nonflatLocalizationExpansionSum_smul
+    (k : Type u) [CommRing k] (r : Polynomial k) (c : ℕ →₀ Polynomial k) :
+    nonflatLocalizationExpansionSum k (r • c) =
+      nonflatLocalizationZPolynomialMap k r *
+        nonflatLocalizationExpansionSum k c := by
+  classical
+  unfold nonflatLocalizationExpansionSum
+  rw [Finsupp.sum_smul_index (fun _ => by simp)]
+  simp only [map_mul]
+  change (∑ m ∈ c.support,
+      nonflatLocalizationZPolynomialMap k r *
+        nonflatLocalizationZPolynomialMap k (c m) *
+          nonflatLocalizationA k m) =
+    nonflatLocalizationZPolynomialMap k r *
+      ∑ m ∈ c.support,
+        nonflatLocalizationZPolynomialMap k (c m) *
+          nonflatLocalizationA k m
+  simp only [mul_assoc]
+  rw [← Finset.mul_sum]
+
+private lemma nonflatLocalization_mk_mul_expansion
+    (k : Type u) [CommRing k]
+    (p : MvPolynomial NonflatLocalizationVariables k)
+    (c : ℕ →₀ Polynomial k) :
+    Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+        nonflatLocalizationExpansionSum k c =
+      nonflatLocalizationZPolynomialMap k
+          (nonflatLocalizationZPolynomialEval k p) *
+        nonflatLocalizationExpansionSum k c := by
+  classical
+  unfold nonflatLocalizationExpansionSum
+  change Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+      (∑ m ∈ c.support,
+        nonflatLocalizationZPolynomialMap k (c m) *
+          nonflatLocalizationA k m) = _
+  rw [Finset.mul_sum]
+  change (∑ m ∈ c.support,
+      Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+        (nonflatLocalizationZPolynomialMap k (c m) *
+          nonflatLocalizationA k m)) =
+    nonflatLocalizationZPolynomialMap k
+        (nonflatLocalizationZPolynomialEval k p) *
+      (∑ m ∈ c.support,
+        nonflatLocalizationZPolynomialMap k (c m) *
+          nonflatLocalizationA k m)
+  rw [Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro m hm
+  have hm' := nonflatLocalization_mk_mul_a k p m
+  have hm'' : Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+        nonflatLocalizationA k m =
+      nonflatLocalizationZPolynomialMap k
+          (nonflatLocalizationZPolynomialEval k p) *
+        nonflatLocalizationA k m := by
+    simpa [map_mul, nonflatLocalizationA] using hm'
+  rw [show Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+      (nonflatLocalizationZPolynomialMap k (c m) *
+        nonflatLocalizationA k m) =
+      (Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p *
+        nonflatLocalizationA k m) *
+        nonflatLocalizationZPolynomialMap k (c m) by ring, hm'']
+  ring
+
+private lemma nonflatLocalization_mem_avarIdeal_expansion
+    (k : Type u) [CommRing k]
+    (p : MvPolynomial NonflatLocalizationVariables k)
+    (hp : p ∈ nonflatLocalizationAVarIdeal k) :
+    ∃ c : ℕ →₀ Polynomial k,
+      Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p =
+        nonflatLocalizationExpansionSum k c := by
+  induction hp using Submodule.span_induction with
+  | mem p hp =>
+      obtain ⟨n, rfl⟩ := hp
+      refine ⟨Finsupp.single n 1, ?_⟩
+      simp [nonflatLocalizationExpansionSum, nonflatLocalizationA]
+  | zero =>
+      exact ⟨0, by simp [nonflatLocalizationExpansionSum]
+        ⟩
+  | add p q hp hq ihp ihq =>
+      obtain ⟨c, hc⟩ := ihp
+      obtain ⟨d, hd⟩ := ihq
+      refine ⟨c + d, ?_⟩
+      rw [map_add, hc, hd, nonflatLocalizationExpansionSum_add]
+  | smul a p hp ih =>
+      obtain ⟨c, hc⟩ := ih
+      refine ⟨nonflatLocalizationZPolynomialEval k a • c, ?_⟩
+      rw [smul_eq_mul, map_mul, hc,
+        nonflatLocalization_mk_mul_expansion,
+        nonflatLocalizationExpansionSum_smul]
+
+private lemma nonflatLocalization_polynomialEval_relations_zero
+    (k : Type u) [CommRing k] :
+    ∀ p ∈ nonflatLocalizationRelationsIdeal k,
+      nonflatLocalizationPolynomialEval k p = 0 := by
+  intro p hp
+  induction hp using Submodule.span_induction with
+  | mem p hp =>
+      rcases hp with hp | hp
+      · obtain ⟨n, rfl⟩ := hp
+        simp [nonflatLocalizationPolynomialEval,
+          nonflatLocalizationYRelation, nonflatLocalizationYVar,
+          nonflatLocalizationAVar]
+      · obtain ⟨⟨i, j⟩, rfl⟩ := hp
+        simp [nonflatLocalizationPolynomialEval,
+          nonflatLocalizationARelation, nonflatLocalizationAVar]
+  | zero => simp
+  | add p q hp hq ihp ihq => simpa [map_add] using congrArg₂ (· + ·) ihp ihq
+  | smul a p hp ih => simpa [smul_eq_mul, map_mul, ih]
+
+private lemma nonflatLocalization_mem_avarIdeal_iff_eval_zero
+    (k : Type u) [CommRing k] (p : MvPolynomial NonflatLocalizationVariables k) :
+    p ∈ nonflatLocalizationAVarIdeal k ↔
+      nonflatLocalizationPolynomialEval k p = 0 := by
+  let e := MvPolynomial.sumAlgEquiv k (Fin 2) ℕ
+  let ψ := (MvPolynomial.map (MvPolynomial.constantCoeff :
+    MvPolynomial ℕ k →+* k)).comp e.toRingHom
+  have hψ : nonflatLocalizationPolynomialEval k = ψ := by
+    apply MvPolynomial.ringHom_ext
+    · intro r
+      simp [nonflatLocalizationPolynomialEval, ψ, e]
+    · intro i
+      cases i with
+      | inl i => simp [nonflatLocalizationPolynomialEval, ψ, e]
+      | inr i => simp [nonflatLocalizationPolynomialEval, ψ, e]
+  have hker : Ideal.map (MvPolynomial.C :
+      MvPolynomial ℕ k →+* MvPolynomial (Fin 2) (MvPolynomial ℕ k))
+      (RingHom.ker (MvPolynomial.constantCoeff : MvPolynomial ℕ k →+* k)) =
+      Ideal.span (Set.range (fun n => MvPolynomial.C (MvPolynomial.X n))) := by
+    rw [nonflatLocalization_mvPolynomial_ker_constantCoeff,
+      Ideal.map_span]
+    congr 1
+    ext q
+    simp
+  have hmap : ∀ q : MvPolynomial (Fin 2) (MvPolynomial ℕ k),
+      q ∈ Ideal.map (MvPolynomial.C :
+        MvPolynomial ℕ k →+* MvPolynomial (Fin 2) (MvPolynomial ℕ k))
+        (RingHom.ker (MvPolynomial.constantCoeff : MvPolynomial ℕ k →+* k)) ↔
+      MvPolynomial.map MvPolynomial.constantCoeff q = 0 := by
+    intro q
+    constructor
+    · intro hq
+      have hle : Ideal.map (MvPolynomial.C :
+          MvPolynomial ℕ k →+* MvPolynomial (Fin 2) (MvPolynomial ℕ k))
+          (RingHom.ker (MvPolynomial.constantCoeff : MvPolynomial ℕ k →+* k)) ≤
+          RingHom.ker (MvPolynomial.map MvPolynomial.constantCoeff) := by
+        rw [Ideal.map_le_iff_le_comap]
+        intro c hc
+        simp only [RingHom.mem_ker] at hc ⊢
+        simpa using hc
+      exact hle hq
+    · intro hq
+      rw [q.as_sum]
+      apply Submodule.sum_mem _
+      intro d hd
+      have hcoeff : MvPolynomial.constantCoeff (MvPolynomial.coeff d q) = 0 := by
+        have hcoeff' := congrArg (fun r => MvPolynomial.coeff d r) hq
+        rw [MvPolynomial.coeff_map] at hcoeff'
+        exact hcoeff'
+      have hc : MvPolynomial.coeff d q ∈
+          RingHom.ker (MvPolynomial.constantCoeff : MvPolynomial ℕ k →+* k) := by
+        exact hcoeff
+      have hC := Ideal.mem_map_of_mem
+        (MvPolynomial.C : MvPolynomial ℕ k →+* MvPolynomial (Fin 2) (MvPolynomial ℕ k)) hc
+      have hmul := (Ideal.map _ _).mul_mem_left
+        (MvPolynomial.monomial d (1 : MvPolynomial ℕ k)) hC
+      simpa [mul_comm, MvPolynomial.C_mul_monomial] using hmul
+  have hideal : Ideal.map e.toRingHom (nonflatLocalizationAVarIdeal k) =
+      Ideal.map (MvPolynomial.C :
+        MvPolynomial ℕ k →+* MvPolynomial (Fin 2) (MvPolynomial ℕ k))
+        (RingHom.ker (MvPolynomial.constantCoeff : MvPolynomial ℕ k →+* k)) := by
+    rw [nonflatLocalizationAVarIdeal, Ideal.map_span, hker]
+    congr 1
+    ext q
+    constructor
+    · rintro ⟨_, ⟨n, rfl⟩, rfl⟩
+      exact ⟨n, by simp [e, nonflatLocalizationAVar]
+        ⟩
+    · rintro ⟨n, rfl⟩
+      exact ⟨MvPolynomial.X (nonflatLocalizationAVar n), ⟨n, rfl⟩, by
+        simp [e, nonflatLocalizationAVar]
+        ⟩
+  rw [hψ]
+  constructor
+  · intro hp
+    have hp' : e p ∈ Ideal.map e.toRingHom (nonflatLocalizationAVarIdeal k) :=
+      Ideal.mem_map_of_mem e.toRingHom hp
+    rw [hideal] at hp'
+    exact (hmap (e p)).mp hp'
+  · intro hp
+    have hp' : e p ∈ Ideal.map e.toRingHom (nonflatLocalizationAVarIdeal k) := by
+      rw [hideal]
+      exact (hmap (e p)).mpr hp
+    have : p ∈ (Ideal.map e.toRingHom (nonflatLocalizationAVarIdeal k)).comap e.toRingHom := by
+      exact hp'
+    rwa [Ideal.comap_map_of_bijective e.toRingHom e.bijective] at this
+
+private lemma nonflatLocalization_mem_avarIdeal_of_y_mul_zero
+    (k : Type u) [Field k] (q : nonflatLocalizationRing k)
+    (hq : nonflatLocalizationY k * q = 0) :
+    ∃ p : MvPolynomial NonflatLocalizationVariables k,
+      Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p = q ∧
+        p ∈ nonflatLocalizationAVarIdeal k := by
+  induction q using Quotient.inductionOn' with
+  | _ p =>
+      refine ⟨p, rfl, ?_⟩
+      apply (nonflatLocalization_mem_avarIdeal_iff_eval_zero k p).mpr
+      change nonflatLocalizationY k *
+          Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p = 0 at hq
+      have hqp :
+          MvPolynomial.X nonflatLocalizationYVar * p ∈
+            nonflatLocalizationRelationsIdeal k := by
+        apply Ideal.Quotient.eq_zero_iff_mem.mp
+        simpa [nonflatLocalizationY] using hq
+      have hEval := nonflatLocalization_polynomialEval_relations_zero k _ hqp
+      have hprod :
+          nonflatLocalizationPolynomialEval k
+              (MvPolynomial.X nonflatLocalizationYVar) *
+            nonflatLocalizationPolynomialEval k p = 0 := by
+        simpa [map_mul] using hEval
+      have hYne :
+          nonflatLocalizationPolynomialEval k
+              (MvPolynomial.X nonflatLocalizationYVar) ≠ 0 := by
+        simp [nonflatLocalizationPolynomialEval, nonflatLocalizationYVar]
+      exact (mul_eq_zero.mp hprod).resolve_left hYne
+
 theorem nonflatLocalizationSourceKernel_iff_expansion
     (k : Type u) [Field k] (g : PowerSeries (nonflatLocalizationRing k)) :
     g ∈ nonflatLocalizationSourceKernel k ↔
       NonflatLocalizationKernelExpansion k g := by
-  sorry
+  classical
+  constructor
+  · intro hg
+    unfold nonflatLocalizationSourceKernel powerSeriesMulKernel at hg
+    change PowerSeries.C (nonflatLocalizationY k) * g = 0 at hg
+    have hexpand : ∀ n, ∃ c : ℕ →₀ Polynomial k,
+        PowerSeries.coeff n g = nonflatLocalizationExpansionSum k c := by
+      intro n
+      have hcoef : nonflatLocalizationY k * PowerSeries.coeff n g = 0 := by
+        have hn := congrArg (PowerSeries.coeff n) hg
+        simpa [PowerSeries.coeff_C_mul] using hn
+      obtain ⟨p, hp⟩ := Ideal.Quotient.mk_surjective (PowerSeries.coeff n g)
+      have hpzero : nonflatLocalizationY k *
+          Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k) p = 0 := by
+        rw [hp]
+        exact hcoef
+      obtain ⟨p, hpq, hpa⟩ :=
+        nonflatLocalization_mem_avarIdeal_of_y_mul_zero k _ hpzero
+      obtain ⟨c, hc⟩ := nonflatLocalization_mem_avarIdeal_expansion k p hpa
+      exact ⟨c, hp.symm.trans (hpq.symm.trans hc)⟩
+    choose c hc using hexpand
+    refine ⟨c, ?_⟩
+    intro n
+    change PowerSeries.coeff n g = nonflatLocalizationExpansionSum k (c n)
+    exact hc n
+  · rintro ⟨c, hc⟩
+    unfold nonflatLocalizationSourceKernel powerSeriesMulKernel
+    change PowerSeries.C (nonflatLocalizationY k) * g = 0
+    ext n
+    rw [PowerSeries.coeff_C_mul, hc]
+    change nonflatLocalizationY k *
+        (∑ m ∈ (c n).support,
+          nonflatLocalizationZPolynomialMap k ((c n) m) *
+            nonflatLocalizationA k m) = 0
+    rw [Finset.mul_sum]
+    apply Finset.sum_eq_zero
+    intro m hm
+    calc
+      nonflatLocalizationY k *
+          (nonflatLocalizationZPolynomialMap k ((c n) m) *
+            nonflatLocalizationA k m) =
+          nonflatLocalizationZPolynomialMap k ((c n) m) *
+            (nonflatLocalizationY k * nonflatLocalizationA k m) := by ring
+      _ = 0 := by rw [nonflatLocalization_y_mul_a, mul_zero]
 
 def nonflatLocalizationTargetMultiplication (k : Type u) [CommRing k] :
     nonflatLocalizationPowerSeries k →ₗ[nonflatLocalizationPowerSeries k]
@@ -2442,7 +2875,170 @@ theorem nonflatLocalizationCompletionMap_flat_implies_kernel_eq
       Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
         (nonflatLocalizationPowerSeries k))
         (nonflatLocalizationSourceKernel k) := by
-  sorry
+  have hmap :
+      nonflatLocalizationCompletionMap k =
+        algebraMap (PowerSeries (nonflatLocalizationRing k))
+          (nonflatLocalizationPowerSeries k) := by
+    rfl
+  have hflat' : RingHom.Flat
+      (algebraMap (PowerSeries (nonflatLocalizationRing k))
+        (nonflatLocalizationPowerSeries k)) := by
+    rw [← hmap]
+    exact hflat
+  haveI : Module.Flat (PowerSeries (nonflatLocalizationRing k))
+      (nonflatLocalizationPowerSeries k) :=
+    (RingHom.flat_algebraMap_iff.mp hflat')
+  let e := TensorProduct.AlgebraTensorModule.rid
+    (PowerSeries (nonflatLocalizationRing k))
+    (nonflatLocalizationPowerSeries k)
+    (nonflatLocalizationPowerSeries k)
+  have htensor := Module.Flat.lTensor_exact
+      (R := PowerSeries (nonflatLocalizationRing k))
+      (M := nonflatLocalizationPowerSeries k)
+      (N := nonflatLocalizationSourceKernel k)
+      (N' := PowerSeries (nonflatLocalizationRing k))
+      (N'' := PowerSeries (nonflatLocalizationRing k))
+      (f := (nonflatLocalizationSourceKernel k).subtype)
+      (g := nonflatLocalizationSourceMultiplication k)
+      (nonflatLocalizationSource_exact k)
+  have hmapC' :
+      algebraMap (PowerSeries (nonflatLocalizationRing k))
+          (nonflatLocalizationPowerSeries k)
+          (PowerSeries.C (nonflatLocalizationY k)) =
+        PowerSeries.C
+          (algebraMap (nonflatLocalizationRing k)
+            (Localization.Away (nonflatLocalizationF k))
+            (nonflatLocalizationY k)) := by
+    change PowerSeries.map
+        (algebraMap (nonflatLocalizationRing k)
+          (Localization.Away (nonflatLocalizationF k)))
+        (PowerSeries.C (nonflatLocalizationY k)) = _
+    rw [PowerSeries.map_C]
+  have hkernel :
+      nonflatLocalizationKernel k ≤
+        Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
+          (nonflatLocalizationPowerSeries k))
+          (nonflatLocalizationSourceKernel k) := by
+    intro q hq
+    have hqmul :
+        nonflatLocalizationTargetMultiplication k q = 0 := hq
+    have hmapC :
+        algebraMap (PowerSeries (nonflatLocalizationRing k))
+            (nonflatLocalizationPowerSeries k)
+            (PowerSeries.C (nonflatLocalizationY k)) =
+          PowerSeries.C
+            (algebraMap (nonflatLocalizationRing k)
+              (Localization.Away (nonflatLocalizationF k))
+              (nonflatLocalizationY k)) := by
+      change PowerSeries.map
+          (algebraMap (nonflatLocalizationRing k)
+            (Localization.Away (nonflatLocalizationF k)))
+          (PowerSeries.C (nonflatLocalizationY k)) = _
+      rw [PowerSeries.map_C]
+    have hcomm :
+        e.toLinearMap.comp
+            (TensorProduct.AlgebraTensorModule.lTensor
+              (nonflatLocalizationPowerSeries k)
+              (nonflatLocalizationPowerSeries k)
+              (nonflatLocalizationSourceMultiplication k)) =
+          (nonflatLocalizationTargetMultiplication k).comp e.toLinearMap := by
+      apply LinearMap.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy =>
+          simp only [LinearMap.map_add, LinearMap.comp_apply]
+          have hx' :
+              e.toLinearMap ((TensorProduct.AlgebraTensorModule.lTensor
+                (nonflatLocalizationPowerSeries k)
+                (nonflatLocalizationPowerSeries k)
+                (nonflatLocalizationSourceMultiplication k)) x) =
+                nonflatLocalizationTargetMultiplication k (e.toLinearMap x) := by
+            simpa only [LinearMap.comp_apply] using hx
+          have hy' :
+              e.toLinearMap ((TensorProduct.AlgebraTensorModule.lTensor
+                (nonflatLocalizationPowerSeries k)
+                (nonflatLocalizationPowerSeries k)
+                (nonflatLocalizationSourceMultiplication k)) y) =
+                nonflatLocalizationTargetMultiplication k (e.toLinearMap y) := by
+            simpa only [LinearMap.comp_apply] using hy
+          rw [hx', hy']
+      | tmul s r =>
+          simp [e, nonflatLocalizationTargetMultiplication,
+            nonflatLocalizationSourceMultiplication,
+            powerSeriesMultiplication, Algebra.smul_def, hmapC]
+          ring
+    let x := e.symm q
+    have hxmul' :
+        (TensorProduct.AlgebraTensorModule.lTensor
+          (nonflatLocalizationPowerSeries k)
+          (nonflatLocalizationPowerSeries k)
+          (nonflatLocalizationSourceMultiplication k)) x = 0 := by
+      apply e.injective
+      change (e.toLinearMap.comp
+          (TensorProduct.AlgebraTensorModule.lTensor
+            (nonflatLocalizationPowerSeries k)
+            (nonflatLocalizationPowerSeries k)
+            (nonflatLocalizationSourceMultiplication k))) x = 0
+      rw [hcomm]
+      simpa [x] using hqmul
+    have hxmul :
+        (nonflatLocalizationSourceMultiplication k).lTensor
+          (nonflatLocalizationPowerSeries k) x = 0 := by
+      simpa only [TensorProduct.AlgebraTensorModule.coe_lTensor] using hxmul'
+    obtain ⟨y, hy⟩ := (htensor x).mp hxmul
+    have hmem :
+        e ((TensorProduct.AlgebraTensorModule.lTensor
+          (nonflatLocalizationPowerSeries k)
+          (nonflatLocalizationPowerSeries k)
+          (nonflatLocalizationSourceKernel k).subtype) y) ∈
+          Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
+            (nonflatLocalizationPowerSeries k))
+            (nonflatLocalizationSourceKernel k) := by
+      refine TensorProduct.induction_on y ?_ ?_ ?_
+      · simp
+      · intro s r
+        simpa [e, Algebra.smul_def, mul_comm] using
+          (Ideal.mul_mem_left
+            (Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
+              (nonflatLocalizationPowerSeries k))
+              (nonflatLocalizationSourceKernel k)) s
+            (Ideal.mem_map_of_mem _ r.property))
+      · intro y z hy hz
+        simpa only [map_add] using
+          (Ideal.add_mem
+            (Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
+              (nonflatLocalizationPowerSeries k))
+              (nonflatLocalizationSourceKernel k))
+            hy hz)
+    have hmem' :
+        e ((nonflatLocalizationSourceKernel k).subtype.lTensor
+          (nonflatLocalizationPowerSeries k) y) ∈
+          Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
+            (nonflatLocalizationPowerSeries k))
+            (nonflatLocalizationSourceKernel k) := by
+      simpa only [TensorProduct.AlgebraTensorModule.coe_lTensor] using hmem
+    rw [hy] at hmem'
+    simpa [x] using hmem'
+  apply le_antisymm hkernel
+  apply Ideal.map_le_iff_le_comap.mpr
+  intro q hq
+  change algebraMap (PowerSeries (nonflatLocalizationRing k))
+    (nonflatLocalizationPowerSeries k) q ∈ nonflatLocalizationKernel k
+  change nonflatLocalizationTargetMultiplication k
+    (algebraMap (PowerSeries (nonflatLocalizationRing k))
+      (nonflatLocalizationPowerSeries k) q) = 0
+  change PowerSeries.C
+      (algebraMap (nonflatLocalizationRing k)
+        (Localization.Away (nonflatLocalizationF k))
+        (nonflatLocalizationY k)) *
+      algebraMap (PowerSeries (nonflatLocalizationRing k))
+        (nonflatLocalizationPowerSeries k) q = 0
+  rw [← hmapC', ← map_mul]
+  change PowerSeries.C (nonflatLocalizationY k) * q = 0 at hq
+  simpa using congrArg
+    (algebraMap (PowerSeries (nonflatLocalizationRing k))
+      (nonflatLocalizationPowerSeries k)) hq
 
 theorem nonflatLocalizationCompletionMap_not_flat
     (k : Type u) [Field k] :
@@ -2471,7 +3067,7 @@ abbrev nonflatLocalizationAdicCompletion (k : Type u) [CommRing k] :=
 theorem nonflatLocalizationAdicIdeal_isPrincipal
     (k : Type u) [CommRing k] :
     (nonflatLocalizationAdicIdeal k).IsPrincipal := by
-  sorry
+  exact ⟨PowerSeries.X, rfl⟩
 
 theorem nonflatLocalizationPowerSeries_completion_equiv
     (k : Type u) [CommRing k] :

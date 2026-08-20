@@ -1665,7 +1665,32 @@ private theorem perfectClosureFiniteTypeSetup
   rw [hrange]
   exact hsep
 
-theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
+private theorem exists_transported_minpoly_coefficient
+    {F U M E : Type*} [Field F] [Field U] [Field M] [Field E]
+    [Algebra F M] [Algebra F E] [Algebra U E]
+    (f : M →ₐ[F] E) (hf : Function.Injective f) (z : M)
+    (htransport : ∀ n ∈ (minpoly F z).support, ∃ b : U,
+      algebraMap U E b = algebraMap F E ((minpoly F z).coeff n)) (n : ℕ) :
+    ∃ b : U, algebraMap U E b =
+      algebraMap F E ((minpoly F (f z)).coeff n) := by
+  rw [minpoly.algHom_eq f hf z]
+  by_cases hn : n ∈ (minpoly F z).support
+  · exact htransport n hn
+  · refine ⟨0, ?_⟩
+    have hzero : (minpoly F z).coeff n = 0 :=
+      Polynomial.notMem_support_iff.mp hn
+    simp [hzero]
+
+private theorem isSeparable_of_transported_minpoly_coefficients
+    {F U M E : Type*} [Field F] [Field U] [Field M] [Field E]
+    [Algebra F M] [Algebra F E] [Algebra U E]
+    (f : M →ₐ[F] E) (hf : Function.Injective f) (z : M)
+    (hz : IsSeparable F z) (hcoeff : ∀ n : ℕ, ∃ b : U,
+      algebraMap U E b = algebraMap F E ((minpoly F (f z)).coeff n)) :
+    IsSeparable U (f z) := by
+  exact isSeparable_of_finite_coefficients (f z) (hz.map f hf) hcoeff
+
+private theorem exists_finite_pth_root_coefficients_isSeparablyGenerated_impl
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] (p : ℕ) (hp : 0 < p) [Fact p.Prime]
     [CharP k p] [CharP K p] :
@@ -1780,25 +1805,19 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
       IsSeparable U (algebraMap K (AlgebraicClosure K) a) := by
     have hzM : IsSeparable F₀ (zM a) :=
       Algebra.IsSeparable.isSeparable F₀ (zM a)
-    have hzAC : IsSeparable F₀ (mToAC (zM a)) :=
-      hzM.map mToACAlg mToACAlg.injective
     have hcoeff (n : ℕ) : ∃ b : U,
         algebraMap U (AlgebraicClosure K) b =
           algebraMap F₀ (AlgebraicClosure K)
             ((minpoly F₀ (mToACAlg (zM a))).coeff n) := by
-      rw [minpoly.algHom_eq mToACAlg mToACAlg.injective (zM a)]
-      by_cases hn : n ∈ (minpoly F₀ (zM a)).support
-      · have hmem := hsP ((minpoly F₀ (zM a)).coeff n)
-          (Finset.mem_biUnion.mpr ⟨a, ha,
-            Finset.mem_image.mpr ⟨n, hn, rfl⟩⟩)
-        exact htransport hmem
-      · refine ⟨0, ?_⟩
-        have hzero : (minpoly F₀ (zM a)).coeff n = 0 :=
-          Polynomial.notMem_support_iff.mp hn
-        simp [hzero]
-    have hz := isSeparable_of_finite_coefficients
-      (F := F₀) (U := U) (E := AlgebraicClosure K)
-      (mToACAlg (zM a)) hzAC hcoeff
+      apply exists_transported_minpoly_coefficient mToACAlg
+        mToACAlg.injective (zM a) _ n
+      intro m hm
+      apply htransport
+      exact hsP ((minpoly F₀ (zM a)).coeff m)
+        (Finset.mem_biUnion.mpr ⟨a, ha,
+          Finset.mem_image.mpr ⟨m, hm, rfl⟩⟩)
+    have hz := isSeparable_of_transported_minpoly_coefficients
+      mToACAlg mToACAlg.injective (zM a) hzM hcoeff
     convert hz using 1
     rfl
   have hKsep (a : K) : IsSeparable U (algebraMap K (AlgebraicClosure K) a) := by
@@ -1877,10 +1896,10 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
           change (tower.baseToTop b : AlgebraicClosure K) = pToAC (bToP b)
           rw [tower.baseToTop_apply]
           rfl }
-    apply AlgebraicIndependent.of_comp tToACAlg
     have hfun : tToACAlg ∘ xT = mToACAlg ∘ xM := by
       funext i
       rfl
+    apply AlgebraicIndependent.of_comp tToACAlg
     rw [hfun]
     exact hB
   have hxTB : IsTranscendenceBasis B xT :=
@@ -1889,6 +1908,16 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
         rw [← IntermediateField.isAlgebraic_adjoin_iff_top]
         simpa [U] using (Algebra.IsSeparable.isAlgebraic U T))
   exact ⟨tower, u, xT, hxTB, inferInstance⟩
+
+theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    [Algebra.EssFiniteType k K] (p : ℕ) (hp : 0 < p) [Fact p.Prime]
+    [CharP k p] [CharP K p] :
+    ∃ tower : FinitePthRootBaseChangeTower k K p hp,
+      IsSeparablyGenerated
+        (finitePthRootFieldAtLevel tower.base)
+        (finitePthRootTopAtLevel tower) :=
+  exists_finite_pth_root_coefficients_isSeparablyGenerated_impl p hp
 
 /- The source's construction is the existence statement below; the structure
    above records its diagram rather than introducing unbundled typeclass

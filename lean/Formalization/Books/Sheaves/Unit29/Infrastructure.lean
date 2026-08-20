@@ -2672,7 +2672,7 @@ private theorem fMapAt_identity_of_eq
   rw [hξ']
   apply heq_of_eq
   change restriction (F := F.presheaf) _ s = s
-  convert restriction_self (F := F.presheaf) s using 1 <;> apply Subsingleton.elim
+  exact restriction_self (F := F.presheaf) s
 
 theorem exists_spectralSystemSectionsDiagram
     {I : Type u} [Category.{w} I] [IsCofiltered I]

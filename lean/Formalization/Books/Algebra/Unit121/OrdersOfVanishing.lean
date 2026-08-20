@@ -913,7 +913,12 @@ theorem latticeDistance_comp_decomposition
     · intro hx
       rcases hx with ⟨z, hz, hzx⟩
       rcases hz with ⟨y, hy, hyz⟩
-      exact ⟨y, hy, by simpa [hyz] using hzx⟩
+      exact ⟨y, hy, by
+        change φ (ψ y) = x
+        have hyz' : ψ y = z := by simpa using hyz
+        have hzx' : φ z = x := by simpa using hzx
+        rw [hyz']
+        exact hzx'⟩
   constructor
   · exact hfirst
   · rw [hcomp]

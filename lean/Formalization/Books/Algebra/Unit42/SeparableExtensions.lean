@@ -1681,8 +1681,8 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
       ((pthRootClosureMap k K).toRingHom.comp P.val) Q
       (fun x => by
         change pthRootClosureMap k K (x : AlgebraicClosure k) ∈ Q
-        letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
-        letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+        let _ : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
+        let _ : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
         obtain ⟨n, b, hb⟩ :=
           (mem_perfectClosure_iff_pow_mem p).1 x.property
         apply (mem_perfectClosure_iff_pow_mem p).2
@@ -1692,8 +1692,8 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
         rw [← map_pow, ← hb']
         rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
         exact ((pthRootClosureMap k K).commutes b).symm)
-  letI : Algebra P Q := RingHom.toAlgebra pToQ
-  letI : PerfectField P := inferInstance
+  let _ : Algebra P Q := RingHom.toAlgebra pToQ
+  let _ : PerfectField P := inferInstance
   obtain ⟨M, sK, u, hM, hsK, hu, hsep⟩ :=
     perfectClosureFiniteTypeSetup (k := k) (K := K) (P := P) (Q := Q) (by
       intro y
@@ -1702,14 +1702,14 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
         pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y)
       rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K)]
       exact ((pthRootClosureMap k K).commutes y).symm)
-  letI : Algebra P M := M.algebra
+  let _ : Algebra P M := M.algebra
   let xM : u → M := fun z => z
   let F₀ : IntermediateField P M :=
     IntermediateField.adjoin P (range xM)
-  letI : Algebra P F₀ := F₀.algebra
-  letI : Algebra.IsSeparable F₀ M := hsep
+  let _ : Algebra P F₀ := F₀.algebra
+  let _ : Algebra.IsSeparable F₀ M := hsep
   let kToM : k →+* M := (algebraMap P M).comp (algebraMap k P)
-  letI : Algebra k M := RingHom.toAlgebra kToM
+  let _ : Algebra k M := RingHom.toAlgebra kToM
   let zM : K → M := fun a =>
     ⟨algebraMap K Q a, hM.symm ▸ IntermediateField.subset_adjoin P _ ⟨a, rfl⟩⟩
   let c : Finset F₀ := sK.biUnion fun a =>
@@ -1727,14 +1727,14 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
   subst base
   let B := finitePthRootFieldAtLevel tower.base
   let T := finitePthRootTopAtLevel tower
-  letI : Algebra B T := finitePthRootBaseAlgebraAtLevel tower
-  letI : IsScalarTower k B T := finitePthRootBaseTowerAtLevel tower
+  let _ : Algebra B T := finitePthRootBaseAlgebraAtLevel tower
+  let _ : IsScalarTower k B T := finitePthRootBaseTowerAtLevel tower
   let xT : u → T := fun z =>
     ⟨(uQ (z : M) : Q), htop (uQ (z : M))
       (Finset.mem_image.mpr ⟨z, z.property, rfl⟩)⟩
   let U : IntermediateField B T :=
     IntermediateField.adjoin B (range xT)
-  letI : Algebra B U := U.algebra
+  let _ : Algebra B U := U.algebra
   let D : IntermediateField k M :=
     IntermediateField.adjoin k
       (range xM ∪ range fun b : sP => algebraMap P M (b : P))
@@ -1770,9 +1770,9 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
     (finitePthRootTopAtLevel tower).val.toRingHom.comp U.val.toRingHom
   let pToAC : P →+* AlgebraicClosure K :=
     mToAC.comp (algebraMap P M)
-  letI : Algebra P (AlgebraicClosure K) := RingHom.toAlgebra pToAC
-  letI : Algebra F₀ (AlgebraicClosure K) := RingHom.toAlgebra fToAC
-  letI : Algebra U (AlgebraicClosure K) := RingHom.toAlgebra uToAC
+  let _ : Algebra P (AlgebraicClosure K) := RingHom.toAlgebra pToAC
+  let _ : Algebra F₀ (AlgebraicClosure K) := RingHom.toAlgebra fToAC
+  let _ : Algebra U (AlgebraicClosure K) := RingHom.toAlgebra uToAC
   let mToACAlg : M →ₐ[F₀] AlgebraicClosure K :=
     { toRingHom := mToAC
       commutes' := fun r => rfl }
@@ -1818,8 +1818,8 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
     exact isSeparable_algebraMap _
   let V : IntermediateField U (AlgebraicClosure K) :=
     IntermediateField.adjoin U (range (algebraMap K (AlgebraicClosure K)))
-  letI : Algebra U V := V.algebra
-  letI : Algebra.IsSeparable U V :=
+  let _ : Algebra U V := V.algebra
+  let _ : Algebra.IsSeparable U V :=
     (IntermediateField.isSeparable_adjoin_iff_isSeparable
       U (AlgebraicClosure K)).2 (by
       rintro _ ⟨a, rfl⟩
@@ -1847,23 +1847,23 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
     · exact htop_le t.property
   let tToV : T →+* V := RingHom.codRestrict
     (finitePthRootTopAtLevel tower).val V hTV
-  letI : Algebra T V := RingHom.toAlgebra tToV
+  let _ : Algebra T V := RingHom.toAlgebra tToV
   let tToVAlg : T →ₐ[U] V :=
     { toRingHom := tToV
       commutes' := fun _ => rfl }
-  haveI : Algebra.IsSeparable U T :=
+  have _ : Algebra.IsSeparable U T :=
     Algebra.IsSeparable.of_algHom U V tToVAlg
   have hxAI : AlgebraicIndependent B xT := by
     let mToACAlg : M →ₐ[P] AlgebraicClosure K :=
       { toRingHom := mToAC
         commutes' := fun r => rfl }
     let bToP : B →+* P := RingHom.codRestrict B.val P (fun b => by
-      letI : IsPurelyInseparable k B := tower.base.purely_inseparable
+      let _ : IsPurelyInseparable k B := tower.base.purely_inseparable
       exact le_perfectClosure k (AlgebraicClosure k) B b.property)
-    letI : Algebra B P := RingHom.toAlgebra bToP
+    let _ : Algebra B P := RingHom.toAlgebra bToP
     let bToAC : B →+* AlgebraicClosure K := pToAC.comp bToP
-    letI : Algebra B (AlgebraicClosure K) := RingHom.toAlgebra bToAC
-    letI : IsScalarTower B P (AlgebraicClosure K) := by
+    let _ : Algebra B (AlgebraicClosure K) := RingHom.toAlgebra bToAC
+    let _ : IsScalarTower B P (AlgebraicClosure K) := by
       apply IsScalarTower.of_algebraMap_eq'
       ext b
       rfl

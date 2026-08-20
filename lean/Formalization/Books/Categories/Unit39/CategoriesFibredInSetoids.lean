@@ -830,7 +830,20 @@ theorem fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable
   /- Proof plan: unpack `h` as a representable-presheaf isomorphism, lift it
   to an equivalence of Grothendieck constructions, and compose it with the
   chosen equivalence from `p` and the representable slice comparison. -/
-  sorry
+  rcases (Formalization.Books.Categories.Unit03.isRepresentable_iff_exists_yoneda_iso
+    (fibredSetoidObjectPresheaf p hp)).mp h with ⟨X, ⟨e⟩⟩
+  have hF : IsFibredEquivalenceOver p
+      (setPresheafProjection (fibredSetoidObjectPresheaf p hp)) :=
+    fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf p hp
+  have hFG : IsFibredEquivalenceOver
+      (setPresheafProjection (fibredSetoidObjectPresheaf p hp))
+      (setPresheafProjection (representablePresheaf X)) :=
+    setPresheafProjection_isFibredEquivalenceOver_of_iso e
+  have hGX : IsFibredEquivalenceOver
+      (setPresheafProjection (representablePresheaf X)) (Over.forget X) :=
+    isFibredEquivalenceOver_symm (representable_presheaf_slice_equivalence X)
+  exact ⟨X, isFibredEquivalenceOver_trans hF
+    (isFibredEquivalenceOver_trans hFG hGX)⟩
 
 theorem fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
     {S : Type uS} [Category.{vS} S]
@@ -871,7 +884,8 @@ theorem fibredSetoids_equivalent_to_fibredInSets
   /- Proof plan: take `fibredSetoidObjectPresheaf p hp` and return the
   equivalence recorded by
   `fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf`. -/
-  sorry
+  exact ⟨fibredSetoidObjectPresheaf p hp,
+    fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf p hp⟩
 
 /- The source packages the preceding construction as a functor from the
    fixed-base 2-category to the ordinary category of fibred-in-sets objects. -/

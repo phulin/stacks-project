@@ -66,7 +66,36 @@ theorem quasiFiniteAt_iff_relativeDimensionAt_eq_zero
     (hq : PrimeSpectrum.comap f q = p) :
     Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q ↔
       relativeDimensionAt f hfinite p q hq = 0 := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.FiniteType R S := hfinite
+  have hp : PrimeSpectrum.comap (algebraMap R S) q = p := by
+    simpa [RingHom.algebraMap_toAlgebra] using hq
+  cases hp
+  let e := PrimeSpectrum.preimageHomeomorphFiber R S
+    (PrimeSpectrum.comap (algebraMap R S) q)
+  let x : PrimeSpectrum.comap (algebraMap R S) ⁻¹'
+      {PrimeSpectrum.comap (algebraMap R S) q} :=
+    ⟨q, rfl⟩
+  have hx : e x = Formalization.Books.Algebra.Unit112.tensorFibrePrime f
+      (PrimeSpectrum.comap (algebraMap R S) q) q hq := by
+    rfl
+  have ht := Formalization.Books.Algebra.Unit122.isolated_point_fibre_criteria f
+    (PrimeSpectrum.comap (algebraMap R S) q) q hq hfinite
+  have hqf := Algebra.quasiFiniteAt_iff_isOpen_singleton_fiber (R := R) q
+  have hqf' : Algebra.QuasiFiniteAt R q.asIdeal ↔ IsOpen ({x} : Set _) := by
+    convert hqf using 1
+  have hdim : IsOpen ({x} : Set _) ↔
+      relativeDimensionAt f hfinite (PrimeSpectrum.comap (algebraMap R S) q) q hq = 0 := by
+    rw [← e.isOpen_image, Set.image_singleton]
+    change Formalization.Books.Topology.Unit26.IsolatedPoint (e x) ↔ _
+    rw [hx]
+    simpa [relativeDimensionAt] using ht.out 0 3
+  change (RingHom.FiniteType f ∧ Algebra.QuasiFiniteAt R q.asIdeal) ↔ _
+  constructor
+  · intro h
+    exact hdim.mp (hqf'.mp h.2)
+  · intro h
+    exact ⟨hfinite, hqf'.mpr (hdim.mpr h)⟩
 
 /-! ### Quasi-finite polynomial covers -/
 
@@ -128,7 +157,47 @@ theorem ringKrullDim_localization_le_of_quasiFiniteAt
     (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q) :
     ringKrullDim (Localization.AtPrime q.asIdeal) ≤
       ringKrullDim (Localization.AtPrime p.asIdeal) := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  rcases hquasi with ⟨hfinite, hqf⟩
+  let _ : Algebra.QuasiFiniteAt R q.asIdeal := hqf
+  have hqp : q.asIdeal.comap f = p.asIdeal := by
+    simpa [PrimeSpectrum.comap_asIdeal] using congrArg PrimeSpectrum.asIdeal hq
+  let F : Set.Iic q → Set.Iic p := fun r =>
+    ⟨PrimeSpectrum.comap f r.1, by
+      apply (PrimeSpectrum.asIdeal_le_asIdeal _ _).mp
+      change r.1.asIdeal.comap f ≤ p.asIdeal
+      calc
+        r.1.asIdeal.comap f ≤ q.asIdeal.comap f :=
+          Ideal.comap_mono ((PrimeSpectrum.asIdeal_le_asIdeal _ _).mpr r.2)
+        _ = p.asIdeal := hqp⟩
+  have hF : StrictMono F := by
+    intro a b hab
+    change PrimeSpectrum.comap f a.1 < PrimeSpectrum.comap f b.1
+    apply lt_of_le_of_ne
+    · exact (PrimeSpectrum.asIdeal_le_asIdeal _ _).mp
+        (Ideal.comap_mono ((PrimeSpectrum.asIdeal_le_asIdeal _ _).mpr hab.le))
+    · intro heq
+      have hbeq : b.1.asIdeal ≤ q.asIdeal :=
+        (PrimeSpectrum.asIdeal_le_asIdeal _ _).mpr b.2
+      let _ : Algebra.QuasiFiniteAt R b.1.asIdeal :=
+        Algebra.QuasiFiniteAt.of_le hbeq
+      have habideal : a.1.asIdeal ≤ b.1.asIdeal :=
+        (PrimeSpectrum.asIdeal_le_asIdeal _ _).mpr hab.le
+      have hunder : a.1.asIdeal.under R = b.1.asIdeal.under R := by
+        rw [Ideal.under_def, Ideal.under_def]
+        simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+          congrArg PrimeSpectrum.asIdeal heq
+      have hab' : a.1 = b.1 := by
+        apply PrimeSpectrum.ext
+        exact Algebra.QuasiFiniteAt.eq_of_le_of_under_eq habideal hunder
+      exact hab.ne (Subtype.ext hab')
+  rw [IsLocalization.AtPrime.ringKrullDim_eq_height
+      q.asIdeal (Localization.AtPrime q.asIdeal),
+    IsLocalization.AtPrime.ringKrullDim_eq_height
+      p.asIdeal (Localization.AtPrime p.asIdeal)]
+  rw [PrimeSpectrum.height_eq_orderHeight q, PrimeSpectrum.height_eq_orderHeight p]
+  rw [Order.height_eq_krullDim_Iic q, Order.height_eq_krullDim_Iic p]
+  exact Order.krullDim_le_of_strictMono F hF
 
 /-- A quasi-finite cover of affine `n`-space has Krull dimension at most `n`. -/
 theorem ringKrullDim_le_of_quasiFinite_polynomial

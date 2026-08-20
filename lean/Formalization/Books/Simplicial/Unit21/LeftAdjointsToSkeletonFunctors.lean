@@ -833,9 +833,9 @@ theorem leftAdjoint_normalizedObject_eq_zero
     (m : ℕ) (U : SimplicialObject.Truncated C m) (n : ℕ) (h : m < n) :
     IsZero (Unit18.normalizedObject ((leftAdjoint (C := C) m).obj U) n) := by
   classical
-  letI : HasLeftSkeletonFunctor C m :=
+  let : HasLeftSkeletonFunctor C m :=
     has_left_skeleton_functor_of_has_finite_colimits m
-  letI : (leftSkeletonInclusion m).HasLeftKanExtension U :=
+  let : (leftSkeletonInclusion m).HasLeftKanExtension U :=
     has_left_skeleton_functor_of_has_finite_colimits m U
   let X : SimplicialObject C := (leftSkeletonInclusion m).leftKanExtension U
   obtain ⟨s, hs⟩ := Unit18.abelian_category_has_normalized_splitting X
@@ -855,15 +855,15 @@ theorem leftAdjoint_normalizedObject_eq_zero
       let e : SimplexCategory := image p.unop
       let ep : ⦋n⦌ ⟶ e := factorThruImage p.unop
       let im : e ⟶ Δ.unop := image.ι p.unop
-      letI : Epi ep := by
+      let : Epi ep := by
         dsimp [ep]
         infer_instance
-      letI : Mono im := by
+      let : Mono im := by
         dsimp [im]
         infer_instance
       have hfac : p = im.op ≫ ep.op := by
         apply Quiver.Hom.unop_inj
-        simpa [ep, im] using (image.fac p.unop)
+        simp [ep, im]
       have helt : e.len < n := by
         have hle : e.len ≤ Δ.unop.len :=
           SimplexCategory.len_le_of_mono im
@@ -900,7 +900,7 @@ theorem leftAdjoint_normalizedObject_eq_zero
         (CostructuredArrow.proj (leftSkeletonInclusion m) (op ⦋n⦌) ⋙ U) := by
       simpa [leftSkeletonDiagram] using
         (has_left_skeleton_colimit_of_has_finite_colimits m n U)
-    letI := hcol
+    let := hcol
     let e : X.obj (op ⦋n⦌) ≅
         colimit (CostructuredArrow.proj (leftSkeletonInclusion m) (op ⦋n⦌) ⋙ U) :=
       Functor.leftKanExtensionObjIsoColimit (leftSkeletonInclusion m) U

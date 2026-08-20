@@ -193,23 +193,113 @@ is the identity; the `z_α` generate and satisfy the additive relation.
 theorem rationalGroupAlgebraBasisElementResidue_eq_one
     (k : Type u) [Field k] (α : ℚ) :
     rationalGroupAlgebraBasisElementResidue k α = 1 := by
-  sorry
+  change Ideal.Quotient.mk (rationalGroupAlgebraKernel k)
+    (rationalGroupAlgebraBasisElement k α) = 1
+  rw [show (1 : rationalGroupAlgebra k ⧸ rationalGroupAlgebraKernel k) =
+      Ideal.Quotient.mk (rationalGroupAlgebraKernel k) 1 by rfl,
+    Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+  exact rationalGroupAlgebra_basisElement_sub_one_mem_kernel k α
 
 theorem rationalGroupAlgebraBasisElementResidue_smul_cotangent
     (k : Type u) [Field k] (α : ℚ) (z : rationalGroupAlgebraCotangent k) :
     rationalGroupAlgebraBasisElementResidue k α • z = z := by
-  sorry
+  rw [rationalGroupAlgebraBasisElementResidue_eq_one]
+  exact one_smul _ z
 
 theorem rationalGroupAlgebraCotangentGenerator_add
     (k : Type u) [Field k] (α β : ℚ) :
     rationalGroupAlgebraCotangentGenerator k (α + β) =
       rationalGroupAlgebraCotangentGenerator k α +
         rationalGroupAlgebraCotangentGenerator k β := by
-  sorry
+  unfold rationalGroupAlgebraCotangentGenerator
+  rw [← LinearMap.map_add]
+  apply (Ideal.toCotangent_eq (rationalGroupAlgebraKernel k)).2
+  change (rationalGroupAlgebraBasisElement k (α + β) - 1) -
+      ((rationalGroupAlgebraBasisElement k α - 1) +
+        (rationalGroupAlgebraBasisElement k β - 1)) ∈
+    rationalGroupAlgebraKernel k ^ 2
+  have hmem :
+      (rationalGroupAlgebraBasisElement k (α + β) - 1) -
+          (rationalGroupAlgebraBasisElement k α - 1) -
+          (rationalGroupAlgebraBasisElement k β - 1) ∈
+        rationalGroupAlgebraKernel k ^ 2 := by
+    rw [← rationalGroupAlgebraBasisElement_sub_one_mul_sub_one]
+    rw [pow_two]
+    exact Ideal.mul_mem_mul
+      (rationalGroupAlgebra_basisElement_sub_one_mem_kernel k α)
+      (rationalGroupAlgebra_basisElement_sub_one_mem_kernel k β)
+  convert hmem using 1 <;> abel
+
+private theorem rationalGroupAlgebra_smul_cotangent_eq_augmentation_smul
+    (k : Type u) [Field k] (a : rationalGroupAlgebra k)
+    (z : rationalGroupAlgebraCotangent k) :
+    a • z = rationalGroupAlgebraAugmentation k a • z := by
+  induction a using AddMonoidAlgebra.induction_on with
+  | of α =>
+      change rationalGroupAlgebraBasisElementResidue k α • z =
+        rationalGroupAlgebraAugmentation k
+            (rationalGroupAlgebraBasisElement k α) • z
+      rw [rationalGroupAlgebraBasisElementResidue_eq_one,
+        rationalGroupAlgebraAugmentation_basisElement]
+      simp
+  | add a b ha hb =>
+      rw [add_smul, map_add, add_smul, ha, hb]
+  | smul c a ha =>
+      rw [Algebra.smul_def c a]
+      rw [map_mul, (rationalGroupAlgebraAugmentation k).commutes,
+        mul_smul, ha]
+      change (algebraMap k (rationalGroupAlgebra k) c) •
+          (rationalGroupAlgebraAugmentation k a • z) =
+        (c * rationalGroupAlgebraAugmentation k a) • z
+      rw [IsScalarTower.algebraMap_smul]
+      simpa [Algebra.smul_def] using
+        (smul_assoc c (rationalGroupAlgebraAugmentation k a) z).symm
 
 theorem rationalGroupAlgebraCotangent_span_generators (k : Type u) [Field k] :
     Submodule.span k (Set.range (rationalGroupAlgebraCotangentGenerator k)) = ⊤ := by
-  sorry
+  let P : Submodule k (rationalGroupAlgebraCotangent k) :=
+    Submodule.span k (Set.range (rationalGroupAlgebraCotangentGenerator k))
+  have hspan_le :
+      Ideal.span (rationalGroupAlgebraKernelGenerators k) ≤
+        rationalGroupAlgebraKernel k := by
+    rw [rationalGroupAlgebraKernel_eq_span_generators]
+  apply top_unique
+  intro z hz
+  obtain ⟨x, rfl⟩ := Ideal.toCotangent_surjective
+    (rationalGroupAlgebraKernel k) z
+  have hx : (x : rationalGroupAlgebra k) ∈
+      Ideal.span (rationalGroupAlgebraKernelGenerators k) := by
+    simpa only [rationalGroupAlgebraKernel_eq_span_generators] using x.property
+  refine Submodule.span_induction
+    (p := fun y hy =>
+      Ideal.toCotangent (rationalGroupAlgebraKernel k)
+          ⟨y, hspan_le hy⟩ ∈ P)
+    ?_ ?_ ?_ ?_ hx
+  · rintro y ⟨α, rfl⟩
+    exact Submodule.subset_span ⟨α, rfl⟩
+  · have hzero :
+        (⟨0, hspan_le (Submodule.zero_mem _)⟩ : rationalGroupAlgebraKernel k) = 0 := by
+      rfl
+    rw [hzero, map_zero]
+    exact P.zero_mem
+  · intro y₁ y₂ hy₁ hy₂ ih₁ ih₂
+    have hsub :
+        (⟨y₁ + y₂, hspan_le (Submodule.add_mem _ hy₁ hy₂)⟩ :
+          rationalGroupAlgebraKernel k) =
+          (⟨y₁, hspan_le hy₁⟩ : rationalGroupAlgebraKernel k) +
+            ⟨y₂, hspan_le hy₂⟩ := by
+      rfl
+    rw [hsub, map_add]
+    exact P.add_mem ih₁ ih₂
+  · intro a y hy ih
+    have hsub :
+        (⟨a • y, hspan_le (Submodule.smul_mem _ a hy)⟩ :
+          rationalGroupAlgebraKernel k) =
+          a • (⟨y, hspan_le hy⟩ : rationalGroupAlgebraKernel k) := by
+      rfl
+    rw [hsub, map_smul,
+      rationalGroupAlgebra_smul_cotangent_eq_augmentation_smul]
+    exact P.smul_mem _ ih
 
 /-- Every cotangent vector is a finite `k`-linear combination of the `z_α`. -/
 theorem rationalGroupAlgebraCotangent_exists_finite_linear_combination

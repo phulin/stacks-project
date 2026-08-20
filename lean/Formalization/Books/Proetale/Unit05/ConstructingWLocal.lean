@@ -713,12 +713,20 @@ theorem stratum_eq_basicOpen_inter_zeroLocus
 theorem stratum_isConstructible
     {A : Type u} [CommRing A] {E : Finset A}
     (p : StratumPartition E) : IsConstructible (stratum p) := by
-  sorry
+  rw [stratum_eq_basicOpen_inter_zeroLocus]
+  exact Topology.IsConstructible.inter
+    (PrimeSpectrum.isConstructible_basicOpen (R := A)) (by
+      rw [← Topology.isConstructible_compl]
+      exact (PrimeSpectrum.isRetrocompact_zeroLocus_compl_of_fg
+        (Submodule.fg_span p.vanishing.finite_toSet)).isConstructible
+        (PrimeSpectrum.isClosed_zeroLocus _).isOpen_compl)
 
 theorem stratum_isLocallyClosed
     {A : Type u} [CommRing A] {E : Finset A}
     (p : StratumPartition E) : IsLocallyClosed (stratum p) := by
-  sorry
+  rw [stratum_eq_basicOpen_inter_zeroLocus]
+  exact (PrimeSpectrum.basicOpen (p.nonvanishing.prod id)).isOpen.isLocallyClosed.inter
+    (PrimeSpectrum.isClosed_zeroLocus _).isLocallyClosed
 
 /-- The vanishing-pattern strata are pairwise disjoint and cover the spectrum. -/
 theorem strata_pairwise_disjoint_and_cover
@@ -726,7 +734,74 @@ theorem strata_pairwise_disjoint_and_cover
     (Pairwise (fun p q : StratumPartition E =>
         Disjoint (stratum p) (stratum q))) ∧
       (⋃ p : StratumPartition E, stratum p) = Set.univ := by
-  sorry
+  constructor
+  · intro p q hpq
+    rw [Set.disjoint_left]
+    intro x hxp hxq
+    have hp := (mem_stratum_iff_vanishing_pattern p x).mp hxp
+    have hq := (mem_stratum_iff_vanishing_pattern q x).mp hxq
+    have hpnv : p.nonvanishing = q.nonvanishing := by
+      ext f
+      constructor
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← p.union_eq]
+          exact Finset.mem_union.mpr (Or.inl hf)
+        have hqcases := Finset.mem_union.mp (q.union_eq ▸ hfE)
+        rcases hqcases with hqf | hqf
+        · exact hqf
+        · exact False.elim ((hp.1 f hf) (hq.2 f hqf))
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← q.union_eq]
+          exact Finset.mem_union.mpr (Or.inl hf)
+        have hpcases := Finset.mem_union.mp (p.union_eq ▸ hfE)
+        rcases hpcases with hpf | hpf
+        · exact hpf
+        · exact False.elim ((hq.1 f hf) (hp.2 f hpf))
+    have hpv : p.vanishing = q.vanishing := by
+      ext f
+      constructor
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← p.union_eq]
+          exact Finset.mem_union.mpr (Or.inr hf)
+        have hqcases := Finset.mem_union.mp (q.union_eq ▸ hfE)
+        rcases hqcases with hqf | hqf
+        · exact False.elim ((hq.1 f hqf) (hp.2 f hf))
+        · exact hqf
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← q.union_eq]
+          exact Finset.mem_union.mpr (Or.inr hf)
+        have hpcases := Finset.mem_union.mp (p.union_eq ▸ hfE)
+        rcases hpcases with hpf | hpf
+        · exact False.elim ((hp.1 f hpf) (hq.2 f hf))
+        · exact hpf
+    apply hpq
+    cases p with
+    | mk pnv pv hdisj hunion =>
+      cases q with
+      | mk qnv qv hdisj' hunion' =>
+        simp_all only [hpnv, hpv]
+  · ext x
+    constructor
+    · intro _
+      trivial
+    · intro _
+      let p : StratumPartition E :=
+        { nonvanishing := E.filter (fun f => f ∉ x.asIdeal)
+          vanishing := E.filter (fun f => f ∈ x.asIdeal)
+          disjoint := by
+            rw [Finset.disjoint_left]
+            intro f hnv hv
+            exact (Finset.mem_filter.mp hnv).2 (Finset.mem_filter.mp hv).2
+          union_eq := by
+            ext f
+            by_cases hf : f ∈ x.asIdeal <;> simp [hf] }
+      exact Set.mem_iUnion.mpr ⟨p, (mem_stratum_iff_vanishing_pattern p x).mpr
+        ⟨fun f hf => (Finset.mem_filter.mp hf).2,
+          fun f hf => (Finset.mem_filter.mp hf).2⟩⟩
 
 /-- A finite constructible stratification. -/
 structure FiniteConstructibleStratification (X : Type u)
@@ -794,7 +869,71 @@ localized spectra. -/
 theorem exists_stageSpectrumEquiv
     {A : Type u} [CommRing A] (E : Finset A) :
     Nonempty (stageSpectrum E ≃ₜ PrimeSpectrum (stageRing E)) := by
-  sorry
+  letI : Finite (StratumPartition E) := by
+    let encode : StratumPartition E → Set E := fun p =>
+      {a | a.1 ∈ p.nonvanishing}
+    apply Finite.of_injective encode
+    intro p q hpq
+    have hnv : p.nonvanishing = q.nonvanishing := by
+      ext f
+      constructor
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← p.union_eq]
+          exact Finset.mem_union.mpr (Or.inl hf)
+        have hf' : (⟨f, hfE⟩ : E) ∈ encode p := by
+          exact hf
+        rw [hpq] at hf'
+        exact hf'
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← q.union_eq]
+          exact Finset.mem_union.mpr (Or.inl hf)
+        have hf' : (⟨f, hfE⟩ : E) ∈ encode q := by
+          exact hf
+        rw [← hpq] at hf'
+        exact hf'
+    have hpv : p.vanishing = q.vanishing := by
+      ext f
+      constructor
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← p.union_eq]
+          exact Finset.mem_union.mpr (Or.inr hf)
+        have hnot : f ∉ q.nonvanishing := by
+          intro hqf
+          have hpf : f ∈ p.nonvanishing := by
+            rw [hnv]
+            exact hqf
+          exact (Finset.disjoint_left.mp p.disjoint) hpf hf
+        have hqcases := Finset.mem_union.mp (q.union_eq ▸ hfE)
+        rcases hqcases with hqf | hqf
+        · exact False.elim (hnot hqf)
+        · exact hqf
+      · intro hf
+        have hfE : f ∈ E := by
+          rw [← q.union_eq]
+          exact Finset.mem_union.mpr (Or.inr hf)
+        have hnot : f ∉ p.nonvanishing := by
+          intro hpf
+          have hqf : f ∈ q.nonvanishing := by
+            rw [← hnv]
+            exact hpf
+          exact (Finset.disjoint_left.mp q.disjoint) hqf hf
+        have hpcases := Finset.mem_union.mp (p.union_eq ▸ hfE)
+        rcases hpcases with hpf | hpf
+        · exact False.elim (hnot hpf)
+        · exact hpf
+    cases p with
+    | mk pnv pv hdisj hunion =>
+      cases q with
+      | mk qnv qv hdisj' hunion' =>
+        simp_all only [hnv, hpv]
+  let e : stageRing E ≃+* (∀ p : StratumPartition E, stratumFactor p) :=
+    (Pi.isoLimit (stratumFactorDiagram E)).symm.commRingCatIsoToRingEquiv.trans
+      (RingEquiv.piEquivPi (fun p : StratumPartition E => stratumFactor p))
+  exact ⟨(PrimeSpectrum.sigmaToPiHomeo (fun p : StratumPartition E => stratumFactor p)).trans
+    (PrimeSpectrum.homeomorphOfRingEquiv e).symm⟩
 
 noncomputable def stageSpectrumEquiv
     {A : Type u} [CommRing A] (E : Finset A) :
@@ -825,7 +964,18 @@ def stageClosedLocusOnSpectrum {A : Type u} [CommRing A] (E : Finset A) :
 theorem stageClosedLocus_isClosed
     {A : Type u} [CommRing A] (E : Finset A) :
     IsClosed (stageClosedLocusOnSpectrum E) := by
-  sorry
+  apply (stageSpectrumEquiv E).isClosed_image.mpr
+  change IsClosed
+    ({x : Σ p : StratumPartition E, PrimeSpectrum (stratumFactor p) |
+      x.2 ∈ localizedPieceSpectrumMap (stratumPiece x.1) ⁻¹'
+        (stratumPiece x.1).carrier} :
+      Set (Σ p : StratumPartition E, PrimeSpectrum (stratumFactor p)))
+  rw [isClosed_sigma_iff]
+  intro p
+  change IsClosed
+    (localizedPieceSpectrumMap (stratumPiece p) ⁻¹'
+      (stratumPiece p).carrier)
+  exact (localization_piece_properties (stratumPiece p)).choose_spec.2
 
 theorem stageClosedLocus_has_closed_subscheme
     {A : Type u} [CommRing A] (E : Finset A) :

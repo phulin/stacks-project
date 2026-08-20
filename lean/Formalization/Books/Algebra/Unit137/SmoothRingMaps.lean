@@ -421,6 +421,12 @@ theorem relative_global_complete_intersection_jacobian_criterion
     {n c : ℕ} (P : Formalization.Books.Algebra.Unit134.Presentation
       R S (Fin n)) (fs : Fin c → P.Ring)
     (hker : P.ker = Ideal.ofList (List.ofFn fs))
+    (hdim : ∀ p : PrimeSpectrum R,
+      Nonempty (PrimeSpectrum
+        (Formalization.Books.Algebra.Unit136.Fiber R S p)) →
+        c ≤ n ∧
+          ringKrullDim (Formalization.Books.Algebra.Unit136.Fiber R S p) =
+            (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞))
     (q : PrimeSpectrum S) :
     IsSmoothAt R S q ↔
       ∃ e : Fin c ↪ Fin n,

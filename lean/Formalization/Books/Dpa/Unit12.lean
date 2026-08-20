@@ -1,0 +1,1 @@
+import Formalization.Books.Dpa.Unit12.KoszulComplexesAndTateResolutions

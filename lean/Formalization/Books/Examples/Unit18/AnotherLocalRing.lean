@@ -1185,24 +1185,574 @@ theorem a_is_complete :
 theorem a_quotient_is_fiberProduct :
     Nonempty ((aRing k p ⧸ aXYIdeal k p) ≃+*
       ↥(RingHom.pullback (badDvrConstantCoeff k p) (badDvrConstantCoeff k p))) := by
-  sorry
+  let e : Unit ↪ Fin 2 := ⟨fun _ => 0, by intro x y h; simp⟩
+  let r : TwoVariablePowerSeries k →+* PowerSeries k :=
+    (MvPowerSeries.killCompl e).toRingHom
+  have hr (z : aRing k p) : OneVariableFiniteDegree k p
+      (r (z : TwoVariablePowerSeries k)) := by
+    rcases (aCondition_iff_diagonalBlocks k p
+      (z : TwoVariablePowerSeries k)).1 z.property 0 with ⟨F, hF, hFfin⟩
+    refine ⟨F, ?_, hFfin⟩
+    rintro a ⟨i, rfl⟩
+    change PowerSeries.coeff i (r (z : TwoVariablePowerSeries k)) ∈ F
+    change MvPowerSeries.coeff (Finsupp.single () i)
+      ((MvPowerSeries.killCompl e) (z : TwoVariablePowerSeries k)) ∈ F
+    rw [MvPowerSeries.coeff_killCompl]
+    have he : Finsupp.embDomain e (Finsupp.single () i) =
+        Finsupp.single (0 : Fin 2) i := by
+      ext j
+      have he0 : e () = (0 : Fin 2) := rfl
+      fin_cases j <;> simp [he0, Finsupp.single_apply]
+    rw [he]
+    apply hF
+    left
+    refine ⟨i, ?_⟩
+    simp [diagonalBlock_spec_left, coefficientXY]
+  let e' : Unit ↪ Fin 2 := ⟨fun _ => 1, by intro x y h; simp⟩
+  let r' : TwoVariablePowerSeries k →+* PowerSeries k :=
+    (MvPowerSeries.killCompl e').toRingHom
+  have hr' (z : aRing k p) : OneVariableFiniteDegree k p
+      (r' (z : TwoVariablePowerSeries k)) := by
+    rcases (aCondition_iff_diagonalBlocks k p
+      (z : TwoVariablePowerSeries k)).1 z.property 0 with ⟨F, hF, hFfin⟩
+    refine ⟨F, ?_, hFfin⟩
+    rintro a ⟨i, rfl⟩
+    change PowerSeries.coeff i (r' (z : TwoVariablePowerSeries k)) ∈ F
+    change MvPowerSeries.coeff (Finsupp.single () i)
+      ((MvPowerSeries.killCompl e') (z : TwoVariablePowerSeries k)) ∈ F
+    rw [MvPowerSeries.coeff_killCompl]
+    have he : Finsupp.embDomain e' (Finsupp.single () i) =
+        Finsupp.single (1 : Fin 2) i := by
+      ext j
+      have he1 : e' () = (1 : Fin 2) := rfl
+      fin_cases j <;> simp [he1, Finsupp.single_apply]
+    rw [he]
+    apply hF
+    right
+    refine ⟨i, ?_⟩
+    simp [diagonalBlock_spec_right, coefficientXY]
+
+  let x : PowerSeries k →ₐ[k] TwoVariablePowerSeries k :=
+    MvPowerSeries.rename e
+  let y : PowerSeries k →ₐ[k] TwoVariablePowerSeries k :=
+    MvPowerSeries.rename e'
+  have hx (f : PowerSeries k) (hf : OneVariableFiniteDegree k p f) :
+      ACondition k p (x f) := by
+    unfold ACondition
+    intro n
+    rcases hf with ⟨F, hF, hFfin⟩
+    refine ⟨F, ?_, hFfin⟩
+    rintro a ⟨d, hd, rfl⟩
+    change MvPowerSeries.coeff d (x f) ∈ F
+    by_cases hd1 : d 1 = 0
+    · have heq : d = Finsupp.embDomain e (Finsupp.single () (d 0)) := by
+        ext j
+        have he0 : e () = (0 : Fin 2) := rfl
+        fin_cases j <;> simp [hd1, he0, Finsupp.single_apply]
+      rw [heq]
+      change MvPowerSeries.coeff
+        (Finsupp.embDomain e (Finsupp.single () (d 0)))
+        (MvPowerSeries.rename e f) ∈ F
+      rw [MvPowerSeries.coeff_embDomain_rename]
+      exact hF ⟨d 0, rfl⟩
+    · have hnot : d ∉ Set.range (Finsupp.mapDomain e) := by
+        rintro ⟨q, rfl⟩
+        apply hd1
+        have h1 : (1 : Fin 2) ∉ Set.range e := by
+          rintro ⟨u, hu⟩
+          cases u
+          change (0 : Fin 2) = 1 at hu
+          exact Fin.zero_ne_one hu
+        exact Finsupp.mapDomain_of_notMem_range q 1 h1
+      change MvPowerSeries.coeff d (MvPowerSeries.rename e f) ∈ F
+      rw [MvPowerSeries.coeff_rename_eq_zero e f hnot]
+      exact (F : IntermediateField (pPowerSubfield k p) k).zero_mem
+  have hy (f : PowerSeries k) (hf : OneVariableFiniteDegree k p f) :
+      ACondition k p (y f) := by
+    unfold ACondition
+    intro n
+    rcases hf with ⟨F, hF, hFfin⟩
+    refine ⟨F, ?_, hFfin⟩
+    rintro a ⟨d, hd, rfl⟩
+    change MvPowerSeries.coeff d (y f) ∈ F
+    by_cases hd0 : d 0 = 0
+    · have heq : d = Finsupp.embDomain e' (Finsupp.single () (d 1)) := by
+        ext j
+        have he1 : e' () = (1 : Fin 2) := rfl
+        fin_cases j <;> simp [hd0, he1, Finsupp.single_apply]
+      rw [heq]
+      change MvPowerSeries.coeff
+        (Finsupp.embDomain e' (Finsupp.single () (d 1)))
+        (MvPowerSeries.rename e' f) ∈ F
+      rw [MvPowerSeries.coeff_embDomain_rename]
+      exact hF ⟨d 1, rfl⟩
+    · have hnot : d ∉ Set.range (Finsupp.mapDomain e') := by
+        rintro ⟨q, rfl⟩
+        apply hd0
+        have h0 : (0 : Fin 2) ∉ Set.range e' := by
+          rintro ⟨u, hu⟩
+          cases u
+          change (1 : Fin 2) = 0 at hu
+          exact Fin.zero_ne_one hu.symm
+        exact Finsupp.mapDomain_of_notMem_range q 0 h0
+      change MvPowerSeries.coeff d (MvPowerSeries.rename e' f) ∈ F
+      rw [MvPowerSeries.coeff_rename_eq_zero e' f hnot]
+      exact (F : IntermediateField (pPowerSubfield k p) k).zero_mem
+
+  let xMap : aRing k p →+* badDvrRing k p :=
+    (r.comp (aSubring k p).subtype).codRestrict
+      (badDvrSubring k p) (fun z => hr z)
+  let yMap : aRing k p →+* badDvrRing k p :=
+    (r'.comp (aSubring k p).subtype).codRestrict
+      (badDvrSubring k p) (fun z => hr' z)
+  have hconst (z : aRing k p) :
+      badDvrConstantCoeff k p (xMap z) = badDvrConstantCoeff k p (yMap z) := by
+    change PowerSeries.constantCoeff (r (z : TwoVariablePowerSeries k)) =
+      PowerSeries.constantCoeff (r' (z : TwoVariablePowerSeries k))
+    change MvPowerSeries.coeff 0
+        ((MvPowerSeries.killCompl e) (z : TwoVariablePowerSeries k)) =
+      MvPowerSeries.coeff 0
+        ((MvPowerSeries.killCompl e') (z : TwoVariablePowerSeries k))
+    rw [MvPowerSeries.coeff_killCompl, MvPowerSeries.coeff_killCompl]
+    rfl
+  let phi : aRing k p →+*
+      RingHom.pullback (badDvrConstantCoeff k p) (badDvrConstantCoeff k p) :=
+    (xMap.prod yMap).codRestrict _ hconst
+
+  have hconstSeries (c : badDvrRing k p) :
+      OneVariableFiniteDegree k p (PowerSeries.C (PowerSeries.constantCoeff c)) := by
+    rcases c.property with ⟨F, hF, hFfin⟩
+    refine ⟨F, ?_, hFfin⟩
+    rintro a ⟨i, rfl⟩
+    by_cases hi : i = 0
+    · subst i
+      simpa using hF ⟨0, rfl⟩
+    · simp [PowerSeries.coeff_C, hi, F.zero_mem]
+
+  have hxx (f : PowerSeries k) : r (x f) = f := by
+    change MvPowerSeries.killCompl e (MvPowerSeries.rename e f) = f
+    exact MvPowerSeries.killCompl_rename_app (e := e) f
+  have hyy (f : PowerSeries k) : r' (y f) = f := by
+    change MvPowerSeries.killCompl e' (MvPowerSeries.rename e' f) = f
+    exact MvPowerSeries.killCompl_rename_app (e := e') f
+  have hxy (f : PowerSeries k) :
+      r (y f) = PowerSeries.C (PowerSeries.constantCoeff f) := by
+    ext i
+    change PowerSeries.coeff i
+        (MvPowerSeries.killCompl e (MvPowerSeries.rename e' f)) =
+      PowerSeries.coeff i (PowerSeries.C (PowerSeries.constantCoeff f))
+    by_cases hi : i = 0
+    · subst i
+      change MvPowerSeries.coeff (Finsupp.single () 0)
+          (MvPowerSeries.killCompl e (MvPowerSeries.rename e' f)) = _
+      rw [MvPowerSeries.coeff_killCompl]
+      have heq : Finsupp.embDomain e (Finsupp.single () 0) = 0 := by
+        ext j
+        fin_cases j
+        · simp [e]
+        · simp [e]
+      rw [heq]
+      simp [PowerSeries.coeff_zero_eq_constantCoeff_apply]
+      rfl
+    · have heq : Finsupp.embDomain e (Finsupp.single () i) =
+          Finsupp.single (0 : Fin 2) i := by
+        ext j
+        have he0 : e () = (0 : Fin 2) := rfl
+        fin_cases j <;> simp [hi, he0, Finsupp.single_apply]
+      change MvPowerSeries.coeff (Finsupp.single () i)
+          (MvPowerSeries.killCompl e (MvPowerSeries.rename e' f)) = _
+      rw [MvPowerSeries.coeff_killCompl, heq]
+      have hnot : Finsupp.single (0 : Fin 2) i ∉
+          Set.range (Finsupp.mapDomain e') := by
+        rintro ⟨q, hq⟩
+        have h0 : (0 : Fin 2) ∉ Set.range e' := by
+          rintro ⟨u, hu⟩
+          cases u
+          change (1 : Fin 2) = 0 at hu
+          exact Fin.zero_ne_one hu.symm
+        have := Finsupp.mapDomain_of_notMem_range q 0 h0
+        have hcoord := this
+        rw [hq] at hcoord
+        simpa [Finsupp.single_apply, hi] using hcoord
+      rw [MvPowerSeries.coeff_rename_eq_zero e' f hnot]
+      simp [PowerSeries.coeff_C, hi]
+  have hyx (f : PowerSeries k) :
+      r' (x f) = PowerSeries.C (PowerSeries.constantCoeff f) := by
+    ext i
+    change PowerSeries.coeff i
+        (MvPowerSeries.killCompl e' (MvPowerSeries.rename e f)) =
+      PowerSeries.coeff i (PowerSeries.C (PowerSeries.constantCoeff f))
+    by_cases hi : i = 0
+    · subst i
+      change MvPowerSeries.coeff (Finsupp.single () 0)
+          (MvPowerSeries.killCompl e' (MvPowerSeries.rename e f)) = _
+      rw [MvPowerSeries.coeff_killCompl]
+      have heq : Finsupp.embDomain e' (Finsupp.single () 0) = 0 := by
+        ext j
+        fin_cases j
+        · simp [e']
+        · simp [e']
+      rw [heq]
+      simp [PowerSeries.coeff_zero_eq_constantCoeff_apply]
+      rfl
+    · have heq : Finsupp.embDomain e' (Finsupp.single () i) =
+          Finsupp.single (1 : Fin 2) i := by
+        ext j
+        have he1 : e' () = (1 : Fin 2) := rfl
+        fin_cases j <;> simp [hi, he1, Finsupp.single_apply]
+      change MvPowerSeries.coeff (Finsupp.single () i)
+          (MvPowerSeries.killCompl e' (MvPowerSeries.rename e f)) = _
+      rw [MvPowerSeries.coeff_killCompl, heq]
+      have hnot : Finsupp.single (1 : Fin 2) i ∉
+          Set.range (Finsupp.mapDomain e) := by
+        rintro ⟨q, hq⟩
+        have h1 : (1 : Fin 2) ∉ Set.range e := by
+          rintro ⟨u, hu⟩
+          cases u
+          change (0 : Fin 2) = 1 at hu
+          exact Fin.zero_ne_one hu
+        have := Finsupp.mapDomain_of_notMem_range q 1 h1
+        have hcoord := this
+        rw [hq] at hcoord
+        simpa [Finsupp.single_apply, hi] using hcoord
+      rw [MvPowerSeries.coeff_rename_eq_zero e f hnot]
+      simp [PowerSeries.coeff_C, hi]
+
+  have hsurj : Function.Surjective phi := by
+    intro w
+    let c : PowerSeries k := w.1.1
+    let d : PowerSeries k := w.1.2
+    let t : k := PowerSeries.constantCoeff c
+    have hcd : PowerSeries.constantCoeff c = PowerSeries.constantCoeff d := by
+      have hw := w.property
+      change badDvrConstantCoeff k p w.1.1 = badDvrConstantCoeff k p w.1.2 at hw
+      simpa [c, d, badDvrConstantCoeff] using hw
+    have htd : PowerSeries.constantCoeff d = t := by
+      simpa [t] using hcd.symm
+    have hct : OneVariableFiniteDegree k p (PowerSeries.C t) := by
+      simpa [t] using hconstSeries w.1.1
+    have hzcond : ACondition k p
+        (x c + y d - x (PowerSeries.C t)) := by
+      simpa only [sub_eq_add_neg] using (aCondition_add k p
+        (aCondition_add k p (hx c w.1.1.property) (hy d w.1.2.property))
+        (aCondition_neg k p (hx (PowerSeries.C t) hct)))
+    let z : aRing k p := ⟨x c + y d - x (PowerSeries.C t), hzcond⟩
+    refine ⟨z, ?_⟩
+    apply Subtype.ext
+    apply Prod.ext
+    · change xMap z = w.1.1
+      apply Subtype.ext
+      change r (x c + y d - x (PowerSeries.C t)) = c
+      rw [map_sub, map_add, hxx, hxy, hxx]
+      simp [htd]
+    · change yMap z = w.1.2
+      apply Subtype.ext
+      change r' (x c + y d - x (PowerSeries.C t)) = d
+      rw [map_sub, map_add, hyx, hyy, hyx]
+      simp [t]
+
+  have hr_aX : r (aX k p) = PowerSeries.X := by
+    change MvPowerSeries.killCompl e (MvPowerSeries.X (0 : Fin 2)) = _
+    convert MvPowerSeries.killCompl_X (R := k) (e := e) () using 1 <;> rfl
+  have hr_aY : r (aY k p) = 0 := by
+    change MvPowerSeries.killCompl e (MvPowerSeries.X (1 : Fin 2)) = 0
+    have h1 : (1 : Fin 2) ∉ Set.range e := by
+      rintro ⟨u, hu⟩
+      cases u
+      change (0 : Fin 2) = 1 at hu
+      exact Fin.zero_ne_one hu
+    exact MvPowerSeries.killCompl_X_eq_zero (R := k) (e := e) h1
+  have hr'_aX : r' (aX k p) = 0 := by
+    change MvPowerSeries.killCompl e' (MvPowerSeries.X (0 : Fin 2)) = 0
+    have h0 : (0 : Fin 2) ∉ Set.range e' := by
+      rintro ⟨u, hu⟩
+      cases u
+      change (1 : Fin 2) = 0 at hu
+      exact Fin.zero_ne_one hu.symm
+    exact MvPowerSeries.killCompl_X_eq_zero (R := k) (e := e') h0
+  have hr'_aY : r' (aY k p) = PowerSeries.X := by
+    change MvPowerSeries.killCompl e' (MvPowerSeries.X (1 : Fin 2)) = _
+    convert MvPowerSeries.killCompl_X (R := k) (e := e') () using 1 <;> rfl
+
+  have hdiv (z : aRing k p) (n : ℕ)
+      (hz0 : ∀ d : Fin 2 →₀ ℕ, d 0 < n →
+        MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0)
+      (hz1 : ∀ d : Fin 2 →₀ ℕ, d 1 < n →
+        MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0) :
+      ∃ q : aRing k p, z = (aX k p * aY k p) ^ n * q := by
+    let shift : Fin 2 →₀ ℕ :=
+      Finsupp.single (0 : Fin 2) n + Finsupp.single (1 : Fin 2) n
+    let q0 : TwoVariablePowerSeries k := fun d =>
+      MvPowerSeries.coeff (d + shift) (z : TwoVariablePowerSeries k)
+    have hqcond : ACondition k p q0 := by
+      apply (aCondition_iff_diagonalBlocks k p q0).2
+      intro r0
+      have hF := (aCondition_iff_diagonalBlocks k p
+        (z : TwoVariablePowerSeries k)).1 z.property (r0 + n)
+      rcases hF with ⟨F, hF, hFfin⟩
+      refine ⟨F, ?_, hFfin⟩
+      intro a ha
+      rcases ha with ha | ha
+      · rcases ha with ⟨i, rfl⟩
+        apply hF
+        left
+        refine ⟨i, ?_⟩
+        change PowerSeries.coeff i
+            (diagonalBlock k (z : TwoVariablePowerSeries k) (r0 + n)).1 =
+          PowerSeries.coeff i (diagonalBlock k q0 r0).1
+        rw [diagonalBlock_spec_left, diagonalBlock_spec_left]
+        unfold coefficientXY
+        have heq :
+            Finsupp.single (0 : Fin 2) (r0 + n + i) +
+                Finsupp.single (1 : Fin 2) (r0 + n) =
+              (Finsupp.single (0 : Fin 2) (r0 + i) +
+                Finsupp.single (1 : Fin 2) r0) + shift := by
+          ext t
+          fin_cases t <;> simp [shift, Nat.add_left_comm, Nat.add_comm]
+        rw [heq]
+        rfl
+      · rcases ha with ⟨j, rfl⟩
+        apply hF
+        right
+        refine ⟨j, ?_⟩
+        change PowerSeries.coeff j
+            (diagonalBlock k (z : TwoVariablePowerSeries k) (r0 + n)).2 =
+          PowerSeries.coeff j (diagonalBlock k q0 r0).2
+        rw [diagonalBlock_spec_right, diagonalBlock_spec_right]
+        unfold coefficientXY
+        have heq :
+            Finsupp.single (0 : Fin 2) (r0 + n) +
+                Finsupp.single (1 : Fin 2) (r0 + n + j) =
+              (Finsupp.single (0 : Fin 2) r0 +
+                Finsupp.single (1 : Fin 2) (r0 + j)) + shift := by
+          ext t
+          fin_cases t <;> simp [shift, Nat.add_left_comm, Nat.add_comm]
+        rw [heq]
+        rfl
+    refine ⟨⟨q0, hqcond⟩, ?_⟩
+    apply Subtype.ext
+    ext d
+    change MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) =
+      MvPowerSeries.coeff d
+        (((MvPowerSeries.X 0 * MvPowerSeries.X 1 :
+          TwoVariablePowerSeries k) ^ n) * q0)
+    rw [show (MvPowerSeries.X 0 * MvPowerSeries.X 1 :
+        TwoVariablePowerSeries k) ^ n =
+          MvPowerSeries.monomial shift 1 by
+      simp [shift, mul_pow, MvPowerSeries.X_pow_eq,
+        MvPowerSeries.monomial_mul_monomial]]
+    rw [MvPowerSeries.coeff_monomial_mul]
+    split_ifs with h
+    · dsimp [q0]
+      simp only [one_mul]
+      change MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff (d - shift + shift) (z : TwoVariablePowerSeries k)
+      rw [tsub_add_cancel_of_le h]
+    · by_cases h0 : d 0 < n
+      · exact hz0 d h0
+      · by_cases h1 : d 1 < n
+        · exact hz1 d h1
+        · have hle : shift ≤ d := by
+            intro i
+            fin_cases i <;> simp [shift, Nat.le_of_not_gt h0,
+              Nat.le_of_not_gt h1]
+          exact (h hle).elim
+  have hker : RingHom.ker phi = aXYIdeal k p := by
+    apply le_antisymm
+    · intro z hz
+      have hz' : phi z = 0 := hz
+      have hz'' : (xMap z, yMap z) = (0, 0) := by
+        have h := congrArg Subtype.val hz'
+        change (xMap z, yMap z) = (0, 0) at h
+        exact h
+      have hxzero : xMap z = 0 := congrArg Prod.fst hz''
+      have hyzero : yMap z = 0 := congrArg Prod.snd hz''
+      have hrzero : r (z : TwoVariablePowerSeries k) = 0 := by
+        exact congrArg Subtype.val hxzero
+      have hr'zero : r' (z : TwoVariablePowerSeries k) = 0 := by
+        exact congrArg Subtype.val hyzero
+      have hzero0 : ∀ d : Fin 2 →₀ ℕ, d 0 < 1 →
+          MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0 := by
+        intro d hd
+        have hd0 : d 0 = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ hd)
+        have heq : d = Finsupp.embDomain e' (Finsupp.single () (d 1)) := by
+          ext j
+          have he1 : e' () = (1 : Fin 2) := rfl
+          fin_cases j <;> simp [hd0, he1, Finsupp.single_apply]
+        rw [heq]
+        change PowerSeries.coeff (d 1) (r' (z : TwoVariablePowerSeries k)) = 0
+        rw [hr'zero]
+        simp
+      have hzero1 : ∀ d : Fin 2 →₀ ℕ, d 1 < 1 →
+          MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0 := by
+        intro d hd
+        have hd1 : d 1 = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ hd)
+        have heq : d = Finsupp.embDomain e (Finsupp.single () (d 0)) := by
+          ext j
+          have he0 : e () = (0 : Fin 2) := rfl
+          fin_cases j <;> simp [hd1, he0, Finsupp.single_apply]
+        rw [heq]
+        change PowerSeries.coeff (d 0) (r (z : TwoVariablePowerSeries k)) = 0
+        rw [hrzero]
+        simp
+      obtain ⟨q, hq⟩ := hdiv z 1 hzero0 hzero1
+      rw [hq]
+      simpa [pow_one] using
+        (Ideal.mul_mem_right q (aXYIdeal k p)
+          (Ideal.subset_span (by simp only [Set.mem_singleton_iff]; rfl)))
+    · intro z hz
+      have hspan : Ideal.span {aX k p * aY k p} ≤ RingHom.ker phi := by
+        apply Ideal.span_le.2
+        rintro _ ⟨rfl⟩
+        exact RingHom.mem_ker.mpr (by
+          apply Subtype.ext
+          dsimp [phi]
+          change (xMap (aX k p * aY k p), yMap (aX k p * aY k p)) = (0, 0)
+          apply Prod.ext
+          · apply Subtype.ext
+            change r (aX k p * aY k p) = 0
+            rw [map_mul, hr_aX, hr_aY]
+            simp
+          · apply Subtype.ext
+            change r' (aX k p * aY k p) = 0
+            rw [map_mul, hr'_aX, hr'_aY]
+            simp)
+      exact hspan hz
+  exact ⟨(Ideal.quotEquivOfEq hker.symm).trans
+    (RingHom.quotientKerEquivOfSurjective hsurj)⟩
 
 theorem a_quotient_is_C_fiberProduct :
     Nonempty ((aRing k p ⧸ aXYIdeal k p) ≃+*
       ↥(RingHom.pullback (cConstantCoeff k p) (dConstantCoeff k p))) := by
-  sorry
+  simpa only [cConstantCoeff, dConstantCoeff] using
+    (a_quotient_is_fiberProduct k p)
 
 theorem a_quotient_is_noetherian :
     IsNoetherianRing (aRing k p ⧸ aXYIdeal k p) := by
-  sorry
+  let P := ↥(RingHom.pullback (badDvrConstantCoeff k p)
+    (badDvrConstantCoeff k p))
+  let diag : badDvrRing k p →+* P :=
+    { toFun := fun c => ⟨(c, c), by rfl⟩
+      map_one' := by rfl
+      map_mul' := by intro c d; rfl
+      map_zero' := by rfl
+      map_add' := by intro c d; rfl }
+  letI : Algebra (badDvrRing k p) P :=
+    diag.toAlgebra
+  letI : IsDiscreteValuationRing (badDvrRing k p) :=
+    badDvrRing_isDiscreteValuationRing k p
+  let gen : P :=
+    ⟨(badDvrVariable k p, 0), by
+      simp [badDvrVariable, badDvrConstantCoeff, PowerSeries.constantCoeff_X]⟩
+  have hfg : (⊤ : Subalgebra (badDvrRing k p) P).FG := by
+    apply Subalgebra.fg_def.2
+    refine ⟨{gen}, Set.finite_singleton _, ?_⟩
+    apply le_antisymm le_top
+    intro w hw
+    have hwd : PowerSeries.constantCoeff (w.1.1 : PowerSeries k) =
+        PowerSeries.constantCoeff (w.1.2 : PowerSeries k) := by
+      simpa [badDvrConstantCoeff] using w.property
+    let diff : PowerSeries k := (w.1.1 : PowerSeries k) - w.1.2
+    have hdiff : OneVariableFiniteDegree k p diff := by
+      simpa [diff, sub_eq_add_neg] using
+        (oneVariableFiniteDegree_add k p w.1.1.property
+          (oneVariableFiniteDegree_neg k p w.1.2.property))
+    let q : badDvrRing k p :=
+      ⟨PowerSeries.mk fun n => PowerSeries.coeff (n + 1) diff,
+        oneVariableFiniteDegree_shift k p hdiff⟩
+    have hdiff_const : PowerSeries.constantCoeff diff = 0 := by
+      dsimp [diff]
+      rw [map_sub]
+      exact sub_eq_zero.mpr hwd
+    have hdiff_eq : diff = (q : PowerSeries k) * PowerSeries.X := by
+      rw [PowerSeries.eq_shift_mul_X_add_const diff]
+      simp [q, hdiff_const]
+    have hw_eq : w = algebraMap (badDvrRing k p) P w.1.2 + gen *
+        algebraMap (badDvrRing k p) P q := by
+      apply Subtype.ext
+      simp only [RingHom.algebraMap_toAlgebra]
+      dsimp [gen, diag]
+      change (w.1.1, w.1.2) =
+        ((w.1.2, w.1.2) + (badDvrVariable k p, 0) * (q, q))
+      apply Prod.ext
+      · apply Subtype.ext
+        change (w.1.1 : PowerSeries k) =
+          (w.1.2 : PowerSeries k) + PowerSeries.X * (q : PowerSeries k)
+        have hdiff' : (w.1.1 : PowerSeries k) - (w.1.2 : PowerSeries k) =
+            PowerSeries.X * (q : PowerSeries k) := by
+          simpa [diff, mul_comm] using hdiff_eq
+        exact (sub_eq_iff_eq_add').mp hdiff'
+      · apply Subtype.ext
+        simp
+    rw [hw_eq]
+    exact add_mem (Subalgebra.algebraMap_mem _ _)
+      (mul_mem (Algebra.subset_adjoin (by simp)) (Subalgebra.algebraMap_mem _ _))
+  letI : Algebra.FiniteType (badDvrRing k p) P := ⟨hfg⟩
+  have hP : IsNoetherianRing P :=
+    Algebra.FiniteType.isNoetherianRing (badDvrRing k p) P
+  obtain ⟨e⟩ := a_quotient_is_C_fiberProduct k p
+  exact @isNoetherianRing_of_ringEquiv P _ _ _ e.symm hP
 
 theorem a_is_noetherian :
     IsNoetherianRing (aRing k p) := by
   sorry
 
+private theorem quotient_mk_isLocalHom_of_le_jacobson_bot
+    {R : Type*} [CommRing R] (I : Ideal R)
+    (h : I ≤ Ideal.jacobson ⊥) : IsLocalHom (Ideal.Quotient.mk I) := by
+  constructor
+  intro a ha
+  have hbot : IsUnit (Ideal.Quotient.mk (Ideal.jacobson ⊥) a) := by
+    rw [isUnit_iff_exists_inv] at ha ⊢
+    obtain ⟨b, hb⟩ := ha
+    obtain ⟨b, rfl⟩ := Ideal.Quotient.mk_surjective b
+    use Ideal.Quotient.mk _ b
+    rw [← (Ideal.Quotient.mk _).map_one, ← (Ideal.Quotient.mk _).map_mul,
+      Ideal.Quotient.eq] at hb ⊢
+    exact h hb
+  obtain ⟨⟨x, y, h1, h2⟩, rfl : x = _⟩ := hbot
+  obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+  rw [← (Ideal.Quotient.mk _).map_mul, ← (Ideal.Quotient.mk _).map_one,
+    Ideal.Quotient.eq, Ideal.mem_jacobson_bot] at h1 h2
+  specialize h1 1
+  have h1 : IsUnit a ∧ IsUnit y := by simpa using h1
+  exact h1.1
+
 theorem a_is_local :
     IsLocalRing (aRing k p) := by
-  sorry
+  letI : IsDiscreteValuationRing (badDvrRing k p) :=
+    badDvrRing_isDiscreteValuationRing k p
+  letI : IsLocalRing (badDvrRing k p) := by infer_instance
+  letI : IsLocalHom (badDvrConstantCoeff k p) :=
+    { map_nonunit := by
+        intro z hz
+        apply oneVariableFiniteDegree_isUnit_of_constantCoeff_ne_zero k p z.property
+        exact (isUnit_iff_ne_zero.mp hz) }
+  let P := ↥(RingHom.pullback (badDvrConstantCoeff k p)
+    (badDvrConstantCoeff k p))
+  letI : IsLocalRing P :=
+    RingHom.isLocalRing_pullback (badDvrConstantCoeff k p)
+      (badDvrConstantCoeff k p)
+  obtain ⟨e⟩ := a_quotient_is_C_fiberProduct k p
+  letI : Nontrivial (aRing k p ⧸ aXYIdeal k p) :=
+    e.symm.injective.nontrivial
+  letI : IsLocalRing (aRing k p ⧸ aXYIdeal k p) := by
+    apply IsLocalRing.of_isUnit_or_isUnit_one_sub_self
+    intro a
+    have h := IsLocalRing.isUnit_or_isUnit_one_sub_self (e a)
+    rcases h with h | h
+    · left
+      have h' : IsUnit (e.symm (e a)) := IsUnit.map e.symm h
+      simpa using h'
+    · right
+      have h' : IsUnit (e.symm (1 - e a)) := IsUnit.map e.symm h
+      simpa only [map_sub, map_one, e.symm_apply_apply] using h'
+  letI : IsAdicComplete (aXYIdeal k p) (aRing k p) :=
+    a_is_complete k p
+  letI : IsLocalHom (Ideal.Quotient.mk (aXYIdeal k p)) :=
+    quotient_mk_isLocalHom_of_le_jacobson_bot (aXYIdeal k p)
+      (IsAdicComplete.le_jacobson_bot (aXYIdeal k p))
+  exact RingHom.domain_isLocalRing (Ideal.Quotient.mk (aXYIdeal k p))
 
 theorem aMaximalIdeal_is_maximal :
     (aMaximalIdeal k p).IsMaximal := by

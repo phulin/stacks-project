@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Closed
 import Mathlib.Algebra.Homology.Bifunctor
 import Mathlib.Algebra.Homology.HomotopyCategory.HomComplexCohomology
+import Mathlib.LinearAlgebra.TensorProduct.Finiteness
 import Formalization.Books.MoreAlgebra.Unit58.TensorProductsOfComplexes
 
 /-!
@@ -291,7 +292,7 @@ theorem tensorElement_finite_sum {R : Type u} [CommRing R]
     (A B : ModuleCat.{u} R) (x : TensorProduct R A B) :
     ∃ (n : ℕ) (a : Fin n → A) (b : Fin n → B),
       x = ∑ i, a i ⊗ₜ[R] b i := by
-  sorry
+  exact TensorProduct.exists_sum_tmul_eq x
 
 /-- Componentwise composition of cochains. -/
 theorem homCochain_composition_component {R : Type u} [Ring R]

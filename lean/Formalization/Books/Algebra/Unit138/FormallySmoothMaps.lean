@@ -265,12 +265,12 @@ theorem formallySmooth_presentation_characterization
     · intro h
       exact ⟨Q.toExtension, hQformal, hQsection.mp h⟩
     · rintro ⟨P, hP, hsection⟩
-      letI : Algebra.FormallySmooth R P.Ring := hP
+      let _ : Algebra.FormallySmooth R P.Ring := hP
       exact (formallySmooth_iff_extension_section P).mpr hsection
   tfae_have 1 ↔ 3 := by
     constructor
     · intro h P hP
-      letI : Algebra.FormallySmooth R P.Ring := hP
+      let _ : Algebra.FormallySmooth R P.Ring := hP
       exact (formallySmooth_iff_extension_section P).mp h
     · intro h
       exact hQsection.mpr (h Q.toExtension hQformal)
@@ -279,12 +279,12 @@ theorem formallySmooth_presentation_characterization
     · intro h
       exact ⟨Q.toExtension, hQformal, hQsplit.mp h⟩
     · rintro ⟨P, hP, hsplit⟩
-      letI : Algebra.FormallySmooth R P.Ring := hP
+      let _ : Algebra.FormallySmooth R P.Ring := hP
       exact (formallySmooth_iff_extension_split_exact P).mpr hsplit
   tfae_have 1 ↔ 5 := by
     constructor
     · intro h P hP
-      letI : Algebra.FormallySmooth R P.Ring := hP
+      let _ : Algebra.FormallySmooth R P.Ring := hP
       exact (formallySmooth_iff_extension_split_exact P).mp h
     · intro h
       exact hQsplit.mpr (h Q.toExtension hQformal)
@@ -300,7 +300,7 @@ theorem ses_formallySmooth
     IsSplitExactLinearSequence
       (KaehlerDifferential.mapBaseChange A B C)
       (KaehlerDifferential.map A B C C) := by
-  letI : Algebra.FormallySmooth B C := hBC
+  let _ : Algebra.FormallySmooth B C := hBC
   have hExact : Function.Exact
       (KaehlerDifferential.mapBaseChange A B C)
       (KaehlerDifferential.map A B C C) :=
@@ -330,7 +330,7 @@ theorem differential_seq_formallySmooth
     (hAC : Algebra.FormallySmooth A C)
     (hBC : Function.Surjective (algebraMap B C)) :
     extensionDifferentialSplitExact (surjectiveExtensionOver (A := A) hBC) := by
-  letI : Algebra.FormallySmooth A C := hAC
+  let _ : Algebra.FormallySmooth A C := hAC
   let P := surjectiveExtensionOver (A := A) hBC
   change IsSplitExactLinearSequence P.cotangentComplex P.toKaehler
   have hPsub : Subsingleton P.H1Cotangent := by
@@ -367,7 +367,7 @@ private theorem cotangent_map_injective_of_formallySmooth
     Function.Injective
       (Algebra.Extension.Cotangent.map
         (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC)) := by
-  letI : Algebra.FormallySmooth A B := hAB
+  let _ : Algebra.FormallySmooth A B := hAB
   let fAC : A →ₐ[A] C := IsScalarTower.toAlgHom A A C
   let q := fAC.kerSquareLift
   have hfAC : Function.Surjective fAC := by
@@ -400,7 +400,7 @@ private theorem cotangent_map_injective_of_formallySmooth
   have hprod :
       algebraMap A B (x - y) ∈ (RingHom.ker (algebraMap B C)) ^ 2 := by
     have hmk := hxy
-    simp only [Algebra.Extension.Cotangent.map_mk] at hmk
+    simp only at hmk
     have hmem := (Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem _ _).mp hmk
     change
       (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC hBC).toAlgHom
@@ -458,7 +458,7 @@ private theorem cotangent_map_injective_of_formallySmooth_over
   let P := surjectiveExtensionOver (A := A) hBC
   let f := surjectiveExtensionOverHom hAC hBC
   change Function.Injective (Algebra.Extension.Cotangent.map f)
-  letI : Algebra.FormallySmooth A P.Ring := hAB
+  let _ : Algebra.FormallySmooth A P.Ring := hAB
   let fAC : A →ₐ[A] C := IsScalarTower.toAlgHom A A C
   let q := fAC.kerSquareLift
   have hfAC : Function.Surjective fAC := by
@@ -488,7 +488,7 @@ private theorem cotangent_map_injective_of_formallySmooth_over
   have hprod :
       algebraMap A P.Ring (x - y) ∈ P.ker ^ 2 := by
     have hmk := hxy
-    simp only [Algebra.Extension.Cotangent.map_mk] at hmk
+    simp only at hmk
     have hmem := (Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem _ _).mp hmk
     change
       f.toAlgHom (x : A) - f.toAlgHom (y : A) ∈ P.ker ^ 2 at hmem
@@ -545,7 +545,7 @@ theorem application_NL_formallySmooth_canonical
       (surjectiveExtensionOver (A := A)
         (surjective_of_composite_algebraMap (B := B) hAC)).cotangentComplex := by
   let hBC := surjective_of_composite_algebraMap (B := B) hAC
-  letI : Algebra.FormallySmooth A B := hAB
+  let _ : Algebra.FormallySmooth A B := hAB
   let E := Formalization.Books.Algebra.Unit134.surjectiveExtension hAC
   let P := surjectiveExtensionOver (A := A) hBC
   let f := surjectiveExtensionOverHom hAC hBC
@@ -614,7 +614,7 @@ theorem application_NL_formallySmooth_canonical
       apply (htarget z).mpr
       refine ⟨ERT.symm x, ?_⟩
       simpa [LinearMap.comp_apply] using hx
-  letI : Subsingleton (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials A C) :=
+  let _ : Subsingleton (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials A C) :=
     Formalization.Books.Algebra.Unit131.moduleOfDifferentials_subsingleton_of_surjective
       hAC
   have hsurj : Function.Surjective P.cotangentComplex := by
@@ -623,8 +623,8 @@ theorem application_NL_formallySmooth_canonical
     exact (P.exact_cotangentComplex_toKaehler z).mp hz
   have hinj : Function.Injective (Algebra.Extension.Cotangent.map f) := by
     exact cotangent_map_injective_of_formallySmooth_over hAC hAB hBC
-  letI : Algebra.FormallySmooth A P.Ring := hAB
-  letI : Module.Projective C P.CotangentSpace := by
+  let _ : Algebra.FormallySmooth A P.Ring := hAB
+  let _ : Module.Projective C P.CotangentSpace := by
     infer_instance
   obtain ⟨s, hs⟩ := Module.projective_lifting_property P.cotangentComplex LinearMap.id hsurj
   exact ⟨hinj, hexact, hsurj, ⟨s, hs⟩⟩
@@ -645,7 +645,7 @@ theorem application_NL_formallySmooth
           (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC
             (surjective_of_composite_algebraMap (B := B) hAC))) d := by
   let hBC := surjective_of_composite_algebraMap (B := B) hAC
-  letI : Algebra.FormallySmooth A B := hAB
+  let _ : Algebra.FormallySmooth A B := hAB
   obtain ⟨d, hd, hdsurj⟩ :=
     Formalization.Books.Algebra.Unit134.conormal_exact_for_two_surjections hAC hBC
   refine ⟨d,
@@ -695,7 +695,7 @@ theorem formallySmooth_of_squareZero_flat
   · rw [hkerqR]
     exact hI
   · rw [hkerqR]
-    simpa [qS] using (Ideal.mk_ker (I := Ideal.map f I))
+    simp [qS]
   · exact hquot
 
 theorem smooth_iff_formallySmooth_and_finitePresentation
@@ -744,9 +744,9 @@ theorem smooth_strong_lift
         ∀ (g : S →ₐ[R] A ⧸ I),
           ∃ lift : S →ₐ[R] A,
             (Ideal.Quotient.mkₐ R I).comp lift = g := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra.FormallySmooth R S := hf.formallySmooth.toAlgebra
-  letI : Algebra.FinitePresentation R S := hf.finitePresentation
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.FormallySmooth R S := hf.formallySmooth.toAlgebra
+  let _ : Algebra.FinitePresentation R S := hf.finitePresentation
   intro I hI g
   classical
   let P := Algebra.Presentation.ofFinitePresentation R S

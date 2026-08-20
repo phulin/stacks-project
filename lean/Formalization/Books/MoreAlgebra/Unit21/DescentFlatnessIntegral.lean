@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit07.FiniteRingMaps
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.RingTheory.AdjoinRoot
+import Mathlib.RingTheory.Extension.Generators
 import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
 import Mathlib.RingTheory.IntegralClosure.IsIntegral.Basic
 import Mathlib.RingTheory.Noetherian.Basic
@@ -77,7 +78,13 @@ theorem have_one_root
     (α : R) (hα : P.eval α = 0) :
     ∃ Q : Polynomial R, Q.Monic ∧
       P = (Polynomial.X - Polynomial.C α) * Q := by
-  sorry
+  have hdiv : Polynomial.X - Polynomial.C α ∣ P :=
+    Polynomial.dvd_iff_isRoot.mpr hα
+  rcases hdiv with ⟨Q, hQ⟩
+  refine ⟨Q, ?_, hQ⟩
+  apply (Polynomial.monic_X_sub_C α).of_mul_monic_left
+  rw [← hQ]
+  exact hP
 
 /- The ring map and its finite/free module structure are exposed explicitly;
    no injectivity is asserted here, matching the source's `R → R'`. -/
@@ -87,9 +94,20 @@ theorem adjoin_one_root
     ∃ (R' : Type u) (_ : CommRing R') (f : R →+* R'),
       letI : Algebra R R' := f.toAlgebra
       Module.Finite R R' ∧ Module.Free R R' ∧
-        ∃ (α : R') (Q : Polynomial R'), Q.Monic ∧
-          Polynomial.map f P = (Polynomial.X - Polynomial.C α) * Q := by
-  sorry
+      ∃ (α : R') (Q : Polynomial R'), Q.Monic ∧
+        Polynomial.map f P = (Polynomial.X - Polynomial.C α) * Q := by
+  refine ⟨AdjoinRoot P, inferInstance, AdjoinRoot.of P, ?_⟩
+  letI : Algebra R (AdjoinRoot P) := AdjoinRoot.instAlgebra (S := R) P
+  have halg : (AdjoinRoot.of P).toAlgebra = (inferInstance : Algebra R (AdjoinRoot P)) := by
+    rw [← AdjoinRoot.algebraMap_eq]
+    exact toAlgebra_algebraMap
+  refine ⟨halg.symm ▸ hP.finite_adjoinRoot, halg.symm ▸ hP.free_adjoinRoot, ?_⟩
+  have hα : (Polynomial.map (AdjoinRoot.of P) P).eval (AdjoinRoot.root P) = 0 := by
+    rw [Polynomial.eval_map]
+    exact AdjoinRoot.eval₂_root P
+  obtain ⟨Q, hQ, hfactor⟩ := have_one_root (Polynomial.map (AdjoinRoot.of P) P)
+    (hP.map _) (AdjoinRoot.root P) hα
+  exact ⟨AdjoinRoot.root P, Q, hQ, hfactor⟩
 
 /- The finite extension in the source is represented by an injective ring map
    together with finite/free module structures.  The target tensor product
@@ -105,7 +123,167 @@ theorem finite_split
       Function.Injective g ∧ Module.Finite R R' ∧ Module.Free R R' ∧
         letI : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
         Nonempty (SplitPolynomialPresentation R' (S ⊗[R] R')) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  classical
+  rcases subsingleton_or_nontrivial R with hR | hR
+  · letI : Subsingleton R := hR
+    have hS : Subsingleton S := by
+      have h01 : (0 : S) = 1 := by
+        calc
+          (0 : S) = f 0 := (f.map_zero).symm
+          _ = f 1 := congrArg f (Subsingleton.elim 0 1)
+          _ = 1 := f.map_one
+      exact ⟨fun x y => by
+        calc
+          x = x * 1 := (mul_one x).symm
+          _ = x * 0 := by rw [h01]
+          _ = 0 := mul_zero x
+          _ = y * 0 := (mul_zero y).symm
+          _ = y * 1 := by rw [h01]
+          _ = y := mul_one y⟩
+    letI : Subsingleton S := hS
+    let T := S ⊗[R] R
+    letI : Algebra R R := (RingHom.id R).toAlgebra
+    letI : Algebra R T := Algebra.TensorProduct.rightAlgebra
+    have hT : Subsingleton T := by
+      refine ⟨?_⟩
+      intro x y
+      induction x using TensorProduct.induction_on with
+      | zero => exact Subsingleton.elim _ _
+      | add x y hx hy => exact Subsingleton.elim _ _
+      | tmul x y => exact Subsingleton.elim _ _
+    letI : Subsingleton T := hT
+    have hφ : Function.Surjective
+        (MvPolynomial.aeval (R := R) (fun i : Fin 0 => (0 : T))) := by
+      intro x
+      exact ⟨0, Subsingleton.elim _ _⟩
+    let φ : MvPolynomial (Fin 0) R →ₐ[R] T :=
+      MvPolynomial.aeval (R := R) (fun i : Fin 0 => (0 : T))
+    have hker : RingHom.ker φ.toRingHom = (⊤ : Ideal (MvPolynomial (Fin 0) R)) := by
+      apply top_unique
+      intro p hp
+      rw [RingHom.mem_ker]
+      exact Subsingleton.elim _ _
+    have he : (MvPolynomial (Fin 0) R ⧸ (⊤ : Ideal (MvPolynomial (Fin 0) R))) ≃ₐ[R] T := by
+      rw [← hker]
+      exact Ideal.quotientKerAlgEquivOfSurjective hφ
+    refine ⟨R, inferInstance, RingHom.id R, ?_⟩
+    letI : Algebra R R := (RingHom.id R).toAlgebra
+    refine ⟨Function.bijective_id.injective, inferInstance, inferInstance, ?_⟩
+    exact ⟨{
+      number := 0
+      degree := Fin.elim0
+      polynomial := Fin.elim0
+      root := fun i => Fin.elim0 i
+      factorization := fun i => Fin.elim0 i
+      ideal := ⊤
+      ideal_contains := fun i => Fin.elim0 i
+      quotientEquiv := he }⟩
+  · letI : Nontrivial R := hR
+    letI : Module.Finite R S := hf
+    obtain ⟨n, ⟨P⟩⟩ := (Algebra.FiniteType.iff_exists_generators.mp
+      (RingHom.Finite.finiteType hf))
+    choose q hq using fun i => IsIntegral.of_finite R (P.val i)
+    let p : Polynomial R := ∏ i, q i
+    have hp : p.Monic := by
+      dsimp [p]
+      exact Polynomial.monic_prod_of_monic Finset.univ q (fun i _ => (hq i).1)
+    have hroot : ∀ i, Polynomial.eval₂ (algebraMap R S) (P.val i) p = 0 := by
+      intro i
+      dsimp [p]
+      change (Polynomial.eval₂RingHom (algebraMap R S) (P.val i)) (∏ j, q j) = 0
+      rw [map_prod]
+      apply Finset.prod_eq_zero (Finset.mem_univ i)
+      exact (hq i).2
+    obtain ⟨R', _, alg, hfinite, hfree, hnontrivial, hsplit⟩ := hp.exists_splits_map
+    letI : CommRing R' := ‹CommRing R'›
+    letI : Algebra R R' := alg
+    letI : Module.Finite R R' := hfinite
+    letI : Module.Free R R' := hfree
+    letI : Nontrivial R' := hnontrivial
+    have hinj : Function.Injective (algebraMap R R') :=
+      FaithfulSMul.algebraMap_injective R R'
+    obtain ⟨m, hm⟩ := Polynomial.splits_iff_exists_multiset.mp hsplit
+    let d := m.toList.length
+    let roots : Fin d → R' := fun j => m.toList[j.1]
+    have hfactor : Polynomial.map (algebraMap R R') p =
+        splitPolynomial roots := by
+      rw [hm]
+      dsimp [splitPolynomial, roots, d]
+      rw [(hp.map (algebraMap R R')).leadingCoeff]
+      simp only [map_one, Polynomial.C_1, one_mul]
+      simpa using (Fin.prod_univ_fun_getElem m.toList
+        (fun x => Polynomial.X - Polynomial.C x)).symm
+    let T := S ⊗[R] R'
+    letI : Algebra R' T := Algebra.TensorProduct.rightAlgebra
+    let iota : S →ₐ[R] T :=
+      Algebra.TensorProduct.includeLeft (R := R) (S := R) (A := S) (B := R')
+    let val : Fin n → T := fun i => iota (P.val i)
+    have hbase : iota.toRingHom.comp (algebraMap R S) =
+        (algebraMap R' T).comp (algebraMap R R') := by
+      rw [show iota.toRingHom = Algebra.TensorProduct.includeLeftRingHom
+        (R := R) (A := S) (B := R') from rfl]
+      rw [Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap]
+      rfl
+    have hsurj : Function.Surjective (MvPolynomial.aeval (R := R') val) := by
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => exact ⟨0, map_zero _⟩
+      | add x y hx hy =>
+          obtain ⟨x, rfl⟩ := hx
+          obtain ⟨y, rfl⟩ := hy
+          exact ⟨x + y, map_add _ _ _⟩
+      | tmul x y =>
+          obtain ⟨q, hq'⟩ := P.aeval_val_surjective x
+          refine ⟨q.map (algebraMap R R') * MvPolynomial.C y, ?_⟩
+          have hqeval : MvPolynomial.eval₂ ((algebraMap R' T).comp (algebraMap R R'))
+              val q = iota x := by
+            calc
+              MvPolynomial.eval₂ ((algebraMap R' T).comp (algebraMap R R')) val q =
+                  MvPolynomial.eval₂ (iota.toRingHom.comp (algebraMap R S)) val q := by
+                    rw [hbase]
+              _ = iota (MvPolynomial.eval₂ (algebraMap R S) P.val q) := by
+                symm
+                simpa [val] using
+                  (MvPolynomial.hom_eval₂ q (algebraMap R S) iota.toRingHom P.val)
+              _ = iota x := by simpa [MvPolynomial.aeval_def] using congrArg iota hq'
+          rw [MvPolynomial.aeval_def, MvPolynomial.eval₂_mul, MvPolynomial.eval₂_map]
+          rw [hqeval]
+          simp only [MvPolynomial.eval₂_C]
+          change (x ⊗ₜ[R] (1 : R')) * ((1 : S) ⊗ₜ[R] y) = x ⊗ₜ[R] y
+          simp
+    let ψ : MvPolynomial (Fin n) R' →ₐ[R'] T := MvPolynomial.aeval val
+    have hcontains : ∀ i, Polynomial.toMvPolynomial i (Polynomial.map (algebraMap R R') p) ∈
+        RingHom.ker ψ.toRingHom := by
+      intro i
+      rw [RingHom.mem_ker]
+      change MvPolynomial.aeval val
+        (Polynomial.toMvPolynomial i (Polynomial.map (algebraMap R R') p)) = 0
+      rw [MvPolynomial.aeval_toMvPolynomial, Polynomial.aeval_def, Polynomial.eval₂_map]
+      calc
+        Polynomial.eval₂ ((algebraMap R' T).comp (algebraMap R R')) (val i)
+              (p) = Polynomial.eval₂ (iota.toRingHom.comp (algebraMap R S)) (val i) p := by
+                rw [hbase]
+        _ = iota (Polynomial.eval₂ (algebraMap R S) (P.val i) p) := by
+          symm
+          simpa [val] using
+            (Polynomial.hom_eval₂ (algebraMap R S) iota.toRingHom p (P.val i))
+        _ = 0 := by simpa using congrArg iota (hroot i)
+    let e : (MvPolynomial (Fin n) R' ⧸ RingHom.ker ψ.toRingHom) ≃ₐ[R'] T :=
+      Ideal.quotientKerAlgEquivOfSurjective hsurj
+    have hpres : Nonempty (SplitPolynomialPresentation R' T) := ⟨{
+      number := n
+      degree := fun _ => d
+      polynomial := fun _ => Polynomial.map (algebraMap R R') p
+      root := fun _ => roots
+      factorization := fun _ => hfactor
+      ideal := RingHom.ker ψ.toRingHom
+      ideal_contains := hcontains
+      quotientEquiv := e }⟩
+    have hAlg : alg.algebraMap.toAlgebra = alg := toAlgebra_algebraMap
+    refine ⟨R', inferInstance, alg.algebraMap, hinj, hAlg.symm ▸ hfinite,
+      hAlg.symm ▸ hfree, ?_⟩
+    exact hAlg.symm ▸ hpres
 
 /-! ## The split-image lemma -/
 

@@ -87,6 +87,35 @@ theorem exists_isSeparatingTranscendenceBasis_of_mini_separability
 `AdjoinPthRoots k`, which also handles the characteristic-zero case using
 the field's exponential characteristic. -/
 
+/-- Frobenius preserves finite linear independence precisely for separable
+field extensions in positive characteristic. -/
+theorem isSeparableExtension_iff_frobenius_linearIndependent
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [CharP k p] :
+    IsSeparableExtension k K ↔
+      ∀ (s : Finset K), LinearIndepOn k id (s : Set K) →
+        LinearIndepOn k (· ^ p) (s : Set K) := by
+  sorry
+
+/-- The Frobenius linear-independence test is equivalent to reducedness
+after adjoining all `p`-th roots of the base field. -/
+theorem frobenius_linearIndependent_iff_isReduced_tensorProduct_adjoinPthRoots
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [CharP k p] :
+    (∀ (s : Finset K), LinearIndepOn k id (s : Set K) →
+        LinearIndepOn k (· ^ p) (s : Set K)) ↔
+      IsReduced (K ⊗[k] AdjoinPthRoots k) := by
+  sorry
+
+/-- For a field extension, reducedness after the canonical `p`-th-root base
+change detects geometric reducedness. -/
+theorem isReduced_tensorProduct_adjoinPthRoots_iff_isGeometricallyReduced
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [CharP k p] :
+    IsReduced (K ⊗[k] AdjoinPthRoots k) ↔
+      IsGeometricallyReduced k K := by
+  sorry
+
 /-- For a positive-characteristic field extension, separability, the
 Frobenius linear-independence test, reducedness after the canonical
 `p`-th-root base change, and geometric reducedness are equivalent. -/
@@ -103,7 +132,9 @@ theorem isSeparableExtension_iff_frobenius_linearIndependent_iff_tensorProduct_r
         IsReduced (K ⊗[k] AdjoinPthRoots k)) ∧
       (IsReduced (K ⊗[k] AdjoinPthRoots k) ↔
         IsGeometricallyReduced k K) := by
-  sorry
+  exact ⟨isSeparableExtension_iff_frobenius_linearIndependent p hp,
+    frobenius_linearIndependent_iff_isReduced_tensorProduct_adjoinPthRoots p hp,
+    isReduced_tensorProduct_adjoinPthRoots_iff_isGeometricallyReduced p hp⟩
 /-
   have hp' : Nat.Prime p := by
     exact CharP.char_prime_of_ne_zero (R := k) (Nat.ne_of_gt hp)
@@ -566,6 +597,51 @@ theorem isSeparableExtension_of_isSeparablyGenerated
     IsSeparableExtension k K := by
   sorry
 
+/-- Testing reducedness after every finite purely inseparable extension is
+equivalent to testing the canonical extension adjoining all `p`-th roots. -/
+theorem isReduced_finitePurelyInseparable_iff_adjoinPthRoots
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    (∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
+      IsReduced (k' ⊗[k] S)) ↔
+        IsReduced (AdjoinPthRoots k ⊗[k] S) := by
+  sorry
+
+/-- The first `p`-th-root extension and the perfect closure give equivalent
+tests for geometric reducedness. -/
+theorem isReduced_adjoinPthRoots_iff_perfectClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsReduced (AdjoinPthRoots k ⊗[k] S) ↔
+      IsReduced (perfectClosure k (AlgebraicClosure k) ⊗[k] S) := by
+  sorry
+
+/-- Passing from the perfect closure to the algebraic closure does not
+change the reducedness test. -/
+theorem isReduced_perfectClosure_iff_algebraicClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsReduced (perfectClosure k (AlgebraicClosure k) ⊗[k] S) ↔
+      IsReduced (AlgebraicClosure k ⊗[k] S) := by
+  sorry
+
+/-- It suffices to test geometric reducedness on the canonical algebraic
+closure. -/
+theorem isReduced_algebraicClosure_iff_isGeometricallyReduced
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    IsReduced (AlgebraicClosure k ⊗[k] S) ↔
+      IsGeometricallyReduced k S := by
+  constructor
+  · intro hΩ
+    have hS : IsReduced S := by
+      let _ : IsReduced (AlgebraicClosure k ⊗[k] S) := hΩ
+      exact isReduced_of_injective
+        (Algebra.TensorProduct.includeRight :
+          S →ₐ[k] AlgebraicClosure k ⊗[k] S)
+        (Algebra.TensorProduct.includeRight_injective
+          (A := AlgebraicClosure k) (B := S) (RingHom.injective _))
+    exact isGeometricallyReduced_of_isReduced_algebraicClosure hS hΩ
+  · intro hS
+    exact hS (AlgebraicClosure k)
+
 theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfectClosure_iff_algebraicClosure
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
     ((∀ (k' : Type u) [Field k'] [Algebra k k']
@@ -578,7 +654,10 @@ theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfe
         IsReduced (AlgebraicClosure k ⊗[k] S)) ∧
       (IsReduced (AlgebraicClosure k ⊗[k] S) ↔
         IsGeometricallyReduced k S) := by
-  sorry
+  exact ⟨isReduced_finitePurelyInseparable_iff_adjoinPthRoots,
+    isReduced_adjoinPthRoots_iff_perfectClosure,
+    isReduced_perfectClosure_iff_algebraicClosure,
+    isReduced_algebraicClosure_iff_isGeometricallyReduced⟩
 
 end
 

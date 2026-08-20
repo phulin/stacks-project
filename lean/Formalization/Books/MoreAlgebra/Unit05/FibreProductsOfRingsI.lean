@@ -14,6 +14,7 @@ import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.LocalRing.Pullback
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.TensorProduct.IsBaseChangePi
 
 /-!
 # More on Algebra, Chapter 5: Fibre products of rings, I
@@ -723,113 +724,14 @@ theorem localized_ring_pullback_isPullback
     exact IsLocalizedModule.restrictScalars_powers hp
       (Algebra.linearMap R (Localization.Away (s g)))
   have hprod_loc : IsLocalizedModule (.powers hp) f1 := by
-    constructor
-    · intro c
-      rw [Module.End.isUnit_iff]
-      constructor
-      · intro x y hxy
-        apply Prod.ext
-        · apply ((Module.End.isUnit_iff _).mp (hB_loc.map_units c)).1
-          exact congrArg Prod.fst hxy
-        · apply ((Module.End.isUnit_iff _).mp (hR'_loc.map_units c)).1
-          exact congrArg Prod.snd hxy
-      · intro x
-        obtain ⟨y, hy⟩ := ((Module.End.isUnit_iff _).mp (hB_loc.map_units c)).2 x.1
-        obtain ⟨z, hz⟩ := ((Module.End.isUnit_iff _).mp (hR'_loc.map_units c)).2 x.2
-        change c • y = x.1 at hy
-        change c • z = x.2 at hz
-        exact ⟨(y, z), by
-          change (c • y, c • z) = x
-          exact Prod.ext hy hz⟩
-    · intro x
-      rcases hB_loc.surj x.1 with ⟨⟨y, c₁⟩, hy⟩
-      rcases hR'_loc.surj x.2 with ⟨⟨z, c₂⟩, hz⟩
-      change c₁ • x.1 = (Algebra.linearMap B (Localization.Away g)) y at hy
-      change c₂ • x.2 = (Algebra.linearMap R' (Localization.Away f)) z at hz
-      refine ⟨((c₂ • y, c₁ • z), c₁ * c₂), ?_⟩
-      apply Prod.ext
-      · change (c₁ * c₂) • x.1 =
-          (Algebra.linearMap B (Localization.Away g)) (c₂ • y)
-        calc
-          (c₁ * c₂) • x.1 = c₂ • (c₁ • x.1) := by
-            change
-              (algebraMap B (Localization.Away g))
-                  ((RingHom.pullbackFst s t) (c₁ * c₂)) * x.1 =
-                (algebraMap B (Localization.Away g))
-                  ((RingHom.pullbackFst s t) c₂) *
-                  ((algebraMap B (Localization.Away g))
-                    ((RingHom.pullbackFst s t) c₁) * x.1)
-            simp only [map_mul]
-            ring
-          _ = c₂ • (Algebra.linearMap B (Localization.Away g) y) := by rw [hy]
-          _ = (Algebra.linearMap B (Localization.Away g)) (c₂ • y) := by
-            exact (LinearMap.map_smul_of_tower
-              (Algebra.linearMap B (Localization.Away g)) c₂ y).symm
-      · change (c₁ * c₂) • x.2 =
-          (Algebra.linearMap R' (Localization.Away f)) (c₁ • z)
-        calc
-          (c₁ * c₂) • x.2 = c₁ • (c₂ • x.2) := by
-            change
-              (algebraMap R' (Localization.Away f))
-                  ((RingHom.pullbackSnd s t) (c₁ * c₂)) * x.2 =
-                (algebraMap R' (Localization.Away f))
-                  ((RingHom.pullbackSnd s t) c₁) *
-                  ((algebraMap R' (Localization.Away f))
-                    ((RingHom.pullbackSnd s t) c₂) * x.2)
-            simp only [map_mul]
-            ring
-          _ = c₁ • (Algebra.linearMap R' (Localization.Away f) z) := by rw [hz]
-          _ = (Algebra.linearMap R' (Localization.Away f)) (c₁ • z) := by
-            exact (LinearMap.map_smul_of_tower
-              (Algebra.linearMap R' (Localization.Away f)) c₁ z).symm
-    · intro x y hxy
-      rcases hB_loc.exists_of_eq (congrArg Prod.fst hxy) with ⟨c₁, hc₁⟩
-      rcases hR'_loc.exists_of_eq (congrArg Prod.snd hxy) with ⟨c₂, hc₂⟩
-      refine ⟨c₁ * c₂, ?_⟩
-      apply Prod.ext
-      · change (c₁ * c₂) • x.1 = (c₁ * c₂) • y.1
-        calc
-          (c₁ * c₂) • x.1 = c₂ • (c₁ • x.1) := by
-            change
-              (algebraMap P B) (c₁ * c₂ : P) * x.1 =
-                (algebraMap P B)
-                  (c₂ : P) *
-                  ((algebraMap P B) (c₁ : P) * x.1)
-            simp only [map_mul]
-            ring
-          _ = c₂ • (c₁ • y.1) := by rw [hc₁]
-          _ = (c₁ * c₂) • y.1 := by
-            change
-              (algebraMap P B) (c₂ : P) *
-                  ((algebraMap P B)
-                    (c₁ : P) * y.1) =
-                (algebraMap P B)
-                  (c₁ * c₂ : P) * y.1
-            simp only [map_mul]
-            ring
-      · change (c₁ * c₂) • x.2 = (c₁ * c₂) • y.2
-        calc
-          (c₁ * c₂) • x.2 = c₁ • (c₂ • x.2) := by
-            change
-              (algebraMap P R')
-                  (c₁ * c₂ : P) * x.2 =
-                (algebraMap P R')
-                  (c₁ : P) *
-                  ((algebraMap P R')
-                    (c₂ : P) * x.2)
-            simp only [map_mul]
-            ring
-          _ = c₁ • (c₂ • y.2) := by rw [hc₂]
-          _ = (c₁ * c₂) • y.2 := by
-            change
-              (algebraMap P R')
-                  (c₁ : P) *
-                  ((algebraMap P R')
-                    (c₂ : P) * y.2) =
-                (algebraMap P R')
-                  (c₁ * c₂ : P) * y.2
-            simp only [map_mul]
-            ring
+    let fB : B →ₗ[P] Localization.Away g :=
+      (Algebra.linearMap B (Localization.Away g)).restrictScalars P
+    let fR : R' →ₗ[P] Localization.Away f :=
+      (Algebra.linearMap R' (Localization.Away f)).restrictScalars P
+    letI := hB_loc
+    letI := hR'_loc
+    change IsLocalizedModule (.powers hp) (fB.prodMap fR)
+    exact IsLocalizedModule.prodMap (.powers hp) fB fR
   let : IsLocalizedModule (.powers hp)
       (Algebra.linearMap P (Localization.Away hp)) := hP_loc
   let : IsLocalizedModule (.powers hp) f1 := hprod_loc

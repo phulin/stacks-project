@@ -269,7 +269,7 @@ theorem leftDualComplex_bounded_and_finiteProjective {R : Type u} [CommRing R]
 
 theorem leftDualComplex_componentwise_duals {R : Type u} [CommRing R]
     (M N : Comp R) [ExactPairing M N] :
-    ∀ n : ℤ, Nonempty (ExactPairing (N.X (-n)) (M.X n)) := by
+    ∀ n : ℤ, Nonempty (ExactPairing (M.X n) (N.X (-n))) := by
   sorry
 
 theorem leftDualComplex_signedDifferential {R : Type u} [CommRing R]

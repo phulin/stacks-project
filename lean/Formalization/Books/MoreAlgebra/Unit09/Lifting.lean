@@ -100,7 +100,7 @@ def IsEtaleAtOver
     {A B : Type u} [CommRing A] [CommRing B]
     (f : A →+* B) (q : Ideal B) [q.IsPrime] : Prop :=
   letI : Algebra A B := f.toAlgebra
-  Algebra.IsEtaleAt A q
+  Formalization.Books.Algebra.Unit143.IsEtaleAt A B ⟨q, inferInstance⟩
 
 /- The introductory catalogue is a cross-reference to the earlier algebra
    chapters for idempotents, projective and stably free modules, basis
@@ -117,8 +117,14 @@ theorem compose_etale_quotient_lifts
     (I : Ideal A) (f : A →+* A') (g : A' →+* A'')
     (hf : RingHom.Etale f) (hg : RingHom.Etale g)
     (e₁ : (A ⧸ I) ≃+* (A' ⧸ Ideal.map f I))
+    (he₁ : ∀ a : A,
+      e₁ (Ideal.Quotient.mk I a) =
+        Ideal.Quotient.mk (Ideal.map f I) (f a))
     (e₂ : (A' ⧸ Ideal.map f I) ≃+*
-      (A'' ⧸ Ideal.map g (Ideal.map f I))) :
+      (A'' ⧸ Ideal.map g (Ideal.map f I)))
+    (he₂ : ∀ a : A',
+      e₂ (Ideal.Quotient.mk (Ideal.map f I) a) =
+        Ideal.Quotient.mk (Ideal.map g (Ideal.map f I)) (g a)) :
     RingHom.Etale (g.comp f) ∧
       Nonempty ((A ⧸ I) ≃+* (A'' ⧸ Ideal.map g (Ideal.map f I))) := by
   exact ⟨RingHom.Etale.stableUnderComposition f g hf hg,
@@ -417,7 +423,7 @@ noncomputable def symmetricAlgebraPresentation
 
 /-- The coordinate map used in the displayed cotangent complex. -/
 noncomputable def symmetricAlgebraCoordinateMap
-    {A K C : Type u} [CommRing A] [CommRing K]
+    {A K C : Type u} [CommRing A] [AddCommGroup K]
     [Module A K] [CommRing C] [Algebra A C]
     {m : ℕ} (i : K →ₗ[A] (Fin m → A)) :
     K →ₗ[A] C →ₗ[A] (Fin m → C) where
@@ -442,7 +448,7 @@ noncomputable def symmetricAlgebraCoordinateMap
 
 /-- The tensor-product map in the source's displayed cotangent complex. -/
 noncomputable def symmetricAlgebraCotangentMap
-    {A K C : Type u} [CommRing A] [CommRing K]
+    {A K C : Type u} [CommRing A] [AddCommGroup K]
     [Module A K] [CommRing C] [Algebra A C]
     {m : ℕ} (i : K →ₗ[A] (Fin m → A)) :
     K ⊗[A] C →ₗ[A] (Fin m → C) :=
@@ -454,16 +460,16 @@ algebra presentation.  The first equivalence identifies the conormal module,
 the second identifies the presentation cotangent space with coordinates, and
 the last field records the displayed differential. -/
 structure SymmetricAlgebraCotangentModel
-    {A K M : Type u} [CommRing A] [CommRing K] [AddCommGroup M]
+    {A K M : Type u} [CommRing A] [AddCommGroup K] [AddCommGroup M]
     [Module A K] [Module A M]
     {m : ℕ} (i : K →ₗ[A] (Fin m → A))
     (p : (Fin m → A) →ₗ[A] M)
     (hp : Function.Surjective p) where
-  tensorModule : Module (SymmetricAlgebra A M)
-    (K ⊗[A] SymmetricAlgebra A M)
   conormalEquiv :
     letI : Module (SymmetricAlgebra A M)
-        (K ⊗[A] SymmetricAlgebra A M) := tensorModule
+        (K ⊗[A] SymmetricAlgebra A M) :=
+      Formalization.Books.Algebra.Unit12.tensorProductBModule
+        A (SymmetricAlgebra A M) K (SymmetricAlgebra A M)
     Formalization.Books.Algebra.Unit134.PresentationConormal
         (symmetricAlgebraPresentation p hp) ≃ₗ[SymmetricAlgebra A M]
           K ⊗[A] SymmetricAlgebra A M
@@ -473,7 +479,9 @@ structure SymmetricAlgebraCotangentModel
           (Fin m → SymmetricAlgebra A M)
   differential_commutes :
     letI : Module (SymmetricAlgebra A M)
-        (K ⊗[A] SymmetricAlgebra A M) := tensorModule
+        (K ⊗[A] SymmetricAlgebra A M) :=
+      Formalization.Books.Algebra.Unit12.tensorProductBModule
+        A (SymmetricAlgebra A M) K (SymmetricAlgebra A M)
     ∀ x : Formalization.Books.Algebra.Unit134.PresentationConormal
         (symmetricAlgebraPresentation p hp),
       cotangentSpaceEquiv
@@ -483,7 +491,7 @@ structure SymmetricAlgebraCotangentModel
 
 /-- The source's cotangent-complex calculation for a symmetric algebra. -/
 theorem cotangent_complex_symmetric_algebra
-    {A K M : Type u} [CommRing A] [CommRing K] [AddCommGroup M]
+    {A K M : Type u} [CommRing A] [AddCommGroup K] [AddCommGroup M]
     [Module A K] [Module A M]
     {m : ℕ} (i : K →ₗ[A] (Fin m → A))
     (p : (Fin m → A) →ₗ[A] M)

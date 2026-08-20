@@ -18,7 +18,7 @@ open CategoryTheory
 open CategoryTheory.SimplicialObject
 open Opposite
 
-universe v u v' u'
+universe v u v' u' uA vA uB vB uC vC
 
 /-! ## Iterated endofunctors and the Godement maps -/
 
@@ -615,28 +615,28 @@ theorem godement_augmentation_condition
 /-! ## Functoriality and sections -/
 
 /-- Whiskering a Godement degree by `F` and `G`. -/
-def godementWhiskeredDegree {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+def godementWhiskeredDegree {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (n : ℕ) : A ⥤ B :=
   F ⋙ godementDegree Y n ⋙ G
 
-def godementWhiskeredFace {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+def godementWhiskeredFace {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (d : Y ⟶ 𝟭 C)
     {n : ℕ} (j : Fin (n + 1)) :
     godementWhiskeredDegree F Y G n ⟶ F ⋙ iteratedEndofunctor Y n ⋙ G :=
   Functor.whiskerRight (Functor.whiskerLeft F (godementFace Y d j)) G
 
-def godementWhiskeredDegeneracy {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+def godementWhiskeredDegeneracy {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (s : Y ⟶ Y ⋙ Y)
     {n : ℕ} (j : Fin (n + 1)) :
     godementWhiskeredDegree F Y G n ⟶
       godementWhiskeredDegree F Y G (n + 1) :=
   Functor.whiskerRight (Functor.whiskerLeft F (godementDegeneracy Y s j)) G
 
-def godementWhiskeredSimplicialFace {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+def godementWhiskeredSimplicialFace {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (d : Y ⟶ 𝟭 C)
     (n : ℕ) (j : Fin (n + 2)) :
     godementWhiskeredDegree F Y G (n + 1) ⟶
@@ -644,8 +644,8 @@ def godementWhiskeredSimplicialFace {A : Type u} {B : Type u'} {C : Type v}
   godementWhiskeredFace F Y G d j
 
 def godementWhiskeredSimplicialDegeneracy
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (s : Y ⟶ Y ⋙ Y)
     (n : ℕ) (j : Fin (n + 1)) :
     godementWhiskeredDegree F Y G n ⟶
@@ -653,8 +653,8 @@ def godementWhiskeredSimplicialDegeneracy
   godementWhiskeredDegeneracy F Y G s j
 
 def godementWhiskeredAugmentationComponent
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (d : Y ⟶ 𝟭 C) (n : ℕ) :
     godementWhiskeredDegree F Y G n ⟶ F ⋙ G := by
   exact
@@ -664,8 +664,8 @@ def godementWhiskeredAugmentationComponent
       Functor.whiskerLeft F (Functor.rightUnitor G).hom
 
 structure GodementWhiskeredSimplicialData
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
   object : SimplicialObject (A ⥤ B)
@@ -684,8 +684,8 @@ structure GodementWhiskeredSimplicialData
 augmentation of the whiskered simplicial object. -/
 
 structure GodementWhiskeredAugmentationData
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
   /-- The simplicial object receiving the augmentation. -/
@@ -708,8 +708,8 @@ structure GodementWhiskeredAugmentationData
       component n
 
 theorem godement_functorial
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
     Nonempty (GodementWhiskeredSimplicialData F Y G d s) ∧
@@ -717,16 +717,16 @@ theorem godement_functorial
   sorry
 
 theorem godement_whiskered_augmentation_condition
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
     Nonempty (GodementWhiskeredAugmentationData F Y G d s) := by
   sorry
 
 theorem godement_functorial_with_augmentation
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
     Nonempty (GodementWhiskeredSimplicialData F Y G d s) ∧
@@ -734,8 +734,8 @@ theorem godement_functorial_with_augmentation
   exact ⟨(godement_functorial F Y G d s h).1,
     godement_whiskered_augmentation_condition F Y G d s h⟩
 
-def godementZeroMap {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+def godementZeroMap {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) :
     F ⋙ Y ⋙ G ⟶ godementWhiskeredDegree F Y G 0 :=
   Functor.whiskerRight
@@ -744,8 +744,8 @@ def godementZeroMap {A : Type u} {B : Type u'} {C : Type v}
 /-- The degree-zero augmentation after transporting the explicit source
 `F ⋙ Y ⋙ G` to the chosen degree-zero object. -/
 def godementWhiskeredDegreeZeroAugmentation
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (d : Y ⟶ 𝟭 C) :
     F ⋙ Y ⋙ G ⟶ F ⋙ G :=
   godementZeroMap F Y G ≫
@@ -754,8 +754,8 @@ def godementWhiskeredDegreeZeroAugmentation
 /-! This is the component formula used in the proof of the section lemma. -/
 
 def godementWhiskeredSectionComponent
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (data : GodementWhiskeredSimplicialData F Y G d s)
@@ -776,8 +776,8 @@ structure GodementAugmentationSection
   section_condition : map ≫ ε = 𝟙 ((SimplicialObject.const D).obj X)
 
 theorem godement_section_morphism
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (data : GodementWhiskeredAugmentationData F Y G d s)
@@ -788,8 +788,8 @@ theorem godement_section_morphism
       (F ⋙ G) data.augmentation) := by
   sorry
 
-structure GodementSection {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+structure GodementSection {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (h₀ : F ⋙ G ⟶ F ⋙ Y ⋙ G) where
@@ -806,8 +806,8 @@ structure GodementSection {A : Type u} {B : Type u'} {C : Type v}
     component n ≫ godementWhiskeredAugmentationComponent F Y G d n = 𝟙 (F ⋙ G)
 
 theorem godement_section_components
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (h₀ : F ⋙ G ⟶ F ⋙ Y ⋙ G)
@@ -820,15 +820,15 @@ theorem godement_section_components
 
 /-! ## The two-map homotopy and the before/after maps -/
 
-def godementOuterAugmentationComponent {B : Type u'} {C : Type v}
-    [Category.{u} B] [Category.{v} C]
+def godementOuterAugmentationComponent {B : Type uB} {C : Type uC}
+    [Category.{vB} B] [Category.{vC} C]
     (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (G : C ⥤ B) (n : ℕ) :
     godementDegree Y n ⋙ G ⟶ G :=
   Functor.whiskerRight (godementAugmentationComponent Y d n) G ≫
     (Functor.leftUnitor G).hom
 
-def godementInnerAugmentationComponent {A : Type u} {C : Type v}
-    [Category.{v'} A] [Category.{v} C]
+def godementInnerAugmentationComponent {A : Type uA} {C : Type uC}
+    [Category.{vA} A] [Category.{vC} C]
     (F : A ⥤ C) (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (n : ℕ) :
     F ⋙ godementDegree Y n ⟶ F :=
   Functor.whiskerLeft F (godementAugmentationComponent Y d n) ≫
@@ -838,8 +838,8 @@ def godementInnerAugmentationComponent {A : Type u} {C : Type v}
 that the given families are morphisms of simplicial objects and commute with
 the augmentation. -/
 
-structure GodementOuterMorphism {B : Type u'} {C : Type v}
-    [Category.{u} B] [Category.{v} C]
+structure GodementOuterMorphism {B : Type uB} {C : Type uC}
+    [Category.{vB} B] [Category.{vC} C]
     (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (G G' : C ⥤ B) (a : G ⟶ G')
     (aₙ : ∀ n, godementDegree Y n ⋙ G ⟶ godementDegree Y n ⋙ G') where
@@ -854,8 +854,8 @@ structure GodementOuterMorphism {B : Type u'} {C : Type v}
     aₙ n ≫ godementOuterAugmentationComponent Y d G' n =
       godementOuterAugmentationComponent Y d G n ≫ a
 
-structure GodementInnerMorphism {A : Type u} {C : Type v}
-    [Category.{v'} A] [Category.{v} C]
+structure GodementInnerMorphism {A : Type uA} {C : Type uC}
+    [Category.{vA} A] [Category.{vC} C]
     (F F' : A ⥤ C) (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (b : F ⟶ F')
     (bₙ : ∀ n, F ⋙ godementDegree Y n ⟶ F' ⋙ godementDegree Y n) where
@@ -899,8 +899,8 @@ structure GodementDegreewiseHomotopy {D : Type u} [Category.{v} D]
       (hij : i ≤ j.castSucc) :
     h n i ≫ degenY n j = degenX n j ≫ h (n + 1) i.castSucc
 
-abbrev GodementWhiskeredHomotopy {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+abbrev GodementWhiskeredHomotopy {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F F' : A ⥤ C) (Y : C ⥤ C) (G G' : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (left right : ∀ n,
@@ -924,8 +924,8 @@ abbrev GodementSelfHomotopy {C : Type u} [Category.{v} C]
 /-! The two endpoint maps in Lemma 33.5. -/
 
 def godementTwoMapLeft
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F F' : A ⥤ C) (Y : C ⥤ C) (G G' : C ⥤ B)
     (a : G ⟶ G')
     (bₙ : ∀ n, F ⋙ godementDegree Y n ⟶ F' ⋙ godementDegree Y n)
@@ -936,8 +936,8 @@ def godementTwoMapLeft
     Functor.whiskerLeft (F' ⋙ godementDegree Y n) a
 
 def godementTwoMapRight
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F F' : A ⥤ C) (Y : C ⥤ C) (G G' : C ⥤ B)
     (aₙ : ∀ n, godementDegree Y n ⋙ G ⟶ godementDegree Y n ⋙ G')
     (b : F ⟶ F') (n : ℕ) :
@@ -947,8 +947,8 @@ def godementTwoMapRight
     Functor.whiskerRight b (godementDegree Y n ⋙ G')
 
 theorem godement_two_maps_homotopic
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    {A : Type uA} {B : Type uB} {C : Type uC}
+    [Category.{vA} A] [Category.{vB} B] [Category.{vC} C]
     (F F' : A ⥤ C) (Y : C ⥤ C) (G G' : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s)
     (a : G ⟶ G')

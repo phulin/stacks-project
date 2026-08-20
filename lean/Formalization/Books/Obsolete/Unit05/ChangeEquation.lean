@@ -135,11 +135,11 @@ theorem change_equation_multiply
             (c ^ (ℓ * i) * t ^ i) =
           t ^ i * (φ (p.coeff i) *
             (c ^ (i * ℓ) * c ^ ((d - i) * ℓ))) := by
-              simp only [c, mul_assoc, mul_comm, mul_left_comm, Nat.mul_comm]
+              simp only [c, mul_assoc, mul_comm, mul_left_comm]
       _ = t ^ i * (φ (p.coeff i) * c ^ (ℓ * d)) := by
             rw [← pow_add, hexp]
       _ = c ^ (ℓ * d) * (φ (p.coeff i) * t ^ i) := by
-            simp only [mul_assoc, mul_comm, mul_left_comm]
+            simp only [mul_assoc, mul_comm]
 
   have hlead : (c ^ ℓ * t) ^ d =
       c ^ (ℓ * d) * (φ (p.coeff d) * t ^ d) := by
@@ -302,7 +302,7 @@ theorem make_integral_less_trivial
       have hq_coeff : q.coeff k = c := by simp [q]
       have hq_nat : q.natDegree = k :=
         Polynomial.natDegree_eq_of_le_of_coeff_ne_zero hq_le
-          (by simpa [hq_coeff, hc])
+          (by simp [hq_coeff, hc])
       have hq_lc : q.leadingCoeff = c := by
         simp [Polynomial.leadingCoeff, hq_nat, hq_coeff]
       have hi := (algebraMap A S).isIntegralElem_leadingCoeff_mul q t hq_eval

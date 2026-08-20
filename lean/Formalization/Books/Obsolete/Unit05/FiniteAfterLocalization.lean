@@ -46,12 +46,12 @@ theorem finite_after_localization
   let Rf := Localization.Away f
   let Sf := Localization.Away (D.rS f)
   let _ : Algebra R Rf := inferInstance
-  letI : Algebra Rf S' := D.rfS'.toAlgebra
-  letI : Algebra R S' := (D.rfS'.comp (algebraMap R Rf)).toAlgebra
-  letI : IsScalarTower R Rf S' := IsScalarTower.of_algebraMap_eq fun _ => rfl
-  letI : Algebra R S := D.rS.toAlgebra
-  letI : Algebra S Sf := inferInstance
-  letI : Algebra R Sf := ((algebraMap S Sf).comp D.rS).toAlgebra
+  let : Algebra Rf S' := D.rfS'.toAlgebra
+  let : Algebra R S' := (D.rfS'.comp (algebraMap R Rf)).toAlgebra
+  let : IsScalarTower R Rf S' := IsScalarTower.of_algebraMap_eq fun _ => rfl
+  let : Algebra R S := D.rS.toAlgebra
+  let : Algebra S Sf := inferInstance
+  let : Algebra R Sf := ((algebraMap S Sf).comp D.rS).toAlgebra
   have hft : Algebra.FiniteType Rf S' := D.finite.to_finiteType
   obtain ⟨n, φ, hφ⟩ := (Algebra.FiniteType.iff_quotient_mvPolynomial''
     (R := Rf) (S := S')).mp hft
@@ -95,7 +95,7 @@ theorem finite_after_localization
     intro i
     rw [show D.s'Sf (b i) =
       algebraMap S Sf (D.rS (f ^ k i)) * D.s'Sf (a i) by
-        simp only [b, map_mul, hbase, ← map_pow]]
+        simp only [b, map_mul, hbase]]
     simpa using (hs i)
   choose p hp hpa using hb
   let p₀ : Fin n → Polynomial R := fun i => Polynomial.X * p i
@@ -148,10 +148,10 @@ theorem finite_after_localization
   have hqt : ∀ i, Polynomial.aeval (t i) (q i) = 0 := by
     intro i
     rcases subsingleton_or_nontrivial R with hR | hR
-    · letI := hR
-      haveI : Subsingleton S := D.rS.codomain_trivial
+    · let _ := hR
+      have : Subsingleton S := D.rS.codomain_trivial
       exact Subsingleton.elim _ _
-    · letI := hR
+    · let _ := hR
       have hdeg : 1 ≤ (p₀ i).natDegree := by
         change 1 ≤ (Polynomial.X * p i).natDegree
         rw [Polynomial.monic_X.natDegree_mul' (hp i).ne_zero,
@@ -178,7 +178,7 @@ theorem finite_after_localization
     Polynomial.eval₂ (algebraMap R B) (MvPolynomial.X i) (q i)
   let I : Ideal B := Ideal.span (Set.range rel)
   let S'' := B ⧸ I
-  letI : CommRing S'' := Ideal.Quotient.commRing I
+  let : CommRing S'' := Ideal.Quotient.commRing I
   let mk : B →ₐ[R] S'' := Ideal.Quotient.mkₐ R I
   let α₀ : B →+* S := MvPolynomial.eval₂Hom (algebraMap R S) t
   let β₀ : B →+* S' := MvPolynomial.eval₂Hom (algebraMap R S') c
@@ -256,7 +256,9 @@ theorem finite_after_localization
       Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (Set.mem_range_self i))
     calc
       Polynomial.aeval (mk (MvPolynomial.X i)) (q i) = mk (rel i) := by
-        simpa [rel, Polynomial.aeval_def] using hh.symm
+        change Polynomial.eval₂ (algebraMap R S'') (mk.toRingHom (MvPolynomial.X i)) (q i) =
+          mk.toRingHom (Polynomial.eval₂ (algebraMap R B) (MvPolynomial.X i) (q i))
+        simpa only [Polynomial.aeval_def, Polynomial.map_id] using hh.symm
       _ = 0 := hzero
   let A : Subalgebra R S'' := Algebra.adjoin R
     (Set.range (fun i : Fin n => mk (MvPolynomial.X i)))
@@ -296,14 +298,14 @@ theorem finite_after_localization
     let rS0 : R →+* S'' := algebraMap R S''
     let newAlg : Algebra R S'' := rS0.toAlgebra
     have hfinite0 : RingHom.Finite rS0 := by
-      letI : Algebra R S'' := newAlg
+      let : Algebra R S'' := newAlg
       have hInt' : Algebra.IsIntegral R S'' := by
         refine ⟨?_⟩
         intro z
         obtain ⟨p, hp, hz⟩ := @Algebra.IsIntegral.isIntegral R S'' _ _ oldAlg hInt z
         refine ⟨p, hp, ?_⟩
         change Polynomial.eval₂ rS0 z p = 0
-        letI : Algebra R S'' := oldAlg
+        let : Algebra R S'' := oldAlg
         change Polynomial.eval₂ rS0 z p = 0 at hz
         exact hz
       have hFT' : Algebra.FiniteType R S'' := by
@@ -311,22 +313,21 @@ theorem finite_after_localization
         have hle : ∀ z : S'',
             z ∈ @Algebra.adjoin R S'' _ _ oldAlg (↑s) →
               z ∈ @Algebra.adjoin R S'' _ _ newAlg (↑s) := by
-          letI : Algebra R S'' := oldAlg
+          let : Algebra R S'' := oldAlg
           intro z hz
           refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hz
           · intro v hv
-            change v ∈ @Algebra.adjoin R S'' _ _ newAlg (↑s)
-            letI : Algebra R S'' := newAlg
+            let : Algebra R S'' := newAlg
             exact Algebra.subset_adjoin hv
           · intro r
             change rS0 r ∈ @Algebra.adjoin R S'' _ _ newAlg (↑s)
-            letI : Algebra R S'' := newAlg
+            let : Algebra R S'' := newAlg
             exact (@Algebra.adjoin R S'' _ _ newAlg (↑s)).algebraMap_mem r
           · intro v w _ _ hv hw
-            letI : Algebra R S'' := newAlg
+            let : Algebra R S'' := newAlg
             exact (@Algebra.adjoin R S'' _ _ newAlg (↑s)).add_mem hv hw
           · intro v w _ _ hv hw
-            letI : Algebra R S'' := newAlg
+            let : Algebra R S'' := newAlg
             exact (@Algebra.adjoin R S'' _ _ newAlg (↑s)).mul_mem hv hw
         have htop : @Algebra.adjoin R S'' _ _ newAlg (↑s) = ⊤ := by
           apply top_unique
@@ -387,7 +388,7 @@ theorem finite_after_localization
         exact (hbase r).symm
     | add p q hp hq => simpa only [map_add] using congrArg₂ (· + ·) hp hq
     | mul_X p i hp =>
-        simp only [map_mul, α₀, β₀, MvPolynomial.eval₂Hom_X'] at hp ⊢
+        simp only [map_mul, α₀, β₀] at hp ⊢
         have hX :
             ((algebraMap S Sf).comp α₀) (MvPolynomial.X i) =
               (D.s'Sf.comp β₀) (MvPolynomial.X i) := by
@@ -424,7 +425,7 @@ theorem finite_after_localization
   have hJβ : J ≤ RingHom.ker β := by
     exact inf_le_right
   let Sfin := S'' ⧸ J
-  letI : CommRing Sfin := Ideal.Quotient.commRing J
+  let : CommRing Sfin := Ideal.Quotient.commRing J
   let qfin : S'' →ₐ[R] Sfin := Ideal.Quotient.mkₐ R J
   let αfin : Sfin →+* S := Ideal.Quotient.lift J α
     (fun a ha => RingHom.mem_ker.mp (hJα ha))
@@ -495,7 +496,9 @@ theorem finite_after_localization
     rw [MvPolynomial.eval₂Hom_C]
   have hφC : ∀ r : Rf, φ (MvPolynomial.C r) = D.rfS' r := by
     intro r
-    simpa [MvPolynomial.algebraMap_eq, RingHom.algebraMap_toAlgebra] using φ.commutes r
+    have h := φ.commutes r
+    rw [MvPolynomial.algebraMap_eq, RingHom.algebraMap_toAlgebra] at h
+    exact h
   have hU : algebraMap R S' f = U := by
     calc
       algebraMap R S' f = β₀ (MvPolynomial.C f) := (hβC f).symm
@@ -612,7 +615,7 @@ theorem finite_after_localization
         symm
         have hrs : rSfin f = qfin (algebraMap R S'' f) := by rfl
         rw [hrs, ← map_pow, ← map_mul]
-  letI : Algebra Sfin S' := βfin.toAlgebra
+  let : Algebra Sfin S' := βfin.toAlgebra
   have hunit : IsUnit (algebraMap Sfin S' (rSfin f)) := by
     have hβf := congrArg (fun g => g f) hβfinr
     have hβf' : βfin (rSfin f) = U := by

@@ -880,8 +880,9 @@ structure GradedShiftFamily (R : Type u) (C : Type v)
       (GradedCategory.hom X ((shift n).obj Y))
       (GradedCategory.hom X Y) n
   /-- Compatibility of the Hom-shift equivalences with homogeneous
-  composition.  The final `eqToHom` is precisely the transport occurring in
-  `LinearShiftFamily.homogeneousComp`. -/
+  composition in two arbitrary degrees.  This is the one extra coherence law
+  needed by reconstruction: the final `eqToHom` is precisely the transport
+  occurring in `LinearShiftFamily.homogeneousComp`. -/
   hom_shift_comp : ∀ {X Y Z : C} (i j : ℤ)
     (f : X ⟶ (shift i).obj Y) (g : Y ⟶ (shift j).obj Z),
     (hom_shift X Z (i + j)).total
@@ -1035,70 +1036,139 @@ theorem degree_zero_shift_family_restricts :
 /-
 Proof roadmap for `reconstructs_from_degree_zero`.
 
-* Abbreviate `A := inferInstance : GradedCategory R C`,
-  `T := degree_zero_shift_family S`, and
-  `Q := LinearShiftFamily.GradedCategory T`.  For `U V : Q`, first build
+The relevant universes are the surrounding `R : Type u`, `C : Type v`, and
+`Category.{w} C`; every Hom and every direct-sum summand below lives in
+`Type w`, and every direct sum is indexed by `ℤ`.
 
-      homEquiv U V :
-        (U ⟶ V) ≃ₗ[R] (U.underlying.down ⟶ V.underlying.down).
+1. Abbreviate
 
-  For each `n : ℤ`, rewrite `T.shift n` with
-  `degree_zero_shift_family_restricts S n`.  After unfolding
-  `GradedFunctor.degreeZero`, the degree-`n` summand of `U ⟶ V` is the
-  degree-zero component of
-  `U.underlying.down ⟶ (S.shift n).obj V.underlying.down`.  Transporting the
-  endpoints along that rewrite and applying
-  `(S.hom_shift _ _ n).component 0` gives a linear equivalence to
-  `(GradedCategory.hom U.underlying.down V.underlying.down).component n`;
-  discharge the remaining `0 + n = n` by `simp`.  Take the direct sum of
-  these equivalences with `DirectSum.congrLinearEquiv` (Mathlib,
-  `Algebra/DirectSum/Module.lean`), then compose with
-  `(DirectSum.decomposeLinearEquiv (fun n =>
-    (GradedCategory.hom U.underlying.down V.underlying.down).component n)).symm`.
-  The required decomposition instance is exactly
-  `GradedCategory.homDecomposition R _ _` from `Unit25/Core.lean`.
+       A := inferInstance : GradedCategory R C
+       T := degree_zero_shift_family S
+       Q := LinearShiftFamily.GradedCategory T.
 
-* Prove the key claim
+   For `U V : Q` and `n : ℤ`, first define the explicitly typed equivalence
 
-      homEquiv U W (f ≫ g) = homEquiv U V f ≫ homEquiv V W g.
+       componentEquiv U V n :
+         LinearShiftFamily.homogeneous T U.underlying V.underlying n ≃ₗ[R]
+           (A.hom U.underlying.down V.underlying.down).component n.
 
-  Use nested `DirectSum.induction_on` on `f` and `g`; the zero and addition
-  cases follow from linearity and the preadditive composition laws.  On
-  `DirectSum.lof` generators, rewrite target composition with
-  `(LinearShiftFamily.categoryData T).total_comp_lof`, then with
-  `LinearShiftFamily.categoryData_homogeneous_comp`.  Normalize the shifts
-  using `degree_zero_shift_family_restricts`; equality proofs inside the two
-  `shift_comp` transports are propositionally irrelevant.  Use
-  `DirectSum.decomposeLinearEquiv_symm_lof` and
-  `GradedModuleShiftIso.component_coe` at degrees `0`, `0`, and `0` to turn
-  the three component maps into the corresponding `total` maps.  The
-  remaining generator equality is exactly `S.hom_shift_comp i j f g`.
-  This is the point for which the cross-degree field is essential;
-  `hom_shift_comp_pre` and `hom_shift_comp_post` alone only treat one fixed
-  degree and cannot replace it.
+   Rewrite `T.shift n` with `(degree_zero_shift_family_restricts S) n`, unfold
+   `GradedFunctor.degreeZero`, and use
+   `(S.hom_shift U.underlying.down V.underlying.down n).component 0`; `simpa`
+   changes its target degree from `0 + n` to `n`.  The definitions of
+   `DegreeZero.obj`, `DegreeZero.category`, and `DegreeZero.of` are in
+   `Formalization/Books/Dga/Unit25/Core.lean`, while
+   `LinearShiftFamily.homogeneous`,
+   `GradedFunctor.degreeZero`, and the restriction theorem are in this file.
 
-* Derive identity preservation rather than adding another coherence field.
-  For `U : Q`, put
-  `p := (homEquiv U U).symm (𝟙 U.underlying.down)` and apply the key claim to
-  `𝟙 U` and `p`.  The category identity laws and
-  `LinearEquiv.apply_symm_apply` reduce it to
-  `homEquiv U U (𝟙 U) = 𝟙 U.underlying.down`.
+   Install the decomposition once, with the fully instantiated type
 
-* Define `G : Q ⥤ C` by `G.obj U := U.underlying.down` and
-  `G.map := homEquiv`; the preceding two claims are its functor laws.  Define
-  `F : C ⥤ Q` by
-  `F.obj X := LinearShiftFamily.categoryObject T (DegreeZero.of A X)` and
-  `F.map f := (homEquiv (F.obj X) (F.obj Y)).symm f`.  Prove its functor laws
-  by applying the injective `homEquiv` and using the laws for `G` together
-  with `LinearEquiv.symm_apply_apply`.
+       letI : DirectSum.Decomposition
+           (fun n : ℤ => (A.hom U.underlying.down V.underlying.down).component n) :=
+         GradedCategory.homDecomposition R _ _
 
-* Finish exactly as in `LinearShiftFamily.degree_zero_recovers` in this file:
-  the objects of `Q` are `TotalGradedObject`s whose underlying objects are
-  `ULift`s, so after cases on those two wrappers, the unit and counit
-  components are identity isomorphisms.  Assemble their naturality with
-  `NatIso.ofComponents`, using the two inverse laws of `homEquiv`, and package
-  `F`, `G`, the two natural isomorphisms, and the triangle equality into the
-  required `Nonempty (C ≌ Q)`.
+   (`Formalization/Books/Dga/Unit25/Core.lean`).  Then define
+
+       homEquiv U V :
+         (U ⟶ V) ≃ₗ[R] (U.underlying.down ⟶ V.underlying.down)
+
+   as `DirectSum.congrLinearEquiv (R := R) (ι := ℤ)
+   (componentEquiv U V)` followed by
+   `(DirectSum.decomposeLinearEquiv (ι := ℤ) (R := R)
+   (fun n => (A.hom U.underlying.down V.underlying.down).component n)).symm`.
+   `DirectSum.congrLinearEquiv`, `coe_congrLinearEquiv`, and `lmap_lof` are in
+   `Mathlib/Algebra/DirectSum/Module.lean`; `decomposeLinearEquiv` and
+   `decomposeLinearEquiv_symm_lof` are in
+   `Mathlib/Algebra/DirectSum/Decomposition.lean`.
+
+2. Immediately prove the generator formula
+
+       homEquiv U V
+           (DirectSum.lof R ℤ
+             (fun k => LinearShiftFamily.homogeneous T
+               U.underlying V.underlying k) n f) =
+         (componentEquiv U V n f :
+           U.underlying.down ⟶ V.underlying.down).
+
+   Unfold only `homEquiv`, rewrite `DirectSum.coe_congrLinearEquiv`, then use
+   `DirectSum.lmap_lof` and `DirectSum.decomposeLinearEquiv_symm_lof`.  Keeping
+   this as a separate claim avoids repeatedly unfolding the large composite
+   equivalence during the composition proof.
+
+3. Isolate all dependent transport in a second helper.  For `i j : ℤ` and
+
+       f : LinearShiftFamily.homogeneous T U.underlying V.underlying i
+       g : LinearShiftFamily.homogeneous T V.underlying W.underlying j,
+
+   prove the equality of underlying morphisms
+
+       (componentEquiv U W (i + j)
+           (LinearShiftFamily.homogeneousComp T i j f g) :
+             U.underlying.down ⟶ W.underlying.down) =
+         (componentEquiv U V i f :
+             U.underlying.down ⟶ V.underlying.down) ≫
+           (componentEquiv V W j g :
+             V.underlying.down ⟶ W.underlying.down).
+
+   Rewrite the three shifts by `(degree_zero_shift_family_restricts S)`, and
+   unfold only `LinearShiftFamily.homogeneousComp` and
+   `GradedFunctor.degreeZero`.  To compare the value of an `eqToHom` in the
+   degree-zero category with the `eqToHom` in `C`, reuse the exact local
+   `hcoe2` pattern from `degree_zero_shift_family_nonempty` above: it proves
+   an `HEq` between `(eqToHom h : X ⟶ Y).1` and `eqToHom k` once the two
+   endpoints have been identified.  The remaining equality follows by
+   rewriting `GradedModuleShiftIso.component_coe` for the three component
+   maps and applying `S.hom_shift_comp i j`.  Any two proofs of the now
+   identical `shift_comp` equality can be identified by proof irrelevance.
+   This helper is exactly where the new cross-degree field is needed;
+   `hom_shift_comp_pre` and `hom_shift_comp_post` do not relate degrees `i`,
+   `j`, and `i + j`.
+
+4. Prove
+
+       homEquiv U W (f ≫ g) =
+         homEquiv U V f ≫ homEquiv V W g
+
+   by nested `DirectSum.induction_on` (`Mathlib/Algebra/DirectSum/Basic.lean`).
+   The zero and addition branches use linearity of `homEquiv` and the
+   preadditive composition laws.  In the generator-generator branch, rewrite
+   source composition with
+   `(LinearShiftFamily.categoryData T).total_comp_lof` (the field is declared
+   in `Formalization/Books/Dga/Unit25/Totalization.lean`), rewrite its
+   component with
+   `LinearShiftFamily.categoryData_homogeneous_comp T`, and finish with the
+   two helper claims from steps 2 and 3.
+
+5. No further coherence field is necessary for identities.  For `U : Q`, set
+
+       p : U ⟶ U := (homEquiv U U).symm (𝟙 U.underlying.down).
+
+   Apply the composition claim to `𝟙 U` and `p`.  Use the category identity
+   laws and `LinearEquiv.apply_symm_apply` to obtain
+   `homEquiv U U (𝟙 U) = 𝟙 U.underlying.down`.
+
+6. Define `G : Q ⥤ C` by `G.obj U := U.underlying.down` and
+   `G.map := homEquiv`; steps 4 and 5 are its functor laws.  Define `F : C ⥤ Q`
+   by
+
+       F.obj X := LinearShiftFamily.categoryObject T (DegreeZero.of A X)
+       F.map f := (homEquiv (F.obj X) (F.obj Y)).symm f.
+
+   Prove the two laws for `F` after applying `(homEquiv _ _).injective`, using
+   step 4 plus `LinearEquiv.apply_symm_apply` and
+   `LinearEquiv.symm_apply_apply` (`Mathlib/Algebra/Module/Equiv/Defs.lean`).
+
+7. Follow `LinearShiftFamily.degree_zero_recovers` earlier in this file for
+   the categorical assembly.  Take the unit of `C ≌ Q` to have components
+   `Iso.refl X : X ≅ (F ⋙ G).obj X`; its naturality reduces to
+   `LinearEquiv.apply_symm_apply`.  Take the counit components
+   `(G ⋙ F).obj U ≅ U` to be identity isomorphisms after cases on the
+   `TotalGradedObject` wrapper and then its `ULift` underlying object; its
+   naturality reduces to `LinearEquiv.symm_apply_apply`.  Build both with
+   `NatIso.ofComponents` (`Mathlib/CategoryTheory/NatIso.lean`), and package
+   `F`, `G`, the unit, the counit, and the objectwise identity triangle into
+   the `CategoryTheory.Equivalence` structure
+   (`Mathlib/CategoryTheory/Equivalence.lean`).
 -/
 theorem reconstructs_from_degree_zero :
     Nonempty

@@ -1,7 +1,6 @@
 import Formalization.Books.Algebra.Unit43.GeometricallyReduced
 import Formalization.Books.Algebra.Unit47.GeometricallyIrreducible
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
-import Mathlib.Algebra.Field.ULift
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.TensorProduct.Basic
 
@@ -80,33 +79,24 @@ def IsGeometricallyIntegral (k : Type u) (S : Type v) [Field k] [CommRing S]
   ∀ (K : Type w) [Field K] [Algebra k K],
     IsDomain (K ⊗[k] S)
 
-private theorem isDomain_tensorProduct_of_isGeometricallyIntegral
+/-- A geometrically integral algebra remains a domain after any field base
+change in the universe quantified over by the predicate. -/
+theorem IsGeometricallyIntegral.isDomain_tensorProduct
     {k : Type u} {S : Type v} {K : Type z}
     [Field k] [CommRing S] [Field K] [Algebra k S] [Algebra k K]
     (h : IsGeometricallyIntegral.{u, v, z} k S) :
-    IsDomain (K ⊗[k] S) := by
-  let K' := ULift.{z} K
-  let : Field K' := inferInstance
-  let : Algebra k K' := inferInstance
-  let : IsDomain (K' ⊗[k] S) := by sorry
-  let e : K' ⊗[k] S ≃ₐ[k] K ⊗[k] S :=
-    Algebra.TensorProduct.congr (ULift.algEquiv (R := k))
-      (AlgEquiv.refl : S ≃ₐ[k] S)
-  exact e.symm.toMulEquiv.isDomain _
+    IsDomain (K ⊗[k] S) :=
+  h K
 
-private theorem isReduced_tensorProduct_of_isGeometricallyIntegral
+/-- A geometrically integral algebra remains reduced after any field base
+change in the universe quantified over by the predicate. -/
+theorem IsGeometricallyIntegral.isReduced_tensorProduct
     {k : Type u} {S : Type v} {K : Type z}
     [Field k] [CommRing S] [Field K] [Algebra k S] [Algebra k K]
     (h : IsGeometricallyIntegral.{u, v, z} k S) :
     IsReduced (K ⊗[k] S) := by
-  let K' := ULift.{z} K
-  let : Field K' := inferInstance
-  let : Algebra k K' := inferInstance
-  let : IsDomain (K' ⊗[k] S) := by sorry
-  let e : K' ⊗[k] S ≃ₐ[k] K ⊗[k] S :=
-    Algebra.TensorProduct.congr (ULift.algEquiv (R := k))
-      (AlgEquiv.refl : S ≃ₐ[k] S)
-  exact isReduced_of_injective e.symm.toRingHom e.symm.injective
+  let _ : IsDomain (K ⊗[k] S) := h.isDomain_tensorProduct
+  infer_instance
 
 /-- Geometric integrality is equivalent to geometric irreducibility together
 with geometric reducedness. -/
@@ -118,11 +108,10 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
   · intro h
     constructor
     · intro K _ _
-      let : IsDomain (K ⊗[k] S) :=
-        isDomain_tensorProduct_of_isGeometricallyIntegral h
+      let : IsDomain (K ⊗[k] S) := h.isDomain_tensorProduct
       infer_instance
     · intro K _ _
-      exact isReduced_tensorProduct_of_isGeometricallyIntegral h
+      exact h.isReduced_tensorProduct
   · rintro ⟨hirr, hred⟩ K _ _
     let : IsReduced (K ⊗[k] S) :=
       isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced

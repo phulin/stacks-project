@@ -235,11 +235,11 @@ theorem exists_adicLiftingQuotient_square_zero
 
 /-- A continuous lifting statement for an adic target and a closed quotient ideal. -/
 theorem exists_continuous_lift
-    {R : Type u} {S : Type v} {A : Type w} [CommRing R] [CommRing S] [CommRing A]
+    {R : Type u} {S : Type v} {A : Type (max u v)} [CommRing R] [CommRing S] [CommRing A]
     (f : R →+* S) (n : Ideal S) (hf : FormallySmoothForIdeal f n)
     [TopologicalSpace A] [IsTopologicalRing A] [IsLinearTopology A A]
     (hA : IsAdicTopologicalRing A)
-    (J : Ideal A) (hJclosed : IsClosed (J : Set A))
+    (J : Ideal A) (hJ : J ^ 2 = ⊥) (hJclosed : IsClosed (J : Set A))
     (hJpower : ∃ (I : Ideal A) (t : ℕ),
       IsIdealOfDefinition A I ∧ 1 ≤ t ∧ J ^ t ≤ I)
     (g : R →+* A)

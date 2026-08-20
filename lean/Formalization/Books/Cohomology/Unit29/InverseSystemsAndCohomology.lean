@@ -1,11 +1,14 @@
 import Formalization.Books.Algebra.Unit86.MittagLefflerSystems
 import Formalization.Books.Categories.Unit21.LimitsAndColimitsOverPreorderedSets
 import Formalization.Books.Cohomology.Unit02.CohomologyOfSheaves
+import Formalization.Books.Cohomology.Unit05.FirstCohomologyAndExtensions
+import Formalization.Books.Cohomology.Unit28.InverseSystems
 import Formalization.Books.Modules.Unit04.Sections
 import Formalization.Books.MoreAlgebra.Unit88.RlimOfModules
 import Formalization.Books.Sheaves.Unit26.RingedSpaceModules
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.FiniteLength
 
 /-!
@@ -18,6 +21,8 @@ limits, and Mittag--Leffler conditions use the canonical categorical APIs.
 
 namespace Formalization.Books.Cohomology.Unit29
 
+/-! ## 29.1. Inverse systems and cohomology, II -/
+
 open CategoryTheory
 open CategoryTheory.Limits
 open Opposite
@@ -25,6 +30,8 @@ open TopologicalSpace
 open Formalization.Books.Algebra.Unit86
 open Formalization.Books.Categories.Unit21
 open Formalization.Books.Cohomology.Unit02
+open Formalization.Books.Cohomology.Unit05
+open Formalization.Books.Cohomology.Unit28
 open Formalization.Books.Modules.Unit04
 open Formalization.Books.Sheaves.Unit10
 
@@ -252,6 +259,241 @@ theorem central_pow {R : Type v} [Ring R] (f : R)
         _ = s * (f ^ n * f) := by rw [mul_assoc]
         _ = s * f ^ (n + 1) := by rw [pow_succ]
 
+
+/-! The arbitrary-ring sheaf interface used by the first five source lemmas. -/
+
+abbrev AModuleSheaf (A : Type v) [CommRing A] (X : TopCat.{v}) :=
+  SheafOfAModules A X
+
+structure GeneralPrincipalInverseSystem (A : Type v) [CommRing A]
+    (X : TopCat.{v}) where
+  f : A
+  stages : InverseSystem ℕ+ (AModuleSheaf A X)
+  cohomology : SheafCohomologicalDeltaFunctor A X
+  globalSections : AModuleSheaf A X ⥤ ModuleCat.{v} A
+  degreeZero : Nonempty (cohomology.functor 0 ≅ globalSections)
+  fScalar : ∀ F : AModuleSheaf A X, F ⟶ F
+  scalar : ∀ n : ℕ+, stages.obj (op n) ⟶ stages.obj (op n)
+  scalar_eq : ∀ n, fScalar (stages.obj (op n)) = scalar n
+
+abbrev generalStageMap {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) {n m : ℕ+} (h : n ≤ m) :
+    S.stages.obj (op m) ⟶ S.stages.obj (op n) :=
+  S.stages.map (opHomOfLE h)
+
+def endomorphismPower {C : Type v} [Category C] {M : C}
+    (u : M ⟶ M) : ℕ → (M ⟶ M)
+  | 0 => 𝟙 M
+  | n + 1 => endomorphismPower u n ≫ u
+
+structure GeneralConditionOne {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) where
+  injection : ∀ n : ℕ+, S.stages.obj (op n) ⟶ S.stages.obj (op (n + 1))
+  projection : ∀ n : ℕ+, S.stages.obj (op (n + 1)) ⟶ S.stages.obj (op 1)
+  zero : ∀ n, injection n ≫ projection n = 0
+  exact : ∀ n, (ShortComplex.mk (injection n) (projection n) (zero n)).ShortExact
+  factor : ∀ n, S.scalar (n + 1) =
+    generalStageMap S (positive_le_succ n) ≫ injection n
+
+structure GeneralConditionTwo {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) where
+  injection : ∀ n : ℕ+, S.stages.obj (op 1) ⟶ S.stages.obj (op (n + 1))
+  factorToFirst : ∀ n : ℕ+, S.stages.obj (op (n + 1)) ⟶ S.stages.obj (op 1)
+  projection : ∀ n : ℕ+, S.stages.obj (op (n + 1)) ⟶ S.stages.obj (op n)
+  zero : ∀ n, injection n ≫ projection n = 0
+  exact : ∀ n, (ShortComplex.mk (injection n) (projection n) (zero n)).ShortExact
+  factor : ∀ n, endomorphismPower (S.scalar (n + 1)) n.val =
+    factorToFirst n ≫ injection n
+  projection_is_transition : ∀ n,
+    projection n = generalStageMap S (positive_le_succ n)
+
+structure GeneralConditionThree {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) where
+  G : AModuleSheaf A X
+  divisible : Epi (S.fScalar G)
+  stageIso : ∀ n : ℕ+, Nonempty
+    (S.stages.obj (op n) ≅ kernel (endomorphismPower (S.fScalar G) n.val))
+
+structure GeneralConditionFour {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) where
+  F : AModuleSheaf A X
+  torsionFree : Mono (S.fScalar F)
+  stageIso : ∀ n : ℕ+, Nonempty
+    (S.stages.obj (op n) ≅ cokernel (endomorphismPower (S.fScalar F) n.val))
+
+def GeneralPrincipalInverseSystem.IsConditionOne
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) : Prop :=
+  Nonempty (GeneralConditionOne S)
+
+def GeneralPrincipalInverseSystem.IsConditionTwo
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) : Prop :=
+  Nonempty (GeneralConditionTwo S)
+
+def GeneralPrincipalInverseSystem.IsConditionThree
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) : Prop :=
+  Nonempty (GeneralConditionThree S)
+
+def GeneralPrincipalInverseSystem.IsConditionFour
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) : Prop :=
+  Nonempty (GeneralConditionFour S)
+
+theorem general_condition_four_implies_three
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) :
+    S.IsConditionFour → S.IsConditionThree := by
+  sorry
+
+theorem general_condition_three_iff_two
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) :
+    S.IsConditionThree ↔ S.IsConditionTwo := by
+  sorry
+
+theorem general_condition_two_iff_one
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) :
+    S.IsConditionTwo ↔ S.IsConditionOne := by
+  sorry
+
+theorem general_condition_four_implies_three_iff_two_iff_one
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) :
+    S.IsConditionFour →
+      (S.IsConditionThree ↔ S.IsConditionTwo) ∧
+      (S.IsConditionTwo ↔ S.IsConditionOne) := by
+  sorry
+
+abbrev generalCohomologySystem {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    InverseSystem ℕ+ (ModuleCat.{v} A) :=
+  S.stages ⋙ S.cohomology.functor p
+
+abbrev generalCohomologyLimit {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    ModuleCat.{v} A :=
+  InverseSystemLimit (generalCohomologySystem S p)
+
+def generalInverseLimitFiltrationAt {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ)
+    (n : ℕ+) : Submodule A (generalCohomologyLimit S p : Type v) :=
+  LinearMap.ker ((limit.π (generalCohomologySystem S p) (op n)).hom)
+
+def generalModuleScalarLinearMap {A M : Type v} [CommRing A]
+    [AddCommGroup M] [Module A M] (r : A) : M →ₗ[A] M :=
+  moduleScalarLinearMap r (fun s => mul_comm r s)
+
+def generalFPowerRange {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ)
+    (n : ℕ+) : Submodule A (generalCohomologyLimit S p : Type v) :=
+  LinearMap.range (generalModuleScalarLinearMap (M := (generalCohomologyLimit S p : Type v))
+    (S.f ^ n.val))
+
+def generalFAdicBasisSets {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    Set (Set (generalCohomologyLimit S p : Type v)) :=
+  {U | ∃ n : ℕ, ∃ x : (generalCohomologyLimit S p : Type v),
+    U = {y | ∃ z ∈ ((LinearMap.range
+      (generalModuleScalarLinearMap (M := (generalCohomologyLimit S p : Type v))
+        (S.f ^ n)) : Submodule A (generalCohomologyLimit S p : Type v)) : Set _),
+      y = x + z}}
+
+def generalInverseLimitTopology {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    TopologicalSpace (generalCohomologyLimit S p : Type v) :=
+  ⨅ n : ℕ+, TopologicalSpace.induced
+    ((limit.π (generalCohomologySystem S p) (op n)).hom)
+    (⊤ : TopologicalSpace ((generalCohomologySystem S p).obj (op n) : Type v))
+
+def generalFAdicTopology {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    TopologicalSpace (generalCohomologyLimit S p : Type v) :=
+  TopologicalSpace.generateFrom (generalFAdicBasisSets S p)
+
+theorem general_topology_I_adic_f
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) (p : ℕ)
+    (hS : S.IsConditionOne) :
+    (∀ c : ℕ+, generalFPowerRange S p c =
+      generalInverseLimitFiltrationAt S p c) ∧
+      generalInverseLimitTopology S p = generalFAdicTopology S p := by
+  sorry
+
+def generalFAdicLimitQuotient {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    ModuleCat.{v} A :=
+  ModuleCat.of A
+    ((generalCohomologyLimit S p : Type v) ⧸ generalFPowerRange S p
+      ⟨1, Nat.zero_lt_succ 0⟩)
+
+def generalFAdicLimitImageAtOne {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    ModuleCat.{v} A :=
+  ModuleCat.of A
+    (LinearMap.range ((limit.π (generalCohomologySystem S p)
+      (op (1 : ℕ+))).hom) : Type v)
+
+theorem general_limit_finite
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X)
+    [IsNoetherianRing A]
+    (hcomplete : IsAdicComplete (Ideal.span ({S.f} : Set A)) A)
+    (hF₁ : Module.Finite A ((S.globalSections).obj
+      (S.stages.obj (op (1 : ℕ+))) : Type v))
+    (hS : S.IsConditionOne) :
+    Module.Finite A (generalCohomologyLimit S 0 : Type v) ∧
+      Function.Injective
+        (fun x : (generalCohomologyLimit S 0 : Type v) => S.f • x) ∧
+      Nonempty (generalFAdicLimitQuotient S 0 ≅
+        generalFAdicLimitImageAtOne S 0) := by
+  sorry
+
+def generalCohomologyImageToFirst {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ)
+    (m : ℕ+) : Submodule A
+      ((generalCohomologySystem S (p + 1)).obj (op (1 : ℕ+)) : Type v) :=
+  LinearMap.range (((generalCohomologySystem S (p + 1)).map
+    (opHomOfLE (show (1 : ℕ+) ≤ m by exact m.2))).hom)
+
+def generalCohomologyStableImageToFirst {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) :
+    Submodule A ((generalCohomologySystem S (p + 1)).obj
+      (op (1 : ℕ+)) : Type v) :=
+  ⨅ m : ℕ+, generalCohomologyImageToFirst S p m
+
+def GeneralMLFirstHypothesis {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) : Prop :=
+  IsFiniteLength A ((generalCohomologySystem S (p + 1)).obj
+      (op (1 : ℕ+)) : Type v) ∨
+    (IsNoetherianRing A ∧ Module.Finite A
+      ((generalCohomologySystem S (p + 1)).obj
+        (op (1 : ℕ+)) : Type v))
+
+def GeneralMLBetterFirstHypothesis {A : Type v} [CommRing A]
+    {X : TopCat.{v}} (S : GeneralPrincipalInverseSystem A X) (p : ℕ) : Prop :=
+  (∃ m : ℕ+, IsFiniteLength A
+      (generalCohomologyImageToFirst S p m : Type v)) ∨
+    (IsNoetherianRing A ∧ Module.Finite A
+      (generalCohomologyStableImageToFirst S p : Type v))
+
+theorem general_lemma_ML
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) (p : ℕ)
+    (hF : GeneralMLFirstHypothesis S p) (hS : S.IsConditionOne) :
+    IsMittagLefflerModuleSystem (generalCohomologySystem S p) := by
+  sorry
+
+theorem general_lemma_ML_better
+    {A : Type v} [CommRing A] {X : TopCat.{v}}
+    (S : GeneralPrincipalInverseSystem A X) (p : ℕ)
+    (hF : GeneralMLBetterFirstHypothesis S p) (hS : S.IsConditionOne) :
+    IsMittagLefflerModuleSystem (generalCohomologySystem S p) := by
+  sorry
+
+
 def fPowerSubmodule {R M : Type v} [Ring R] [AddCommGroup M] [Module R M]
     (f : R) (hcentral : ∀ s : R, f * s = s * f) (n : ℕ) : Submodule R M :=
   LinearMap.range (moduleScalarLinearMap (M := M) (f ^ n)
@@ -276,13 +518,21 @@ def IsFAdicallyComplete {R : Type v} [Ring R] (f : R)
       x m - x n ∈ fPowerSubmodule f hcentral m) →
     ∃ L : R, ∀ n : ℕ, L - x n ∈ fPowerSubmodule f hcentral n
 
+/-! The source's ring-completeness hypothesis uses Mathlib's canonical
+`IsAdicComplete` predicate for the principal ideal generated by `f`.  The
+sequential predicate above is retained for the explicitly topological
+formulation of the preceding lemma. -/
+
+abbrev IsPrincipalIdealComplete {R : Type v} [CommRing R] (f : R) : Prop :=
+  IsAdicComplete (Ideal.span ({f} : Set R)) R
+
 @[instance_reducible]
 def inverseLimitTopology {R : Type v} [Ring R]
     {M : InverseSystem ℕ+ (ModuleCat.{v} R)} :
     TopologicalSpace ((InverseSystemLimit M : ModuleCat.{v} R) : Type v) :=
   ⨅ n : ℕ+, TopologicalSpace.induced
     ((limit.π M (op n)).hom)
-    (⊥ : TopologicalSpace (M.obj (op n) : Type v))
+    (⊤ : TopologicalSpace (M.obj (op n) : Type v))
 
 def fAdicTopology {X : RingedSpace.{v}}
     (S : PrincipalInverseSystem X) (p : ℕ) :
@@ -338,7 +588,8 @@ theorem limit_finite
     (hcomplete : IsFAdicallyComplete (globalSectionValue S.f)
       (fun s => S.central (op (⊤ : Opens X.carrier)) s))
     (hF₁ : Module.Finite (cohomologyRing X)
-      ((cohomologySystem S 0).obj (op (1 : ℕ+)) : Type v))
+      ((ringedSpaceModuleGlobalSections X).obj
+        (S.stages.obj (op (1 : ℕ+))) : Type v))
     (hS : S.IsConditionOne) :
     Module.Finite (cohomologyRing X) (cohomologyLimit S 0 : Type v) ∧
       Function.Injective (fun x : (cohomologyLimit S 0 : Type v) =>
@@ -495,6 +746,26 @@ abbrev bocksteinTateModule {X : RingedSpace.{v}}
     (D : BocksteinSystemData f hcentral F p) :
     ModuleCat.{v} (cohomologyRing X) := InverseSystemLimit D.right
 
+/-! These source-facing aliases make the first displayed sequence read as
+completion, middle cohomology, and Tate module, while retaining the
+canonical inverse-limit constructions above. -/
+
+abbrev usualFAdicCompletion {X : RingedSpace.{v}}
+    {f : GlobalSection (X := X)} {hcentral : ∀ (U : (Opens X.carrier)ᵒᵖ)
+      (r : (X.structureSheaf.obj.obj U : Type v)),
+      globalSectionValueAt f U * r = r * globalSectionValueAt f U}
+    {F : SheafModule (X := X)} {p : ℕ}
+    (D : BocksteinSystemData f hcentral F p) :
+    ModuleCat.{v} (cohomologyRing X) := bocksteinCompletion D
+
+abbrev fAdicTateModule {X : RingedSpace.{v}}
+    {f : GlobalSection (X := X)} {hcentral : ∀ (U : (Opens X.carrier)ᵒᵖ)
+      (r : (X.structureSheaf.obj.obj U : Type v)),
+      globalSectionValueAt f U * r = r * globalSectionValueAt f U}
+    {F : SheafModule (X := X)} {p : ℕ}
+    (D : BocksteinSystemData f hcentral F p) :
+    ModuleCat.{v} (cohomologyRing X) := bocksteinTateModule D
+
 structure ModuleShortExact {R : Type v} [Ring R]
     {L M N : ModuleCat.{v} R} where
   inclusion : L ⟶ M
@@ -509,8 +780,8 @@ theorem bockstein_limit_exact {X : RingedSpace.{v}}
       globalSectionValueAt f U * r = r * globalSectionValueAt f U}
     {F : SheafModule (X := X)} {p : ℕ}
     (D : BocksteinSystemData f hcentral F p) :
-    Nonempty (ModuleShortExact (L := bocksteinCompletion D)
-      (M := bocksteinMiddleLimit D) (N := bocksteinTateModule D)) := by
+    Nonempty (ModuleShortExact (L := usualFAdicCompletion D)
+      (M := bocksteinMiddleLimit D) (N := fAdicTateModule D)) := by
   sorry
 
 noncomputable abbrev firstDerivedLimit {R : Type v} [Ring R]

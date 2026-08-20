@@ -64,7 +64,7 @@ abbrev ordinaryTensorProductCarrier
     [CommRing R] [Ring A] [Ring B] [AddCommGroup M] [Module R M]
     [Module Aᵐᵒᵖ M] [Algebra R A] [Algebra R B]
     [AddCommGroup N] [Module R N]
-    (Ndata : BimoduleModuleData R A B N)
+    (_Ndata : BimoduleModuleData R A B N)
     (leftModule : Module A N) : Type u :=
   @relativeTensorProduct R A M N
     inferInstance inferInstance inferInstance inferInstance inferInstance
@@ -106,7 +106,7 @@ theorem ordinaryTensorProduct_rightModule_exists
   sorry
 
 /-- The selected right `B`-module structure on `M ⊗_A N`. -/
-noncomputable def ordinaryTensorProductRightModule
+@[instance_reducible] noncomputable def ordinaryTensorProductRightModule
     {R A B M N : Type u}
     [CommRing R] [Ring A] [Ring B] [AddCommGroup M] [Module R M]
     [Module Aᵐᵒᵖ M] [Algebra R A] [Algebra R B]
@@ -266,6 +266,25 @@ abbrev gradedTensorProductComponent
     (fun p => Ndata.component p)
     Mdata.homogeneousAction (gradedBimoduleLeftAction GA GB Ndata)
 
+/-- The pure-tensor formula for the right action on the graded relative tensor
+product. -/
+def gradedTensorProductRightActionOnPureTensor
+    {R A B M N : Type u}
+    [CommRing R] [Ring A] [Ring B] [AddCommGroup M] [Module R M]
+    [Algebra R A] [Algebra R B] [AddCommGroup N] [Module R N]
+    (GA : GradedAlgebraData R A) (GB : GradedAlgebraData R B)
+    (Mdata : GradedRightModuleData R A M GA)
+    (Ndata : GradedBimodule R A B N GA GB)
+    (p q r : ℤ) (m : Mdata.grading.component p)
+    (x : Ndata.component q) (b : GB.component r) :
+    gradedTensorProductComponent GA GB Mdata Ndata ((p + q) + r) :=
+  gradedRelativeTensorProductMk ((p + q) + r) p (q + r)
+    (fun i => Mdata.grading.component i)
+    (fun i => GA.component i)
+    (fun i => Ndata.component i)
+    Mdata.homogeneousAction (gradedBimoduleLeftAction GA GB Ndata)
+    (by omega) m ((gradedBimoduleRightAction GA GB Ndata q r) x b)
+
 /-- The homogeneous right `B`-module structure on the graded relative tensor
 product.  The unit and associativity fields use the homogeneous component
 identifications supplied by `GradedAlgebraData`. -/
@@ -280,6 +299,17 @@ structure GradedTensorProductRightModuleSpec
     gradedTensorProductComponent GA GB Mdata Ndata p →ₗ[R]
       GB.component q →ₗ[R]
         gradedTensorProductComponent GA GB Mdata Ndata (p + q)
+  rightAction_pure : ∀ (p q r : ℤ)
+      (m : Mdata.grading.component p) (x : Ndata.component q)
+      (b : GB.component r),
+    rightAction (p + q) r
+        (gradedRelativeTensorProductMk (p + q) p q
+          (fun i => Mdata.grading.component i)
+          (fun i => GA.component i)
+          (fun i => Ndata.component i)
+          Mdata.homogeneousAction (gradedBimoduleLeftAction GA GB Ndata)
+          rfl m x) b =
+      gradedTensorProductRightActionOnPureTensor GA GB Mdata Ndata p q r m x b
   right_one : ∀ (p : ℤ) (x : gradedTensorProductComponent GA GB Mdata Ndata p),
     transportGraded (X := fun i =>
         (gradedTensorProductComponent GA GB Mdata Ndata i : Type u)) (by omega)
@@ -534,6 +564,46 @@ noncomputable def differentialGradedTensorProduct_shift_iso
 
 /-! ## Associativity -/
 
+/-- The underlying complex of the tensor product of a differential graded
+`(A,B)`-bimodule with a differential graded `(B,C)`-bimodule. -/
+abbrev differentialGradedBimoduleTensorProductComplex
+    {R : Type u} [CommRing R]
+    {A B C : DifferentialGradedAlgebra R}
+    (N : DifferentialGradedBimodule A B)
+    (N' : DifferentialGradedBimodule B C) : CochainComplexOver R :=
+  differentialGradedTensorProduct
+    (DifferentialGradedBimodule.toRightModule N)
+    (DifferentialGradedBimodule.toLeftModule N')
+
+/-- A differential graded `(A,C)`-bimodule structure on the relative tensor
+product of an `(A,B)`-bimodule and a `(B,C)`-bimodule. -/
+structure DifferentialGradedBimoduleTensorProductSpec
+    {R : Type u} [CommRing R]
+    {A B C : DifferentialGradedAlgebra R}
+    (N : DifferentialGradedBimodule A B)
+    (N' : DifferentialGradedBimodule B C) where
+  object : DifferentialGradedBimodule A C
+  object_complex : object.complex =
+    differentialGradedBimoduleTensorProductComplex N N'
+
+/-- The differential graded tensor product of composable bimodules exists. -/
+theorem differentialGradedBimoduleTensorProduct_exists
+    {R : Type u} [CommRing R]
+    {A B C : DifferentialGradedAlgebra R}
+    (N : DifferentialGradedBimodule A B)
+    (N' : DifferentialGradedBimodule B C) :
+    Nonempty (DifferentialGradedBimoduleTensorProductSpec N N') := by
+  sorry
+
+/-- A selected differential graded tensor product of composable bimodules. -/
+noncomputable def differentialGradedBimoduleTensorProduct
+    {R : Type u} [CommRing R]
+    {A B C : DifferentialGradedAlgebra R}
+    (N : DifferentialGradedBimodule A B)
+    (N' : DifferentialGradedBimodule B C) :
+    DifferentialGradedBimodule A C :=
+  (Classical.choice (differentialGradedBimoduleTensorProduct_exists N N')).object
+
 /-- The source's ordinary associativity assertion, represented by the
 canonical linear equivalence between the two balanced quotient
 presentations.  The module instances on the two inner tensor products are
@@ -597,11 +667,11 @@ theorem differentialGradedTensorProduct_associator_exists
     (M : DifferentialGradedModule A)
     (N : DifferentialGradedBimodule A B)
     (N' : DifferentialGradedBimodule B C) :
-    ∃ (P : DifferentialGradedBimodule A C),
-      Nonempty (
-        differentialGradedTensorProductModule
-            (differentialGradedTensorProductModule M N) N' ≅
-          differentialGradedTensorProductModule M P) := by
+    Nonempty (
+      differentialGradedTensorProductModule
+          (differentialGradedTensorProductModule M N) N' ≅
+        differentialGradedTensorProductModule M
+          (differentialGradedBimoduleTensorProduct N N')) := by
   sorry
 
 end Formalization.Books.Dga.Unit29

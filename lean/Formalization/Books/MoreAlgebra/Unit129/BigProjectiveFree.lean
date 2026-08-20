@@ -291,10 +291,10 @@ theorem element_projective
   let c : L := i s
   let d : P →₀ R := b.repr c
   let S : Set P := d.support
-  letI : Finite S := Finite.of_injective
+  let _ : Finite S := Finite.of_injective
     (fun x : S => (⟨x.1, x.2⟩ : d.support))
     (by intro x y hxy; exact Subtype.ext (congrArg Subtype.val hxy))
-  letI : Fintype S := Fintype.ofFinite S
+  let _ : Fintype S := Fintype.ofFinite S
   let A : Submodule R L := Submodule.span R (b '' S)
   let B : Submodule R L := Submodule.span R (b '' Sᶜ)
   have hAB : IsCompl A B := by
@@ -389,8 +389,8 @@ theorem element_projective
     rw [ha']
   have hKcomp : IsComplemented K :=
     ⟨LinearMap.ker fK, LinearMap.isCompl_of_proj hfK⟩
-  letI : Module.Finite R A := Module.Finite.of_basis bA
-  letI : Module.Free R A := Module.Free.of_basis bA
+  let _ : Module.Finite R A := Module.Finite.of_basis bA
+  let _ : Module.Free R A := Module.Free.of_basis bA
   have hKfin : Module.Finite R K := Module.Finite.equiv eK
   have hKfree : Module.Free R K := Module.Free.of_equiv eK
   have hTa : T' ⟨c, hcA⟩ = (0, s) := by
@@ -594,14 +594,14 @@ private theorem bass_basechange_span
     | tmul a p =>
         have hp : p ∈ Submodule.span R (({s} : Set P) ∪ (M : Set P)) := by
           rw [Submodule.span_union]
-          simpa [hgen]
+          simp [hgen]
         have hqp : q p ∈ W := by
           refine Submodule.span_induction
             (p := fun x _ => q x ∈ W) ?_ ?_ ?_ ?_ hp
           · rintro x (rfl | hx)
             · exact Submodule.mem_sup_left (Submodule.subset_span (by simp))
             · exact Submodule.mem_sup_right (Submodule.subset_span ⟨x, hx, rfl⟩)
-          · simpa [q] using W.zero_mem
+          · simp [q]
           · intro x y _ _ hx hy
             simpa only [map_add] using W.add_mem hx hy
           · intro r x _ hx
@@ -620,7 +620,7 @@ private theorem bass_basechange_span
 private theorem bass_basechange_span_lift
     {R : Type u} {P : Type v} [CommRing R]
     [AddCommGroup P] [Module R P]
-    (M : Submodule R P) (s : P) (z : TensorProduct R (R ⧸ Ring.jacobson R) P)
+    (M : Submodule R P) (_s : P) (z : TensorProduct R (R ⧸ Ring.jacobson R) P)
     (hz : z ∈ Submodule.span (R ⧸ Ring.jacobson R)
       ((TensorProduct.mk R (R ⧸ Ring.jacobson R) P 1) '' (M : Set P))) :
     ∃ m : P, m ∈ M ∧ TensorProduct.mk R (R ⧸ Ring.jacobson R) P 1 m = z := by
@@ -651,9 +651,9 @@ private theorem bass_basechange_rank
   let A := R ⧸ Ring.jacobson R
   let PB := TensorProduct R A P
   let q := m.asIdeal.comap (algebraMap R A)
-  letI : q.IsMaximal := Ideal.comap_isMaximal_of_surjective
+  let _ : q.IsMaximal := Ideal.comap_isMaximal_of_surjective
       (Ideal.Quotient.mk (Ring.jacobson R)) Ideal.Quotient.mk_surjective
-  letI : Algebra (Localization.AtPrime q) (Localization.AtPrime m.asIdeal) :=
+  let _ : Algebra (Localization.AtPrime q) (Localization.AtPrime m.asIdeal) :=
     Localization.AtPrime.algebraOfLiesOver q m.asIdeal
   let LA := Localization.AtPrime m.asIdeal
   let LR := Localization.AtPrime q
@@ -664,8 +664,8 @@ private theorem bass_basechange_rank
       (TensorProduct.AlgebraTensorModule.cancelBaseChange R _ _ _ P).symm ≪≫ₗ
       (TensorProduct.AlgebraTensorModule.congr (LinearEquiv.refl _ _)
         (LocalizedModule.equivTensorProduct _ P).symm)
-  letI : Module.Projective LR (LocalizedModule q.primeCompl P) := inferInstance
-  letI : Module.Free LR (LocalizedModule q.primeCompl P) :=
+  let _ : Module.Projective LR (LocalizedModule q.primeCompl P) := inferInstance
+  let _ : Module.Free LR (LocalizedModule q.primeCompl P) :=
     Formalization.Books.Algebra.Unit85.projective_free_over_local_ring inferInstance
   have hbase := Module.rank_baseChange (R := LA) (S := LR)
       (M' := LocalizedModule q.primeCompl P)
@@ -696,7 +696,7 @@ private theorem bass_finite_kernel
     obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective M z
     have hy : y ∈ Submodule.span R (({x} : Set P) ∪ (M : Set P)) := by
       rw [Submodule.span_union]
-      simpa [hgen]
+      simp [hgen]
     refine Submodule.span_induction
       (p := fun z _ => ∃ r, q r = M.mkQ z) ?_ ?_ ?_ ?_ hy
     · rintro z (rfl | hz)
@@ -712,8 +712,8 @@ private theorem bass_finite_kernel
       calc
         (q (a * b)) = a • q b := by simp [q, smul_smul]
         _ = a • M.mkQ z := by rw [hb]
-  letI : Module.Finite R (P ⧸ M) := Module.Finite.of_surjective q hqsurj
-  letI : Module.Finite R (Fin n → R) := inferInstance
+  let _ : Module.Finite R (P ⧸ M) := Module.Finite.of_surjective q hqsurj
+  let _ : Module.Finite R (Fin n → R) := inferInstance
   let f : P →ₗ[R] (P ⧸ M) × (Fin n → R) :=
     (M.mkQ).prod (LinearMap.pi fs)
   have hfK : LinearMap.ker f = K := by
@@ -752,11 +752,11 @@ private theorem bass_localized_exact_finite
     let Ploc := LocalizedModule p.primeCompl P
     let Hloc := LocalizedModule p.primeCompl (P ⧸ K)
     let k := p.ResidueField
-    let q : Ploc →ₗ[L] TensorProduct L k Ploc :=
+    let _q : Ploc →ₗ[L] TensorProduct L k Ploc :=
       TensorProduct.mk L k Ploc 1
     let f : LocalizedModule p.primeCompl K →ₗ[L] Ploc :=
       LocalizedModule.map p.primeCompl K.subtype
-    let g : Ploc →ₗ[L] Hloc :=
+    let _g : Ploc →ₗ[L] Hloc :=
       LocalizedModule.map p.primeCompl K.mkQ
     Module.Finite k
       ((TensorProduct L k Ploc) ⧸ LinearMap.range (f.baseChange k)) := by
@@ -779,9 +779,9 @@ private theorem bass_localized_exact_finite
     simpa only [LinearMap.baseChange_eq_ltensor] using lTensor_exact k hfg hgs
   have hgs' : Function.Surjective (g.baseChange k) :=
     LinearMap.baseChange_surjective k hgs
-  letI : Module.Finite L Hloc := Module.Finite.of_isLocalizedModule
+  let _ : Module.Finite L Hloc := Module.Finite.of_isLocalizedModule
     p.primeCompl (LocalizedModule.mkLinearMap p.primeCompl (P ⧸ K))
-  letI : Module.Finite k (TensorProduct L k Hloc) := Module.Finite.base_change L k Hloc
+  let _ : Module.Finite k (TensorProduct L k Hloc) := Module.Finite.base_change L k Hloc
   let q : TensorProduct L k Ploc →ₗ[k] TensorProduct L k Hloc := g.baseChange k
   have hqker : LinearMap.ker q = LinearMap.range (f.baseChange k) :=
     hfg'.linearMap_ker_eq
@@ -909,7 +909,7 @@ private theorem bass_exists_global_element
   let v := qglobal (s + m)
   let W : Submodule k (TensorProduct L k Ploc) := Submodule.span k ({v} : Set _)
   by_contra h
-  push_neg at h
+  push Not at h
   have hle : LinearMap.range (f.baseChange k) ≤ W := by
     apply bass_localized_range_le K p s m
     intro y hy
@@ -921,16 +921,16 @@ private theorem bass_exists_global_element
       apply top_unique
       intro x hx
       exact (Submodule.Quotient.mk_eq_zero W).mpr (hle ⟨x, rfl⟩))
-  letI : Module.Finite k
+  let _ : Module.Finite k
       ((TensorProduct L k Ploc) ⧸ LinearMap.range (f.baseChange k)) := hfin
   have hqbar_surj : Function.Surjective qbar := by
     intro z
     obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective W z
     exact ⟨Submodule.mkQ (LinearMap.range (f.baseChange k)) x, rfl⟩
-  letI : Module.Finite k ((TensorProduct L k Ploc) ⧸ W) :=
+  let _ : Module.Finite k ((TensorProduct L k Ploc) ⧸ W) :=
     Module.Finite.of_surjective qbar hqbar_surj
-  letI : Module.Finite k W := inferInstance
-  letI : Module.Finite k (TensorProduct L k Ploc) :=
+  let _ : Module.Finite k W := inferInstance
+  let _ : Module.Finite k (TensorProduct L k Ploc) :=
     Module.Finite.of_submodule_quotient W
   exact (not_lt_of_ge hQ) (Module.rank_lt_aleph0 k (TensorProduct L k Ploc))
 
@@ -946,7 +946,7 @@ private theorem bass_good_element_noetherian
   have hstates : states.Nonempty := by
     refine ⟨⊥, ?_⟩
     refine ⟨0, 0, Submodule.zero_mem M, (fun i : Fin 0 => Fin.elim0 i), ?_⟩
-    simp [states]
+    simp
   obtain ⟨I, hI, hmax⟩ :=
     (set_has_maximal_iff_noetherian (R := A) (M := A)).mpr inferInstance
       states hstates
@@ -962,16 +962,16 @@ private theorem bass_good_element_noetherian
     refine ⟨m, hm, ∑ i, c i • fs i, ?_⟩
     simpa [LinearMap.sum_apply, smul_eq_mul] using hc
   obtain ⟨p, hp, hIp⟩ := Ideal.ne_top_iff_exists_maximal.mp hnotop
-  letI : p.IsMaximal := hp
+  let _ : p.IsMaximal := hp
   let K : Submodule A P := M ⊓ ⨅ i : Fin n, LinearMap.ker (fs i)
-  letI : Module.Finite A (P ⧸ K) := by
+  let _ : Module.Finite A (P ⧸ K) := by
     simpa [K] using bass_finite_kernel M s fs hgen
   have hQ : Cardinal.aleph0 ≤ Module.rank p.ResidueField
       (TensorProduct (Localization.AtPrime p) p.ResidueField
         (LocalizedModule p.primeCompl P)) := by
-    letI : Module.Projective (Localization.AtPrime p)
+    let _ : Module.Projective (Localization.AtPrime p)
         (LocalizedModule p.primeCompl P) := inferInstance
-    letI : Module.Free (Localization.AtPrime p)
+    let _ : Module.Free (Localization.AtPrime p)
         (LocalizedModule p.primeCompl P) :=
       Formalization.Books.Algebra.Unit85.projective_free_over_local_ring inferInstance
     have hr := Module.rank_baseChange (R := p.ResidueField)
@@ -1027,7 +1027,7 @@ private theorem bass_good_element_noetherian
     rintro _ ⟨i, rfl⟩
     apply Ideal.subset_span
     refine ⟨Fin.succ i, ?_⟩
-    simp [fs', hker_y, add_assoc, add_left_comm, add_comm]
+    simp [fs', hker_y, add_comm]
   have hnle : ¬ I' ≤ Ideal.span (Set.range (fun i => fs i (s + m))) := by
     intro hle'
     have hmemp : φ (s + m + y) ∈ I' := by
@@ -1056,8 +1056,8 @@ theorem trick_to_find_good_element
   let PB := TensorProduct R A P
   let q : P →ₗ[R] PB := TensorProduct.mk R A P 1
   let N : Submodule A PB := Submodule.span A (q '' (M : Set P))
-  letI : IsNoetherianRing A := hR
-  letI : Module.Projective A PB :=
+  let _ : IsNoetherianRing A := hR
+  let _ : Module.Projective A PB :=
     bass_basechange_projective (R := R) (A := A) (P := P)
   have hgenPB : Submodule.span A ({q s} : Set PB) ⊔ N = ⊤ := by
     change Submodule.span A ({q s} : Set PB) ⊔
@@ -1093,7 +1093,7 @@ theorem trick_to_find_good_element
       (Ring.jacobson R) le_rfl hunit_quot
   let χ : P →ₗ[R] R := (↑(IsUnit.unit hunit).inv : R) • ψ
   have hχx : χ x = 1 := by
-    simpa [χ, LinearMap.smul_apply, mul_comm] using hunit.val_inv_mul
+    simp [χ, LinearMap.smul_apply, mul_comm]
   let S : Submodule R P := Submodule.span R ({x} : Set P)
   let ix0 : R →ₗ[R] P := LinearMap.toSpanSingleton R P x
   let ix : R →ₗ[R] S := ix0.codRestrict S (by
@@ -1118,7 +1118,6 @@ theorem trick_to_find_good_element
       simp
     · simp
     · intro z z' _ _ hz hz'
-      change (ix (χ (z + z')) : P) = z + z'
       rw [map_add, map_add]
       change (ix (χ z) : P) + (ix (χ z') : P) = z + z'
       exact congrArg₂ (· + ·) hz hz'
@@ -1182,24 +1181,24 @@ private theorem bass_complement_infinite
   let L := Localization.AtPrime m.asIdeal
   let S := m.asIdeal.primeCompl
   let projC : (R × P) →ₗ[R] C := C.projectionOnto K hKC.symm
-  letI : Module.Projective R C := Module.Projective.of_split C.subtype projC (by
+  let _ : Module.Projective R C := Module.Projective.of_split C.subtype projC (by
     apply LinearMap.ext
     intro c
     exact C.projectionOnto_apply_left hKC.symm c)
-  letI : Module.Projective L (LocalizedModule S C) := inferInstance
-  letI : Module.Free L (LocalizedModule S C) :=
+  let _ : Module.Projective L (LocalizedModule S C) := inferInstance
+  let _ : Module.Free L (LocalizedModule S C) :=
     Formalization.Books.Algebra.Unit85.projective_free_over_local_ring
       (R := L) (P := LocalizedModule S C) inferInstance
-  letI : Module.Finite L (LocalizedModule S C) :=
+  let _ : Module.Finite L (LocalizedModule S C) :=
     Module.rank_lt_aleph0_iff.mp hlt
-  letI : Module.Finite L (LocalizedModule S K) :=
+  let _ : Module.Finite L (LocalizedModule S K) :=
     Module.Finite.of_isLocalizedModule S (LocalizedModule.mkLinearMap S K)
   let eProd : LocalizedModule S (K × C) ≃ₗ[L]
       LocalizedModule S K × LocalizedModule S C :=
     IsLocalizedModule.linearEquiv S (LocalizedModule.mkLinearMap S (K × C))
       ((LocalizedModule.mkLinearMap S K).prodMap
         (LocalizedModule.mkLinearMap S C)) |>.extendScalarsOfIsLocalization S L
-  letI : Module.Finite L (LocalizedModule S (K × C)) :=
+  let _ : Module.Finite L (LocalizedModule S (K × C)) :=
     Module.Finite.equiv eProd.symm
   let eKC : (K × C) ≃ₗ[R] (R × P) :=
     Submodule.prodEquivOfIsCompl K C hKC
@@ -1207,7 +1206,7 @@ private theorem bass_complement_infinite
       LocalizedModule S (R × P) :=
     IsLocalizedModule.mapEquiv S (LocalizedModule.mkLinearMap S (K × C))
       (LocalizedModule.mkLinearMap S (R × P)) L eKC
-  letI : Module.Finite L (LocalizedModule S (R × P)) :=
+  let _ : Module.Finite L (LocalizedModule S (R × P)) :=
     Module.Finite.equiv eLoc
   exact (not_lt_of_ge (bass_hasInfinite_product (F := R) hP m))
     (Module.rank_lt_aleph0 L (LocalizedModule S (R × P)))
@@ -1223,11 +1222,11 @@ private theorem bass_rank_one_step
     (s : P) (hs : (0, s) ∈ K) :
     ∃ L : Submodule R P, s ∈ L ∧ IsComplemented L ∧
       Module.Finite R L ∧ Module.IsStablyFree R L := by
-  letI : Module.Finite R K := hKfin
-  letI : Module.IsStablyFree R K := hKstable
+  let _ : Module.Finite R K := hKfin
+  let _ : Module.IsStablyFree R K := hKstable
   obtain ⟨C, hKC⟩ := hKcomp
   let projC : (R × P) →ₗ[R] C := C.projectionOnto K hKC.symm
-  letI : Module.Projective R C := Module.Projective.of_split C.subtype projC (by
+  let _ : Module.Projective R C := Module.Projective.of_split C.subtype projC (by
     apply LinearMap.ext
     intro c
     exact C.projectionOnto_apply_left hKC.symm c)
@@ -1257,7 +1256,7 @@ private theorem bass_rank_one_step
     · exact Submodule.smul_mem _ a
         (Submodule.mem_sup_left (Submodule.subset_span (Set.mem_singleton t)))
     · apply Submodule.mem_sup_right
-      exact ⟨p, by simp [MC, inrP]⟩
+      exact ⟨p, by simp [inrP]⟩
   obtain ⟨mc, hmc, hU, ⟨eU⟩⟩ :=
     trick_to_find_good_element hR hCP t MC hgenC
   obtain ⟨p, hp⟩ := hmc
@@ -1267,7 +1266,9 @@ private theorem bass_rank_one_step
   have hπone : π (1, p) = y := by
     have hp' : π (0, p) = mc := by simpa [inrP] using hp
     calc
-      π (1, p) = π ((1, 0) + (0, p)) := by congr 1 <;> ext <;> simp
+      π (1, p) = π ((1, 0) + (0, p)) := by
+        congr 1
+        ext <;> simp
       _ = π (1, 0) + π (0, p) := map_add π (1, 0) (0, p)
       _ = t + mc := by rw [hp']
       _ = y := rfl
@@ -1290,7 +1291,7 @@ private theorem bass_rank_one_step
       have hdiff := congrArg π hpairs
       rw [map_sub, map_smul, hp'] at hdiff
       rw [hdiff]
-      simp only [smul_add, smul_neg, neg_smul, neg_one_smul, one_smul]
+      simp only [smul_add]
       abel
     have hy0 : proj₂ y = 0 :=
       C₂.projectionOnto_apply_of_mem_right hUC₂.symm
@@ -1301,7 +1302,7 @@ private theorem bass_rank_one_step
     change proj₂ (π (0, p₀ - a • p)) = z
     rw [← hproj2 z, heq, map_add, map_smul, hy0]
     simp
-  letI : Module.Projective R C₂ := Module.Projective.of_split C₂.subtype proj₂ (by
+  let _ : Module.Projective R C₂ := Module.Projective.of_split C₂.subtype proj₂ (by
     apply LinearMap.ext
     intro z
     exact C₂.projectionOnto_apply_left hUC₂.symm z)
@@ -1343,7 +1344,7 @@ private theorem bass_rank_one_step
     { toFun := fun z => (z.1, (z.2 : P) + z.1 • p)
       map_add' := by
         intro z z'
-        ext <;> simp [add_smul, smul_add, add_assoc, add_left_comm, add_comm]
+        ext <;> simp [add_smul, add_assoc, add_left_comm]
       map_smul' := by
         intro r z
         ext <;> simp [smul_add, mul_smul] }
@@ -1368,7 +1369,7 @@ private theorem bass_rank_one_step
     rw [hsplit]
     rw [show (0, (l : P) + r • p) = (0, (l : P)) + r • ((0 : R), p) by
       ext <;> simp, hpair]
-    simp only [map_add, map_smul, map_zero, hl, hp']
+    simp only [map_add, map_smul, hl, hp']
     rw [zero_add, ← smul_add, ← map_add, hy0]
     exact smul_zero r
   have hzero (r : R) (l : L) :
@@ -1446,37 +1447,37 @@ private theorem bass_rank_one_step
       exact ⟨beta z, hαβ z⟩
   let eα : (R × L) ≃ₗ[R] K × U := LinearEquiv.ofBijective alpha hab
   let eU' : R ≃ₗ[R] U := by simpa [U, y] using eU
-  letI : Module.Finite R U := Module.Finite.equiv eU'
-  letI : Module.Free R U := Module.Free.of_equiv eU'
-  letI : Module.Finite R (K × U) := inferInstance
-  letI : Module.Finite R (R × L) := Module.Finite.equiv eα.symm
+  let _ : Module.Finite R U := Module.Finite.equiv eU'
+  let _ : Module.Free R U := Module.Free.of_equiv eU'
+  let _ : Module.Finite R (K × U) := inferInstance
+  let _ : Module.Finite R (R × L) := Module.Finite.equiv eα.symm
   have hKUstable : Module.IsStablyFree R (K × U) := by
     obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hKNfree⟩ :=
       Module.IsStablyFree.exist_free_prod R K
-    letI : AddCommGroup N := hNadd
-    letI : Module R N := hNmod
-    letI : Module.Finite R N := hNfin
-    letI : Module.Free R N := hNfree
-    letI : Module.Free R (K × N) := hKNfree
+    let _ : AddCommGroup N := hNadd
+    let _ : Module R N := hNmod
+    let _ : Module.Finite R N := hNfin
+    let _ : Module.Free R N := hNfree
+    let _ : Module.Free R (K × N) := hKNfree
     let eKU : ((K × U) × N) ≃ₗ[R] (K × N) × U :=
       ((LinearEquiv.prodAssoc R K U N).trans
         ((LinearEquiv.refl R K).prodCongr (LinearEquiv.prodComm R U N))).trans
         (LinearEquiv.prodAssoc R K N U).symm
-    letI : Module.Free R ((K × U) × N) := Module.Free.of_equiv eKU.symm
+    let _ : Module.Free R ((K × U) × N) := Module.Free.of_equiv eKU.symm
     exact Module.IsStablyFree.of_free_prod R (K × U) N
-  letI : Module.IsStablyFree R (K × U) := hKUstable
+  let _ : Module.IsStablyFree R (K × U) := hKUstable
   have hRLstable : Module.IsStablyFree R (R × L) := by
     obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hKUNfree⟩ :=
       Module.IsStablyFree.exist_free_prod R (K × U)
-    letI : AddCommGroup N := hNadd
-    letI : Module R N := hNmod
-    letI : Module.Finite R N := hNfin
-    letI : Module.Free R N := hNfree
-    letI : Module.Free R ((K × U) × N) := hKUNfree
-    letI : Module.Free R ((R × L) × N) := Module.Free.of_equiv
+    let _ : AddCommGroup N := hNadd
+    let _ : Module R N := hNmod
+    let _ : Module.Finite R N := hNfin
+    let _ : Module.Free R N := hNfree
+    let _ : Module.Free R ((K × U) × N) := hKUNfree
+    let _ : Module.Free R ((R × L) × N) := Module.Free.of_equiv
       (eα.symm.prodCongr (LinearEquiv.refl R N))
     exact Module.IsStablyFree.of_free_prod R (R × L) N
-  letI : Module.IsStablyFree R (R × L) := hRLstable
+  let _ : Module.IsStablyFree R (R × L) := hRLstable
   have hLfin : Module.Finite R L := by
     exact Module.Finite.of_surjective (LinearMap.snd R R L) (by
       intro l
@@ -1485,17 +1486,17 @@ private theorem bass_rank_one_step
   have hLstable : Module.IsStablyFree R L := by
     obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hRLNfree⟩ :=
       Module.IsStablyFree.exist_free_prod R (R × L)
-    letI : AddCommGroup N := hNadd
-    letI : Module R N := hNmod
-    letI : Module.Finite R N := hNfin
-    letI : Module.Free R N := hNfree
-    letI : Module.Free R ((R × L) × N) := hRLNfree
+    let _ : AddCommGroup N := hNadd
+    let _ : Module R N := hNmod
+    let _ : Module.Finite R N := hNfin
+    let _ : Module.Free R N := hNfree
+    let _ : Module.Free R ((R × L) × N) := hRLNfree
     let eL : ((R × L) × N) ≃ₗ[R] L × (R × N) :=
       (((LinearEquiv.prodAssoc R R L N).trans
         ((LinearEquiv.refl R R).prodCongr (LinearEquiv.prodComm R L N))).trans
         (LinearEquiv.prodAssoc R R N L).symm).trans
         (LinearEquiv.prodComm R (R × N) L)
-    letI : Module.Free R (L × (R × N)) := Module.Free.of_equiv eL
+    let _ : Module.Free R (L × (R × N)) := Module.Free.of_equiv eL
     exact Module.IsStablyFree.of_free_prod R L (R × N)
   exact ⟨L, hsL, hLcomp, hLfin, hLstable⟩
 
@@ -1508,12 +1509,12 @@ private theorem bass_stably_free_equiv
     Module.IsStablyFree R N := by
   obtain ⟨T, hTadd, hTmod, hTfin, hTfree, hMTfree⟩ :=
     Module.IsStablyFree.exist_free_prod R M
-  letI : AddCommGroup T := hTadd
-  letI : Module R T := hTmod
-  letI : Module.Finite R T := hTfin
-  letI : Module.Free R T := hTfree
-  letI : Module.Free R (M × T) := hMTfree
-  letI : Module.Free R (N × T) :=
+  let _ : AddCommGroup T := hTadd
+  let _ : Module R T := hTmod
+  let _ : Module.Finite R T := hTfin
+  let _ : Module.Free R T := hTfree
+  let _ : Module.Free R (M × T) := hMTfree
+  let _ : Module.Free R (N × T) :=
     Module.Free.of_equiv (e.prodCongr (LinearEquiv.refl R T))
   exact Module.IsStablyFree.of_free_prod R N T
 
@@ -1543,7 +1544,7 @@ private theorem bass_finite_summand
         rcases z.property with ⟨k, hk⟩
         apply Subtype.ext
         rw [← hk]
-        simp [projL, fK, projK, hKC.1]
+        simp [projL, fK, projK]
         rfl
       have hLcomp : IsComplemented L :=
         ⟨LinearMap.ker projL, LinearMap.isCompl_of_proj hprojL⟩
@@ -1562,7 +1563,7 @@ private theorem bass_finite_summand
         rcases z.property with ⟨k, hk⟩
         exact ⟨k, Subtype.ext hk⟩
       let eK : K ≃ₗ[R] L := LinearEquiv.ofBijective fK' ⟨hfK'inj, hfK'surj⟩
-      letI : Module.Finite R K := hKfin
+      let _ : Module.Finite R K := hKfin
       have hLfin : Module.Finite R L := Module.Finite.equiv eK
       have hLstable : Module.IsStablyFree R L :=
         bass_stably_free_equiv hKstable eK
@@ -1605,13 +1606,13 @@ private theorem bass_finite_summand
         · exact Submodule.codisjoint_map eAmbient.symm.surjective hKC.codisjoint
       have hsK' : (0, (0, s)) ∈ K' := by
         refine ⟨(0, s), hs, ?_⟩
-        simp [K', eAmbient, econs]
+        simp [eAmbient, econs]
         ext i
         simp [Finsupp.tail_apply]
       let eK : K ≃ₗ[R] K' :=
         Submodule.equivMapOfInjective eAmbient.symm.toLinearMap
           eAmbient.symm.injective K
-      letI : Module.Finite R K := hKfin
+      let _ : Module.Finite R K := hKfin
       have hK'fin : Module.Finite R K' := Module.Finite.equiv eK
       have hK'stable : Module.IsStablyFree R K' :=
         bass_stably_free_equiv hKstable eK
@@ -1632,7 +1633,7 @@ theorem element_in_free_summand
       Module.Finite R M ∧ Module.IsStablyFree R M := by
   obtain ⟨n, K, hsK, hKcomp, hKfin, hKfree⟩ :=
     element_projective (R := R) (P := P) s
-  letI : Module.Free R K := hKfree
+  let _ : Module.Free R K := hKfree
   exact bass_finite_summand hR hP n K hKcomp hKfin
     (inferInstance : Module.IsStablyFree R K) s hsK
 

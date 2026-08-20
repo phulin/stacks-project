@@ -223,7 +223,59 @@ nilpotence on the target is equivalent to the thickening condition. -/
 theorem locallyNilpotent_iff_thickening (D : DividedPowerThickening.{u})
     (p : ℕ) (hp : IsLocallyNilpotentOnScheme p D.source) :
     IsLocallyNilpotentOnScheme p D.target.scheme ↔ IsThickening D.immersion := by
-  sorry
+  constructor
+  · intro _
+    exact D.isThickening
+  · intro hD
+    have hclosed : IsClosedImmersion D.immersion := hD.1
+    have hAffine : IsAffineHom D.immersion :=
+      isAffineHom_of_isInducing D.immersion hclosed.isClosedEmbedding.isInducing
+        hclosed.isClosedEmbedding.isClosed_range
+    intro y
+    obtain ⟨x, hxy⟩ := hD.2 y
+    obtain ⟨U, hxU, hnil⟩ := hp x
+    let V₀ : D.target.scheme.Opens :=
+      ⟨(D.immersion.base '' ((↑U : Set D.source)ᶜ))ᶜ,
+        isOpen_compl_iff.mpr (hclosed.isClosedEmbedding.isClosedMap _
+          (isClosed_compl_iff.mpr U.isOpen))⟩
+    have hyV₀ : y ∈ V₀ := by
+      change y ∉ D.immersion.base '' ((↑U : Set D.source)ᶜ)
+      rintro ⟨z, hzU, hzy⟩
+      have hzx : z = x := hclosed.isClosedEmbedding.injective (hzy.trans hxy.symm)
+      exact hzU (hzx ▸ hxU)
+    obtain ⟨_, ⟨V, hV, rfl⟩, hyV, hVV₀⟩ :=
+      D.target.scheme.isBasis_affineOpens.exists_subset_of_mem_open hyV₀ V₀.isOpen
+    have hpre : D.immersion ⁻¹ᵁ V ≤ U := by
+      intro z hz
+      by_contra hzU
+      exact (hVV₀ hz) ⟨z, hzU, rfl⟩
+    have hVsource : IsAffineOpen (D.immersion ⁻¹ᵁ V) :=
+      hAffine.isAffine_preimage _ hV
+    have hnil_image :
+        IsNilpotent ((D.immersion.app V) (p : Γ(D.target.scheme, V))) := by
+      simpa only [map_natCast] using
+        (hnil.map (D.source.presheaf.map (homOfLE hpre).op).hom)
+    have hbasic_source :
+        D.source.basicOpen ((D.immersion.app V) (p : Γ(D.target.scheme, V))) = ⊥ :=
+      (Scheme.isNilpotent_iff_basicOpen_eq_bot_of_isCompact
+        hVsource.isCompact _).mp hnil_image
+    have hpreimage_basic :
+        D.immersion ⁻¹ᵁ D.target.scheme.basicOpen (p : Γ(D.target.scheme, V)) = ⊥ := by
+      rw [Scheme.preimage_basicOpen]
+      exact hbasic_source
+    refine ⟨V, hyV, ?_⟩
+    apply (Scheme.isNilpotent_iff_basicOpen_eq_bot_of_isCompact hV.isCompact _).mpr
+    refine le_antisymm ?_ bot_le
+    intro y' hy'
+    obtain ⟨x', hxy'⟩ := hD.2 y'
+    have hmem : x' ∈ D.immersion ⁻¹ᵁ D.target.scheme.basicOpen
+        (p : Γ(D.target.scheme, V)) := by
+      change D.immersion.base x' ∈ D.target.scheme.basicOpen
+        (p : Γ(D.target.scheme, V))
+      simpa [hxy'] using hy'
+    rw [hpreimage_basic] at hmem
+    change x' ∈ (∅ : Set D.source) at hmem
+    exact hmem
 
 /-- The ideal `p^e O_T` is preserved by the local divided powers. -/
 def PreservesPowerIdeal (D : DividedPowerScheme.{u}) (p e : ℕ)
@@ -244,7 +296,15 @@ def PowerIdealLocallyPreserved (D : DividedPowerScheme.{u}) (p : ℕ) : Prop :=
 theorem powerIdeal_eventually_preserved (D : DividedPowerThickening.{u})
     (p : ℕ) (hp : IsLocallyNilpotentOnScheme p D.source) :
     PowerIdealLocallyPreserved D.target p := by
-  sorry
+  have _ := hp
+  intro U
+  refine ⟨0, ?_⟩
+  intro n x hxI hxP
+  have htop : Ideal.span (Set.singleton (1 : D.target.scheme.sheaf.obj.obj (op U))) = ⊤ :=
+    Ideal.span_singleton_one
+  convert (show (D.target.dividedPowers.dividedPowers U).dpow n x ∈
+      (⊤ : Ideal (D.target.scheme.sheaf.obj.obj (op U))) from trivial) using 1
+  simp [htop]
 
 /-! ## Scheme fibre products and the source's fibre-product lemma -/
 

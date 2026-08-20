@@ -817,7 +817,8 @@ structure FiniteConstructibleStratification (X : Type u)
 refined by a finite vanishing-pattern stratification. -/
 theorem exists_stratum_refinement
     {A : Type u} [CommRing A]
-    (S : FiniteConstructibleStratification (PrimeSpectrum A)) :
+    (S : FiniteConstructibleStratification (PrimeSpectrum A))
+    (hS : Nonempty S.index) :
     ∃ E : Finset A, ∀ p : StratumPartition E, ∃ i : S.index,
       stratum p ⊆ S.piece i := by
   sorry

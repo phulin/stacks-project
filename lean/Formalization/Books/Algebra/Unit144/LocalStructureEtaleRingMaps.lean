@@ -142,16 +142,16 @@ theorem etaleAt_standardEtale_neighborhood
   rcases h with ⟨g, hg, hE⟩
   let T := Localization.Away g
   let Q : Ideal T := Ideal.map (algebraMap S T) q.asIdeal
-  letI : q.asIdeal.IsPrime := q.2
-  letI : Q.IsPrime :=
+  let : q.asIdeal.IsPrime := q.2
+  let : Q.IsPrime :=
     IsLocalization.isPrime_of_isPrime_disjoint (Submonoid.powers g) T q.asIdeal q.2
       (Set.disjoint_left.2 (fun x hxg hxq =>
         by
           change x ∈ Submonoid.powers g at hxg
           obtain ⟨n, rfl⟩ := hxg
           exact hg (q.2.mem_of_pow_mem n hxq)))
-  letI : Algebra.Etale R T := hE
-  letI : Algebra.IsEtaleAt R Q := by
+  let : Algebra.Etale R T := hE
+  let : Algebra.IsEtaleAt R Q := by
     exact Algebra.FormallyEtale.comp R T (Localization.AtPrime Q)
   obtain ⟨f, hf, hstd⟩ :=
     Algebra.IsEtaleAt.exists_isStandardEtale (R := R) (S := T) Q
@@ -166,19 +166,19 @@ theorem etaleAt_standardEtale_neighborhood
   have hassoc : Associated f (algebraMap S T s) := by
     rw [← hs]
     exact associated_mul_unit_right f _ (IsUnit.pow _ (IsLocalization.Away.algebraMap_isUnit g))
-  letI : IsLocalization.Away (algebraMap S T s) (Localization.Away f) :=
+  let : IsLocalization.Away (algebraMap S T s) (Localization.Away f) :=
     IsLocalization.Away.of_associated hassoc
   have hloc : IsLocalization.Away (s * g) (Localization.Away f) :=
     IsLocalization.Away.mul (R := S) (S := T) (T := Localization.Away f)
       (x := g) (y := s)
-  letI : IsLocalization.Away (g * s) (Localization.Away f) := by
+  let : IsLocalization.Away (g * s) (Localization.Away f) := by
     simpa [mul_comm] using hloc
   have hgs : g * s ∉ q.asIdeal := by
     intro hgs
     exact (q.2.mul_mem_iff_mem_or_mem.mp hgs).elim hg hs_q
   let e : Localization.Away (g * s) ≃ₐ[R] Localization.Away f :=
     (IsLocalization.algEquiv (.powers (g * s)) _ _).restrictScalars R
-  letI : Algebra.IsStandardEtale R (Localization.Away f) := hstd
+  let : Algebra.IsStandardEtale R (Localization.Away f) := hstd
   exact ⟨g * s, hgs, Algebra.IsStandardEtale.of_equiv e.symm⟩
 
 /-! ## Finite flat covers -/

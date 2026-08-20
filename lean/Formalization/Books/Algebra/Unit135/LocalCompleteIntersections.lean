@@ -105,6 +105,7 @@ theorem global_complete_intersection_maximal_localizations
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) ∧
       Formalization.Books.Topology.Unit10.Equidimensional
         (X := PrimeSpectrum S) := by
+  let _ := hc
   have hmaxdim : ∀ m : MaximalSpectrum S,
       ringKrullDim (Localization.AtPrime m.asIdeal) =
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
@@ -198,8 +199,8 @@ theorem global_complete_intersection_maximal_localizations
       change (n : ℕ∞) - c ≤ q.asIdeal.height
       exact (tsub_le_iff_right).2 (WithBot.coe_le_coe.mp hheight)
     exact le_antisymm hupper hlower
-  haveI : Algebra.FiniteType k S := P.finiteType
-  haveI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  let _ : Algebra.FiniteType k S := P.finiteType
+  let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
   refine ⟨hmaxdim m, ?_⟩
   refine ⟨(((n - c : ℕ) : ℕ∞) : WithBot ℕ∞), ?_⟩
   intro C hC
@@ -389,7 +390,7 @@ theorem global_complete_intersection_localize
         (Localization.AtPrime m.asIdeal)]
       exact le_of_eq (hmax m).1
     by_cases hT : Nontrivial T
-    · letI : Nontrivial T := hT
+    · let _ : Nontrivial T := hT
       have hdimT : ringKrullDim T =
           (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
         apply le_antisymm hupper
@@ -403,7 +404,7 @@ theorem global_complete_intersection_localize
             (Localization.AtPrime m.asIdeal)]
           exact (hmax m).1
         rw [← hheight]
-        letI : J.IsPrime := hJprime
+        let _ : J.IsPrime := hJprime
         exact Ideal.height_le_ringKrullDim_of_isPrime
       let e : Fin (n + 1) ≃ Sum Unit (Fin n) :=
         (finCongr (by simp [Fintype.card_sum, Nat.add_comm])).trans
@@ -425,7 +426,7 @@ theorem global_complete_intersection_localize
       let fQ : Sum (Fin c) Unit → Q.Ring :=
         Sum.elim (fun i => qcomp.toAlgHom (f i)) (fun _ => rel)
       let ef : Fin (c + 1) ≃ Sum (Fin c) Unit :=
-        (finCongr (by simp [Fintype.card_sum, Nat.add_comm])).trans
+        (finCongr (by simp [Fintype.card_sum])).trans
           (Fintype.equivFin (Sum (Fin c) Unit)).symm
       let f' : Fin (c + 1) → P'.Ring :=
         fun i => er.symm (fQ (ef i))
@@ -601,13 +602,12 @@ theorem local_complete_intersection_of_localizationSpanTarget
     have hspec : us i j * algebraMap S U (den i j : S) =
         algebraMap S U (num i j) := by
       rw [← hnum i j]
-      simpa [U] using
-        (IsLocalization.mk'_spec U (num i j) (den i j))
+      simp [U]
     have hunit : IsUnit (algebraMap S U (den i j : S)) :=
       IsLocalization.map_units U (den i j)
     have hassoc : Associated (us i j) (algebraMap S U (num i j)) := by
       exact (associated_mul_unit_right _ _ hunit).trans (Associated.of_eq hspec)
-    letI : IsLocalization.Away (us i j)
+    let _ : IsLocalization.Away (us i j)
         (Localization.Away (algebraMap S U (num i j))) :=
       IsLocalization.Away.of_associated hassoc.symm
     let e₁ : Localization.Away (us i j) ≃ₐ[U]
@@ -815,7 +815,7 @@ private theorem global_complete_intersection_at_maximal_isCohenMacaulay
           apply isUnit_of_mul_isUnit_left
           rw [IsLocalization.mk'_spec]
           exact IsUnit.map (algebraMap k L) (isUnit_iff_ne_zero.mpr ha)
-      letI : Field L := Field.ofIsUnitOrEqZero hunitzero
+      let _ : Field L := Field.ofIsUnitOrEqZero hunitzero
       let ebot := RingHom.quotientKerEquivOfSurjective
         (f := RingHom.id L) Function.surjective_id
       have hzeroIdeal : (Ideal.ofList [] : Ideal L) = RingHom.ker (RingHom.id L) := by
@@ -861,7 +861,7 @@ private theorem global_complete_intersection_at_maximal_isCohenMacaulay
     have hspan0 : Ideal.span (Set.range fR) =
         RingHom.ker (RingHom.id R) := by
       ext x
-      simp [fR, Ideal.ofList]
+      simp [fR]
     have eQuot0 : (R ⧸ RingHom.ker (RingHom.id R)) ≃+* T := by
       rw [← hspan0]
       exact eQuot
@@ -883,7 +883,7 @@ private theorem global_complete_intersection_at_maximal_isCohenMacaulay
       omega
     obtain ⟨hcmQ, _⟩ := hmax i
     obtain ⟨hlocalQ, hcmQ⟩ := hcmQ
-    letI : IsLocalRing
+    let _ : IsLocalRing
         (R ⧸ (Ideal.ofList ((List.ofFn fR).take (i.1 + 1)) : Ideal R)) := hlocalQ
     have hideal : Ideal.ofList ((List.ofFn fR).take (i.1 + 1) : List R) =
         Ideal.span (Set.range fR) := by
@@ -901,9 +901,9 @@ theorem local_complete_intersection_isCohenMacaulay
       (RingHom.finiteType_algebraMap.mp hS.1)
     letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
     Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S := by
-  letI : Algebra.FiniteType k S := RingHom.finiteType_algebraMap.mp hS.1
-  letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
-  letI : IsJacobsonRing S := isJacobsonRing_of_finiteType (A := k) (B := S)
+  let _ : Algebra.FiniteType k S := RingHom.finiteType_algebraMap.mp hS.1
+  let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  let _ : IsJacobsonRing S := isJacobsonRing_of_finiteType (A := k) (B := S)
   rcases hS with ⟨_, n, gs, hcover, hloc⟩
   intro p
   have hpnotop : p.asIdeal ≠ (⊤ : Ideal S) := p.isPrime.ne_top
@@ -921,7 +921,7 @@ theorem local_complete_intersection_isCohenMacaulay
   rcases hglobal with ⟨_, hcase⟩
   rcases hcase with hsub | ⟨n', c', P, f, hker, hc, hdim⟩
   · exfalso
-    letI : Subsingleton U := hsub
+    let _ : Subsingleton U := hsub
     let J : Ideal U := m.asIdeal.map (algebraMap S U)
     have hpow : Submonoid.powers (gs i) ≤ m.asIdeal.primeCompl :=
       Submonoid.powers_le.mpr (Ideal.mem_primeCompl_iff.mpr hgi)
@@ -951,7 +951,7 @@ theorem local_complete_intersection_isCohenMacaulay
     have hJprime : J.IsPrime := by
       simpa [J] using IsLocalization.isPrime_of_isPrime_disjoint
         (Submonoid.powers (gs i)) U m.asIdeal m.isMaximal.isPrime hdisj
-    letI : J.IsPrime := hJprime
+    let _ : J.IsPrime := hJprime
     have hunder : Ideal.under S J = m.asIdeal := by
       simpa [J] using IsLocalization.under_map_of_isPrime_disjoint
         (Submonoid.powers (gs i)) U m.isMaximal.isPrime hdisj
@@ -971,7 +971,7 @@ theorem local_complete_intersection_isCohenMacaulay
       by
         ext x
         rw [Ideal.mem_primeCompl_iff, Ideal.mem_primeCompl_iff, hcomapU]
-    letI : IsLocalization m.asIdeal.primeCompl
+    let _ : IsLocalization m.asIdeal.primeCompl
         (Localization (J.comap (algebraMap S U)).primeCompl) := by
       rw [hsubU]
       infer_instance
@@ -980,7 +980,7 @@ theorem local_complete_intersection_isCohenMacaulay
         (Localization (J.comap (algebraMap S U)).primeCompl)
     let eU : Mloc ≃+* Localization.AtPrime J :=
       eU0.toRingEquiv.trans eUAlg.toRingEquiv
-    letI : IsNoetherianRing Mloc :=
+    let _ : IsNoetherianRing Mloc :=
       Formalization.Books.Algebra.Unit31.localization_isNoetherian m.asIdeal.primeCompl
     have hmcm : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing Mloc :=
       isCohenMacaulayLocalRing_of_ringEquiv eU.symm hcmU
@@ -994,7 +994,7 @@ theorem local_complete_intersection_isCohenMacaulay
     have hpMprime : pMideal.IsPrime := by
       simpa [pMideal] using IsLocalization.isPrime_of_isPrime_disjoint
         m.asIdeal.primeCompl Mloc p.asIdeal p.isPrime hdisjP
-    letI : pMideal.IsPrime := hpMprime
+    let _ : pMideal.IsPrime := hpMprime
     let pM : PrimeSpectrum Mloc := ⟨pMideal, hpMprime⟩
     have hunderP : Ideal.under S pMideal = p.asIdeal := by
       simpa [pMideal] using IsLocalization.under_map_of_isPrime_disjoint
@@ -1010,7 +1010,7 @@ theorem local_complete_intersection_isCohenMacaulay
       by
         ext x
         rw [Ideal.mem_primeCompl_iff, Ideal.mem_primeCompl_iff, hcomapP]
-    letI : IsLocalization p.asIdeal.primeCompl
+    let _ : IsLocalization p.asIdeal.primeCompl
         (Localization (pMideal.comap (algebraMap S Mloc)).primeCompl) := by
       rw [hsubP]
       infer_instance

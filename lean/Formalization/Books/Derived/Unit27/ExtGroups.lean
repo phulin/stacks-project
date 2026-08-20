@@ -70,7 +70,51 @@ theorem derivedExt_shift_presentation
     Nonempty
       (DerivedExt X Y i ≃+
         ((shiftFunctor (DerivedCategory C) (-i)).obj X ⟶ Y)) := by
-  sorry
+  let E := shiftEquiv (DerivedCategory C) (-i)
+  let adj := E.toAdjunction
+  have hAdjAdd : E.functor.Additive := by
+    change (shiftFunctor (DerivedCategory C) (-i)).Additive
+    infer_instance
+  let e := adj.homEquiv X Y
+  let ah : (X ⟶ E.inverse.obj Y) →+ (E.functor.obj X ⟶ Y) :=
+    AddMonoidHom.mk' (fun f => e.symm f) (by
+      intro f g
+      change E.functor.map (f + g) ≫ adj.counit.app Y =
+        E.functor.map f ≫ adj.counit.app Y + E.functor.map g ≫ adj.counit.app Y
+      rw [hAdjAdd.map_add, Preadditive.add_comp])
+  let ae := AddEquiv.ofBijective ah e.symm.bijective
+  have hY : E.inverse.obj Y = (shiftFunctor (DerivedCategory C) i).obj Y := by
+    dsimp [E, shiftEquiv, shiftEquiv']
+    rw [Int.neg_neg]
+  let eY : E.inverse.obj Y ≅ (shiftFunctor (DerivedCategory C) i).obj Y := eqToIso hY
+  let castEquiv : (X ⟶ E.inverse.obj Y) ≃+
+      (X ⟶ (shiftFunctor (DerivedCategory C) i).obj Y) :=
+    AddEquiv.mk'
+      { toFun := fun f => f ≫ eY.hom
+        invFun := fun f => f ≫ eY.inv
+        left_inv := by intro f; simp [Category.assoc]
+        right_inv := by intro f; simp [Category.assoc] }
+      (by
+        intro f g
+        change (f + g) ≫ eY.hom = f ≫ eY.hom + g ≫ eY.hom
+        rw [Preadditive.add_comp])
+  have hX : E.functor.obj X = (shiftFunctor (DerivedCategory C) (-i)).obj X := by
+    rfl
+  let eX : E.functor.obj X ≅ (shiftFunctor (DerivedCategory C) (-i)).obj X := eqToIso hX
+  let rightCast : (E.functor.obj X ⟶ Y) ≃+
+      ((shiftFunctor (DerivedCategory C) (-i)).obj X ⟶ Y) :=
+    AddEquiv.mk'
+      { toFun := fun f => eX.inv ≫ f
+        invFun := fun f => eX.hom ≫ f
+        left_inv := by intro f; simp
+        right_inv := by intro f; simp }
+      (by
+        intro f g
+        change eX.inv ≫ (f + g) = eX.inv ≫ f + eX.inv ≫ g
+        rw [Preadditive.comp_add])
+  refine ⟨?_⟩
+  simpa [E, adj, shiftEquiv, shiftEquiv'] using
+    castEquiv.symm.trans (ae.trans rightCast)
 
 /-- Composition of an `i`-extension with a `j`-extension.
 
@@ -90,7 +134,7 @@ theorem derivedExtComp_add_right
     (η : DerivedExt Y Z j) (ξ₁ ξ₂ : DerivedExt X Y i) (h : j + i = k) :
     derivedExtComp η (ξ₁ + ξ₂) h =
       derivedExtComp η ξ₁ h + derivedExtComp η ξ₂ h := by
-  sorry
+  simp [derivedExtComp, ShiftedHom.comp_add]
 
 theorem derivedExtComp_add_left
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -98,7 +142,7 @@ theorem derivedExtComp_add_left
     (η₁ η₂ : DerivedExt Y Z j) (ξ : DerivedExt X Y i) (h : j + i = k) :
     derivedExtComp (η₁ + η₂) ξ h =
       derivedExtComp η₁ ξ h + derivedExtComp η₂ ξ h := by
-  sorry
+  simp [derivedExtComp, ShiftedHom.add_comp]
 
 theorem derivedExtComp_assoc
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -108,7 +152,8 @@ theorem derivedExtComp_assoc
     (h₃ : c + b = m) (h₄ : m + a = l) :
     derivedExtComp θ (derivedExtComp η ξ h₁) h₂ =
       derivedExtComp (derivedExtComp θ η h₃) ξ h₄ := by
-  sorry
+  simpa only [derivedExtComp] using
+    (ShiftedHom.comp_assoc ξ η θ h₁ h₃ (by rw [h₃, h₄]))
 
 /-! ## Exact windows and full subcategories -/
 
@@ -177,14 +222,164 @@ theorem derivedExtCovariantWindow_exact
     (T : Triangle (DerivedCategory C)) (hT : T ∈ distTriang (DerivedCategory C))
     (X : DerivedCategory C) (i : ℤ) :
     (derivedExtCovariantWindow T X i).Exact := by
-  sorry
+  let R :=
+    (preadditiveCoyoneda.obj (Opposite.op X)).homologySequenceComposableArrows₅
+      T i (i + 1) rfl
+  have hR : R.Exact := by
+    exact (preadditiveCoyoneda.obj (Opposite.op X)).homologySequenceComposableArrows₅_exact
+      T hT i (i + 1) rfl
+  have hwindow : derivedExtCovariantWindow T X i = R := by
+    have h₀ : AddCommGrpCat.of (DerivedExt X T.obj₁ i) =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).shift i).obj T.obj₁ := by rfl
+    have h₁ : AddCommGrpCat.of (DerivedExt X T.obj₂ i) =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).shift i).obj T.obj₂ := by rfl
+    have h₂ : AddCommGrpCat.of (DerivedExt X T.obj₃ i) =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).shift i).obj T.obj₃ := by rfl
+    have h₃ : AddCommGrpCat.of (DerivedExt X T.obj₁ (i + 1)) =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).shift (i + 1)).obj T.obj₁ := by rfl
+    have h₄ : AddCommGrpCat.of (DerivedExt X T.obj₂ (i + 1)) =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).shift (i + 1)).obj T.obj₂ := by rfl
+    have h₅ : AddCommGrpCat.of (DerivedExt X T.obj₃ (i + 1)) =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).shift (i + 1)).obj T.obj₃ := by rfl
+    have hm₂ : AddCommGrpCat.ofHom (derivedExtPostcompShift (X := X) T.mor₃ i) =
+        (preadditiveCoyoneda.obj (Opposite.op X)).homologySequenceδ T i (i + 1) rfl := by
+      apply AddCommGrpCat.ext
+      intro ξ
+      change derivedExtComp T.mor₃ ξ _ =
+        ((preadditiveCoyoneda.obj (Opposite.op X)).homologySequenceδ T i (i + 1) rfl) ξ
+      rw [preadditiveCoyoneda_homologySequenceδ_apply]
+      simp [derivedExtComp, ShiftedHom.comp]
+    refine ComposableArrows.ext₅ (f := derivedExtCovariantWindow T X i) (g := R)
+      h₀ h₁ h₂ h₃ h₄ h₅ ?_ ?_ hm₂ ?_ ?_
+    · dsimp [R, derivedExtCovariantWindow, derivedExtPostcomp, derivedExtComp,
+        Functor.homologySequenceComposableArrows₅, ComposableArrows.map',
+        ComposableArrows.mk₅, ComposableArrows.mk₄, ComposableArrows.mk₃,
+        ComposableArrows.mk₂, ComposableArrows.mk₁,
+        ComposableArrows.precomp, ComposableArrows.Precomp.map,
+        ComposableArrows.Precomp.obj]
+      apply AddCommGrpCat.ext
+      intro ξ
+      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
+      change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) _ =
+        ξ ≫ (shiftFunctor (DerivedCategory C) i).map T.mor₁
+      simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₁)
+    · dsimp [R, derivedExtCovariantWindow, derivedExtPostcomp, derivedExtComp,
+        Functor.homologySequenceComposableArrows₅, ComposableArrows.map',
+        ComposableArrows.mk₅, ComposableArrows.mk₄, ComposableArrows.mk₃,
+        ComposableArrows.mk₂, ComposableArrows.mk₁,
+        ComposableArrows.precomp, ComposableArrows.Precomp.map,
+        ComposableArrows.Precomp.obj]
+      apply AddCommGrpCat.ext
+      intro ξ
+      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
+      change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) _ =
+        ξ ≫ (shiftFunctor (DerivedCategory C) i).map T.mor₂
+      simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₂)
+    · dsimp [R, derivedExtCovariantWindow, derivedExtPostcomp, derivedExtComp,
+        Functor.homologySequenceComposableArrows₅, ComposableArrows.map',
+        ComposableArrows.mk₅, ComposableArrows.mk₄, ComposableArrows.mk₃,
+        ComposableArrows.mk₂, ComposableArrows.mk₁,
+        ComposableArrows.precomp, ComposableArrows.Precomp.map,
+        ComposableArrows.Precomp.obj]
+      apply AddCommGrpCat.ext
+      intro ξ
+      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
+      change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) _ =
+        ξ ≫ (shiftFunctor (DerivedCategory C) (i + 1)).map T.mor₁
+      simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₁)
+    · dsimp [R, derivedExtCovariantWindow, derivedExtPostcomp, derivedExtComp,
+        Functor.homologySequenceComposableArrows₅, ComposableArrows.map',
+        ComposableArrows.mk₅, ComposableArrows.mk₄, ComposableArrows.mk₃,
+        ComposableArrows.mk₂, ComposableArrows.mk₁,
+        ComposableArrows.precomp, ComposableArrows.Precomp.map,
+        ComposableArrows.Precomp.obj]
+      apply AddCommGrpCat.ext
+      intro ξ
+      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
+      change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) _ =
+        ξ ≫ (shiftFunctor (DerivedCategory C) (i + 1)).map T.mor₂
+      simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₂)
+  rw [hwindow]
+  exact hR
 
 theorem derivedExtContravariantWindow_exact
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     (T : Triangle (DerivedCategory C)) (hT : T ∈ distTriang (DerivedCategory C))
     (Y : DerivedCategory C) (i : ℤ) :
     (derivedExtContravariantWindow T Y i).Exact := by
-  sorry
+  let T' := (triangleOpEquivalence (DerivedCategory C)).functor.obj (Opposite.op T)
+  let R :=
+    (preadditiveYoneda.obj Y).homologySequenceComposableArrows₅ T' i (i + 1) rfl
+  have hT' : T' ∈ distTriang (DerivedCategory C)ᵒᵖ := by
+    exact op_distinguished T hT
+  have hR : R.Exact := by
+    exact (preadditiveYoneda.obj Y).homologySequenceComposableArrows₅_exact
+      T' hT' i (i + 1) rfl
+  have hwindow : derivedExtContravariantWindow T Y i = R := by
+    have h₀ : AddCommGrpCat.of (DerivedExt T.obj₃ Y i) =
+        ((preadditiveYoneda.obj Y).shift i).obj T'.obj₁ := by rfl
+    have h₁ : AddCommGrpCat.of (DerivedExt T.obj₂ Y i) =
+        ((preadditiveYoneda.obj Y).shift i).obj T'.obj₂ := by rfl
+    have h₂ : AddCommGrpCat.of (DerivedExt T.obj₁ Y i) =
+        ((preadditiveYoneda.obj Y).shift i).obj T'.obj₃ := by rfl
+    have h₃ : AddCommGrpCat.of (DerivedExt T.obj₃ Y (i + 1)) =
+        ((preadditiveYoneda.obj Y).shift (i + 1)).obj T'.obj₁ := by rfl
+    have h₄ : AddCommGrpCat.of (DerivedExt T.obj₂ Y (i + 1)) =
+        ((preadditiveYoneda.obj Y).shift (i + 1)).obj T'.obj₂ := by rfl
+    have h₅ : AddCommGrpCat.of (DerivedExt T.obj₁ Y (i + 1)) =
+        ((preadditiveYoneda.obj Y).shift (i + 1)).obj T'.obj₃ := by rfl
+    have hm₀ : AddCommGrpCat.ofHom (derivedExtPrecomp (Z := Y) T.mor₂ i) =
+        ((preadditiveYoneda.obj Y).shift i).map T'.mor₁ := by
+      apply AddCommGrpCat.ext
+      intro ξ
+      change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) ξ _ = _
+      simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
+        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
+        ShiftedHom.mk₀_comp]
+      change T.mor₂ ≫ ξ = T.mor₂ ≫ ξ
+      rfl
+    have hm₁ : AddCommGrpCat.ofHom (derivedExtPrecomp (Z := Y) T.mor₁ i) =
+        ((preadditiveYoneda.obj Y).shift i).map T'.mor₂ := by
+      apply AddCommGrpCat.ext
+      intro ξ
+      change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) ξ _ = _
+      simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
+        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
+        ShiftedHom.mk₀_comp]
+      change T.mor₁ ≫ ξ = T.mor₁ ≫ ξ
+      rfl
+    have hm₂ : AddCommGrpCat.ofHom (derivedExtPrecompShift (Z := Y) T.mor₃ i) =
+        (preadditiveYoneda.obj Y).homologySequenceδ T' i (i + 1) rfl := by
+      apply AddCommGrpCat.ext
+      intro ξ
+      change derivedExtComp ξ T.mor₃ _ =
+        ((preadditiveYoneda.obj Y).homologySequenceδ T' i (i + 1) rfl) ξ
+      rw [preadditiveYoneda_homologySequenceδ_apply]
+      simp [derivedExtComp, ShiftedHom.comp]
+    have hm₃ : AddCommGrpCat.ofHom (derivedExtPrecomp (Z := Y) T.mor₂ (i + 1)) =
+        ((preadditiveYoneda.obj Y).shift (i + 1)).map T'.mor₁ := by
+      apply AddCommGrpCat.ext
+      intro ξ
+      change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) ξ _ = _
+      simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
+        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
+        ShiftedHom.mk₀_comp]
+      change T.mor₂ ≫ ξ = T.mor₂ ≫ ξ
+      rfl
+    have hm₄ : AddCommGrpCat.ofHom (derivedExtPrecomp (Z := Y) T.mor₁ (i + 1)) =
+        ((preadditiveYoneda.obj Y).shift (i + 1)).map T'.mor₂ := by
+      apply AddCommGrpCat.ext
+      intro ξ
+      change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) ξ _ = _
+      simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
+        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
+        ShiftedHom.mk₀_comp]
+      change T.mor₁ ≫ ξ = T.mor₁ ≫ ξ
+      rfl
+    refine ComposableArrows.ext₅ (f := derivedExtContravariantWindow T Y i) (g := R)
+      h₀ h₁ h₂ h₃ h₄ h₅ hm₀ hm₁ hm₂ hm₃ hm₄
+  rw [hwindow]
+  exact hR
 
 /- The short-exact case is the source's six-term long exact sequence starting
 at degree zero; Mathlib supplies the distinguished triangle `singleTriangle`. -/

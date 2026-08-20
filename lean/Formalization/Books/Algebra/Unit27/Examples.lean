@@ -3798,8 +3798,6 @@ private theorem card_primeSpectrum_le_finrank
       (IsArtinianRing.finrank_eq_sum_primeSpectrum Q ℚ).symm
 
 private theorem affine_second_aeval_surjective (a : ℚ) :
-    let d : ℚ := 2 - a
-    let c : ℚ := 2 * a * (1 - a)
     let I : Ideal affineBaseSubalgebra := Ideal.span {affineG a}
     let Q := affineBaseSubalgebra ⧸ I
     let Abar : Q := Ideal.Quotient.mk I affineA

@@ -3176,6 +3176,23 @@ def IsFibredEquivalenceOverMap
       (over : (G.functor ⋙ F.functor) ⋙ q = (𝟭 T) ⋙ q),
       IsFibredNatIsoOver q over e)
 
+/-- The unbundled existence predicate and the fixed-map predicate describe
+the same notion of equivalence over a base.  This is the canonical bridge
+for downstream developments: they should use `FibredMorphism` rather than
+introducing a second, fieldwise-identical bundle. -/
+theorem isFibredEquivalenceOver_iff_exists_fibredMorphism
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    (p : S ⥤ C) (q : T ⥤ C) :
+    IsFibredEquivalenceOver p q ↔
+      ∃ F : FibredMorphism p q, IsFibredEquivalenceOverMap F := by
+  constructor
+  · rintro ⟨F, G, hF, hG, hFcart, hGcart, hFG, hGF⟩
+    refine ⟨{ functor := F, over := hF, preserves := hFcart }, ?_⟩
+    exact ⟨{ functor := G, over := hG, preserves := hGcart }, hFG, hGF⟩
+  · rintro ⟨F, G, hFG, hGF⟩
+    exact ⟨F.functor, G.functor, F.over, G.over, F.preserves, G.preserves,
+      hFG, hGF⟩
+
 /-- A represented fibred category together with both directions of its
 equivalence with the representing slice.  Keeping the strict triangles and
 vertical unit and counit makes the construction independent of universe

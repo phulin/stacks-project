@@ -30,45 +30,6 @@ universe vC uC vS uS vT uT
 
 noncomputable section
 
-/-! ## Universe-polymorphic fibred morphisms -/
-
-/- The fixed-base wrapper from Unit 33 is convenient when all categories have
-   one common universe.  The textbook statement is universe-polymorphic, so
-   this small raw interface keeps the strict triangle and preservation field
-   without imposing that restriction. -/
-structure FibredMorphism
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    (p : S ⥤ C) (q : T ⥤ C) where
-  functor : S ⥤ T
-  over : functor ⋙ q = p
-  preserves : MapsStronglyCartesian p q functor
-
-def IsFibredEquivalenceOverMap
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    {p : S ⥤ C} {q : T ⥤ C} (F : FibredMorphism p q) : Prop :=
-  ∃ G : T ⥤ S,
-    G ⋙ p = q ∧
-      MapsStronglyCartesian q p G ∧
-      (∃ e : F.functor ⋙ G ≅ 𝟭 S,
-        ∃ over : (F.functor ⋙ G) ⋙ p = (𝟭 S) ⋙ p,
-          IsNatIsoOver p e over) ∧
-      (∃ e : G ⋙ F.functor ≅ 𝟭 T,
-        ∃ over : (G ⋙ F.functor) ⋙ q = (𝟭 T) ⋙ q,
-          IsNatIsoOver q e over)
-
-theorem isFibredEquivalenceOver_iff_exists_fibredMorphism
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    (p : S ⥤ C) (q : T ⥤ C) :
-    IsFibredEquivalenceOver p q ↔
-      ∃ F : FibredMorphism p q, IsFibredEquivalenceOverMap F := by
-  constructor
-  · rintro ⟨F, G, hF, hG, hFcart, hGcart, hFG, hGF⟩
-    refine ⟨{ functor := F, over := hF, preserves := hFcart }, ?_⟩
-    exact ⟨G, hG, hGcart, hFG, hGF⟩
-  · rintro ⟨F, hF⟩
-    rcases hF with ⟨G, hG, hGcart, hFG, hGF⟩
-    exact ⟨F.functor, G, F.over, hG, F.preserves, hGcart, hFG, hGF⟩
-
 /-! ## The slice and representability -/
 
 theorem sliceProjection_isFibredInGroupoids
@@ -110,6 +71,14 @@ structure RepresentablePresentation
   representingObject : C
   equivalence : FibredMorphism p (Over.forget representingObject)
   isEquivalence : IsFibredEquivalenceOverMap equivalence
+
+/-- Forget the book-facing wrapper and expose the shared presentation used by
+the universe-polymorphic 2-Yoneda infrastructure. -/
+noncomputable def RepresentablePresentation.toFibredSlicePresentation
+    {S C : Type*} [Category* S] [Category* C] {p : S ⥤ C}
+    (P : RepresentablePresentation p) : Unit36.FibredSlicePresentation p :=
+  Unit36.FibredSlicePresentation.ofEquivalenceOverMap P.representingObject
+    P.equivalence P.isEquivalence
 
 def IsRepresentableCategoryFibredInGroupoids
     {S : Type uS} [Category.{vS} S]
@@ -396,24 +365,24 @@ theorem representablePresentations_are_isomorphic
     (P Q : RepresentablePresentation p) :
     Nonempty (RepresentablePresentationIso P Q) := by
   rcases P.isEquivalence with
-    ⟨P_inv, hP_inv, hP_inv_cart, ⟨P_unit, P_unit_over, hP_unit⟩,
+    ⟨P_inv, ⟨P_unit, P_unit_over, hP_unit⟩,
       ⟨P_counit, P_counit_over, hP_counit⟩⟩
   rcases Q.isEquivalence with
-    ⟨Q_inv, hQ_inv, hQ_inv_cart, ⟨Q_unit, Q_unit_over, hQ_unit⟩,
+    ⟨Q_inv, ⟨Q_unit, Q_unit_over, hQ_unit⟩,
       ⟨Q_counit, Q_counit_over, hQ_counit⟩⟩
   let : P.equivalence.functor.IsEquivalence :=
-    Functor.IsEquivalence.mk' P_inv P_unit.symm P_counit
-  let : P_inv.IsEquivalence :=
+    Functor.IsEquivalence.mk' P_inv.functor P_unit.symm P_counit
+  let : P_inv.functor.IsEquivalence :=
     Functor.IsEquivalence.mk' P.equivalence.functor
       P_counit.symm P_unit
   let : Q.equivalence.functor.IsEquivalence :=
-    Functor.IsEquivalence.mk' Q_inv Q_unit.symm Q_counit
+    Functor.IsEquivalence.mk' Q_inv.functor Q_unit.symm Q_counit
   let H : Over P.representingObject ⥤ Over Q.representingObject :=
-    P_inv ⋙ Q.equivalence.functor
+    P_inv.functor ⋙ Q.equivalence.functor
   have hH : H ⋙ Over.forget Q.representingObject =
       Over.forget P.representingObject := by
     dsimp [H]
-    rw [Functor.assoc, Q.equivalence.over, hP_inv]
+    rw [Functor.assoc, Q.equivalence.over, P_inv.over]
   let : H.IsEquivalence := inferInstance
   obtain ⟨f, e, over, he⟩ :=
     slice_functor_over_isomorphic_to_map H hH
@@ -426,7 +395,8 @@ theorem representablePresentations_are_isomorphic
   let objectIso : P.representingObject ≅ Q.representingObject :=
     ⟨f, inv f, IsIso.hom_inv_id f, IsIso.inv_hom_id f⟩
   let ePQ : P.equivalence.functor ⋙ H ≅ Q.equivalence.functor :=
-    (Functor.associator P.equivalence.functor P_inv Q.equivalence.functor).symm ≪≫
+    (Functor.associator P.equivalence.functor P_inv.functor
+      Q.equivalence.functor).symm ≪≫
       Functor.isoWhiskerRight P_unit Q.equivalence.functor ≪≫
       Functor.leftUnitor Q.equivalence.functor
   let comparison' :
@@ -444,12 +414,12 @@ theorem representablePresentations_are_isomorphic
         Q.equivalence.functor ⋙ Over.forget Q.representingObject := by
     dsimp [H]
     calc
-      (P.equivalence.functor ⋙ (P_inv ⋙ Q.equivalence.functor)) ⋙
+      (P.equivalence.functor ⋙ (P_inv.functor ⋙ Q.equivalence.functor)) ⋙
           Over.forget Q.representingObject =
-          (P.equivalence.functor ⋙ P_inv) ⋙
+          (P.equivalence.functor ⋙ P_inv.functor) ⋙
             (Q.equivalence.functor ⋙ Over.forget Q.representingObject) := by
         simp [Functor.assoc]
-      _ = (P.equivalence.functor ⋙ P_inv) ⋙ p := by
+      _ = (P.equivalence.functor ⋙ P_inv.functor) ⋙ p := by
         rw [Q.equivalence.over]
       _ = (𝟭 S) ⋙ p := P_unit_over
       _ = (𝟭 S) ⋙ (Q.equivalence.functor ⋙
@@ -480,7 +450,7 @@ theorem representablePresentations_are_isomorphic
           Functor.congr_obj Q.equivalence.over X
       have hQmap :
           Over.Hom.left (Q.equivalence.functor.map (P_unit.hom.app Z)) =
-            eqToHom (hQ_obj ((P.equivalence.functor ⋙ P_inv).obj Z)) ≫
+            eqToHom (hQ_obj ((P.equivalence.functor ⋙ P_inv.functor).obj Z)) ≫
               p.map (P_unit.hom.app Z) ≫
                 eqToHom (hQ_obj ((𝟭 S).obj Z)).symm := by
         have hQmap := Functor.congr_hom Q.equivalence.over
@@ -502,139 +472,28 @@ theorem representablePresentations_are_isomorphic
   intro Z
   simpa [objectIso, sliceFibredMorphism] using hcomparison' Z
 
-/-! ## Fibred morphisms modulo 2-isomorphism -/
-
-def FibredMorphismNatTrans
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    {p : S ⥤ C} {q : T ⥤ C}
-    {F G : FibredMorphism p q}
-    (η : F.functor ⟶ G.functor) : Prop :=
-  ∀ Z : S,
-    q.map (η.app Z) =
-      eqToHom (congrArg (fun H : S ⥤ C => H.obj Z)
-        (F.over.trans G.over.symm))
-
-def FibredMorphismTwoIsomorphismRelation
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    {p : S ⥤ C} {q : T ⥤ C}
-    (F G : FibredMorphism p q) : Prop :=
-  ∃ η : F.functor ⟶ G.functor,
-    FibredMorphismNatTrans η ∧ IsIso η
-
-abbrev FibredMorphismsModuloTwoIsomorphism
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    (p : S ⥤ C) (q : T ⥤ C) :=
-  Quot (FibredMorphismTwoIsomorphismRelation (p := p) (q := q))
-
-theorem fibredMorphismTwoIsomorphismRelation_isEquivalence
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    {p : S ⥤ C} {q : T ⥤ C} :
-    Equivalence
-      (FibredMorphismTwoIsomorphismRelation (p := p) (q := q)) := by
-  constructor
-  · intro F
-    refine ⟨𝟙 F.functor, ?_, inferInstance⟩
-    intro Z
-    simp
-  · intro F G hFG
-    rcases hFG with ⟨η, hη, hηiso⟩
-    refine ⟨inv η, ?_, inferInstance⟩
-    intro Z
-    apply (cancel_mono (q.map (η.app Z))).1
-    have hinv : (inv η).app Z ≫ η.app Z = 𝟙 _ := by
-      exact congrArg (fun τ => τ.app Z) (IsIso.inv_hom_id η)
-    rw [← q.map_comp, hinv, q.map_id, hη]
-    simp
-  · intro F G K hFG hGK
-    rcases hFG with ⟨η, hη, hηiso⟩
-    rcases hGK with ⟨θ, hθ, hθiso⟩
-    refine ⟨η ≫ θ, ?_, inferInstance⟩
-    intro Z
-    change q.map (η.app Z ≫ θ.app Z) = _
-    rw [Functor.map_comp, hη, hθ]
-    simp
-
-/- The source's displayed equality is represented by an equivalence of the
-   quotient type with the hom type in the base.
-
-   Interface audit: no coherence or fibred hypothesis is missing here.
-   `P.equivalence` preserves strongly cartesian arrows, while
-   `P.isEquivalence` supplies a strongly-cartesian-preserving inverse and
-   vertical unit and counit; similarly for `Q`.  Thus each presentation has
-   exactly the data required by the universe-polymorphic 2-Yoneda interface
-   in Unit 36.  The explicit `hp` and `hq` are book-facing hypotheses and are
-   not needed by that comparison.
-
-   Proof roadmap (the reusable declarations below are in
-   `Unit36/PresheavesOfCategories.lean`):
-
-   1. Before this theorem, add private fieldwise conversions between this
-      file's `FibredMorphism p q` and
-      `Unit36.FibredMorphism p q`.  They keep `functor`, `over`, and
-      `preserves` unchanged.  Prove both composites equal to the identity by
-      cases on the bundled morphism (proof irrelevance handles the Prop
-      field).  The construction is universe-polymorphic as written: use
-      `{S T C : Type*} [Category* S] [Category* T] [Category* C]`, with no
-      `ULift` or common-universe specialization.
-   2. Unpack `P.isEquivalence` as an inverse functor, its `over` and
-      cartesian-preservation proofs, and the vertical unit/counit witnesses.
-      Package these, together with the converted `P.equivalence`, as
-      `P36 : Unit36.FibredSlicePresentation p`; do the same for `Q36`.
-      `Unit36.IsFibredNatIsoOver` has the same component equation as
-      `IsNatIsoOver` (only its `over` and `e` arguments are ordered
-      differently), so each verticality field is discharged by `exact` after
-      unfolding or by `simpa [Unit36.IsFibredNatIsoOver, IsNatIsoOver]`.
-      Set the `representingObject` fields definitionally to those of `P` and
-      `Q` so that the final hom types need no transport.
-   3. Let `hmap φ := sliceMap_mapsStronglyCartesian φ`, and form
-      `E36 := Unit36.fibredSliceMorphismClassesEquiv P36 Q36 hmap`.
-      This is the already-proved equivalence from Unit 36 fibred-morphism
-      classes to `P.representingObject ⟶ Q.representingObject`.
-   4. Lift the conversions from step 1 through `Quot.map`.  Preservation of
-      the two relations reuses the same natural transformation: after
-      translating its endpoints, this file's `FibredMorphismNatTrans` and
-      `Unit36.FibredMorphismNatTrans` reduce to the same equation involving
-      `F.over.trans G.over.symm`.  Use `Quot.inductionOn` and the two
-      conversion-composite lemmas to prove that the resulting maps on
-      quotients are inverse, giving an equivalence `Eclasses` between the two
-      versions of `FibredMorphismsModuloTwoIsomorphism`.
-   5. Return `⟨Eclasses.trans E36⟩`.  Keep `hp` and `hq` unused; weakening the
-      presentations or adding another coherence assumption is unnecessary.
-
-   A direct `exact Unit36.fibredSliceMorphismClassesEquiv ...` is a dead end:
-   Unit 36 and this file currently declare distinct (though fieldwise
-   identical) bundled morphism and quotient types, so the explicit adapters
-   in steps 1 and 4 must precede reuse of that result. -/
+/-- The represented 2-Yoneda equivalence, obtained directly from the shared
+universe-polymorphic presentation and quotient infrastructure in Unit 36. -/
 theorem representable_morphism_classes_equiv
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}
-    (hp : p.IsFibredInGroupoids)
-    (hq : q.IsFibredInGroupoids)
     (P : RepresentablePresentation p)
     (Q : RepresentablePresentation q) :
     Nonempty
       (FibredMorphismsModuloTwoIsomorphism p q ≃
         (P.representingObject ⟶ Q.representingObject)) := by
-  sorry
+  exact ⟨Unit36.fibredSliceMorphismClassesEquiv
+    P.toFibredSlicePresentation Q.toFibredSlicePresentation
+    (fun φ => sliceMap_mapsStronglyCartesian φ)⟩
 
 noncomputable def representableMorphismClassesEquiv
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}
-    (hp : p.IsFibredInGroupoids)
-    (hq : q.IsFibredInGroupoids)
     (P : RepresentablePresentation p)
     (Q : RepresentablePresentation q) :
     FibredMorphismsModuloTwoIsomorphism p q ≃
       (P.representingObject ⟶ Q.representingObject) :=
-  Classical.choice (representable_morphism_classes_equiv hp hq P Q)
-
-noncomputable def fibredMorphismObjectClassMap
-    {S T C : Type*} [Category* S] [Category* T] [Category* C]
-    {p : S ⥤ C} {q : T ⥤ C}
-    (F : FibredMorphism p q) (U : C) :
-    SetoidObjectClasses (Functor.Fiber p U) →
-      SetoidObjectClasses (Functor.Fiber q U) :=
-  objectIsoClassMap (fibreFunctor p q F.functor F.over U)
+  Classical.choice (representable_morphism_classes_equiv P Q)
 
 def FibredMorphismInducesRepresentingMorphismOnObjectClasses
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
@@ -643,63 +502,16 @@ def FibredMorphismInducesRepresentingMorphismOnObjectClasses
     (Q : RepresentablePresentation q)
     (F : FibredMorphism p q)
     (φ : P.representingObject ⟶ Q.representingObject) : Prop :=
-  ∀ U : C,
-    fibredMorphismObjectClassMap Q.equivalence U ∘
-        fibredMorphismObjectClassMap F U =
-      fibredMorphismObjectClassMap (sliceFibredMorphism φ) U ∘
-        fibredMorphismObjectClassMap P.equivalence U
+  Unit36.FibredMorphismInducesRepresentingMorphismOnObjectClasses
+    P.toFibredSlicePresentation Q.toFibredSlicePresentation
+      (fun ψ => sliceMap_mapsStronglyCartesian ψ) F φ
 
-/- Interface audit: the uniqueness conclusion is sound as stated.  Although
-   uniqueness of a vertical natural isomorphism needs thin target fibres,
-   this is not a missing hypothesis: `Q.isEquivalence` identifies `q` with a
-   slice, whose fibres are discrete, and hence makes every fibre of `q` a
-   setoid.  The `hp`/`hq` arguments are retained to match the surrounding
-   book interface.
-
-   Proof roadmap:
-
-   1. Reuse the private fieldwise morphism conversions and the presentations
-      `P36 : Unit36.FibredSlicePresentation p` and
-      `Q36 : Unit36.FibredSlicePresentation q` described in the roadmap for
-      `representable_morphism_classes_equiv`.  Also reuse
-      `hmap φ := sliceMap_mapsStronglyCartesian φ`.
-   2. Build
-      `hQ : IsFibredEquivalenceOver q
-        (Over.forget Q.representingObject)` with
-      `isFibredEquivalenceOver_iff_exists_fibredMorphism`, using
-      `Q.equivalence` and `Q.isEquivalence`.  Then set
-      `hqSetoid := isCategoryFibredInSetoids_of_fibredEquivalence_slice q
-        Q.representingObject hQ`.  For the exact thinness input expected by
-      Unit 36, define
-      `hhom U X Y :=
-        ((isSetoid_iff_isGroupoid_and_hom_subsingleton.mp
-          (hqSetoid.2 U)).2 X Y)`.
-      The setoid declarations used here are in
-      `Unit39/CategoriesFibredInSetoids.lean`.
-   3. Apply the existing theorem
-      `Unit36.fibredSlicePresentation_morphism_existsAndUnique
-        P36 Q36 hmap hhom φ`.  It returns a Unit 36 fibred morphism `F36`,
-      the required equality of fibrewise object-class maps, and the unique
-      vertical natural isomorphism to every other morphism inducing `φ`.
-   4. Convert `F36` back to this file's `FibredMorphism p q`.  For any local
-      `G`, convert it forward before applying the Unit 36 uniqueness clause.
-      The object-class premise transports by unfolding
-      `fibredMorphismObjectClassMap`, `objectIsoClassMap`, `fibreFunctor`, and
-      `Unit36.fibredMorphismObjectClassMap`: both sides are
-      `(ThinSkeleton.map _).obj`, and the fibre functors have identical
-      object and morphism fields.  Likewise, the returned
-      `Unit36.FibredMorphismNatTrans` is this file's
-      `FibredMorphismNatTrans` after unfolding, and the underlying functor
-      hom type is definitionally unchanged by the fieldwise conversion.
-   5. Assemble `⟨ofUnit36 F36, induced_map_equality, fun G hG => ...⟩`, using
-      the conversion-composite equality to transport the `∃!` witness and
-      its uniqueness equation.  No choice of cleavage and no additional
-      coherence law is required. -/
+/-- Existence and uniqueness follow from the shared presentation theorem in
+Unit 36.  The target fibres are thin because `Q` identifies `q` with a slice;
+Unit 39 transfers that property across the equivalence. -/
 theorem representable_morphism_exists_and_unique
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}
-    (hp : p.IsFibredInGroupoids)
-    (hq : q.IsFibredInGroupoids)
     (P : RepresentablePresentation p)
     (Q : RepresentablePresentation q)
     (φ : P.representingObject ⟶ Q.representingObject) :
@@ -709,7 +521,24 @@ theorem representable_morphism_exists_and_unique
           FibredMorphismInducesRepresentingMorphismOnObjectClasses P Q G φ →
             ∃! η : F.functor ⟶ G.functor,
               FibredMorphismNatTrans η ∧ IsIso η := by
-  sorry
+  let P' := P.toFibredSlicePresentation
+  let Q' := Q.toFibredSlicePresentation
+  obtain ⟨Qinv, ⟨Qunit, QunitOver, hQunit⟩,
+    ⟨Qcounit, QcounitOver, hQcounit⟩⟩ := Q.isEquivalence
+  have hQ : IsEquivalenceOverFunctor q
+      (Over.forget Q.representingObject) Q.equivalence.functor :=
+    ⟨Qinv.functor, Q.equivalence.over, Qinv.over,
+      ⟨Qunit, QunitOver, hQunit⟩, ⟨Qcounit, QcounitOver, hQcounit⟩⟩
+  have hqSetoid : IsCategoryFibredInSetoids q :=
+    (equivalence_to_fibredInSets_gives_setoidFibres q
+      (Over.forget Q.representingObject) Q.equivalence.functor
+      Q.equivalence.over hQ
+      (sliceProjection_isFibredInSets Q.representingObject)).1
+  have hhom : ∀ (U : C) (X Y : Functor.Fiber q U),
+      Subsingleton (X ⟶ Y) := fun U X Y =>
+    (isSetoid_iff_isGroupoid_and_hom_subsingleton.mp (hqSetoid.2 U)).2 X Y
+  exact Unit36.fibredSlicePresentation_morphism_existsAndUnique P' Q'
+    (fun ψ => sliceMap_mapsStronglyCartesian ψ) hhom φ
 
 end
 

@@ -23,6 +23,7 @@ open Formalization.Books.Categories.Unit31
 open Formalization.Books.Categories.Unit33
 open Formalization.Books.Categories.Unit34
 open Formalization.Books.Categories.Unit35
+open Formalization.Books.Categories.Unit36
 open Formalization.Books.Categories.Unit39
 open Formalization.Books.Categories.Unit40
 open Formalization.Books.Categories.Unit41
@@ -2698,9 +2699,9 @@ private theorem representable_projection_faithful
     (h : IsRepresentableCategoryFibredInGroupoids r) : r.Faithful := by
   rcases h with ⟨_hr, ⟨P⟩⟩
   rcases P.isEquivalence with
-    ⟨Q, _hQ, _hQcart, ⟨e₁, _over₁, _he₁⟩, ⟨e₂, _over₂, _he₂⟩⟩
+    ⟨Q, ⟨e₁, _over₁, _he₁⟩, ⟨e₂, _over₂, _he₂⟩⟩
   let : P.equivalence.functor.IsEquivalence :=
-    Functor.IsEquivalence.mk' Q e₁.symm e₂
+    Functor.IsEquivalence.mk' Q.functor e₁.symm e₂
   constructor
   intro A B f g hfg
   apply (inferInstance : P.equivalence.functor.Faithful).map_injective

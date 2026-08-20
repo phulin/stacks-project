@@ -1544,7 +1544,20 @@ theorem isAnnihilatedByIdealPower_zero_iff
     (I : Ideal R) :
     IsAnnihilatedByIdealPower (N := N) I 0 ↔ Subsingleton N := by
   simp only [IsAnnihilatedByIdealPower, pow_zero, one_smul]
-  exact Submodule.top_eq_bot_iff
+  constructor
+  · intro h
+    constructor
+    intro x y
+    apply sub_eq_zero.mp
+    have hxy : x - y ∈ (⊤ : Submodule R N) := Submodule.mem_top
+    rw [h] at hxy
+    simpa using hxy
+  · intro h
+    apply le_antisymm
+    · intro x _hx
+      change x = 0
+      exact h.elim x 0
+    · exact bot_le
 
 theorem exists_positive_annihilating_power
     {R N : Type u} [CommRing R] [AddCommGroup N] [Module R N]

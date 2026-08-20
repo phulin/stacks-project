@@ -499,7 +499,7 @@ theorem isCohenMacaulayRing_mPolynomial
 
 private theorem localDepth_fin_succ_ge
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
-    [Nontrivial R] (k : ℕ) :
+    (k : ℕ) :
     localDepth R (Fin k.succ → R) ≥ localDepth R R := by
   induction k with
   | zero =>
@@ -548,7 +548,7 @@ theorem dimension_shift_in_exact_sequence
   have hMnon : Nontrivial M := by
     by_contra h
     exact hMsub (not_nontrivial_iff_subsingleton.mp h)
-  letI : Nontrivial M := hMnon
+  let : Nontrivial M := hMnon
   have hn : n ≠ 0 := by
     intro hn
     subst n
@@ -567,10 +567,10 @@ theorem dimension_shift_in_exact_sequence
   have hPnon : Nontrivial (Fin n → R) := Function.Surjective.nontrivial hg
   have hRnon : Nontrivial R := by
     by_contra h
-    letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
+    let : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
     exact (not_nontrivial_iff_subsingleton.mpr
       (inferInstance : Subsingleton (Fin n → R))) hPnon
-  letI : Nontrivial R := hRnon
+  let : Nontrivial R := hRnon
   have hRdepth : localDepth R R = (d : ℕ∞) := by
     apply WithBot.coe_injective
     calc
@@ -604,7 +604,7 @@ theorem dimension_shift_in_exact_sequence
     apply le_antisymm hPdepthle
     simpa [hRdepth] using hfree
   by_cases hKsub : Subsingleton K
-  · letI : Subsingleton K := hKsub
+  · let : Subsingleton K := hKsub
     have hKtop : localDepth R K = ⊤ :=
       depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) K
     refine Or.inr (Or.inl ?_)
@@ -613,7 +613,7 @@ theorem dimension_shift_in_exact_sequence
   have hKnon : Nontrivial K := by
     by_contra h
     exact hKsub (not_nontrivial_iff_subsingleton.mp h)
-  letI : Nontrivial K := hKnon
+  let : Nontrivial K := hKnon
   have hseq := localDepth_shortExact f g hf hfg hg
   have hKineq : min (localDepth R (Fin n → R))
       (localDepth R M + 1) ≤ localDepth R K := hseq.2.2
@@ -624,7 +624,7 @@ theorem dimension_shift_in_exact_sequence
   · have hM1d : localDepth R M + 1 ≤ (d : ℕ∞) :=
       (ENat.add_one_le_iff hMtop.ne).mpr hbd
     have hM1P : localDepth R M + 1 ≤ localDepth R (Fin n → R) := by
-      exact hM1d.trans (by simpa [hPdepth] using le_rfl)
+      exact hM1d.trans (by simp [hPdepth])
     have hM1K : localDepth R M + 1 ≤ localDepth R K := by
       rw [min_eq_right hM1P] at hKineq
       exact hKineq
@@ -640,7 +640,7 @@ theorem dimension_shift_in_exact_sequence
     · rw [hPdepth, hM_eq, min_eq_left (by simp)] at hKineq
       exact hKineq
   exact Or.inr (Or.inr (by
-    simpa [hK_eq, hM_eq]))
+    simp [hK_eq, hM_eq]))
 
 /- A source-facing predicate for a finite initial segment of a finite-free
    resolution whose last displayed kernel is maximal Cohen-Macaulay. -/
@@ -676,7 +676,7 @@ private noncomputable def identityResolution
     constructor
     · intro hx
       have hx0 : x = 0 := by simpa using hx
-      exact ⟨0, by simpa [hx0]⟩
+      exact ⟨0, by simp [hx0]⟩
     · rintro ⟨y, hy⟩
       have hy0 : y = 0 := Subsingleton.elim _ _
       rw [hy0] at hy
@@ -709,7 +709,7 @@ private noncomputable def identityResolution
 
 private theorem localDepth_finiteFree_eq
     {R P : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
-    [Nontrivial R] [AddCommGroup P] [Module R P] [Module.Free R P]
+    [AddCommGroup P] [Module R P] [Module.Free R P]
     [Module.Finite R P] [Nontrivial P] (d : ℕ)
     (hR : IsCohenMacaulayLocalRing R)
     (hdim : ringKrullDim R = (((d : ℕ∞) : WithBot ℕ∞))) :
@@ -766,7 +766,7 @@ private theorem localDepth_kernel_eq_succ_of_lt
     (hP : localDepth R P = (d : ℕ∞))
     (hM : localDepth R M = (e : ℕ∞))
     (hed : (e : ℕ∞) < (d : ℕ∞))
-    (hKtop : localDepth R K < ⊤) :
+    (_hKtop : localDepth R K < ⊤) :
     localDepth R K = ((e + 1 : ℕ) : ℕ∞) := by
   have hseq := localDepth_shortExact f g hf hfg hg
   have hde : (e : ℕ∞) + 1 ≤ (d : ℕ∞) := by
@@ -837,12 +837,11 @@ private noncomputable def prependResolution
       d_comp_d' := by
         intro i j k hij hjk
         cases i <;> cases j <;> cases k <;>
-          simp [d, Category.assoc, G.augmentation_condition,
-            G.complex.d_comp_d, hcomp, Nat.succ_eq_add_one,
+          simp [d, G.complex.d_comp_d,
             Nat.add_assoc, ComplexShape.down_Rel] at *
         all_goals
           subst_vars
-          simp [d, Category.assoc, G.augmentation_condition]
+          simp
           simpa [Category.assoc] using
             congrArg (fun q => q ≫ ι) G.augmentation_condition }
   have hGepi : Function.Surjective G.augmentation.hom :=
@@ -982,7 +981,7 @@ private noncomputable def tailResolution
 
 private theorem exists_mcm_finite_free_resolution_prefix_aux
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
-    [Nontrivial R] (N : ModuleCat.{u} R) [Module.Finite R N]
+    (N : ModuleCat.{u} R) [Module.Finite R N]
     [Nontrivial (N : Type u)] (d k e : ℕ)
     (F : Formalization.Books.Algebra.Unit71.Resolution R N)
     (hterms : ∀ i,
@@ -1020,30 +1019,30 @@ private theorem exists_mcm_finite_free_resolution_prefix_aux
         · intro h
           omega
   | succ k ih =>
-      letI : Module.Finite R (F.complex.X 0 : Type u) := (hterms 0).2
-      letI : Module.Free R (F.complex.X 0 : Type u) := (hterms 0).1
+      let : Module.Finite R (F.complex.X 0 : Type u) := (hterms 0).2
+      let : Module.Free R (F.complex.X 0 : Type u) := (hterms 0).1
       have hPnon : Nontrivial (F.complex.X 0 : Type u) := by
         exact Function.Surjective.nontrivial
           ((ModuleCat.epi_iff_surjective F.augmentation).mp F.augmentation_epi)
-      letI : Nontrivial (F.complex.X 0 : Type u) := hPnon
+      let : Nontrivial (F.complex.X 0 : Type u) := hPnon
       let K := CategoryTheory.Limits.kernel F.augmentation
-      letI : IsNoetherian R (F.complex.X 0 : Type u) :=
+      let : IsNoetherian R (F.complex.X 0 : Type u) :=
         isNoetherian_of_isNoetherianRing_of_finite R _
-      letI : Module.Finite R (K : Type u) := by
+      let : Module.Finite R (K : Type u) := by
         apply Module.Finite.of_injective (R := R) (S := R)
           (M := (K : Type u)) (N := (F.complex.X 0 : Type u))
           (CategoryTheory.Limits.kernel.ι F.augmentation).hom
         exact (ModuleCat.mono_iff_injective _).mp inferInstance
       have hKsub : ¬Nontrivial (K : Type u) → False := by
         intro hK
-        letI : Subsingleton (K : Type u) :=
+        let : Subsingleton (K : Type u) :=
           not_nontrivial_iff_subsingleton.mp hK
         have hKzero : CategoryTheory.Limits.IsZero K :=
           ModuleCat.isZero_iff_subsingleton.mpr inferInstance
-        letI : Mono F.augmentation :=
+        let : Mono F.augmentation :=
           CategoryTheory.Preadditive.mono_of_isZero_kernel F.augmentation hKzero
-        letI : Epi F.augmentation := F.augmentation_epi
-        letI : IsIso F.augmentation :=
+        let : Epi F.augmentation := F.augmentation_epi
+        let : IsIso F.augmentation :=
           CategoryTheory.isIso_of_mono_of_epi F.augmentation
         let ePM : (F.complex.X 0 : Type u) ≃ₗ[R] (N : Type u) :=
           (CategoryTheory.asIso F.augmentation).toLinearEquiv
@@ -1060,11 +1059,11 @@ private theorem exists_mcm_finite_free_resolution_prefix_aux
       have hKnon : Nontrivial (K : Type u) := by
         by_contra hK
         exact hKsub hK
-      letI : Nontrivial (K : Type u) := hKnon
+      let : Nontrivial (K : Type u) := hKnon
       let S := CategoryTheory.ShortComplex.mk
         (CategoryTheory.Limits.kernel.ι F.augmentation) F.augmentation
         (CategoryTheory.Limits.kernel.condition F.augmentation)
-      letI : Epi F.augmentation := F.augmentation_epi
+      let : Epi F.augmentation := F.augmentation_epi
       have hS : S.ShortExact := by
         dsimp [S]
         refine { exact := ?_, mono_f := inferInstance, epi_g := inferInstance }
@@ -1099,7 +1098,7 @@ private theorem exists_mcm_finite_free_resolution_prefix_aux
       obtain ⟨n, hn, hprefix⟩ := ih (N := K) (e := e + 1)
         G hGterms hKdepth (by omega)
       rcases hprefix with ⟨G', hG'terms, ⟨hterm, hcm, hzero, hinj⟩⟩
-      letI : Module.Finite R (G'.complex.X n) := hterm
+      let : Module.Finite R (G'.complex.X n) := hterm
       let H := prependResolution
         (CategoryTheory.Limits.kernel.ι F.augmentation) F.augmentation
         (CategoryTheory.Limits.kernel.condition F.augmentation) hS G'
@@ -1152,20 +1151,20 @@ theorem exists_mcm_finite_free_resolution_prefix
   classical
   have hRnon : Nontrivial R := by
     by_contra h
-    letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
+    let : Subsingleton R := not_nontrivial_iff_subsingleton.mp h
     have hbot : ringKrullDim R = (⊥ : WithBot ℕ∞) :=
       ringKrullDim_eq_bot_of_subsingleton
     rw [hbot] at hdim
     simp at hdim
-  letI : Nontrivial R := hRnon
+  let : Nontrivial R := hRnon
   have hMnon : Nontrivial M := by
     by_contra h
-    letI : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
+    let : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
     have htop : localDepth R M = ⊤ :=
       depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) M
     have : (e : ℕ∞) = ⊤ := by simpa [hdepth] using htop.symm
     simp at this
-  letI : Nontrivial M := hMnon
+  let : Nontrivial M := hMnon
   have hdepthle : localDepth R M ≤ (d : ℕ∞) := by
     apply WithBot.coe_le_coe.mp
     calc
@@ -1321,7 +1320,7 @@ theorem exists_regularSequence_of_localRingHom
         let Q := QuotSMulTop (φ a) M
         have hQnon : Nontrivial Q :=
           nontrivial_quotSMulTop_of_mem_maximalIdeal M haB
-        letI : Nontrivial Q := hQnon
+        let : Nontrivial Q := hQnon
         have hQcm : Formalization.Books.Algebra.Unit103.IsCohenMacaulay B Q :=
           (Formalization.Books.Algebra.Unit103.isCohenMacaulay_iff_of_isSMulRegular
             (R := B) (M := M) (φ a) haB hreg).mp hM
@@ -1349,7 +1348,7 @@ theorem exists_regularSequence_of_localRingHom
               have hqeq : q = (c : ℕ∞) := by
                 exact ENat.add_right_injective_of_ne_top (n := 1)
                   (by simp) (by simpa [add_comm] using hEq)
-              simpa [hq, hqeq]
+              simp [hqeq]
         obtain ⟨ys, hyslen, hysreg⟩ := ih Q hQcm hQdim
         refine ⟨a :: ys, ?_, ?_⟩
         · simp [hyslen]
@@ -1371,7 +1370,7 @@ theorem exists_regularSequence_of_localRingHom
   | bot =>
       exfalso
       rw [hd] at hnonneg
-      simpa using hnonneg
+      simp at hnonneg
   | coe q =>
       have hqtop : q ≠ ⊤ := by
         intro hq

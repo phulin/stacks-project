@@ -258,6 +258,37 @@ def IsIdealOfDefinition
     (R : Type u) [CommRing R] [IsLocalRing R] (I : Ideal R) : Prop :=
   I.radical = IsLocalRing.maximalIdeal R
 
+theorem isIdealOfDefinition_iff_radical_eq
+    {R : Type u} [CommRing R] [IsLocalRing R] (I : Ideal R) :
+    IsIdealOfDefinition R I ↔
+      I.radical = IsLocalRing.maximalIdeal R :=
+  Iff.rfl
+
+theorem Ideal.le_maximalIdeal_of_isIdealOfDefinition
+    {R : Type u} [CommRing R] [IsLocalRing R] {I : Ideal R}
+    (hI : IsIdealOfDefinition R I) :
+    I ≤ IsLocalRing.maximalIdeal R := by
+  rw [← hI]
+  exact Ideal.le_radical
+
+theorem isIdealOfDefinition_iff_zeroLocus_eq_singleton
+    {R : Type u} [CommRing R] [IsLocalRing R] (I : Ideal R) :
+    IsIdealOfDefinition R I ↔
+      PrimeSpectrum.zeroLocus (I : Set R) = {IsLocalRing.closedPoint R} := by
+  have hclosed :
+      PrimeSpectrum.zeroLocus (IsLocalRing.maximalIdeal R) =
+        {IsLocalRing.closedPoint R} := by
+    simpa only [IsLocalRing.closedPoint] using
+      (PrimeSpectrum.zeroLocus_eq_singleton (IsLocalRing.maximalIdeal R))
+  rw [IsIdealOfDefinition, ← hclosed]
+  constructor
+  · intro h
+    exact PrimeSpectrum.zeroLocus_eq_iff.mpr
+      (h.trans (IsLocalRing.maximalIdeal.isMaximal R).isPrime.radical.symm)
+  · intro h
+    exact (PrimeSpectrum.zeroLocus_eq_iff.mp h).trans
+      (IsLocalRing.maximalIdeal.isMaximal R).isPrime.radical
+
 theorem maximalIdeal_isIdealOfDefinition
     (R : Type u) [CommRing R] [IsLocalRing R] :
     IsIdealOfDefinition R (IsLocalRing.maximalIdeal R) := by
@@ -274,6 +305,23 @@ theorem exists_pow_maximalIdeal_le_of_isIdealOfDefinition
   have hfg : (IsLocalRing.maximalIdeal R).FG :=
     Ideal.FG.of_isNoetherianRing _
   exact Ideal.exists_pow_le_of_le_radical_of_fg hrad hfg
+
+theorem isIdealOfDefinition_iff_exists_pow_maximalIdeal_le
+    {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (I : Ideal R) :
+    IsIdealOfDefinition R I ↔
+      I ≤ IsLocalRing.maximalIdeal R ∧
+        ∃ r : ℕ, (IsLocalRing.maximalIdeal R) ^ r ≤ I := by
+  constructor
+  · intro hI
+    exact ⟨Ideal.le_maximalIdeal_of_isIdealOfDefinition hI,
+      exists_pow_maximalIdeal_le_of_isIdealOfDefinition I hI⟩
+  · rintro ⟨hI, r, hr⟩
+    apply le_antisymm
+    · exact (Ideal.radical_mono hI).trans
+        (IsLocalRing.maximalIdeal.isMaximal R).isPrime.radical.le
+    · intro x hx
+      exact Ideal.mem_radical_iff.mpr ⟨r, hr (Ideal.pow_mem_pow hx r)⟩
 
 theorem finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]

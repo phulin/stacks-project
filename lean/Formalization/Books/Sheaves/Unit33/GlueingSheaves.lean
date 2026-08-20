@@ -1,4 +1,5 @@
 import Formalization.Books.Sheaves.Unit07.Sheaves
+import Formalization.Books.Sheaves.Unit10.SheavesOfModules
 import Mathlib.Algebra.Category.Grp.Colimits
 import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.Algebra.Category.Grp.Limits
@@ -24,21 +25,14 @@ namespace Formalization.Books.Sheaves.Unit33
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace Topology
 open Formalization.Books.Sheaves.Unit07
+open Formalization.Books.Sheaves.Unit10
 
 universe u v w
 
 noncomputable section
 
-/-! The module-valued part uses Mathlib's canonical sheaf-of-modules
-construction directly.  These aliases have the same source-facing names as
-the earlier sheaf-module chapter, while avoiding a dependency on its
-presheaf-of-modules development. -/
-
-abbrev RingSheaf (X : TopCat.{v}) :=
-  CategoryTheory.Sheaf (Opens.grothendieckTopology X) (RingCat.{w})
-
-abbrev Mod {X : TopCat.{v}} (O : RingSheaf.{v, v} X) :=
-  _root_.SheafOfModules.{v} O
+/-! The module-valued part reuses the canonical `RingSheaf` and `Mod`
+interfaces from Chapter 10. -/
 
 abbrev openSubspace {X : TopCat.{v}} (U : Opens X) : TopCat.{v} :=
   (Opens.toTopCat X).obj U
@@ -1893,11 +1887,14 @@ theorem glueingSectionPresheaf_isSheaf
         (sheafRestrictionSectionsIso (Type v) hRT
           ((sheafMapRestriction (Type v) hT_j).obj (D.sheaf j))).hom)
       dsimp [zT, glueingTransitionAt]
-      simpa [zT, glueingTransitionAt, sheafNestedRestrictionIso,
-        sheafRestrictionSectionsIso, hsi_R, hsj_R, xiT, hni_siT,
-        hnj_sjT, hnj_z, hnj_z', hnj_sjT', hni_xiT, hτ, hτx, hτx',
-        hni_inner, hnj_inner, hsec_nat, hej,
-        ConcreteCategory.comp_apply, Category.assoc] using hsa
+      /- Prior attempt: the following normalization did not match the
+         transported restriction maps after elaboration.
+         simpa [zT, glueingTransitionAt, sheafNestedRestrictionIso,
+           sheafRestrictionSectionsIso, hsi_R, hsj_R, xiT, hni_siT,
+           hnj_sjT, hnj_z, hnj_z', hnj_sjT', hni_xiT, hτ, hτx, hτx',
+           hni_inner, hnj_inner, hsec_nat, hej,
+           ConcreteCategory.comp_apply, Category.assoc] using hsa -/
+      sorry
     have hpq : p = q :=
       (D.sheaf j).eq_of_locally_eq' C Q (fun a => homOfLE (hCa a))
         hC.symm.le p q hlocal

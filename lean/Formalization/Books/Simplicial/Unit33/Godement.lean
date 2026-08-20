@@ -217,12 +217,8 @@ theorem godement_simplicial_data
         dsimp [godementDegree]
         have hij' : (i : ℕ) ≤ (j : ℕ) := hij
         have hji : (j : ℕ) + 1 ≤ n + 2 := by omega
-        simp [Category.assoc, CategoryTheory.eqToHom_trans,
-          CategoryTheory.eqToHom_trans_assoc,
-          CategoryTheory.eqToHom_app, CategoryTheory.eqToHom_refl,
-          CategoryTheory.eqToHom_map, CategoryTheory.eqToHom_naturality,
-          Functor.map_comp, NatTrans.naturality, d.naturality,
-          Functor.whiskerLeft_comp_whiskerRight, hij, hij', hji]
+        simp [Category.assoc, CategoryTheory.eqToHom_trans_assoc,
+          CategoryTheory.eqToHom_app]
       δ_comp_σ_of_le := by
         intro n i j hij
         change op (godementSimplicialDegeneracy Y s (n + 1) j.succ ≫
@@ -236,13 +232,8 @@ theorem godement_simplicial_data
         have hji : (j : ℕ) + 1 ≤ n + 2 := by omega
         have h1 : n + 1 - ((j : ℕ) + 1) = n - (j : ℕ) := by omega
         have h2 : n + 1 + 1 - (i : ℕ) = 1 + (n + 1 - (i : ℕ)) := by omega
-        simp [Category.assoc, CategoryTheory.eqToHom_trans,
-          CategoryTheory.eqToHom_trans_assoc,
-          CategoryTheory.eqToHom_app, CategoryTheory.eqToHom_refl,
-          CategoryTheory.eqToHom_map, CategoryTheory.eqToHom_naturality,
-          Functor.map_comp, NatTrans.naturality, d.naturality, s.naturality,
-          Functor.whiskerLeft_comp_whiskerRight, iteratedEndofunctor_add,
-          hij, hji, h1, h2]
+        simp [Category.assoc, CategoryTheory.eqToHom_trans_assoc,
+          CategoryTheory.eqToHom_app]
       δ_comp_σ_self := by
         intro n i
         change op (godementSimplicialDegeneracy Y s n i ≫
@@ -265,8 +256,7 @@ theorem godement_simplicial_data
                 iteratedEndofunctor Y ((n + 1) - ↑i)) := by
           have hi : (n + 1) - (↑i : ℕ) = 1 + (n - (↑i : ℕ)) := by omega
           rw [hi, iteratedEndofunctor_add]
-          simp [Functor.assoc, Functor.id_comp, Functor.comp_id,
-            iteratedEndofunctor]
+          simp [Functor.id_comp, Functor.comp_id, iteratedEndofunctor]
         let a : godementDegree Y (n + 1) =
             iteratedEndofunctor Y (↑i) ⋙ (Y ⋙ Y) ⋙
               iteratedEndofunctor Y (n - ↑i) := by
@@ -285,8 +275,7 @@ theorem godement_simplicial_data
           have hi : n + 1 - (↑i.castSucc : ℕ) = 1 + (n - (↑i : ℕ)) := by
             simpa using (show n + 1 - (↑i : ℕ) = 1 + (n - (↑i : ℕ)) by omega)
           rw [hi, iteratedEndofunctor_add]
-          simp [Functor.assoc, Functor.id_comp, Functor.comp_id,
-            iteratedEndofunctor]
+          simp [Functor.assoc, Functor.comp_id, iteratedEndofunctor]
         let S :=
           Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
             (Functor.whiskerRight s (iteratedEndofunctor Y (n - ↑i)))
@@ -304,11 +293,7 @@ theorem godement_simplicial_data
               T.app X ≫ (eqToHom r).app X := by
             dsimp [S, T, D']
             have hi : n + 1 - (↑i : ℕ) = 1 + (n - (↑i : ℕ)) := by omega
-            simp [S, T, D', Category.assoc,
-              hi, iteratedEndofunctor_add,
-              Functor.assoc, Functor.id_comp, Functor.comp_id,
-              CategoryTheory.eqToHom_map, CategoryTheory.eqToHom_naturality,
-              Functor.map_comp, d.naturality]
+            simp [Functor.assoc, Functor.id_comp]
             have hiF : iteratedEndofunctor Y (n + 1 - (↑i.castSucc : ℕ)) =
                 Y ⋙ iteratedEndofunctor Y (n - (↑i : ℕ)) := by
               have hsub : n + 1 - (↑i.castSucc : ℕ) =
@@ -343,7 +328,7 @@ theorem godement_simplicial_data
                   eqToHom q.symm := by
             dsimp [p, q, S, D', godementSimplicialFace,
               godementSimplicialDegeneracy, godementFace, godementDegeneracy]
-            simp [Category.assoc, a, b]
+            simp
           have hhm :
               eqToHom p ≫ S ≫ eqToHom a.symm ≫ eqToHom b ≫ D' ≫
                   eqToHom q.symm =
@@ -386,12 +371,8 @@ theorem godement_simplicial_data
         ext X
         dsimp [godementSimplicialFace, godementSimplicialDegeneracy,
           godementFace, godementDegeneracy, godementDegree]
-        simp [Category.assoc, CategoryTheory.eqToHom_trans,
-          CategoryTheory.eqToHom_trans_assoc,
-          CategoryTheory.eqToHom_app, CategoryTheory.eqToHom_refl,
-          CategoryTheory.eqToHom_map, CategoryTheory.eqToHom_naturality,
-          Functor.map_comp, NatTrans.naturality, d.naturality,
-          Functor.whiskerLeft_comp_whiskerRight, h.right_unit]
+        simp [Category.assoc, CategoryTheory.eqToHom_trans_assoc,
+          CategoryTheory.eqToHom_app]
         let p : godementDegree Y n =
             iteratedEndofunctor Y (↑i) ⋙ Y ⋙ iteratedEndofunctor Y (n - ↑i) := by
           change iteratedEndofunctor Y (n + 1) = _
@@ -431,9 +412,7 @@ theorem godement_simplicial_data
                     simp [iteratedEndofunctor]
               _ = iteratedEndofunctor Y (↑i) ⋙ Y := hcomm.symm
           rw [hs]
-          simpa [Functor.assoc] using
-            congrArg (fun F : C ⥤ C => F ⋙ 𝟭 C ⋙
-              iteratedEndofunctor Y (n - (↑i : ℕ))) hcomm
+          simp only [Functor.assoc]
         let a : godementDegree Y (n + 1) =
             iteratedEndofunctor Y (↑i) ⋙ (Y ⋙ Y) ⋙
               iteratedEndofunctor Y (n - ↑i) := by
@@ -474,9 +453,7 @@ theorem godement_simplicial_data
                     simp [iteratedEndofunctor]
               _ = iteratedEndofunctor Y (↑i) ⋙ Y := hcomm.symm
           rw [hs]
-          simpa [Functor.assoc] using
-            congrArg (fun F : C ⥤ C => F ⋙ Y ⋙
-              iteratedEndofunctor Y (n - (↑i : ℕ))) hcomm
+          simp only [Functor.assoc]
         let S :=
           Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
             (Functor.whiskerRight s (iteratedEndofunctor Y (n - ↑i)))
@@ -492,11 +469,7 @@ theorem godement_simplicial_data
           have inner : (eqToHom m).app X ≫ D'.app X =
               T.app X ≫ (eqToHom r).app X := by
             dsimp [S, T, D']
-            simp [S, T, D', m, r, Category.assoc,
-              Functor.assoc, Functor.id_comp, Functor.comp_id,
-              CategoryTheory.eqToHom_map,
-              CategoryTheory.eqToHom_naturality, Functor.map_comp,
-              d.naturality]
+            simp [Functor.assoc, Functor.id_comp, Functor.comp_id]
             have hcomm : iteratedEndofunctor Y (↑i) ⋙ Y =
                 Y ⋙ iteratedEndofunctor Y (↑i) := by
               calc
@@ -538,7 +511,7 @@ theorem godement_simplicial_data
                   eqToHom q.symm := by
             dsimp [p, q, S, D', godementSimplicialFace,
               godementSimplicialDegeneracy, godementFace, godementDegeneracy]
-            simp [Category.assoc, a, b]
+            simp
           have hhm :
               eqToHom p ≫ S ≫ eqToHom a.symm ≫ eqToHom b ≫ D' ≫
                   eqToHom q.symm =
@@ -574,13 +547,11 @@ theorem godement_simplicial_data
           using hu
       δ_comp_σ_of_gt := by
         intro n i j hji
-        simp only [CategoryTheory.op_comp]
         simp [godementSimplicialFace, godementSimplicialDegeneracy,
           godementFace, godementDegeneracy]
       σ_comp_σ := by
         intro n i j hij
-        simp only [CategoryTheory.op_comp]
-        simp [godementSimplicialDegeneracy, godementDegeneracy, h.coassoc] }
+        simp [godementSimplicialDegeneracy, godementDegeneracy] }
   let U := Formalization.Books.Simplicial.Unit02.simplicialObjectOfGeneratorData D
   refine ⟨{ object := U, object_obj := ?_, face_def := ?_, degeneracy_def := ?_ }⟩
   · intro n

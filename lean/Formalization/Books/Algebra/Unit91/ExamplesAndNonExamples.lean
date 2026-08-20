@@ -5,6 +5,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.LinearAlgebra.Contraction
 import Mathlib.RingTheory.AdicCompletion.Basic
+import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.AdicCompletion.Functoriality
 import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Henselian
@@ -1995,11 +1996,419 @@ theorem powerSeriesXi_lies_in_directSum_adicCompletion
     simp
 
 /-- The `(x)`-adic completion of the direct sum is not Mittag-Leffler. -/
+private theorem finite_annihilator_approximation_of_mittagLeffler_general
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (η : M)
+    (hML : IsMittagLefflerModule (ModuleCat.of R M)) :
+    ∃ Q : ModuleCat.{u} R,
+      Module.Finite R (Q : Type u) ∧
+        ∃ ξ' : (Q : Type u), ∀ l : ℕ, 1 ≤ l →
+          elementAnnihilatorModuloIdeal (I ^ l) η =
+            elementAnnihilatorModuloIdeal (I ^ l) ξ' := by
+  classical
+  let f : R →ₗ[R] M := LinearMap.toSpanSingleton R M η
+  have hRfp : Module.FinitePresentation R R :=
+    Module.finitePresentation_of_projective R R
+  obtain ⟨Q, hQfp, g, hmut⟩ :=
+    hML (ModuleCat.of R R) hRfp f
+  let _ : Module.FinitePresentation R (Q : Type u) := hQfp
+  refine ⟨Q, inferInstance, g 1, ?_⟩
+  intro l hl
+  ext r
+  rw [elementAnnihilatorModuloIdeal,
+    Submodule.mem_annihilator_span_singleton,
+    elementAnnihilatorModuloIdeal,
+    Submodule.mem_annihilator_span_singleton]
+  let X := R ⧸ I ^ l
+  let z : R ⊗[R] X := 1 ⊗ₜ[R] (Ideal.Quotient.mk _ r)
+  have heM :
+      (TensorProduct.tensorQuotEquivQuotSMul (M : Type u) (I ^ l))
+          ((f.rTensor X) z) =
+        r • moduleQuotientElement (I ^ l) η := by
+    change _ = r • (I ^ l • (⊤ : Submodule R M)).mkQ η
+    rw [show z = (1 : R) ⊗ₜ[R] (Ideal.Quotient.mk _ r) by rfl]
+    rw [LinearMap.rTensor_tmul]
+    rw [show f 1 = η by simp [f]]
+    rw [TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+    change (I ^ l • (⊤ : Submodule R M)).mkQ (r • η) =
+      r • (I ^ l • (⊤ : Submodule R M)).mkQ η
+    exact (I ^ l • (⊤ : Submodule R M)).mkQ.map_smul r η
+  have heQ :
+      (TensorProduct.tensorQuotEquivQuotSMul (Q : Type u) (I ^ l))
+          ((g.rTensor X) z) =
+        r • moduleQuotientElement (I ^ l) (g 1) := by
+    change _ = r • (I ^ l • (⊤ : Submodule R Q)).mkQ (g 1)
+    rw [show z = (1 : R) ⊗ₜ[R] (Ideal.Quotient.mk _ r) by rfl]
+    rw [LinearMap.rTensor_tmul]
+    rw [TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+    change (I ^ l • (⊤ : Submodule R Q)).mkQ (r • g 1) =
+      r • (I ^ l • (⊤ : Submodule R Q)).mkQ (g 1)
+    exact (I ^ l • (⊤ : Submodule R Q)).mkQ.map_smul r (g 1)
+  have hker : LinearMap.ker (f.rTensor X) = LinearMap.ker (g.rTensor X) :=
+    le_antisymm (hmut.1 X) (hmut.2 X)
+  constructor
+  · intro hr
+    have hzf : (f.rTensor X) z = 0 := by
+      apply (TensorProduct.tensorQuotEquivQuotSMul (M : Type u) (I ^ l)).injective
+      rw [heM]
+      exact hr
+    have hzg : (g.rTensor X) z = 0 :=
+      LinearMap.mem_ker.mp (hker ▸ LinearMap.mem_ker.mpr hzf)
+    have hzg' := congrArg
+      (TensorProduct.tensorQuotEquivQuotSMul (Q : Type u) (I ^ l)) hzg
+    rw [heQ] at hzg'
+    exact hzg'
+  · intro hr
+    have hzg : (g.rTensor X) z = 0 := by
+      apply (TensorProduct.tensorQuotEquivQuotSMul (Q : Type u) (I ^ l)).injective
+      rw [heQ]
+      exact hr
+    have hzf : (f.rTensor X) z = 0 :=
+      LinearMap.mem_ker.mp (hker.symm ▸ LinearMap.mem_ker.mpr hzg)
+    have hzf' := congrArg
+      (TensorProduct.tensorQuotEquivQuotSMul (M : Type u) (I ^ l)) hzf
+    rw [heM] at hzf'
+    exact hzf'
+
+/-- The `(x)`-adic completion of the direct sum is not Mittag-Leffler. -/
 theorem powerSeriesTorsionDirectSumCompletion_not_mittagLeffler
     (k : Type u) [Field k] :
     ¬ IsMittagLefflerModule
       (ModuleCat.of (PowerSeries k) (powerSeriesTorsionDirectSumCompletion k)) := by
-  sorry
+  classical
+  intro hML
+  obtain ⟨η, hη⟩ := powerSeriesXi_lies_in_directSum_adicCompletion k
+  obtain ⟨Q, hQ, ξ', hξ'⟩ :=
+    finite_annihilator_approximation_of_mittagLeffler_general
+      (powerSeriesXIdeal k) η hML
+  letI : ∀ n : ℕ+, AddCommGroup (powerSeriesQuotientFamily k n : Type u) := fun n => by
+    change AddCommGroup
+      (PowerSeries k ⧸ (powerSeriesXIdeal k) ^ (n : ℕ))
+    infer_instance
+  have hIFG : (powerSeriesXIdeal k).FG := by
+    exact Submodule.fg_span_singleton (PowerSeries.X : PowerSeries k)
+  have hprincipal : ∀ {M : Type u} [AddCommGroup M]
+      [Module (PowerSeries k) M] (x : PowerSeries k) (y : M),
+      y ∈ (Ideal.span {x} • (⊤ : Submodule (PowerSeries k) M)) ↔
+        ∃ z : M, x • z = y := by
+    intro M _ _ x y
+    constructor
+    · intro hy
+      refine Submodule.smul_induction_on hy ?_ (fun a b ha hb ↦ ?_)
+      · intro r hr z hz
+        rcases Ideal.mem_span_singleton.mp hr with ⟨c, hc⟩
+        refine ⟨c • z, ?_⟩
+        rw [hc]
+        exact (smul_assoc x c z).symm
+      · rcases ha with ⟨a, rfl⟩
+        rcases hb with ⟨b, rfl⟩
+        exact ⟨a + b, by simp⟩
+    · rintro ⟨z, rfl⟩
+      exact Submodule.smul_mem_smul (Submodule.subset_span (Set.mem_singleton x))
+        Submodule.mem_top
+  have hquot (l : ℕ)
+      (dbar : moduleQuotientByIdeal
+        (R := PowerSeries k) (M := powerSeriesTorsionDirectSum k)
+        (powerSeriesXIdeal k ^ l))
+      (hd : (DirectSum.coeFnLinearMap (PowerSeries k)).reduceModIdeal
+        (powerSeriesXIdeal k ^ l) dbar = 0) : dbar = 0 := by
+    let N : Submodule (PowerSeries k) (powerSeriesTorsionDirectSum k) :=
+      powerSeriesXIdeal k ^ l • (⊤ : Submodule (PowerSeries k) (powerSeriesTorsionDirectSum k))
+    have hsurj := Submodule.Quotient.mk_surjective N
+    obtain ⟨d, hdbar⟩ := hsurj dbar
+    subst dbar
+    change (powerSeriesXIdeal k ^ l •
+      (⊤ : Submodule (PowerSeries k) (powerSeriesTorsionProduct k))).mkQ
+        (DirectSum.coeFnLinearMap (PowerSeries k) d) = 0 at hd
+    have hpow : powerSeriesXIdeal k ^ l =
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ l)} := by
+      simp [powerSeriesXIdeal, Ideal.span_singleton_pow]
+    rw [hpow] at hd
+    rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hd
+    obtain ⟨z, hz⟩ :=
+      (hprincipal ((PowerSeries.X : PowerSeries k) ^ l)
+        (DirectSum.coeFnLinearMap (PowerSeries k) d)).mp hd
+    have hcomp : ∀ i,
+        d i ∈ Ideal.span {((PowerSeries.X : PowerSeries k) ^ l)} •
+          (⊤ : Submodule (PowerSeries k)
+            (powerSeriesQuotientFamily k i : Type u)) := by
+      intro i
+      apply (hprincipal ((PowerSeries.X : PowerSeries k) ^ l) _).mpr
+      refine ⟨z i, ?_⟩
+      exact congrFun hz i
+    change (powerSeriesXIdeal k ^ l •
+      (⊤ : Submodule (PowerSeries k) (powerSeriesTorsionDirectSum k))).mkQ d = 0
+    rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+    rw [← DirectSum.sum_support_of d]
+    apply Submodule.sum_mem
+    intro i hi
+    obtain ⟨w, hw⟩ := (hprincipal ((PowerSeries.X : PowerSeries k) ^ l) _).mp
+      (hcomp i)
+    rw [← hw, DirectSum.of_smul]
+    have hX : (PowerSeries.X : PowerSeries k) ^ l ∈ powerSeriesXIdeal k ^ l := by
+      rw [hpow]
+      exact Ideal.subset_span (Set.mem_singleton _)
+    exact Submodule.smul_mem_smul
+      hX Submodule.mem_top
+  have hmap (r : PowerSeries k) :
+      powerSeriesDirectSumCompletionToProductCompletion k (r • η) =
+        r • powerSeriesDirectSumCompletionToProductCompletion k η := by
+    change AdicCompletion.map (powerSeriesXIdeal k)
+        (DirectSum.coeFnLinearMap (PowerSeries k))
+        ((algebraMap (PowerSeries k)
+          (AdicCompletion (powerSeriesXIdeal k) (PowerSeries k)) r) • η) = _
+    rw [map_smul]
+    rfl
+  have hann (l : ℕ) :
+      elementAnnihilatorModuloIdeal
+          ((powerSeriesXIdeal k) ^ l) η =
+        elementAnnihilatorModuloIdeal
+          ((powerSeriesXIdeal k) ^ l) (powerSeriesXi k) := by
+    ext r
+    constructor
+    · intro hr
+      rw [elementAnnihilatorModuloIdeal,
+        Submodule.mem_annihilator_span_singleton] at hr ⊢
+      unfold moduleQuotientElement at hr ⊢
+      rw [← map_smul, Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hr ⊢
+      have hzero :
+          (AdicCompletion.eval (powerSeriesXIdeal k)
+            (powerSeriesTorsionDirectSum k) l) (r • η) = 0 := by
+        apply LinearMap.mem_ker.mp
+        apply (AdicCompletion.pow_smul_top_le_ker_eval
+          (I := powerSeriesXIdeal k) (M := powerSeriesTorsionDirectSum k) l)
+        exact hr
+      have hzero_map :
+          (AdicCompletion.eval (powerSeriesXIdeal k)
+            (powerSeriesTorsionProduct k) l)
+            (powerSeriesDirectSumCompletionToProductCompletion k (r • η)) = 0 := by
+        change (AdicCompletion.map (powerSeriesXIdeal k)
+          (DirectSum.coeFnLinearMap (PowerSeries k)) (r • η)).val l = 0
+        rw [AdicCompletion.map_val_apply]
+        rw [show (r • η).val l = 0 from hzero]
+        simp
+      rw [hmap] at hzero_map
+      rw [hη] at hzero_map
+      have hzero_of :
+          (AdicCompletion.eval (powerSeriesXIdeal k)
+            (powerSeriesTorsionProduct k) (l))
+            (AdicCompletion.of (powerSeriesXIdeal k)
+              (powerSeriesTorsionProduct k) (r • powerSeriesXi k)) = 0 := by
+        rw [AdicCompletion.eval_of]
+        have hzero_map' := hzero_map
+        rw [map_smul, AdicCompletion.eval_of] at hzero_map'
+        rw [(powerSeriesXIdeal k ^ l •
+          (⊤ : Submodule (PowerSeries k) (powerSeriesTorsionProduct k))).mkQ.map_smul]
+        exact hzero_map'
+      rw [AdicCompletion.eval_of] at hzero_of
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hzero_of
+      exact hzero_of
+    · intro hr
+      rw [elementAnnihilatorModuloIdeal,
+        Submodule.mem_annihilator_span_singleton] at hr ⊢
+      unfold moduleQuotientElement at hr ⊢
+      rw [← map_smul, Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hr ⊢
+      have hzero_target_mk :
+          (powerSeriesXIdeal k ^ l •
+            (⊤ : Submodule (PowerSeries k) (powerSeriesTorsionProduct k))).mkQ
+              (r • powerSeriesXi k) = 0 := by
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+        exact hr
+      have hzero_target :
+          (AdicCompletion.eval (powerSeriesXIdeal k)
+            (powerSeriesTorsionProduct k) l)
+            (r • AdicCompletion.of (powerSeriesXIdeal k)
+              (powerSeriesTorsionProduct k) (powerSeriesXi k)) = 0 := by
+        rw [map_smul, AdicCompletion.eval_of]
+        rw [(powerSeriesXIdeal k ^ l •
+          (⊤ : Submodule (PowerSeries k) (powerSeriesTorsionProduct k))).mkQ.map_smul]
+          at hzero_target_mk
+        exact hzero_target_mk
+      have hzero_map :
+          (AdicCompletion.eval (powerSeriesXIdeal k)
+            (powerSeriesTorsionProduct k) l)
+            (powerSeriesDirectSumCompletionToProductCompletion k (r • η)) = 0 := by
+        rw [hmap, hη]
+        exact hzero_target
+      have hsource_coord :
+          (AdicCompletion.eval (powerSeriesXIdeal k)
+            (powerSeriesTorsionDirectSum k) l) (r • η) = 0 := by
+        change (AdicCompletion.map (powerSeriesXIdeal k)
+          (DirectSum.coeFnLinearMap (PowerSeries k)) (r • η)).val l = 0 at hzero_map
+        rw [AdicCompletion.map_val_apply] at hzero_map
+        exact hquot l ((r • η).val l) hzero_map
+      rw [AdicCompletion.pow_smul_top_eq_ker_eval
+        (I := powerSeriesXIdeal k) (M := powerSeriesTorsionDirectSum k) hIFG]
+      exact LinearMap.mem_ker.mpr hsource_coord
+  obtain ⟨a, ha | ha⟩ :=
+    finite_module_annihilator_eventually_principal k Q ξ' hQ
+  · obtain ⟨l₀, hl₀⟩ := ha
+    obtain ⟨m₀, hm₀⟩ := powerSeriesXi_annihilator_eventually k
+    let m := max (max m₀ l₀) (a + 1)
+    have hm₀' : m₀ ≤ m := by
+      dsimp [m]
+      exact (le_max_left _ _).trans (le_max_left _ _)
+    have hl₀' : l₀ ≤ m := by
+      dsimp [m]
+      exact (le_max_right _ _).trans (le_max_left _ _)
+    have hm1 : 1 ≤ m := by
+      have ha1 : a + 1 ≤ m := by
+        dsimp [m]
+        exact le_max_right _ _
+      omega
+    have hnatpow : ∀ t : ℕ, t ≤ 2 ^ t := by
+      intro t
+      induction t with
+      | zero => simp
+      | succ t iht =>
+          calc
+            t + 1 ≤ 2 ^ t + 1 := Nat.succ_le_succ iht
+            _ ≤ 2 ^ t * 2 := by
+              nlinarith [Nat.one_le_pow t 2 (by decide : 0 < 2)]
+            _ = 2 ^ (t + 1) := by rw [pow_succ]
+    have hlpow : l₀ ≤ 2 ^ m := hl₀'.trans (hnatpow m)
+    have h1pow : ∀ t : ℕ, 1 ≤ 2 ^ t := by
+      intro t
+      exact Nat.one_le_pow t 2 (by decide : 0 < 2)
+    have hEq1 :
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)))} =
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^ a)} := by
+      exact (hm₀ m (hm₀'.trans le_rfl)).symm.trans
+        ((hann (2 ^ m)).symm.trans
+          ((hξ' (2 ^ m) (h1pow m)).trans (hl₀ (2 ^ m) hlpow)))
+    have hEq2 :
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ m))} =
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^ a)} := by
+      have hpa :
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ m))} =
+            elementAnnihilatorModuloIdeal
+              ((powerSeriesXIdeal k) ^ (2 ^ (m + 1))) (powerSeriesXi k) := by
+        simpa [Nat.add_sub_cancel] using (hm₀ (m + 1) (by omega)).symm
+      exact hpa.trans
+        ((hann (2 ^ (m + 1))).symm.trans
+          ((hξ' (2 ^ (m + 1)) (h1pow (m + 1))).trans
+            (hl₀ (2 ^ (m + 1)) (hl₀'.trans
+              (le_trans (Nat.le_succ m) (hnatpow (m + 1)))))))
+    have hspan_pow_eq : ∀ {p q : ℕ},
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ p)} =
+            Ideal.span {((PowerSeries.X : PowerSeries k) ^ q)} → p = q := by
+      intro p q hpq
+      have hp : (PowerSeries.X : PowerSeries k) ^ q ∣
+          (PowerSeries.X : PowerSeries k) ^ p := by
+        rcases Ideal.mem_span_singleton.mp
+          (hpq ▸ Ideal.subset_span (Set.mem_singleton _)) with ⟨s, hs⟩
+        exact ⟨s, hs⟩
+      have hqp : q ≤ p := by
+        by_contra hnot
+        have hlt : p < q := by omega
+        have hc := (PowerSeries.X_pow_dvd_iff.mp hp) p hlt
+        simp at hc
+      have hq : (PowerSeries.X : PowerSeries k) ^ p ∣
+          (PowerSeries.X : PowerSeries k) ^ q := by
+        rcases Ideal.mem_span_singleton.mp
+          (hpq.symm ▸ Ideal.subset_span (Set.mem_singleton _)) with ⟨s, hs⟩
+        exact ⟨s, hs⟩
+      have hpq' : p ≤ q := by
+        by_contra hnot
+        have hlt : q < p := by omega
+        have hc := (PowerSeries.X_pow_dvd_iff.mp hq) q hlt
+        simp at hc
+      omega
+    have heq1 := hspan_pow_eq hEq1
+    have heq2 := hspan_pow_eq hEq2
+    have hpowlt : 2 ^ (m - 1) < 2 ^ m := by
+      exact Nat.pow_lt_pow_right (by decide : 1 < 2)
+        (Nat.sub_lt (Nat.zero_lt_of_lt hm1) (by omega))
+    omega
+  · obtain ⟨l₀, hl₀⟩ := ha
+    obtain ⟨m₀, hm₀⟩ := powerSeriesXi_annihilator_eventually k
+    let m := max (max m₀ l₀) (a + 1)
+    have hm₀' : m₀ ≤ m := by
+      dsimp [m]
+      exact (le_max_left _ _).trans (le_max_left _ _)
+    have hl₀' : l₀ ≤ m := by
+      dsimp [m]
+      exact (le_max_right _ _).trans (le_max_left _ _)
+    have hm1 : 1 ≤ m := by
+      have ha1 : a + 1 ≤ m := by
+        dsimp [m]
+        exact le_max_right _ _
+      omega
+    have hnatpow : ∀ t : ℕ, t ≤ 2 ^ t := by
+      intro t
+      induction t with
+      | zero => simp
+      | succ t iht =>
+          calc
+            t + 1 ≤ 2 ^ t + 1 := Nat.succ_le_succ iht
+            _ ≤ 2 ^ t * 2 := by
+              nlinarith [Nat.one_le_pow t 2 (by decide : 0 < 2)]
+            _ = 2 ^ (t + 1) := by rw [pow_succ]
+    have hm0pow : l₀ ≤ 2 ^ m := hl₀'.trans (hnatpow m)
+    have h1pow : ∀ t : ℕ, 1 ≤ 2 ^ t := by
+      intro t
+      exact Nat.one_le_pow t 2 (by decide : 0 < 2)
+    have hEq1 :
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)))} =
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ m - a))} := by
+      exact (hm₀ m (hm₀'.trans le_rfl)).symm.trans
+        ((hann (2 ^ m)).symm.trans
+          ((hξ' (2 ^ m) (h1pow m)).trans
+            (hl₀ (2 ^ m) hm0pow)))
+    have hEq2 :
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ m))} =
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ (m + 1) - a))} := by
+      have hpa :
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^ (2 ^ m))} =
+            elementAnnihilatorModuloIdeal
+              ((powerSeriesXIdeal k) ^ (2 ^ (m + 1))) (powerSeriesXi k) := by
+        simpa [Nat.add_sub_cancel] using (hm₀ (m + 1) (by omega)).symm
+      exact hpa.trans
+        ((hann (2 ^ (m + 1))).symm.trans
+          ((hξ' (2 ^ (m + 1)) (h1pow (m + 1))).trans
+            (hl₀ (2 ^ (m + 1))
+              (hl₀'.trans (le_trans (Nat.le_succ m) (hnatpow (m + 1)))))))
+    have hspan_pow_eq : ∀ {p q : ℕ},
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ p)} =
+            Ideal.span {((PowerSeries.X : PowerSeries k) ^ q)} → p = q := by
+      intro p q hpq
+      have hp : (PowerSeries.X : PowerSeries k) ^ q ∣
+          (PowerSeries.X : PowerSeries k) ^ p := by
+        rcases Ideal.mem_span_singleton.mp
+          (hpq ▸ Ideal.subset_span (Set.mem_singleton _)) with ⟨s, hs⟩
+        exact ⟨s, hs⟩
+      have hqp : q ≤ p := by
+        by_contra hnot
+        have hlt : p < q := by omega
+        have hc := (PowerSeries.X_pow_dvd_iff.mp hp) p hlt
+        simp at hc
+      have hq : (PowerSeries.X : PowerSeries k) ^ p ∣
+          (PowerSeries.X : PowerSeries k) ^ q := by
+        rcases Ideal.mem_span_singleton.mp
+          (hpq.symm ▸ Ideal.subset_span (Set.mem_singleton _)) with ⟨s, hs⟩
+        exact ⟨s, hs⟩
+      have hpq' : p ≤ q := by
+        by_contra hnot
+        have hlt : q < p := by omega
+        have hc := (PowerSeries.X_pow_dvd_iff.mp hq) q hlt
+        simp at hc
+      omega
+    have heq1 := hspan_pow_eq hEq1
+    have heq2 := hspan_pow_eq hEq2
+    have heq1' : 2 ^ (m - 1) = 2 ^ m - a := heq1
+    have heq2' : 2 ^ m = 2 ^ (m + 1) - a := heq2
+    have hpowlt : 2 ^ (m - 1) < 2 ^ m := by
+      exact Nat.pow_lt_pow_right (by decide : 1 < 2)
+        (Nat.sub_lt (Nat.zero_lt_of_lt hm1) (by omega))
+    have hpow_succ : 2 ^ (m + 1) = 2 ^ m * 2 := by
+      rw [pow_succ]
+    generalize hp : 2 ^ (m - 1) = p at heq1 heq1' hpowlt
+    generalize hq : 2 ^ m = q at heq1 heq1' heq2 heq2' hpowlt hpow_succ
+    generalize hs : 2 ^ (m + 1) = s at heq2 heq2' hpow_succ
+    have hp_pos : 1 ≤ p := by
+      rw [← hp]
+      exact h1pow (m - 1)
+    omega
 
 /-! ### The Artinian-local example -/
 
@@ -2056,20 +2465,785 @@ theorem artinianLocalExample_finitePresentation
     (k : Type u) [Field k] :
     Algebra.FinitePresentation (artinianLocalExampleBaseRing k)
       (artinianLocalExampleAlgebra k) := by
-  sorry
+  infer_instance
 
 /-- The displayed algebra is countably generated as a module. -/
 theorem artinianLocalExample_countablyGenerated
     (k : Type u) [Field k] :
     Module.IsCountablyGenerated (artinianLocalExampleBaseRing k)
       (artinianLocalExampleAlgebra k) := by
-  sorry
+  classical
+  let f := artinianLocalExamplePolynomialRelation k
+  let R := artinianLocalExampleBaseRing k
+  let S := artinianLocalExampleAlgebra k
+  let s : Set S := Set.range (fun n : ℕ => (AdjoinRoot.root f) ^ n)
+  let Q : Submodule R S := Submodule.span R s
+  refine ⟨s, Set.countable_range _, ?_⟩
+  rw [eq_top_iff]
+  intro x hx
+  clear hx
+  induction x using AdjoinRoot.induction_on with
+  | ih p =>
+      induction p using Polynomial.induction_on' with
+      | add p q hp hq =>
+          simpa [map_add] using Q.add_mem hp hq
+      | monomial n a =>
+          rw [← Polynomial.C_mul_X_pow_eq_monomial, map_mul, AdjoinRoot.mk_C,
+            map_pow, AdjoinRoot.mk_X]
+          simpa [R, S, f, s, Q, Algebra.smul_def, AdjoinRoot.algebraMap_eq] using Q.smul_mem a
+            (Submodule.subset_span (show (AdjoinRoot.root f) ^ n ∈ s by
+              exact ⟨n, rfl⟩))
+
+private lemma artinianLocalExample_idempotent
+    (k : Type u) [Field k]
+    (φ : artinianLocalExampleAlgebra k →+* Polynomial k)
+    (σ : Polynomial k →+* artinianLocalExampleAlgebra k)
+    (A : artinianLocalExampleBaseRing k)
+    (hφσ : ∀ p : Polynomial k, φ (σ p) = p)
+    (hA_formula :
+      ∀ x : artinianLocalExampleAlgebra k,
+        AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * x =
+          AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ (φ x))
+    (hmap_of :
+      ∀ (e : artinianLocalExampleAlgebra k →ₗ[artinianLocalExampleBaseRing k]
+          artinianLocalExampleAlgebra k)
+        (r : artinianLocalExampleBaseRing k)
+        (x : artinianLocalExampleAlgebra k),
+        e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) r * x) =
+          AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) r * e x)
+    (htop_all :
+      ∀ (e : artinianLocalExampleAlgebra k →ₗ[artinianLocalExampleBaseRing k]
+          artinianLocalExampleAlgebra k)
+        (x : artinianLocalExampleAlgebra k),
+        φ (e x) = φ (e 1) * φ x)
+    (hdecomp :
+      ∀ (x : artinianLocalExampleAlgebra k),
+        ∃ p : Polynomial k,
+          x = σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p)
+    (e : artinianLocalExampleAlgebra k →ₗ[artinianLocalExampleBaseRing k]
+      artinianLocalExampleAlgebra k)
+    (he : e.comp e = e) :
+    e = 0 ∨ e = LinearMap.id := by
+  let R := artinianLocalExampleBaseRing k
+  let S := artinianLocalExampleAlgebra k
+  have hqmul : φ (e 1) * φ (e 1) = φ (e 1) := by
+    have he1 : e (e 1) = e 1 := by
+      simpa only [LinearMap.comp_apply] using LinearMap.congr_fun he 1
+    rw [← htop_all e (e 1), he1]
+  have hqfac : φ (e 1) * (φ (e 1) - 1) = 0 := by
+    rw [mul_sub, hqmul]
+    ring
+  have hzero (e : S →ₗ[R] S) (he : e.comp e = e)
+      (hq : φ (e 1) = 0) : e = 0 := by
+    have htopzero (y : S) (hy : φ y = 0) : e y = 0 := by
+      obtain ⟨p, hp⟩ := hdecomp y
+      have hp' : y = AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p := by
+        rw [hp, hy]
+        simp
+      rw [hp', hmap_of, hA_formula, htop_all, hq]
+      simp
+    ext x
+    obtain ⟨p, hp⟩ := hdecomp x
+    have htop' : e (σ (φ x)) = 0 := by
+      have htopimage : φ (e (σ (φ x))) = 0 := by
+        rw [htop_all, hq]
+        simp
+      have hkill := htopzero (e (σ (φ x))) htopimage
+      calc
+        e (σ (φ x)) = e (e (σ (φ x))) :=
+          (LinearMap.congr_fun he (σ (φ x))).symm
+        _ = 0 := hkill
+    have hbottom' : e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) = 0 := by
+      rw [hmap_of, hA_formula, htop_all, hq]
+      simp
+    calc
+      e x = e (σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) := congrArg e hp
+      _ = e (σ (φ x)) + e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) := map_add _ _ _
+      _ = 0 := by rw [htop', hbottom', add_zero]
+  rcases mul_eq_zero.mp hqfac with hq | hq
+  · exact Or.inl (hzero e he hq)
+  · right
+    have hqone : φ (e 1) = 1 := sub_eq_zero.mp hq
+    have hsocle (q : Polynomial k) :
+        e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q) =
+          AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := by
+      rw [hmap_of, hA_formula, htop_all, hqone, hφσ]
+      simp
+    have htopfix (x : S) : e (σ (φ x)) = σ (φ x) := by
+      obtain ⟨q, hqdecomp⟩ := hdecomp (e (σ (φ x)))
+      have hφeq : φ (e (σ (φ x))) = φ x := by
+        rw [htop_all, hqone, hφσ]
+        simp
+      have hqdecomp' : e (σ (φ x)) =
+          σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := by
+        calc
+          e (σ (φ x)) = σ (φ (e (σ (φ x)))) +
+              AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := hqdecomp
+          _ = σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := by rw [hφeq]
+      have heq : e (σ (φ x)) =
+          e (σ (φ x)) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := by
+        calc
+          e (σ (φ x)) = e (e (σ (φ x))) :=
+            (LinearMap.congr_fun he (σ (φ x))).symm
+          _ = e (σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q) := congrArg e hqdecomp'
+          _ = e (σ (φ x)) + e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q) := map_add _ _ _
+          _ = e (σ (φ x)) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := by rw [hsocle]
+      have hqzero : AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q = 0 := by
+        exact add_left_cancel (heq.symm.trans (add_zero _).symm)
+      calc
+        e (σ (φ x)) = σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ q := hqdecomp'
+        _ = σ (φ x) := by rw [hqzero, add_zero]
+    ext x
+    change e x = x
+    obtain ⟨p, hp⟩ := hdecomp x
+    have hxe : e x = e (σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) :=
+      congrArg (fun y : S => e y) hp
+    have hsum : e (σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) =
+        e (σ (φ x)) + e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) := by
+      rw [map_add]
+    have hfixed : e (σ (φ x)) + e (AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p) =
+        σ (φ x) + AdjoinRoot.of (artinianLocalExamplePolynomialRelation k) A * σ p := by
+      simpa only [htopfix x, hsocle p]
+    exact hxe.trans (hsum.trans (hfixed.trans hp.symm))
 
 /-- The displayed module is indecomposable. -/
 theorem artinianLocalExample_indecomposable
     (k : Type u) [Field k] :
     Indecomposable (artinianLocalExampleModule k) := by
-  sorry
+  classical
+  let I := artinianLocalExampleRelationIdeal k
+  let R := artinianLocalExampleBaseRing k
+  let f := artinianLocalExamplePolynomialRelation k
+  let S := artinianLocalExampleAlgebra k
+  let A := artinianLocalExampleA k
+  let B := artinianLocalExampleB k
+  let ρ₀ : artinianLocalExamplePolynomialRing k →+* k :=
+    MvPolynomial.eval₂Hom (RingHom.id k) (fun _ => 0)
+  have hI : I ≤ RingHom.ker ρ₀ := by
+    change artinianLocalExampleRelationIdeal k ≤ RingHom.ker ρ₀
+    rw [artinianLocalExampleRelationIdeal, Ideal.span_le]
+    intro p hp
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl | rfl <;> simp [ρ₀]
+  let ρ : R →+* k :=
+    Ideal.Quotient.lift I ρ₀ (fun x hx => RingHom.mem_ker.mp (hI hx))
+  let ρP : R →+* Polynomial k := (Polynomial.C : k →+* Polynomial k).comp ρ
+  have hρA : ρ A = 0 := by
+    change ρ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = 0
+    dsimp [ρ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [ρ₀]
+  have hρB : ρ B = 0 := by
+    change ρ (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) = 0
+    dsimp [ρ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [ρ₀]
+  have hρC (c : k) :
+      ρ (Ideal.Quotient.mk I (MvPolynomial.C c)) = c := by
+    dsimp [ρ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [ρ₀]
+  have hA2 : A * A = 0 := by
+    change Ideal.Quotient.mk I
+      (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (0 : Fin 2)) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+  have hAB : A * B = 0 := by
+    change Ideal.Quotient.mk I
+      (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal])
+  have hφhf : Polynomial.eval₂ ρP Polynomial.X f = 0 := by
+    simp [f, artinianLocalExamplePolynomialRelation, ρP, A, B, hρA, hρB]
+  let φ : S →+* Polynomial k := AdjoinRoot.lift ρP Polynomial.X hφhf
+  have hφmk (p : Polynomial R) :
+      φ (AdjoinRoot.mk f p) = p.map ρ := by
+    rw [AdjoinRoot.lift_mk]
+    induction p using Polynomial.induction_on' with
+    | add p q hp hq =>
+        simp [map_add, hp, hq]
+    | monomial n a =>
+        rw [← Polynomial.C_mul_X_pow_eq_monomial]
+        simp [ρP]
+  have hφof (r : R) : φ (AdjoinRoot.of f r) = Polynomial.C (ρ r) := by
+    change φ (AdjoinRoot.mk f (Polynomial.C r)) = Polynomial.C (ρ r)
+    rw [hφmk]
+    simp
+  have hA_mul (r : R) :
+      A * algebraMap R S r = algebraMap k S (ρ r) * A := by
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective r
+    induction p using MvPolynomial.induction_on with
+    | C c =>
+        simp only [← AdjoinRoot.algebraMap_eq]
+        change (algebraMap R S A) * algebraMap R S
+            (Ideal.Quotient.mk I (MvPolynomial.C c)) =
+          algebraMap k S (ρ (Ideal.Quotient.mk I (MvPolynomial.C c))) *
+            algebraMap R S A
+        have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
+          change Ideal.Quotient.mk I
+            (algebraMap k (artinianLocalExamplePolynomialRing k) c) = algebraMap k R c
+          rw [Ideal.Quotient.mk_algebraMap]
+        rw [hρC, hmkC]
+        rw [IsScalarTower.algebraMap_apply k R S c, mul_comm]
+    | add p q hp hq =>
+        simp only [map_add, add_mul, mul_add, hp, hq]
+    | mul_X p i hp =>
+        fin_cases i
+        · simp only [map_mul, A, artinianLocalExampleA,
+            I, R, S]
+          simp only [← AdjoinRoot.algebraMap_eq]
+          have hA2S : (algebraMap R S A) * (algebraMap R S A) = 0 := by
+            rw [← map_mul, hA2, map_zero]
+          have hA2S' :
+              (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
+                (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) = 0 := by
+            simpa [A, I, artinianLocalExampleA, R, S] using hA2S
+          have hρX0 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = 0 := by
+            simpa [A, I, artinianLocalExampleA] using hρA
+          calc
+            (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
+                ((algebraMap R S (Ideal.Quotient.mk I p)) *
+                  (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))))) =
+              algebraMap R S (Ideal.Quotient.mk I p) *
+                ((algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
+                  (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))))) := by ring
+            _ = 0 := by rw [hA2S', mul_zero]
+            _ = _ := by simp [hρX0, A, I, artinianLocalExampleA, R, S]
+        · simp only [map_mul, A, artinianLocalExampleA,
+            I, R, S]
+          simp only [← AdjoinRoot.algebraMap_eq]
+          have hABS : (algebraMap R S A) * (algebraMap R S B) = 0 := by
+            rw [← map_mul, hAB, map_zero]
+          have hABS' :
+              (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
+                (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2)))) = 0 := by
+            simpa [A, B, I, artinianLocalExampleA, artinianLocalExampleB, R, S] using hABS
+          have hρX0 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = 0 := by
+            simpa [A, I, artinianLocalExampleA] using hρA
+          have hρX1 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) = 0 := by
+            simpa [B, I, artinianLocalExampleB] using hρB
+          calc
+            (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
+                ((algebraMap R S (Ideal.Quotient.mk I p)) *
+                  (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))))) =
+              algebraMap R S (Ideal.Quotient.mk I p) *
+                ((algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2)))) *
+                  (algebraMap R S (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))))) := by ring
+            _ = 0 := by rw [hABS', mul_zero]
+            _ = _ := by simp [hρX0, hρX1, A, B, I, artinianLocalExampleA,
+              artinianLocalExampleB, R, S]
+  have hρalg (c : k) : ρ (algebraMap k R c) = c := by
+    have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
+      change Ideal.Quotient.mk I
+        (algebraMap k (artinianLocalExamplePolynomialRing k) c) = algebraMap k R c
+      rw [Ideal.Quotient.mk_algebraMap]
+    rw [← hmkC]
+    exact hρC c
+  have hφalg (c : k) : φ (algebraMap k S c) = Polynomial.C c := by
+    rw [IsScalarTower.algebraMap_apply k R S, AdjoinRoot.algebraMap_eq,
+      AdjoinRoot.lift_of]
+    simp [ρP, hρalg]
+  have hφroot : φ (AdjoinRoot.root f) = Polynomial.X := by
+    change AdjoinRoot.lift ρP Polynomial.X hφhf (AdjoinRoot.root f) = Polynomial.X
+    exact AdjoinRoot.lift_root hφhf
+  let σ : Polynomial k →+* S :=
+    Polynomial.eval₂RingHom (algebraMap k S) (AdjoinRoot.root f)
+  have hφσ (p : Polynomial k) : φ (σ p) = p := by
+    induction p using Polynomial.induction_on' with
+    | add p q hp hq =>
+        simp only [map_add, hp, hq, σ]
+    | monomial n a =>
+        rw [← Polynomial.C_mul_X_pow_eq_monomial]
+        rw [map_mul, map_pow]
+        rw [map_mul]
+        rw [show σ (Polynomial.C a) = algebraMap k S a by simp [σ]]
+        rw [show σ Polynomial.X = AdjoinRoot.root f by simp [σ]]
+        rw [hφalg]
+        rw [map_pow, hφroot]
+  have hA_formula (x : S) :
+      AdjoinRoot.of f A * x = AdjoinRoot.of f A * σ (φ x) := by
+    induction x using AdjoinRoot.induction_on with
+    | ih p =>
+        induction p using Polynomial.induction_on' with
+        | add p q hp hq =>
+            simp only [map_add, hp, hq, mul_add]
+        | monomial n r =>
+            rw [← Polynomial.C_mul_X_pow_eq_monomial, map_mul, AdjoinRoot.mk_C,
+              map_pow, AdjoinRoot.mk_X]
+            rw [← AdjoinRoot.algebraMap_eq]
+            have hA_mul' :
+                (algebraMap R (AdjoinRoot f) A) * algebraMap R (AdjoinRoot f) r =
+                  algebraMap k (AdjoinRoot f) (ρ r) * algebraMap R (AdjoinRoot f) A := by
+              simpa [S, f] using hA_mul r
+            have hφalgR :
+                φ (algebraMap R (AdjoinRoot f) r) = Polynomial.C (ρ r) := by
+              rw [AdjoinRoot.algebraMap_eq]
+              exact hφof r
+            rw [← mul_assoc, hA_mul']
+            rw [map_mul, map_pow, hφalgR, hφroot]
+            rw [map_mul]
+            rw [show σ (Polynomial.C (ρ r)) = algebraMap k S (ρ r) by simp [σ]]
+            rw [map_pow]
+            rw [show σ Polynomial.X = AdjoinRoot.root f by simp [σ]]
+            ring
+  let T₀ := TrivSqZeroExt (Polynomial k) (Polynomial k)
+  let χ₀ : artinianLocalExamplePolynomialRing k →+* T₀ :=
+    MvPolynomial.eval₂Hom
+      ((TrivSqZeroExt.inlHom (Polynomial k) (Polynomial k)).comp Polynomial.C)
+      (fun i => if i = 0 then TrivSqZeroExt.inr (1 : Polynomial k)
+        else TrivSqZeroExt.inr Polynomial.X)
+  have hχI : I ≤ RingHom.ker χ₀ := by
+    change artinianLocalExampleRelationIdeal k ≤ RingHom.ker χ₀
+    rw [artinianLocalExampleRelationIdeal, Ideal.span_le]
+    intro p hp
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl | rfl <;>
+      simp [χ₀, T₀, pow_two, TrivSqZeroExt.inr_mul_inr]
+  let χ : R →+* T₀ :=
+    Ideal.Quotient.lift I χ₀ (fun x hx => RingHom.mem_ker.mp (hχI hx))
+  have hχA : χ A = TrivSqZeroExt.inr (1 : Polynomial k) := by
+    change χ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = _
+    dsimp [χ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [χ₀, T₀]
+  have hχB : χ B = TrivSqZeroExt.inr Polynomial.X := by
+    change χ (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) = _
+    dsimp [χ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [χ₀, T₀]
+  have hχA' : χ (artinianLocalExampleA k) = TrivSqZeroExt.inr (1 : Polynomial k) := by
+    simpa [A] using hχA
+  have hχB' : χ (artinianLocalExampleB k) = TrivSqZeroExt.inr Polynomial.X := by
+    simpa [B] using hχB
+  have hτhf : Polynomial.eval₂ χ (TrivSqZeroExt.inl Polynomial.X) f = 0 := by
+    have hmul :
+        (TrivSqZeroExt.inr (1 : Polynomial k) : T₀) *
+            (TrivSqZeroExt.inl Polynomial.X : T₀) =
+          (TrivSqZeroExt.inr Polynomial.X : T₀) := by
+      rw [TrivSqZeroExt.inr_mul_inl]
+      simp
+    simp [f, artinianLocalExamplePolynomialRelation, hχA', hχB', T₀, hmul,
+      TrivSqZeroExt.inl_mul_inr, TrivSqZeroExt.inr_mul_inl]
+    change (TrivSqZeroExt.inr (1 : Polynomial k) : T₀) *
+        (TrivSqZeroExt.inl Polynomial.X : T₀) -
+          Polynomial.X • (TrivSqZeroExt.inr (1 : Polynomial k) : T₀) = 0
+    rw [← TrivSqZeroExt.inr_smul, hmul]
+    simp [smul_eq_mul]
+  let τ : S →+* T₀ :=
+    AdjoinRoot.lift χ (TrivSqZeroExt.inl Polynomial.X) hτhf
+  have hτA : τ (AdjoinRoot.of f A) = TrivSqZeroExt.inr (1 : Polynomial k) := by
+    change AdjoinRoot.lift χ (TrivSqZeroExt.inl Polynomial.X) hτhf
+      (AdjoinRoot.of f A) = _
+    rw [AdjoinRoot.lift_of]
+    exact hχA
+  have hτB : τ (AdjoinRoot.of f B) = TrivSqZeroExt.inr Polynomial.X := by
+    change AdjoinRoot.lift χ (TrivSqZeroExt.inl Polynomial.X) hτhf
+      (AdjoinRoot.of f B) = _
+    rw [AdjoinRoot.lift_of]
+    exact hχB
+  have hτroot : τ (AdjoinRoot.root f) = TrivSqZeroExt.inl Polynomial.X := by
+    change AdjoinRoot.lift χ (TrivSqZeroExt.inl Polynomial.X) hτhf
+      (AdjoinRoot.root f) = _
+    exact AdjoinRoot.lift_root hτhf
+  have hχalg (c : k) :
+      χ (algebraMap k R c) = (TrivSqZeroExt.inl (Polynomial.C c) : T₀) := by
+    have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
+      change Ideal.Quotient.mk I
+        (algebraMap k (artinianLocalExamplePolynomialRing k) c) = algebraMap k R c
+      rw [Ideal.Quotient.mk_algebraMap]
+    rw [← hmkC]
+    dsimp [χ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [χ₀, T₀]
+  have hτalg (c : k) :
+      τ (algebraMap k S c) = (TrivSqZeroExt.inl (Polynomial.C c) : T₀) := by
+    rw [IsScalarTower.algebraMap_apply k R S, AdjoinRoot.algebraMap_eq,
+      AdjoinRoot.lift_of]
+    exact hχalg c
+  have hτσ (p : Polynomial k) :
+      τ (σ p) = (TrivSqZeroExt.inl p : T₀) := by
+    induction p using Polynomial.induction_on' with
+    | add p q hp hq =>
+        simp only [map_add, hp, hq]
+        rw [TrivSqZeroExt.inl_add]
+    | monomial n c =>
+        rw [← Polynomial.C_mul_X_pow_eq_monomial, map_mul, map_pow]
+        rw [show σ (Polynomial.C c) = algebraMap k S c by simp [σ]]
+        rw [show σ Polynomial.X = AdjoinRoot.root f by simp [σ]]
+        rw [map_mul, map_pow, hτalg, hτroot]
+        simp [T₀]
+  have hAσ_injective (p : Polynomial k)
+      (hp : AdjoinRoot.of f A * σ p = 0) : p = 0 := by
+    have h := congrArg TrivSqZeroExt.snd (congrArg τ hp)
+    rw [map_mul, hτA, hτσ] at h
+    simpa [T₀, TrivSqZeroExt.inr_mul_inl, smul_eq_mul] using h
+  have hrootrel :
+      AdjoinRoot.of f A * AdjoinRoot.root f = AdjoinRoot.of f B := by
+    change AdjoinRoot.of (Polynomial.C A * Polynomial.X - Polynomial.C B) A *
+        AdjoinRoot.root (Polynomial.C A * Polynomial.X - Polynomial.C B) =
+      AdjoinRoot.of (Polynomial.C A * Polynomial.X - Polynomial.C B) B
+    rw [← sub_eq_zero]
+    convert AdjoinRoot.eval₂_root
+      (Polynomial.C A * Polynomial.X - Polynomial.C B) using 1 <;>
+      simp only [Polynomial.eval₂_sub, Polynomial.eval₂_mul,
+        Polynomial.eval₂_C, Polynomial.eval₂_X]
+    rfl
+  have hmap_smul (e : S →ₗ[R] S) (r : R) (x : S) :
+      e (algebraMap R S r * x) = algebraMap R S r * e x := by
+    rw [← Algebra.smul_def, ← Algebra.smul_def]
+    exact e.map_smul r x
+  have hmap_of (e : S →ₗ[R] S) (r : R) (x : S) :
+      e (AdjoinRoot.of f r * x) = AdjoinRoot.of f r * e x := by
+    rw [← AdjoinRoot.algebraMap_eq]
+    exact hmap_smul e r x
+  have hB_formula (x : S) :
+      AdjoinRoot.of f B * x =
+        AdjoinRoot.of f A * σ (Polynomial.X * φ x) := by
+    calc
+      AdjoinRoot.of f B * x =
+          (AdjoinRoot.of f A * AdjoinRoot.root f) * x := by rw [hrootrel]
+      _ = AdjoinRoot.of f A * (AdjoinRoot.root f * x) := by ring
+      _ = AdjoinRoot.of f A * σ (φ (AdjoinRoot.root f * x)) := hA_formula _
+      _ = AdjoinRoot.of f A * σ (Polynomial.X * φ x) := by
+        rw [map_mul, hφroot]
+  have hφalgR (r : R) :
+      φ (algebraMap R S r) = Polynomial.C (ρ r) := by
+    rw [AdjoinRoot.algebraMap_eq]
+    exact hφof r
+  have htop (e : S →ₗ[R] S) (n : ℕ) :
+      φ (e (AdjoinRoot.root f ^ n)) =
+        φ (e 1) * Polynomial.X ^ n := by
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        have hpow :
+            AdjoinRoot.of f A * AdjoinRoot.root f ^ (Nat.succ n) =
+              AdjoinRoot.of f B * AdjoinRoot.root f ^ n := by
+          rw [pow_succ]
+          calc
+            AdjoinRoot.of f A * (AdjoinRoot.root f ^ n * AdjoinRoot.root f) =
+                (AdjoinRoot.of f A * AdjoinRoot.root f) *
+                  AdjoinRoot.root f ^ n := by ring
+            _ = AdjoinRoot.of f B * AdjoinRoot.root f ^ n := by rw [hrootrel]
+        have heq :
+            AdjoinRoot.of f A *
+                σ (φ (e (AdjoinRoot.root f ^ Nat.succ n))) =
+              AdjoinRoot.of f A *
+                σ (Polynomial.X * φ (e (AdjoinRoot.root f ^ n))) := by
+          calc
+            AdjoinRoot.of f A *
+                σ (φ (e (AdjoinRoot.root f ^ Nat.succ n))) =
+                AdjoinRoot.of f A * e (AdjoinRoot.root f ^ Nat.succ n) :=
+              (hA_formula _).symm
+            _ = e (AdjoinRoot.of f A * AdjoinRoot.root f ^ Nat.succ n) :=
+              (hmap_of e A _).symm
+            _ = e (AdjoinRoot.of f B * AdjoinRoot.root f ^ n) := by rw [hpow]
+            _ = AdjoinRoot.of f B * e (AdjoinRoot.root f ^ n) := hmap_of e B _
+            _ = AdjoinRoot.of f A *
+                σ (Polynomial.X * φ (e (AdjoinRoot.root f ^ n))) := hB_formula _
+        have hdiff :
+            φ (e (AdjoinRoot.root f ^ Nat.succ n)) -
+                Polynomial.X * φ (e (AdjoinRoot.root f ^ n)) = 0 := by
+          apply hAσ_injective
+          rw [map_sub, mul_sub]
+          exact sub_eq_zero.mpr heq
+        calc
+          φ (e (AdjoinRoot.root f ^ Nat.succ n)) =
+              Polynomial.X * φ (e (AdjoinRoot.root f ^ n)) :=
+            sub_eq_zero.mp hdiff
+          _ = Polynomial.X * (φ (e 1) * Polynomial.X ^ n) := by rw [ih]
+          _ = φ (e 1) * Polynomial.X ^ Nat.succ n := by
+            rw [pow_succ]
+            ring
+  have htop_all (e : S →ₗ[R] S) (x : S) :
+      φ (e x) = φ (e 1) * φ x := by
+    induction x using AdjoinRoot.induction_on with
+    | ih p =>
+        induction p using Polynomial.induction_on' with
+        | add p q hp hq =>
+            simp only [map_add, hp, hq, e.map_add, φ.map_add]
+            ring
+        | monomial n r =>
+            rw [← Polynomial.C_mul_X_pow_eq_monomial, map_mul,
+              AdjoinRoot.mk_C, map_pow, AdjoinRoot.mk_X]
+            calc
+              φ (e (AdjoinRoot.of f r * AdjoinRoot.root f ^ n)) =
+                  φ (AdjoinRoot.of f r * e (AdjoinRoot.root f ^ n)) := by
+                    rw [hmap_of]
+              _ = Polynomial.C (ρ r) * φ (e (AdjoinRoot.root f ^ n)) := by
+                rw [map_mul, hφof]
+              _ = Polynomial.C (ρ r) *
+                  (φ (e 1) * Polynomial.X ^ n) := by rw [htop]
+              _ = φ (e 1) *
+                  (Polynomial.C (ρ r) * Polynomial.X ^ n) := by ring
+              _ = φ (e 1) * φ (AdjoinRoot.of f r * AdjoinRoot.root f ^ n) := by
+                rw [map_mul, hφof, map_pow, hφroot]
+  have hB2 : B * B = 0 := by
+    change Ideal.Quotient.mk I
+      (MvPolynomial.X (1 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+  have hRA (r : R) : A * r = algebraMap k R (ρ r) * A := by
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective r
+    induction p using MvPolynomial.induction_on with
+    | C c =>
+        have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
+          change Ideal.Quotient.mk I
+            (algebraMap k (artinianLocalExamplePolynomialRing k) c) = algebraMap k R c
+          rw [Ideal.Quotient.mk_algebraMap]
+        rw [hmkC, hρalg]
+        ring
+    | add p q hp hq =>
+        simp only [map_add, add_mul, mul_add]
+        rw [hp, hq]
+    | mul_X p i hp =>
+        fin_cases i
+        · have hρX0 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = 0 := by
+            change ρ A = 0
+            exact hρA
+          simp only [map_mul]
+          change A * ((Ideal.Quotient.mk I p) * A) =
+            algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+              algebraMap k R (ρ A) * A
+          calc
+            A * ((Ideal.Quotient.mk I p) * A) =
+                (Ideal.Quotient.mk I p) * (A * A) := by ring
+            _ = 0 := by rw [hA2, mul_zero]
+            _ = algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+                algebraMap k R (ρ A) * A := by simp [hρA]
+        · have hρX1 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) = 0 := by
+            change ρ B = 0
+            exact hρB
+          simp only [map_mul]
+          change A * ((Ideal.Quotient.mk I p) * B) =
+            algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+              algebraMap k R (ρ B) * A
+          calc
+            A * ((Ideal.Quotient.mk I p) * B) =
+                (Ideal.Quotient.mk I p) * (A * B) := by ring
+            _ = 0 := by rw [hAB, mul_zero]
+            _ = algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+                algebraMap k R (ρ B) * A := by simp [hρB]
+  have hRB (r : R) : B * r = algebraMap k R (ρ r) * B := by
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective r
+    induction p using MvPolynomial.induction_on with
+    | C c =>
+        have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
+          change Ideal.Quotient.mk I
+            (algebraMap k (artinianLocalExamplePolynomialRing k) c) = algebraMap k R c
+          rw [Ideal.Quotient.mk_algebraMap]
+        rw [hmkC, hρalg]
+        ring
+    | add p q hp hq =>
+        simp only [map_add, add_mul, mul_add]
+        rw [hp, hq]
+    | mul_X p i hp =>
+        fin_cases i
+        · have hρX0 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = 0 := by
+            change ρ A = 0
+            exact hρA
+          simp only [map_mul]
+          change B * ((Ideal.Quotient.mk I p) * A) =
+            algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+              algebraMap k R (ρ A) * B
+          calc
+            B * ((Ideal.Quotient.mk I p) * A) =
+                (Ideal.Quotient.mk I p) * (B * A) := by ring
+            _ = 0 := by rw [show B * A = 0 by rw [mul_comm, hAB], mul_zero]
+            _ = algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+                algebraMap k R (ρ A) * B := by simp [hρA]
+        · have hρX1 : ρ (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) = 0 := by
+            change ρ B = 0
+            exact hρB
+          simp only [map_mul]
+          change B * ((Ideal.Quotient.mk I p) * B) =
+            algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+              algebraMap k R (ρ B) * B
+          calc
+            B * ((Ideal.Quotient.mk I p) * B) =
+                (Ideal.Quotient.mk I p) * (B * B) := by ring
+            _ = 0 := by rw [hB2, mul_zero]
+            _ = algebraMap k R (ρ (Ideal.Quotient.mk I p)) *
+                algebraMap k R (ρ B) * B := by simp [hρB]
+  have himage (r u v : R)
+      (hr : r = algebraMap k R (ρ r) + A * u + B * v) :
+      AdjoinRoot.of f r =
+        algebraMap k S (ρ r) + algebraMap k S (ρ u) * AdjoinRoot.of f A +
+          algebraMap k S (ρ v) * AdjoinRoot.of f B := by
+    have hr' : r = algebraMap k R (ρ r) +
+        algebraMap k R (ρ u) * A + algebraMap k R (ρ v) * B := by
+      calc
+        r = algebraMap k R (ρ r) + A * u + B * v := hr
+        _ = algebraMap k R (ρ r) + algebraMap k R (ρ u) * A +
+            algebraMap k R (ρ v) * B := by rw [hRA u, hRB v]
+    calc
+      AdjoinRoot.of f r = AdjoinRoot.of f
+          (algebraMap k R (ρ r) + algebraMap k R (ρ u) * A +
+            algebraMap k R (ρ v) * B) := congrArg (AdjoinRoot.of f) hr'
+      _ = algebraMap k S (ρ r) + algebraMap k S (ρ u) * AdjoinRoot.of f A +
+          algebraMap k S (ρ v) * AdjoinRoot.of f B := by
+        simp only [map_add, map_mul]
+        rw [← AdjoinRoot.algebraMap_eq]
+        simp only [IsScalarTower.algebraMap_apply k R (AdjoinRoot f),
+          IsScalarTower.algebraMap_apply k R S]
+        ring
+  have hcoeff (r : R) :
+      ∃ u v : R, r = algebraMap k R (ρ r) + A * u + B * v := by
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective r
+    induction p using MvPolynomial.induction_on with
+    | C c =>
+        refine ⟨0, 0, ?_⟩
+        have hmkC : Ideal.Quotient.mk I (MvPolynomial.C c) = algebraMap k R c := by
+          change Ideal.Quotient.mk I
+            (algebraMap k (artinianLocalExamplePolynomialRing k) c) = algebraMap k R c
+          rw [Ideal.Quotient.mk_algebraMap]
+        rw [hmkC, hρalg]
+        simp
+    | add p q hp hq =>
+        rcases hp with ⟨u, v, hp⟩
+        rcases hq with ⟨u', v', hq⟩
+        refine ⟨u + u', v + v', ?_⟩
+        calc
+          Ideal.Quotient.mk I (p + q) =
+              Ideal.Quotient.mk I p + Ideal.Quotient.mk I q := by rw [map_add]
+          _ = (algebraMap k R (ρ (Ideal.Quotient.mk I p)) + A * u + B * v) +
+              (algebraMap k R (ρ (Ideal.Quotient.mk I q)) + A * u' + B * v') := by
+            exact congrArg₂ (· + ·) hp hq
+          _ = algebraMap k R (ρ (Ideal.Quotient.mk I (p + q))) +
+              A * (u + u') + B * (v + v') := by
+            simp only [map_add, mul_add]
+            ring
+    | mul_X p i hp =>
+        fin_cases i
+        · refine ⟨algebraMap k R (ρ (Ideal.Quotient.mk I p)), 0, ?_⟩
+          rw [map_mul]
+          change (Ideal.Quotient.mk I p) * A =
+            algebraMap k R (ρ ((Ideal.Quotient.mk I p) * A)) +
+              A * algebraMap k R (ρ (Ideal.Quotient.mk I p)) + B * 0
+          calc
+            (Ideal.Quotient.mk I p) * A = A * (Ideal.Quotient.mk I p) := by ring
+            _ = algebraMap k R (ρ (Ideal.Quotient.mk I p)) * A := hRA _
+            _ = algebraMap k R (ρ ((Ideal.Quotient.mk I p) * A)) +
+                A * algebraMap k R (ρ (Ideal.Quotient.mk I p)) + B * 0 := by
+              simp [hρA]
+              ring
+        · refine ⟨0, algebraMap k R (ρ (Ideal.Quotient.mk I p)), ?_⟩
+          rw [map_mul]
+          change (Ideal.Quotient.mk I p) * B =
+            algebraMap k R (ρ ((Ideal.Quotient.mk I p) * B)) +
+              A * 0 + B * algebraMap k R (ρ (Ideal.Quotient.mk I p))
+          calc
+            (Ideal.Quotient.mk I p) * B = B * (Ideal.Quotient.mk I p) := by ring
+            _ = algebraMap k R (ρ (Ideal.Quotient.mk I p)) * B := hRB _
+            _ = algebraMap k R (ρ ((Ideal.Quotient.mk I p) * B)) +
+                A * 0 + B * algebraMap k R (ρ (Ideal.Quotient.mk I p)) := by
+              simp [hρB]
+              ring
+  have hdecomp (x : S) :
+      ∃ p : Polynomial k, x = σ (φ x) + AdjoinRoot.of f A * σ p := by
+    induction x using AdjoinRoot.induction_on with
+    | ih p =>
+        induction p using Polynomial.induction_on' with
+        | add p q hp hq =>
+            rcases hp with ⟨p', hp'⟩
+            rcases hq with ⟨q', hq'⟩
+            refine ⟨p' + q', ?_⟩
+            calc
+              AdjoinRoot.mk f (p + q) =
+                  (σ (φ (AdjoinRoot.mk f p)) + AdjoinRoot.of f A * σ p') +
+                    (σ (φ (AdjoinRoot.mk f q)) + AdjoinRoot.of f A * σ q') :=
+                congrArg₂ (· + ·) hp' hq'
+              _ = σ (φ (AdjoinRoot.mk f (p + q))) +
+                  AdjoinRoot.of f A * σ (p' + q') := by
+                simp only [map_add, mul_add]
+                ring
+        | monomial n r =>
+            obtain ⟨u, v, hr⟩ := hcoeff r
+            refine ⟨Polynomial.C (ρ u) * Polynomial.X ^ n +
+              Polynomial.C (ρ v) * Polynomial.X ^ Nat.succ n, ?_⟩
+            rw [← Polynomial.C_mul_X_pow_eq_monomial, map_mul,
+              AdjoinRoot.mk_C, map_pow, AdjoinRoot.mk_X]
+            have hmain :
+                AdjoinRoot.of f r =
+                  algebraMap k S (ρ r) +
+                    algebraMap k S (ρ u) * AdjoinRoot.of f A +
+                    algebraMap k S (ρ v) * AdjoinRoot.of f B := himage r u v hr
+            rw [hmain, ← hrootrel]
+            simp only [map_mul, map_add, map_pow]
+            simp only [hφalg, hφof, hρA, hρB, map_zero]
+            rw [show σ (Polynomial.C (ρ u)) = algebraMap k S (ρ u) by simp [σ],
+              show σ (Polynomial.C (ρ v)) = algebraMap k S (ρ v) by simp [σ],
+              show σ Polynomial.X = AdjoinRoot.root f by simp [σ]]
+            rw [hφroot]
+            simp only [show σ (Polynomial.C (ρ r)) = algebraMap k S (ρ r) by simp [σ],
+              show σ Polynomial.X = AdjoinRoot.root f by simp [σ], f]
+            rw [pow_succ]
+            ring
+  have hendo (e : S →ₗ[R] S) (he : e.comp e = e) :
+      e = 0 ∨ e = LinearMap.id :=
+    artinianLocalExample_idempotent k φ σ A hφσ hA_formula hmap_of htop_all hdecomp e he
+  simp only [Indecomposable]
+  constructor
+  · rw [ModuleCat.isZero_iff_subsingleton]
+    intro h
+    have h10 : (1 : S) = 0 := @Subsingleton.elim S h 1 0
+    have hφ10 : (1 : Polynomial k) = 0 := by
+      have h := congrArg φ h10
+      simpa using h
+    exact (one_ne_zero : (1 : Polynomial k) ≠ 0) hφ10
+  · intro Y Z a
+    let e_cat : artinianLocalExampleModule k ⟶ artinianLocalExampleModule k :=
+      a.hom ≫ biprod.fst ≫ biprod.inl ≫ a.inv
+    let e : S →ₗ[R] S := e_cat.hom
+    have he_cat : e_cat ≫ e_cat = e_cat := by
+      simp [e_cat, Category.assoc]
+    have he : e.comp e = e := by
+      have h := congrArg (fun q => q.hom) he_cat
+      simpa [e, ModuleCat.hom_comp] using h
+    rcases hendo e he with he0 | he1
+    · left
+      have he_cat0 : e_cat = 0 := by
+        apply ModuleCat.hom_ext
+        simpa [e] using he0
+      have h_inl_fst :
+          (biprod.inl : Y ⟶ Y ⊞ Z) ≫ (biprod.fst : Y ⊞ Z ⟶ Y) = 0 := by
+        have h := congrArg
+          (fun q : artinianLocalExampleModule k ⟶ artinianLocalExampleModule k =>
+            biprod.inl ≫ a.inv ≫ q ≫ a.hom ≫ biprod.fst) he_cat0
+        simpa [e_cat, Category.assoc] using h
+      rw [ModuleCat.isZero_iff_subsingleton]
+      constructor
+      intro y z
+      have hid : (𝟙 Y : Y ⟶ Y) = 0 := by simpa using h_inl_fst
+      have hy : y = 0 := by
+        simpa using congrArg (fun q : Y ⟶ Y => q y) hid
+      have hz : z = 0 := by
+        simpa using congrArg (fun q : Y ⟶ Y => q z) hid
+      exact hy.trans hz.symm
+    · right
+      have he_cat1 : e_cat = 𝟙 _ := by
+        apply ModuleCat.hom_ext
+        simpa [e] using he1
+      have h_inr_snd :
+          (biprod.inr : Z ⟶ Y ⊞ Z) ≫ (biprod.snd : Y ⊞ Z ⟶ Z) = 0 := by
+        have h := congrArg
+          (fun q : artinianLocalExampleModule k ⟶ artinianLocalExampleModule k =>
+            biprod.inr ≫ a.inv ≫ q ≫ a.hom ≫ biprod.snd) he_cat1
+        simpa only [e_cat, Category.assoc, Iso.inv_hom_id_assoc,
+          Iso.hom_inv_id_assoc, biprod.inl_fst, biprod.inr_fst,
+          biprod.inl_snd, biprod.inr_snd, Category.comp_id, Category.id_comp,
+          zero_comp, comp_zero] using h.symm
+      rw [ModuleCat.isZero_iff_subsingleton]
+      constructor
+      intro y z
+      have hid : (𝟙 Z : Z ⟶ Z) = 0 := by
+        symm
+        simpa using h_inr_snd
+      have hy : y = 0 := by
+        simpa using congrArg (fun q : Z ⟶ Z => q y) hid
+      have hz : z = 0 := by
+        simpa using congrArg (fun q : Z ⟶ Z => q z) hid
+      exact hy.trans hz.symm
 
 /-- The displayed module is not finitely generated.  This implicit fact is
 needed to turn the direct-sum conclusion into the source's non-example. -/
@@ -2077,13 +3251,146 @@ theorem artinianLocalExample_not_finite
     (k : Type u) [Field k] :
     ¬ Module.Finite (artinianLocalExampleBaseRing k)
       (artinianLocalExampleAlgebra k) := by
-  sorry
+  intro hfinite
+  let I := artinianLocalExampleRelationIdeal k
+  let R := artinianLocalExampleBaseRing k
+  let f := artinianLocalExamplePolynomialRelation k
+  let S := artinianLocalExampleAlgebra k
+  let ρ₀ : artinianLocalExamplePolynomialRing k →+* k :=
+    MvPolynomial.eval₂Hom (RingHom.id k) (fun _ => 0)
+  have hI : I ≤ RingHom.ker ρ₀ := by
+    change artinianLocalExampleRelationIdeal k ≤ RingHom.ker ρ₀
+    rw [artinianLocalExampleRelationIdeal, Ideal.span_le]
+    intro p hp
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl | rfl <;> simp [ρ₀]
+  let ρ : R →+* k :=
+    Ideal.Quotient.lift I ρ₀ (fun x hx => RingHom.mem_ker.mp (hI hx))
+  let ρP : R →+* Polynomial k := (Polynomial.C : k →+* Polynomial k).comp ρ
+  have hρA : ρ (artinianLocalExampleA k) = 0 := by
+    change ρ (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) = 0
+    dsimp [ρ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [ρ₀]
+  have hρB : ρ (artinianLocalExampleB k) = 0 := by
+    change ρ (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) = 0
+    dsimp [ρ]
+    rw [Ideal.Quotient.lift_mk]
+    simp [ρ₀]
+  have hf : Polynomial.eval₂ ρP Polynomial.X f = 0 := by
+    simp [f, artinianLocalExamplePolynomialRelation, ρP,
+      hρA, hρB]
+  let φ : S →+* Polynomial k := AdjoinRoot.lift ρP Polynomial.X hf
+  have hsurj : Function.Surjective φ := by
+    intro p
+    let q : Polynomial R := p.map (algebraMap k R)
+    refine ⟨AdjoinRoot.mk f q, ?_⟩
+    rw [AdjoinRoot.lift_mk, Polynomial.eval₂_map]
+    have hcomp : ρP.comp (algebraMap k R) =
+        (Polynomial.C : k →+* Polynomial k) := by
+      apply RingHom.ext
+      intro a
+      simp only [ρP, RingHom.coe_comp, Function.comp_apply]
+      rw [show algebraMap k R a = Ideal.Quotient.mk I (MvPolynomial.C a) by rfl,
+        Ideal.Quotient.lift_mk]
+      simp [ρ₀]
+    rw [hcomp]
+    simp
+  let ψ : S →ₛₗ[ρ] Polynomial k :=
+    { toFun := φ
+      map_add' := φ.map_add
+      map_smul' := by
+        intro r x
+        simp only [Algebra.smul_def]
+        rw [map_mul]
+        congr 1
+        rw [AdjoinRoot.algebraMap_eq]
+        rw [AdjoinRoot.lift_of]
+        rfl }
+  have hfinite' : Module.Finite k (Polynomial k) :=
+    Module.Finite.of_surjective ψ hsurj
+  exact Polynomial.not_finite hfinite'
 
 /-- The base ring is Artinian. -/
 theorem artinianLocalExample_baseRing_isArtinian
     (k : Type u) [Field k] :
     IsArtinianRing (artinianLocalExampleBaseRing k) := by
-  sorry
+  let I := artinianLocalExampleRelationIdeal k
+  let R := artinianLocalExampleBaseRing k
+  let A := artinianLocalExampleA k
+  let B := artinianLocalExampleB k
+  let Q : Submodule k R := Submodule.span k ({(1 : R), A, B} : Set R)
+  have hA2 : A * A = 0 := by
+    change Ideal.Quotient.mk I
+      (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (0 : Fin 2)) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+  have hAB : A * B = 0 := by
+    change Ideal.Quotient.mk I
+      (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal])
+  have hB2 : B * B = 0 := by
+    change Ideal.Quotient.mk I
+      (MvPolynomial.X (1 : Fin 2) * MvPolynomial.X (1 : Fin 2)) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span (by simp [I, artinianLocalExampleRelationIdeal, pow_two])
+  have hmulA : ∀ z : R, z ∈ Q → z * A ∈ Q := by
+    intro z hz
+    induction hz using Submodule.span_induction with
+    | mem z hz =>
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
+        rcases hz with rfl | rfl | rfl
+        · exact Submodule.subset_span (by simp [Q])
+        · simpa [hA2] using Q.zero_mem
+        · simpa [mul_comm, hAB] using Q.zero_mem
+    | zero => simp
+    | add x y _ _ hx hy =>
+        rw [add_mul]
+        exact Q.add_mem hx hy
+    | smul c x hx hmul =>
+        rw [smul_mul_assoc]
+        exact Q.smul_mem c hmul
+  have hmulB : ∀ z : R, z ∈ Q → z * B ∈ Q := by
+    intro z hz
+    induction hz using Submodule.span_induction with
+    | mem z hz =>
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
+        rcases hz with rfl | rfl | rfl
+        · exact Submodule.subset_span (by simp [Q])
+        · simpa [mul_comm, hAB] using Q.zero_mem
+        · simpa [hB2] using Q.zero_mem
+    | zero => simp
+    | add x y _ _ hx hy =>
+        rw [add_mul]
+        exact Q.add_mem hx hy
+    | smul c x hx hmul =>
+        rw [smul_mul_assoc]
+        exact Q.smul_mem c hmul
+  have hspan : Q = ⊤ := by
+    rw [eq_top_iff]
+    intro x hx
+    clear hx
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+    change Ideal.Quotient.mk I p ∈ Q
+    induction p using MvPolynomial.induction_on with
+    | C a =>
+        change algebraMap k R a ∈ Q
+        have hgen : (1 : R) ∈ ({(1 : R), A, B} : Set R) := by simp
+        rw [Algebra.algebraMap_eq_smul_one]
+        exact Q.smul_mem a (Submodule.subset_span hgen)
+    | add p q hp hq =>
+        simpa [map_add] using Q.add_mem hp hq
+    | mul_X p i hp =>
+        fin_cases i
+        · simpa [A, artinianLocalExampleA, I, R] using hmulA
+            (Ideal.Quotient.mk I p) hp
+        · simpa [B, artinianLocalExampleB, I, R] using hmulB
+            (Ideal.Quotient.mk I p) hp
+  have hfinite : Module.Finite k R := by
+    rw [Module.finite_def, Submodule.fg_def]
+    exact ⟨{(1 : R), A, B}, by simp, hspan⟩
+  exact IsArtinianRing.of_finite k R
 
 /-- The base ring is local. -/
 theorem artinianLocalExample_baseRing_isLocal

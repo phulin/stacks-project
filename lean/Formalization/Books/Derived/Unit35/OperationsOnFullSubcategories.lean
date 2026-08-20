@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Homology.DerivedCategory.Basic
+import Mathlib.Algebra.Homology.DerivedCategory.TStructure
+import Mathlib.Algebra.Homology.DerivedCategory.FullyFaithful
 import Mathlib.CategoryTheory.ObjectProperty.CompleteLattice
 import Mathlib.CategoryTheory.ObjectProperty.FiniteProducts
 import Mathlib.CategoryTheory.ObjectProperty.Retract
@@ -437,23 +439,125 @@ theorem smd_iSup :
 include hA in
 theorem add_iSup :
     add (⨆ i, A i) = ⨆ i, add (A i) := by
-  sorry
+  apply le_antisymm
+  · intro X hX
+    rcases hX with ⟨n, T, hT, ⟨e⟩⟩
+    choose idx hidx using fun j => (ObjectProperty.prop_iSup_iff _ _).1 (hT j)
+    let m : ℕ := Finset.univ.sup idx
+    have hidx_le : ∀ j : Fin n, idx j ≤ m := by
+      intro j
+      exact Finset.le_sup (Finset.mem_univ j)
+    exact (ObjectProperty.prop_iSup_iff _ _).2
+      ⟨m, ⟨n, T, (fun j => hA (hidx_le j) (T j) (hidx j)), ⟨e⟩⟩⟩
+  · refine iSup_le ?_
+    intro i X hX
+    rcases hX with ⟨n, T, hT, ⟨e⟩⟩
+    refine ⟨n, T, ?_, ⟨e⟩⟩
+    intro j
+    exact (ObjectProperty.prop_iSup_iff _ _).2 ⟨i, hT j⟩
 
 /-! Left extension products commute with an increasing union. -/
 theorem iSup_star (B : ObjectProperty C) :
     star (⨆ i, A i) B = ⨆ i, star (A i) B := by
-  sorry
+  apply le_antisymm
+  · intro X hX
+    rcases hX with ⟨Y, Z, f, g, h, hT, hA, hB⟩
+    obtain ⟨i, hA⟩ := (ObjectProperty.prop_iSup_iff _ _).1 hA
+    exact (ObjectProperty.prop_iSup_iff _ _).2
+      ⟨i, ⟨Y, Z, f, g, h, hT, hA, hB⟩⟩
+  · refine iSup_le ?_
+    intro i
+    exact ObjectProperty.monotone_extensionProduct_left B (le_iSup A i)
 
 /-! Right extension products commute with an increasing union. -/
 theorem star_iSup (B : ObjectProperty C) :
     star B (⨆ i, A i) = ⨆ i, star B (A i) := by
-  sorry
+  apply le_antisymm
+  · intro X hX
+    rcases hX with ⟨Y, Z, f, g, h, hT, hB, hA⟩
+    obtain ⟨i, hA⟩ := (ObjectProperty.prop_iSup_iff _ _).1 hA
+    exact (ObjectProperty.prop_iSup_iff _ _).2
+      ⟨i, ⟨Y, Z, f, g, h, hT, hB, hA⟩⟩
+  · refine iSup_le ?_
+    intro i
+    exact ObjectProperty.monotone_extensionProduct_right B (le_iSup A i)
+
+omit [CategoryTheory.IsTriangulated C] in
+private lemma extensionProduct_iSup_iSup_diag
+    (P Q : ℕ → ObjectProperty C) (hP : Monotone P) (hQ : Monotone Q) :
+    (⨆ i, ⨆ j, star (P i) (Q j)) = ⨆ k, star (P k) (Q k) := by
+  apply le_antisymm
+  · refine iSup_le ?_
+    intro i
+    refine iSup_le ?_
+    intro j
+    let k := max i j
+    have hleft : star (P i) (Q j) ≤ star (P k) (Q j) :=
+      ObjectProperty.monotone_extensionProduct_left (Q j)
+        (hP (Nat.le_max_left i j))
+    have hright : star (P k) (Q j) ≤ star (P k) (Q k) :=
+      ObjectProperty.monotone_extensionProduct_right (P k)
+        (hQ (Nat.le_max_right i j))
+    exact hleft.trans (hright.trans (le_iSup (fun k => star (P k) (Q k)) k))
+  · refine iSup_le ?_
+    intro k
+    exact le_iSup_of_le k (le_iSup_of_le k le_rfl)
 
 /-! Iterated extension products commute with an increasing union. -/
 include hA in
 theorem starPower_iSup (n : ℕ) :
     starPower (⨆ i, A i) n = ⨆ i, starPower (A i) n := by
-  sorry
+  have hPowerMono : ∀ n : ℕ, Monotone (fun i => starPower (A i) n) := by
+    intro n
+    induction n with
+    | zero => simpa [starPower] using hA
+    | succ n ih =>
+        cases n with
+        | zero => simpa [starPower] using hA
+        | succ n =>
+            intro i j hij
+            change (A i).extensionProductIter (n + 1) ≤
+              (A j).extensionProductIter (n + 1)
+            rw [ObjectProperty.extensionProductIter_succ,
+              ObjectProperty.extensionProductIter_succ]
+            exact (ObjectProperty.monotone_extensionProduct_left
+                ((A i).extensionProductIter n) (hA hij)).trans
+              (ObjectProperty.monotone_extensionProduct_right (A j)
+                (show (A i).extensionProductIter n ≤
+                    (A j).extensionProductIter n from ih hij))
+  induction n with
+  | zero => simp [starPower]
+  | succ n ih =>
+      cases n with
+      | zero => simp [starPower]
+      | succ n =>
+          change (⨆ i, A i).extensionProductIter (n + 1) =
+            ⨆ i, (A i).extensionProductIter (n + 1)
+          simp_rw [ObjectProperty.extensionProductIter_succ]
+          have ih' : (⨆ i, A i).extensionProductIter n =
+              ⨆ i, (A i).extensionProductIter n := by
+            simpa [starPower] using ih
+          rw [ih']
+          have hright := star_iSup (fun i => (A i).extensionProductIter n)
+            (⨆ i, A i)
+          have hright' :
+              (⨆ i, A i).extensionProduct (⨆ i, (A i).extensionProductIter n) =
+                ⨆ i, (⨆ i, A i).extensionProduct ((A i).extensionProductIter n) := by
+            simpa only [star] using hright
+          rw [hright']
+          have hleft (j : ℕ) :
+              (⨆ i, A i).extensionProduct ((A j).extensionProductIter n) =
+                ⨆ i, (A i).extensionProduct ((A j).extensionProductIter n) := by
+            simpa only [star] using iSup_star A ((A j).extensionProductIter n)
+          simp_rw [hleft]
+          have hdiag := extensionProduct_iSup_iSup_diag A
+            (fun i => (A i).extensionProductIter n) hA (hPowerMono (n + 1))
+          calc
+            (⨆ j, ⨆ i, (A i).extensionProduct ((A j).extensionProductIter n)) =
+                ⨆ i, ⨆ j, (A i).extensionProduct ((A j).extensionProductIter n) :=
+              iSup_comm
+            _ = ⨆ k, (A k).extensionProduct ((A k).extensionProductIter n) := by
+              simpa only [star] using hdiag
 
 end UnionOperations
 
@@ -483,6 +587,354 @@ def complexTermwiseInWindow
 def representedByComplex (K : DerivedCategory C) (L : BookComplex C) : Prop :=
   Nonempty ((DerivedCategory.Q (C := C)).obj L ≅ K)
 
+private lemma truncLT_homology_map_iso (K : DerivedCategory C) (b i : ℤ)
+    (hi : i < b) :
+    IsIso ((derivedCohomologyFunctor C i).map
+      ((DerivedCategory.TStructure.t.truncLTι b).app K)) := by
+  let T := (DerivedCategory.TStructure.t.triangleLTGE b).obj K
+  let S := (derivedCohomologyFunctor C 0).homologySequenceComposableArrows₅ T
+    (i - 1) i (by omega)
+  have hG0 : IsZero ((derivedCohomologyFunctor C (i - 1)).obj T.obj₃) :=
+    (DerivedCategory.isGE_iff _ b).1 (by infer_instance) (i - 1) (by omega)
+  have hG1 : IsZero ((derivedCohomologyFunctor C i).obj T.obj₃) :=
+    (DerivedCategory.isGE_iff _ b).1 (by infer_instance) i hi
+  have hzero0 : S.map' 2 3 = 0 := by
+    dsimp [S, Functor.homologySequenceComposableArrows₅]
+    exact hG0.eq_of_src _ _
+  have hzero1 : S.map' 4 5 = 0 := by
+    dsimp [S, Functor.homologySequenceComposableArrows₅]
+    exact hG1.eq_of_tgt _ _
+  have hS : S.Exact :=
+    (derivedCohomologyFunctor C 0).homologySequenceComposableArrows₅_exact T
+      (DerivedCategory.TStructure.t.triangleLTGE_distinguished b K)
+      (i - 1) i (by omega)
+  have hiS : IsIso (S.map' 3 4) :=
+    ComposableArrows.Exact.isIso_map' hS 2 (by omega) hzero0 hzero1
+  dsimp [T, S, Functor.homologySequenceComposableArrows₅] at hiS ⊢
+  exact hiS
+
+private lemma truncGE_homology_map_iso (K : DerivedCategory C) (b i : ℤ)
+    (hi : b ≤ i) :
+    IsIso ((derivedCohomologyFunctor C i).map
+      ((DerivedCategory.TStructure.t.truncGEπ b).app K)) := by
+  let T := (DerivedCategory.TStructure.t.triangleLTGE b).obj K
+  let S := (derivedCohomologyFunctor C 0).homologySequenceComposableArrows₅ T
+    i (i + 1) (by omega)
+  have hL0 : IsZero ((derivedCohomologyFunctor C i).obj T.obj₁) :=
+    (DerivedCategory.isLE_iff _ (b - 1)).1 (by infer_instance) i (by omega)
+  have hL1 : IsZero ((derivedCohomologyFunctor C (i + 1)).obj T.obj₁) :=
+    (DerivedCategory.isLE_iff _ (b - 1)).1 (by infer_instance) (i + 1) (by omega)
+  have hzero0 : S.map' 0 1 = 0 := by
+    dsimp [S, Functor.homologySequenceComposableArrows₅]
+    exact hL0.eq_of_src _ _
+  have hzero1 : S.map' 2 3 = 0 := by
+    dsimp [S, Functor.homologySequenceComposableArrows₅]
+    exact hL1.eq_of_tgt _ _
+  have hS : S.Exact :=
+    (derivedCohomologyFunctor C 0).homologySequenceComposableArrows₅_exact T
+      (DerivedCategory.TStructure.t.triangleLTGE_distinguished b K)
+      i (i + 1) (by omega)
+  have hiS : IsIso (S.map' 1 2) :=
+    ComposableArrows.Exact.isIso_map' hS 0 (by omega) hzero0 hzero1
+  dsimp [T, S, Functor.homologySequenceComposableArrows₅] at hiS ⊢
+  exact hiS
+
+private lemma shift_singleFunctor_iso (Y : C) (n : ℤ) :
+    Nonempty ((shiftFunctor (DerivedCategory C) (-n)).obj
+      ((DerivedCategory.singleFunctor C 0).obj Y) ≅
+      (DerivedCategory.singleFunctor C n).obj Y) := by
+  let X := (DerivedCategory.singleFunctor C 0).obj Y
+  let S := (shiftFunctor (DerivedCategory C) (-n)).obj X
+  have hXGE : DerivedCategory.IsGE X 0 := by infer_instance
+  have hXLE : DerivedCategory.IsLE X 0 := by infer_instance
+  have hSge : DerivedCategory.IsGE S n :=
+    @CategoryTheory.Triangulated.TStructure.isGE_shift
+      (DerivedCategory C) _ _ _ _ _ _ DerivedCategory.TStructure.t
+      X 0 (-n) n (by omega) hXGE
+  have hSle : DerivedCategory.IsLE S n :=
+    @CategoryTheory.Triangulated.TStructure.isLE_shift
+      (DerivedCategory C) _ _ _ _ _ _ DerivedCategory.TStructure.t
+      X 0 (-n) n (by omega) hXLE
+  obtain ⟨Z, ⟨e⟩⟩ :=
+    @DerivedCategory.exists_iso_singleFunctor_obj_of_isGE_of_isLE C _ _ _ S n hSge hSle
+  have hIso : (derivedCohomologyFunctor C 0).obj (S⟦n⟧) ≅
+      (derivedCohomologyFunctor C n).obj S := by
+    simpa only [Functor.comp_obj, DerivedCategory.shift_homologyFunctor] using
+      (asIso (((derivedCohomologyFunctor C 0).isoShift n).hom.app S))
+  have hu : S⟦n⟧ ≅ X := by
+    dsimp [S]
+    exact shiftNegShift (C := DerivedCategory C) (X := X) n
+  let eShift : (derivedCohomologyFunctor C n).obj S ≅ Y :=
+    hIso.symm ≪≫ (derivedCohomologyFunctor C 0).mapIso hu ≪≫
+      (DerivedCategory.singleFunctorCompHomologyFunctorIso C 0).app Y
+  let eZY : Z ≅ Y :=
+    ((derivedCohomologyFunctor C n).mapIso e ≪≫
+      (DerivedCategory.singleFunctorCompHomologyFunctorIso C n).app Z).symm ≪≫ eShift
+  exact ⟨e ≪≫ (DerivedCategory.singleFunctor C n).mapIso eZY⟩
+
+private lemma derivedProperty_of_iso (E : ObjectProperty C) {X Y : C}
+    (hX : derivedProperty E ((DerivedCategory.singleFunctor C 0).obj X))
+    (e : X ≅ Y) :
+    derivedProperty E ((DerivedCategory.singleFunctor C 0).obj Y) := by
+  rcases hX with ⟨Z, hZ, ⟨e'⟩⟩
+  exact ⟨Z, hZ, ⟨e' ≪≫ (DerivedCategory.singleFunctor C 0).mapIso e⟩⟩
+
+private lemma add_mono {P Q : ObjectProperty (DerivedCategory C)} (hPQ : P ≤ Q) :
+    add P ≤ add Q := by
+  intro X hX
+  rcases hX with ⟨n, A, hA, ⟨e⟩⟩
+  exact ⟨n, A, fun i => hPQ (A i) (hA i), ⟨e⟩⟩
+
+private lemma conePower_mono {P Q : ObjectProperty (DerivedCategory C)}
+    (hPQ : P ≤ Q) (n : ℕ) : conePower P n ≤ conePower Q n := by
+  exact ObjectProperty.monotone_retractClosure
+    (ObjectProperty.monotone_extensionProductIter (add_mono hPQ) (n - 1))
+
+private lemma derivedWindowProperty_mono (E : ObjectProperty C) (a b : ℤ)
+    (hab : a ≤ b) :
+    derivedWindowProperty E a (b - 1) ≤ derivedWindowProperty E a b := by
+  intro X hX
+  simp only [derivedWindowProperty, shiftWindow, ObjectProperty.prop_iSup_iff] at hX ⊢
+  rcases hX with ⟨i, hi⟩
+  refine ⟨⟨i, i.property.1, ?_⟩, hi⟩
+  exact le_trans i.property.2 (by simp)
+
+private lemma shifted_smd_add_mem (E : ObjectProperty C) (a b i : ℤ)
+    (hai : a ≤ i) (hib : i ≤ b) (X : C) (hX : smd (add E) X) :
+    conePower (derivedWindowProperty E a b) 1
+      ((shiftFunctor (DerivedCategory C) (-i)).obj
+        ((DerivedCategory.singleFunctor C 0).obj X)) := by
+  let F : C ⥤ DerivedCategory C :=
+    DerivedCategory.singleFunctor C 0 ⋙ shiftFunctor (DerivedCategory C) (-i)
+  let P := derivedWindowProperty E a b
+  rcases hX with ⟨Y, hY, ⟨r⟩⟩
+  rcases hY with ⟨n, A, hA, ⟨eA⟩⟩
+  have hsum : add P (F.obj Y) := by
+    refine ⟨n, F.obj ∘ A, ?_, ?_⟩
+    · intro j
+      dsimp [F]
+      simp only [P, derivedWindowProperty, shiftWindow,
+        ObjectProperty.prop_iSup_iff]
+      refine ⟨⟨i, ?_⟩, ?_⟩
+      · exact ⟨by simpa using hai, by simpa using hib⟩
+      · exact ObjectProperty.strictMap_obj (derivedProperty E)
+          (shiftFunctor (DerivedCategory C) (-i))
+          (ObjectProperty.prop_map_obj E (DerivedCategory.singleFunctor C 0)
+            (hA j))
+    · exact ⟨(biproduct.isoCoproduct (F.obj ∘ A)).symm ≪≫
+        (F.mapBiproduct A).symm ≪≫
+        F.mapIso (biproduct.isoCoproduct A ≪≫ eA)⟩
+  change smd (add P) (F.obj X)
+  exact ObjectProperty.prop_retractClosure hsum (r.map F)
+
+private lemma add_smd_add_le (P : ObjectProperty (DerivedCategory C)) :
+    add (smd (add P)) ≤ smd (add P) := by
+  let _ : (smd (add P)).IsClosedUnderFiniteCoproducts :=
+    smd_add_closedUnderDirectSums P
+  intro X hX
+  rcases hX with ⟨n, A, hA, ⟨e⟩⟩
+  exact ObjectProperty.prop_of_iso (smd (add P))
+    (biproduct.isoCoproduct A ≪≫ e)
+    ((smd (add P)).prop_of_isColimit (biproduct.isColimit A)
+      (fun j => hA j.as))
+
+private lemma conePower_one_mono (P : ObjectProperty (DerivedCategory C))
+    (n : ℕ) : conePower (conePower P 1) n ≤ conePower P n := by
+  change smd (starPower (add (smd (add P))) n) ≤
+    smd (starPower (add P) n)
+  have h := ObjectProperty.monotone_retractClosure
+    (ObjectProperty.monotone_extensionProductIter (add_smd_add_le P) (n - 1))
+  rw [ObjectProperty.retractClosure_extensionProductIter_retractClosure
+    (P := add P)] at h
+  simpa [starPower] using h
+
+private lemma derived_mem_conePower_of_bounds
+    (E : ObjectProperty C) (a b : ℤ) (hab : a ≤ b)
+    (K : DerivedCategory C)
+    (hGE : DerivedCategory.IsGE K a)
+    (hLE : DerivedCategory.IsLE K b)
+    (hE : ∀ i : ℤ, a ≤ i → i ≤ b →
+      derivedProperty E ((DerivedCategory.singleFunctor C 0).obj
+        ((derivedCohomologyFunctor C i).obj K))) :
+    conePower (derivedWindowProperty E a b) (intervalLength a b) K := by
+  have hrec : ∀ d : ℕ, ∀ (a b : ℤ), a ≤ b → ∀ (K : DerivedCategory C),
+      DerivedCategory.IsGE K a → DerivedCategory.IsLE K b →
+      (∀ i : ℤ, a ≤ i → i ≤ b →
+        derivedProperty E ((DerivedCategory.singleFunctor C 0).obj
+          ((derivedCohomologyFunctor C i).obj K))) →
+      intervalLength a b = d + 1 →
+      conePower (derivedWindowProperty E a b) (intervalLength a b) K := by
+    intro d
+    induction d with
+    | zero =>
+        intro a b hab K hGE hLE hE hlen
+        have hab' : a = b := by
+          simp [intervalLength] at hlen
+          omega
+        subst b
+        have hpiece := hE a (by omega) (by omega)
+        rcases hpiece with ⟨Y, hY, ⟨eY⟩⟩
+        let eYH : Y ≅ (derivedCohomologyFunctor C a).obj K :=
+          ((DerivedCategory.singleFunctorCompHomologyFunctorIso C 0).app Y).symm ≪≫
+            (derivedCohomologyFunctor C 0).mapIso eY ≪≫
+            (DerivedCategory.singleFunctorCompHomologyFunctorIso C 0).app
+              ((derivedCohomologyFunctor C a).obj K)
+        obtain ⟨Z, ⟨eK⟩⟩ :=
+          @DerivedCategory.exists_iso_singleFunctor_obj_of_isGE_of_isLE C _ _ _ K a
+            hGE hLE
+        let eKZ : (derivedCohomologyFunctor C a).obj K ≅ Z :=
+          (derivedCohomologyFunctor C a).mapIso eK ≪≫
+            (DerivedCategory.singleFunctorCompHomologyFunctorIso C a).app Z
+        obtain ⟨eShift⟩ := shift_singleFunctor_iso Y a
+        let eSK : (shiftFunctor (DerivedCategory C) (-a)).obj
+            ((DerivedCategory.singleFunctor C 0).obj Y) ≅ K :=
+          eShift ≪≫
+            (eK ≪≫ (DerivedCategory.singleFunctor C a).mapIso
+              (eYH ≪≫ eKZ).symm).symm
+        let P := derivedWindowProperty E a a
+        have hP : P ((shiftFunctor (DerivedCategory C) (-a)).obj
+            ((DerivedCategory.singleFunctor C 0).obj Y)) := by
+          simp only [P, derivedWindowProperty, shiftWindow,
+            ObjectProperty.prop_iSup_iff]
+          refine ⟨⟨a, ?_⟩, ?_⟩
+          · simp
+          · exact ObjectProperty.strictMap_obj (derivedProperty E)
+              (shiftFunctor (DerivedCategory C) (-a))
+              (ObjectProperty.prop_map_obj E
+                (DerivedCategory.singleFunctor C 0) hY)
+        have hadd : add P ((shiftFunctor (DerivedCategory C) (-a)).obj
+            ((DerivedCategory.singleFunctor C 0).obj Y)) := by
+          let f : Fin 1 → DerivedCategory C := fun _ =>
+            (shiftFunctor (DerivedCategory C) (-a)).obj
+              ((DerivedCategory.singleFunctor C 0).obj Y)
+          refine ⟨1, f, fun _ => hP, ?_⟩
+          exact ⟨(biproduct.isoCoproduct f).symm ≪≫ biproductUniqueIso f⟩
+        rw [hlen]
+        change smd (add P) K
+        exact ObjectProperty.prop_retractClosure hadd
+          (Retract.ofIso eSK.symm)
+    | succ d ih =>
+        intro a b hab K hGE hLE hE hlen
+        have hab' : a ≠ b := by
+          intro h
+          subst b
+          simp [intervalLength] at hlen
+        have hab'' : a ≤ b - 1 := by
+          omega
+        let T := (DerivedCategory.TStructure.t.triangleLTGE b).obj K
+        let L := T.obj₁
+        let G := T.obj₃
+        have hLGE : DerivedCategory.IsGE L a := by
+          apply (DerivedCategory.isGE_iff _ a).2
+          intro i hi
+          have hK0 := (DerivedCategory.isGE_iff _ a).1 hGE i hi
+          have hf : IsIso ((derivedCohomologyFunctor C i).map
+              ((DerivedCategory.TStructure.t.truncLTι b).app K)) :=
+            truncLT_homology_map_iso K b i (by omega)
+          exact IsZero.of_iso hK0 (@asIso C _ _ _
+            ((derivedCohomologyFunctor C i).map
+              ((DerivedCategory.TStructure.t.truncLTι b).app K)) hf)
+        have hLLE : DerivedCategory.IsLE L (b - 1) := by infer_instance
+        have hGGE : DerivedCategory.IsGE G b := by infer_instance
+        have hGLE : DerivedCategory.IsLE G b := by
+          apply (DerivedCategory.isLE_iff _ b).2
+          intro i hi
+          have hK0 := (DerivedCategory.isLE_iff _ b).1 hLE i hi
+          have hf : IsIso ((derivedCohomologyFunctor C i).map
+              ((DerivedCategory.TStructure.t.truncGEπ b).app K)) :=
+            truncGE_homology_map_iso K b i (by omega)
+          exact IsZero.of_iso hK0 (@asIso C _ _ _
+            ((derivedCohomologyFunctor C i).map
+              ((DerivedCategory.TStructure.t.truncGEπ b).app K)) hf).symm
+        have hEL : ∀ i : ℤ, a ≤ i → i ≤ b - 1 →
+            derivedProperty E ((DerivedCategory.singleFunctor C 0).obj
+              ((derivedCohomologyFunctor C i).obj L)) := by
+          intro i hai hib
+          have hKpiece := hE i hai (by omega)
+          have hf : IsIso ((derivedCohomologyFunctor C i).map
+              ((DerivedCategory.TStructure.t.truncLTι b).app K)) :=
+            truncLT_homology_map_iso K b i (by omega)
+          exact derivedProperty_of_iso E hKpiece (@asIso C _ _ _
+            ((derivedCohomologyFunctor C i).map
+              ((DerivedCategory.TStructure.t.truncLTι b).app K)) hf).symm
+        have hlenL : intervalLength a (b - 1) = d + 1 := by
+          simp [intervalLength] at hlen ⊢
+          omega
+        have hL := ih a (b - 1) hab'' L hLGE hLLE hEL hlenL
+        have hL' : conePower (derivedWindowProperty E a b) (d + 1) L := by
+          rw [← hlenL]
+          exact conePower_mono (derivedWindowProperty_mono E a b hab)
+            (intervalLength a (b - 1)) L hL
+        have hpiece := hE b (by omega) (by omega)
+        rcases hpiece with ⟨Y, hY, ⟨eY⟩⟩
+        let eYH : Y ≅ (derivedCohomologyFunctor C b).obj K :=
+          ((DerivedCategory.singleFunctorCompHomologyFunctorIso C 0).app Y).symm ≪≫
+            (derivedCohomologyFunctor C 0).mapIso eY ≪≫
+            (DerivedCategory.singleFunctorCompHomologyFunctorIso C 0).app
+              ((derivedCohomologyFunctor C b).obj K)
+        have hf : IsIso ((derivedCohomologyFunctor C b).map
+            ((DerivedCategory.TStructure.t.truncGEπ b).app K)) :=
+          truncGE_homology_map_iso K b b (by omega)
+        let eKG : (derivedCohomologyFunctor C b).obj K ≅
+            (derivedCohomologyFunctor C b).obj G :=
+          @asIso C _ _ _ ((derivedCohomologyFunctor C b).map
+            ((DerivedCategory.TStructure.t.truncGEπ b).app K)) hf
+        obtain ⟨Z, ⟨eG⟩⟩ :=
+          @DerivedCategory.exists_iso_singleFunctor_obj_of_isGE_of_isLE C _ _ _ G b
+            hGGE hGLE
+        let eGZ : (derivedCohomologyFunctor C b).obj G ≅ Z :=
+          (derivedCohomologyFunctor C b).mapIso eG ≪≫
+            (DerivedCategory.singleFunctorCompHomologyFunctorIso C b).app Z
+        obtain ⟨eShift⟩ := shift_singleFunctor_iso Y b
+        let eSG : (shiftFunctor (DerivedCategory C) (-b)).obj
+            ((DerivedCategory.singleFunctor C 0).obj Y) ≅ G :=
+          eShift ≪≫
+            (eG ≪≫ (DerivedCategory.singleFunctor C b).mapIso
+              (eYH ≪≫ eKG ≪≫ eGZ).symm).symm
+        let P := derivedWindowProperty E a b
+        have hP : P ((shiftFunctor (DerivedCategory C) (-b)).obj
+            ((DerivedCategory.singleFunctor C 0).obj Y)) := by
+          simp only [P, derivedWindowProperty, shiftWindow,
+            ObjectProperty.prop_iSup_iff]
+          refine ⟨⟨b, ?_⟩, ?_⟩
+          · exact ⟨by simpa using hab, by simp⟩
+          · exact ObjectProperty.strictMap_obj (derivedProperty E)
+              (shiftFunctor (DerivedCategory C) (-b))
+              (ObjectProperty.prop_map_obj E
+                (DerivedCategory.singleFunctor C 0) hY)
+        have hadd : add P ((shiftFunctor (DerivedCategory C) (-b)).obj
+            ((DerivedCategory.singleFunctor C 0).obj Y)) := by
+          let f : Fin 1 → DerivedCategory C := fun _ =>
+            (shiftFunctor (DerivedCategory C) (-b)).obj
+              ((DerivedCategory.singleFunctor C 0).obj Y)
+          refine ⟨1, f, fun _ => hP, ?_⟩
+          exact ⟨(biproduct.isoCoproduct f).symm ≪≫ biproductUniqueIso f⟩
+        have hGcone : conePower P 1 G := by
+          change smd (add P) G
+          exact ObjectProperty.prop_retractClosure hadd
+            (Retract.ofIso eSG.symm)
+        have hstar : star (conePower P (d + 1)) (conePower P 1) K := by
+          refine ⟨L, G, T.mor₁, T.mor₂, T.mor₃, ?_, hL', hGcone⟩
+          exact DerivedCategory.TStructure.t.triangleLTGE_distinguished b K
+        have hd : 1 ≤ d + 1 := by omega
+        have hcone : conePower P ((d + 1) + 1) K := by
+          rw [conePower_add P hd (by omega)]
+          exact ObjectProperty.prop_retractClosure hstar (Retract.refl K)
+        rw [hlen]
+        exact hcone
+  have hlen : intervalLength a b = (b - a).toNat + 1 := by
+    simp only [intervalLength]
+    apply Int.ofNat_injective
+    calc
+      Int.ofNat (b - a + 1).toNat = b - a + 1 :=
+        Int.toNat_of_nonneg (by omega)
+      _ = b - a + 1 := rfl
+      _ = Int.ofNat (b - a).toNat + 1 := by
+        congr 1
+        exact (Int.toNat_of_nonneg (by omega : 0 ≤ b - a)).symm
+      _ = Int.ofNat ((b - a).toNat + 1) := by norm_num
+  exact hrec (b - a).toNat a b hab K hGE hLE hE hlen
+
 /-! Cohomology supported in `[a,b]` gives the stated cone bound. -/
 theorem derived_mem_conePower_of_cohomology
     (E : ObjectProperty C) (a b : ℤ) (hab : a ≤ b)
@@ -492,7 +944,17 @@ theorem derived_mem_conePower_of_cohomology
     (hE : ∀ i : ℤ, a ≤ i → i ≤ b →
       E ((derivedCohomologyFunctor C i).obj K)) :
     conePower (derivedWindowProperty E a b) (intervalLength a b) K := by
-  sorry
+  have hGE : DerivedCategory.IsGE K a :=
+    (DerivedCategory.isGE_iff K a).2 (fun i hi => hvanish i (Or.inl hi))
+  have hLE : DerivedCategory.IsLE K b :=
+    (DerivedCategory.isLE_iff K b).2 (fun i hi => hvanish i (Or.inr hi))
+  have hE' : ∀ i : ℤ, a ≤ i → i ≤ b →
+      derivedProperty E ((DerivedCategory.singleFunctor C 0).obj
+        ((derivedCohomologyFunctor C i).obj K)) := by
+    intro i hai hib
+    exact ObjectProperty.prop_map_obj E (DerivedCategory.singleFunctor C 0)
+      (hE i hai hib)
+  exact derived_mem_conePower_of_bounds E a b hab K hGE hLE hE'
 
 /-! Cohomology in `smd(add(E))` gives the same cone bound. -/
 theorem derived_mem_conePower_of_cohomology_smd_add
@@ -503,7 +965,23 @@ theorem derived_mem_conePower_of_cohomology_smd_add
     (hE : ∀ i : ℤ, a ≤ i → i ≤ b →
       smd (add E) ((derivedCohomologyFunctor C i).obj K)) :
     conePower (derivedWindowProperty E a b) (intervalLength a b) K := by
-  sorry
+  have hK := derived_mem_conePower_of_cohomology (smd (add E)) a b hab K
+    hvanish hE
+  have hwindow : derivedWindowProperty (smd (add E)) a b ≤
+      conePower (derivedWindowProperty E a b) 1 := by
+    intro X hX
+    simp only [derivedWindowProperty, shiftWindow,
+      ObjectProperty.prop_iSup_iff] at hX
+    rcases hX with ⟨j, hX⟩
+    rcases (ObjectProperty.strictMap_iff _ _ _).1 hX with ⟨Z, hZ, rfl⟩
+    rcases hZ with ⟨Y, hY, ⟨e⟩⟩
+    have hs := shifted_smd_add_mem E a b (j : ℤ)
+      (by simpa using j.property.1) (by simpa using j.property.2) Y hY
+    exact ObjectProperty.prop_of_iso (conePower (derivedWindowProperty E a b) 1)
+      ((shiftFunctor (DerivedCategory C) (-(j : ℤ))).mapIso e) hs
+  have hK' := conePower_mono hwindow (intervalLength a b) K hK
+  exact conePower_one_mono (derivedWindowProperty E a b)
+    (intervalLength a b) K hK'
 
 /-! A bounded complex with terms in `E` gives the stated cone bound. -/
 theorem derived_mem_conePower_of_complex

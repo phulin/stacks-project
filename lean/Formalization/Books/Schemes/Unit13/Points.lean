@@ -180,17 +180,17 @@ private theorem common_field_refinement
       ∃ a : Spec (CommRingCat.of Ω.carrier) ⟶ Spec (CommRingCat.of L),
       ∃ b : Spec (CommRingCat.of Ω.carrier) ⟶ Spec (CommRingCat.of M),
         a ≫ Spec.map f = b ≫ Spec.map g := by
-  letI : Algebra K L := f.hom.toAlgebra
-  letI : Algebra K M := g.hom.toAlgebra
+  let : Algebra K L := f.hom.toAlgebra
+  let : Algebra K M := g.hom.toAlgebra
   let T := TensorProduct K L M
-  letI : Nontrivial T :=
+  let : Nontrivial T :=
     Algebra.TensorProduct.nontrivial_of_algebraMap_injective_of_isDomain K L M
       (by simpa only [RingHom.algebraMap_toAlgebra] using RingHom.injective f.hom)
       (by simpa only [RingHom.algebraMap_toAlgebra] using RingHom.injective g.hom)
   obtain ⟨J, hJ⟩ := Ideal.exists_maximal T
-  letI : J.IsMaximal := hJ
+  let : J.IsMaximal := hJ
   let Ω := T ⧸ J
-  letI : Field Ω := Ideal.Quotient.field J
+  let : Field Ω := Ideal.Quotient.field J
   let iL : L →+* Ω := (Ideal.Quotient.mk J).comp
     (Algebra.TensorProduct.includeLeftRingHom (R := K) (A := L) (B := M))
   let iM : M →+* Ω := (Ideal.Quotient.mk J).comp

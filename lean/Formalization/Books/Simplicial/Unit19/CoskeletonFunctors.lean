@@ -2426,7 +2426,7 @@ theorem has_coskeleton_of_has_finite_connected_limits
     (hC : HasFiniteConnectedLimits C)
     (U : SimplicialObject.Truncated C k) :
     HasCoskeleton k U := by
-  letI : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
+  let : NeZero k := ⟨Nat.ne_of_gt (lt_of_lt_of_le Nat.zero_lt_one hk)⟩
   let : (truncInclusion k).HasPointwiseRightKanExtension U := by
     intro X
     have : Finite (SimplexCategory.Truncated k) :=

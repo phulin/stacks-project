@@ -1138,10 +1138,325 @@ theorem twoThreeGenerated_locallyNilpotentKernel
     (hgen : twoThreeGenerated f) (hker : locallyNilpotentKernel f) :
     IsHomeomorph (PrimeSpectrum.comap f) ∧
       residueFieldMapsBijective f ∧
-        ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
+      ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
           twoThreeGenerated (baseChangeRingMap f g) ∧
             locallyNilpotentKernel (baseChangeRingMap f g) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let U : Set S := {x : S | x ^ 2 ∈ f.range ∧ x ^ 3 ∈ f.range}
+  have hgen' : Algebra.adjoin R U = ⊤ := by
+    simpa [U, twoThreeGenerated, generatedBy] using hgen
+  have hint : Algebra.IsIntegral R S := by
+    let hsub : Algebra.IsIntegral R (Algebra.adjoin R U) :=
+      Algebra.IsIntegral.adjoin (by
+        intro x hx
+        obtain ⟨r, hr⟩ := hx.1
+        apply IsIntegral.of_pow (n := 2) (by norm_num)
+        rw [← hr]
+        simpa [RingHom.algebraMap_toAlgebra] using
+          (isIntegral_algebraMap (R := R) (A := S) (x := r)))
+    constructor
+    intro x
+    have hx : x ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+    have hi := hsub.isIntegral (⟨x, hx⟩ : Algebra.adjoin R U)
+    change IsIntegral R ((⟨x, hx⟩ : Algebra.adjoin R U) : S)
+    exact hi.algebraMap
+  have hfint : f.IsIntegral := by
+    intro x
+    change IsIntegral R x
+    exact hint.isIntegral x
+  have hker' : RingHom.ker f ≤ nilradical R := by
+    intro x hx
+    exact (mem_nilradical).2 (hker x hx)
+  have hsurj : Function.Surjective (PrimeSpectrum.comap f) := by
+    exact (PrimeSpectrum.comap_quotientMk_bijective_of_le_nilradical hker').2.comp
+      (hfint.kerLift.comap_surjective f.kerLift_injective)
+  have hres_surj : ∀ q : PrimeSpectrum S, Function.Surjective (residueFieldMap f q) := by
+    intro q
+    let K := (PrimeSpectrum.comap f q).asIdeal.ResidueField
+    let L := q.asIdeal.ResidueField
+    let hq := residueFieldMap f q
+    letI : Algebra K L := hq.toAlgebra
+    have hS : ∀ s : S, algebraMap S L s ∈ hq.range := by
+      intro s
+      have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+      refine Algebra.adjoin_induction (p := fun x _ => algebraMap S L x ∈ hq.range)
+        ?_ ?_ ?_ ?_ hs
+      · intro x hx
+        refine range_of_sq_cube_of_field hq (algebraMap S L x) ?_ ?_
+        · obtain ⟨r, hr⟩ := hx.1
+          refine ⟨algebraMap R K r, ?_⟩
+          calc
+            hq (algebraMap R K r) = algebraMap S L (f r) := by
+              simpa [K, L, hq, residueFieldMap] using
+                (Ideal.ResidueField.map_algebraMap
+                  (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+            _ = algebraMap S L (x ^ 2) := by rw [hr]
+            _ = algebraMap S L x ^ 2 := by rw [map_pow]
+        · obtain ⟨r, hr⟩ := hx.2
+          refine ⟨algebraMap R K r, ?_⟩
+          calc
+            hq (algebraMap R K r) = algebraMap S L (f r) := by
+              simpa [K, L, hq, residueFieldMap] using
+                (Ideal.ResidueField.map_algebraMap
+                  (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+            _ = algebraMap S L (x ^ 3) := by rw [hr]
+            _ = algebraMap S L x ^ 3 := by rw [map_pow]
+      · intro r
+        refine ⟨algebraMap R K r, ?_⟩
+        calc
+          hq (algebraMap R K r) = algebraMap S L (f r) := by
+            simpa [K, L, hq, residueFieldMap] using
+              (Ideal.ResidueField.map_algebraMap
+                (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+          _ = algebraMap S L (algebraMap R S r) := by
+            simp [RingHom.algebraMap_toAlgebra]
+      · intro x y hx hy hxp hyp
+        rcases hxp with ⟨a, ha⟩
+        rcases hyp with ⟨b, hb⟩
+        refine ⟨a + b, ?_⟩
+        calc
+          hq (a + b) = hq a + hq b := map_add hq a b
+          _ = algebraMap S L x + algebraMap S L y := by rw [ha, hb]
+          _ = algebraMap S L (x + y) := (map_add (algebraMap S L) x y).symm
+      · intro x y hx hy hxp hyp
+        rcases hxp with ⟨a, ha⟩
+        rcases hyp with ⟨b, hb⟩
+        refine ⟨a * b, ?_⟩
+        calc
+          hq (a * b) = hq a * hq b := map_mul hq a b
+          _ = algebraMap S L x * algebraMap S L y := by rw [ha, hb]
+          _ = algebraMap S L (x * y) := (map_mul (algebraMap S L) x y).symm
+    have hz : Function.Surjective hq := by
+      intro z
+      obtain ⟨aa, bb, hbb, hz⟩ := IsFractionRing.div_surjective (S ⧸ q.asIdeal) z
+      obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective aa
+      obtain ⟨w, hw⟩ := Ideal.Quotient.mk_surjective bb
+      obtain ⟨r, hr⟩ := hS y
+      obtain ⟨s, hs⟩ := hS w
+      refine ⟨r / s, ?_⟩
+      rw [map_div₀, hr, hs]
+      simpa [K, L, Ideal.algebraMap_quotient_residueField_mk, ← hy, ← hw] using hz
+    simpa [K, L, hq] using hz
+  have hres : residueFieldMapsBijective f := by
+    intro q
+    refine ⟨RingHom.injective _, hres_surj q⟩
+  have hres_surj' : ∀ (q : PrimeSpectrum S) (I : Ideal R) [I.IsPrime]
+      (hI : I = q.asIdeal.comap f),
+      Function.Surjective (Ideal.ResidueField.map I q.asIdeal f hI) := by
+    intro q I _ hI
+    cases hI
+    exact hres_surj q
+  have hcomap_inj : Function.Injective (PrimeSpectrum.comap f) := by
+    intro q q' hqq'
+    have hI : q.asIdeal.comap f = q'.asIdeal.comap f := by
+      simpa using congrArg PrimeSpectrum.asIdeal hqq'
+    let I := q.asIdeal.comap f
+    letI : I.IsPrime := (PrimeSpectrum.comap f q).isPrime
+    let K := I.ResidueField
+    let L := q.asIdeal.ResidueField
+    let L' := q'.asIdeal.ResidueField
+    let hq := Ideal.ResidueField.map I q.asIdeal f rfl
+    let hq' := Ideal.ResidueField.map I q'.asIdeal f hI
+    let e₁ : K ≃+* L := RingEquiv.ofBijective hq
+      ⟨RingHom.injective _, hres_surj' q I rfl⟩
+    let e₂ : K ≃+* L' := RingEquiv.ofBijective hq'
+      ⟨RingHom.injective _, hres_surj' q' I hI⟩
+    let e : L ≃+* L' := e₁.symm.trans e₂
+    have hebase : ∀ r : R,
+        e (hq (algebraMap R K r)) = algebraMap S L' (f r) := by
+      intro r
+      have hecomp : e.toRingHom.comp hq = hq' := by
+        apply RingHom.ext
+        intro z
+        change e₂ (e₁.symm (e₁ z)) = e₂ z
+        rw [e₁.symm_apply_apply]
+      calc
+        e (hq (algebraMap R K r)) = (e.toRingHom.comp hq)
+            (algebraMap R K r) := rfl
+        _ = hq' (algebraMap R K r) := by rw [hecomp]
+        _ = algebraMap S L' (f r) := by
+          simpa [I, K, L', hq'] using
+            (Ideal.ResidueField.map_algebraMap I q'.asIdeal f hI r)
+    have hmap : ∀ s : S, e (algebraMap S L s) = algebraMap S L' s := by
+      intro s
+      have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+      refine Algebra.adjoin_induction (p := fun x _ =>
+        e (algebraMap S L x) = algebraMap S L' x) ?_ ?_ ?_ ?_ hs
+      · intro x hx
+        obtain ⟨r₂, hr₂⟩ := hx.1
+        obtain ⟨r₃, hr₃⟩ := hx.2
+        have hsq : e (algebraMap S L x) ^ 2 =
+            algebraMap S L' x ^ 2 := by
+          calc
+            e (algebraMap S L x) ^ 2 =
+                e ((algebraMap S L x) ^ 2) := (map_pow e _ 2).symm
+            _ = e (algebraMap S L (x ^ 2)) :=
+              congrArg e ((map_pow (algebraMap S L) x 2).symm)
+            _ = e (hq (algebraMap R K r₂)) := by
+              congr 1
+              calc
+                algebraMap S L (x ^ 2) = algebraMap S L (f r₂) := by rw [hr₂]
+                _ = hq (algebraMap R K r₂) := by
+                  symm
+                  simpa [K, L, hq] using
+                    (Ideal.ResidueField.map_algebraMap
+                      I q.asIdeal f rfl r₂)
+            _ = algebraMap S L' (f r₂) := hebase r₂
+            _ = algebraMap S L' (x ^ 2) := by rw [hr₂]
+            _ = algebraMap S L' x ^ 2 := by rw [map_pow]
+        have hcu : e (algebraMap S L x) ^ 3 =
+            algebraMap S L' x ^ 3 := by
+          calc
+            e (algebraMap S L x) ^ 3 =
+                e ((algebraMap S L x) ^ 3) := (map_pow e _ 3).symm
+            _ = e (algebraMap S L (x ^ 3)) :=
+              congrArg e ((map_pow (algebraMap S L) x 3).symm)
+            _ = e (hq (algebraMap R K r₃)) := by
+              congr 1
+              calc
+                algebraMap S L (x ^ 3) = algebraMap S L (f r₃) := by rw [hr₃]
+                _ = hq (algebraMap R K r₃) := by
+                  symm
+                  simpa [K, L, hq] using
+                    (Ideal.ResidueField.map_algebraMap
+                      I q.asIdeal f rfl r₃)
+            _ = algebraMap S L' (f r₃) := hebase r₃
+            _ = algebraMap S L' (x ^ 3) := by rw [hr₃]
+            _ = algebraMap S L' x ^ 3 := by rw [map_pow]
+        let α := e (algebraMap S L x)
+        let β := algebraMap S L' x
+        have hab : α = β := by
+          by_cases hβ : β = 0
+          · have hα : α ^ 2 = 0 := by simpa [α, β, hβ] using hsq
+            have hα' : α * α = 0 := by simpa [pow_two] using hα
+            rcases mul_eq_zero.mp hα' with hα' | hα'
+            · rw [hβ]
+              exact hα'
+            · rw [hβ]
+              exact hα'
+          · have hprod : (α - β) * β ^ 2 = 0 := by
+              have hsq' : α ^ 2 = β ^ 2 := by simpa [α, β] using hsq
+              have hcu' : α ^ 3 = β ^ 3 := by simpa [α, β] using hcu
+              calc
+                (α - β) * β ^ 2 = α * β ^ 2 - β ^ 3 := by ring
+                _ = α * α ^ 2 - β ^ 3 := by rw [← hsq']
+                _ = α ^ 3 - β ^ 3 := by ring
+                _ = 0 := sub_eq_zero.mpr hcu'
+            exact sub_eq_zero.mp
+              ((mul_eq_zero.mp hprod).resolve_right (pow_ne_zero 2 hβ))
+        exact hab
+      · intro r
+        simpa [RingHom.algebraMap_toAlgebra, K, L, hq, residueFieldMap] using hebase r
+      · intro x y hx hy hxp hyp
+        simpa only [map_add] using congrArg₂ (· + ·) hxp hyp
+      · intro x y hx hy hxp hyp
+        simpa only [map_mul] using congrArg₂ (· * ·) hxp hyp
+    have hqeq : q.asIdeal = q'.asIdeal := by
+      ext x
+      constructor
+      · intro hx
+        apply Ideal.algebraMap_residueField_eq_zero.mp
+        rw [← hmap x]
+        rw [Ideal.algebraMap_residueField_eq_zero.mpr hx]
+        exact map_zero e
+      · intro hx
+        apply Ideal.algebraMap_residueField_eq_zero.mp
+        have hz : e (algebraMap S L x) = 0 := by
+          rw [hmap x, Ideal.algebraMap_residueField_eq_zero.mpr hx]
+        apply e.injective
+        simpa only [map_zero] using hz
+    exact PrimeSpectrum.ext hqeq
+  have hhome : IsHomeomorph (PrimeSpectrum.comap f) :=
+    (isHomeomorph_iff_continuous_isClosedMap_bijective).2
+      ⟨PrimeSpectrum.continuous_comap f,
+        PrimeSpectrum.isClosedMap_comap_of_isIntegral f hfint,
+        ⟨hcomap_inj, hsurj⟩⟩
+  refine ⟨hhome, hres, ?_⟩
+  intro R' _ g
+  let : Algebra R R' := g.toAlgebra
+  let bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g
+  let : Algebra R' (S ⊗[R] R') := bc.toAlgebra
+  let a : S →+* S ⊗[R] R' := baseChangeAlgebraMap f g
+  let U' : Set (S ⊗[R] R') := {z | z ^ 2 ∈ bc.range ∧ z ^ 3 ∈ bc.range}
+  let D : Subalgebra R' (S ⊗[R] R') := Algebra.adjoin R' U'
+  have hcomp : a.comp f = bc.comp g := by
+    change Algebra.TensorProduct.includeLeftRingHom.comp f =
+      Algebra.TensorProduct.includeRight.toRingHom.comp g
+    exact Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+  have hleft : ∀ s : S, a s ∈ D := by
+    intro s
+    have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+    refine Algebra.adjoin_induction (p := fun x _ => a x ∈ D) ?_ ?_ ?_ ?_ hs
+    · intro x hx
+      apply Algebra.subset_adjoin
+      refine ⟨?_, ?_⟩
+      · obtain ⟨r, hr⟩ := hx.1
+        refine ⟨g r, ?_⟩
+        calc
+          bc (g r) = a (f r) := by
+            exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+          _ = a (x ^ 2) := by rw [hr]
+          _ = a x ^ 2 := by rw [map_pow]
+      · obtain ⟨r, hr⟩ := hx.2
+        refine ⟨g r, ?_⟩
+        calc
+          bc (g r) = a (f r) := by
+            exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+          _ = a (x ^ 3) := by rw [hr]
+          _ = a x ^ 3 := by rw [map_pow]
+    · intro r
+      apply Algebra.subset_adjoin
+      refine ⟨?_, ?_⟩
+      · refine ⟨(g r) ^ 2, ?_⟩
+        have hcr : bc (g r) = a (algebraMap R S r) := by
+          exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+        rw [map_pow, hcr]
+      · refine ⟨(g r) ^ 3, ?_⟩
+        have hcr : bc (g r) = a (algebraMap R S r) := by
+          exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+        rw [map_pow, hcr]
+    · intro x y hx hy hxp hyp
+      simpa only [map_add] using D.add_mem hxp hyp
+    · intro x y hx hy hxp hyp
+      simpa only [map_mul] using D.mul_mem hxp hyp
+  have hD : D = ⊤ := by
+    apply top_unique
+    intro z _
+    refine TensorProduct.induction_on z ?_ ?_ ?_
+    · exact D.zero_mem
+    · intro s r'
+      have hmul := D.mul_mem (hleft s) (D.algebraMap_mem r')
+      change a s * bc r' ∈ D at hmul
+      have hbc : bc r' = (1 : S) ⊗ₜ[R] r' := by
+        simp [bc, baseChangeRingMap]
+      rw [hbc] at hmul
+      have ha : a s = s ⊗ₜ[R] (1 : R') := by
+        simp [a, baseChangeAlgebraMap]
+      rw [ha] at hmul
+      simpa [Algebra.TensorProduct.tmul_mul_tmul] using hmul
+    · intro x y hx hy
+      exact D.add_mem hx hy
+  have hgen_bc : twoThreeGenerated bc := by
+    change Algebra.adjoin R' U' = ⊤
+    exact hD
+  have hsurj0 : Function.Surjective (PrimeSpectrum.comap
+      (algebraMap R' (R' ⊗[R] S))) :=
+    (Formalization.Books.Algebra.Unit30.spectrum_surjective_radical_ideal_conditions_baseChange
+      f hhome.surjective g).2
+  let e : (R' ⊗[R] S) ≃+* (S ⊗[R] R') :=
+    (Algebra.TensorProduct.comm R R' S).toRingEquiv
+  have heq : e.toRingHom.comp (algebraMap R' (R' ⊗[R] S)) = bc := by
+    ext r'
+    simp [e, bc, baseChangeRingMap]
+  have hsurj_bc : Function.Surjective (PrimeSpectrum.comap bc) := by
+    rw [← heq, PrimeSpectrum.comap_comp]
+    exact hsurj0.comp
+      (PrimeSpectrum.isHomeomorph_comap_of_bijective e.bijective).surjective
+  have hker_bc : RingHom.ker bc ≤ nilradical R' :=
+    (PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical bc).1 hsurj_bc.denseRange
+  refine ⟨hgen_bc, ?_⟩
+  intro x hx
+  exact mem_nilradical.1 (hker_bc hx)
 /- Existing proof scaffold for roadmap steps 1--4; it deliberately stops
 before the homeomorphism assembly and the base-change argument.
   letI : Algebra R S := f.toAlgebra

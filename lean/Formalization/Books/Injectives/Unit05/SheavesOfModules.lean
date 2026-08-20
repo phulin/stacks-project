@@ -255,7 +255,31 @@ structure StalkwiseInjectiveEmbeddingData
   mono_j : ∀ x : X, Mono (j x)
   injective_I : ∀ x : X, Injective (I x)
 
-/-- The stalk/skyscraper Hom correspondence used in the source. -/
+/-- The stalk/skyscraper Hom correspondence used in the source.
+
+Proof roadmap:
+
+* Work throughout with the support ring
+  `TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x`.  Choose
+  `K` from
+  `Formalization.Books.Sheaves.Unit27.exists_moduleSkyscraperSheafFunctor`
+  in `Formalization/Books/Sheaves/Unit27/Skyscraper.lean`.
+* As in the definition immediately below, obtain
+  `e : (Unit27.moduleSkyscraperSheafFunctor X.structureSheaf x).obj I ≅
+  moduleSkyscraperSheaf X x I` by `simpa` from `(K.obj_iso I).some`, unfolding
+  `K`, both `moduleSkyscraperSheaf` definitions, and
+  `Unit27.moduleSkyscraperSheafFunctor`.
+* Build an equivalence `eHom` between the two Hom sets out of `F`: its
+  forward and inverse maps postcompose with `e.hom` and `e.inv`; discharge
+  the inverse laws with `simp [e, Category.assoc]`.
+* Transitivity of equivalences now combines `eHom` with
+  `Unit27.moduleStalkSkyscraperHomEquiv X.structureSheaf x F I` from the same
+  file.  Its source is definitionally `stalkModule X F x`; wrap the composite
+  equivalence in `Nonempty.intro`.
+
+Do not try to close this theorem with `stalkSkyscraperHomEquiv`: that
+definition occurs below this declaration.  Its body is instead an elaborated
+template for the construction just described. -/
 theorem exists_stalkSkyscraperHomEquiv (X : RingedSpace.{v}) (x : X)
     (F : Mod X.structureSheaf)
     (I : ModuleCat.{v}
@@ -288,7 +312,43 @@ noncomputable def stalkSkyscraperHomEquiv (X : RingedSpace.{v}) (x : X)
   (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
       X.structureSheaf x F I).trans eHom
 
-/-- Each module skyscraper with injective support stalk is injective. -/
+/-- Each module skyscraper with injective support stalk is injective.
+
+Proof roadmap:
+
+* Put `L := Unit27.moduleStalkFunctor X.structureSheaf x`,
+  `R := Unit27.moduleSkyscraperSheafFunctor X.structureSheaf x`, and
+  `adj := Unit27.moduleStalkSkyscraperAdjunction X.structureSheaf x`, all at
+  universe `v`.  Lean does not currently infer `L.PreservesMonomorphisms`, so
+  construct a local term `hL` of that type rather than adding a hypothesis to
+  this theorem.
+* For the `preserves` field of `hL`, take a mono `f : A ⟶ B`.  First obtain
+  `hSheaf : Mono ((SheafOfModules.toSheaf X.structureSheaf).map f)` with
+  `Functor.map_mono`; `SheafOfModules.toSheaf` is faithful in
+  `Mathlib/Algebra/Category/ModuleCat/Sheaf.lean`.  Then use the following
+  explicitly typed local helper (and apply it with `@... hSheaf`): for
+  `S T : TopCat.Sheaf AddCommGrpCat.{v} X.carrier` and `g : S ⟶ T` with
+  `[Mono g]`, `TopCat.Presheaf.stalk_mono_of_mono g x` from
+  `Mathlib/Topology/Sheaves/Stalks.lean` proves
+  `Mono ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map g.hom)`.
+* Convert that additive stalk mono to `Mono (L.map f)` using
+  `ModuleCat.mono_iff_injective` and `AddCommGrpCat.mono_iff_injective`; after
+  introducing two stalk elements, the required equality is definitionally
+  the equality for `Unit27.moduleStalkAddMap`, so the original equality closes
+  it directly.
+* Apply
+  `@CategoryTheory.Adjunction.map_injective _ _ _ _ L R adj hL I hI` from
+  `Mathlib/CategoryTheory/Preadditive/Injective/Basic.lean` to get
+  `Injective (R.obj I)`.  Choose `K` from
+  `Unit27.exists_moduleSkyscraperSheafFunctor` and, exactly as in
+  `stalkSkyscraperHomEquiv` above, derive
+  `e : R.obj I ≅ moduleSkyscraperSheaf X x I` from `(K.obj_iso I).some`.
+  Finish with `CategoryTheory.Injective.of_iso e` applied to the injectivity
+  of `R.obj I`.
+
+Pass the proof terms `hSheaf` and `hL` explicitly through the helper and the
+`@Adjunction.map_injective` call.  Introducing them with `haveI` or `letI`
+causes the `haveILetI` style warning, which is rejected by PAF. -/
 theorem moduleSkyscraper_injective (X : RingedSpace.{v}) (x : X)
     (I : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x))
@@ -381,8 +441,6 @@ theorem stalkwiseProductMap_mono (X : RingedSpace.{v})
                 moduleSkyscraperSheaf X x (D.I x) from
               Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x))) := by
       rw [stalkwiseProductMap_component, heq]
-      change Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
-        X.structureSheaf x).map (φ jx ≫ e.hom))
       have hcomp : Mono (
           (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
             X.structureSheaf x).map (φ jx) ≫
@@ -408,20 +466,6 @@ theorem stalkwiseProductMap_mono (X : RingedSpace.{v})
     constructor
     intro Z a b hab
     apply hcomponent.right_cancellation
-    change a ≫
-        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
-          X.structureSheaf x).map
-          (stalkwiseProductMap X F D ≫
-            (show skyscraperProduct X D.I ⟶
-                moduleSkyscraperSheaf X x (D.I x) from
-              Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x)) =
-      b ≫
-        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
-          X.structureSheaf x).map
-          (stalkwiseProductMap X F D ≫
-            (show skyscraperProduct X D.I ⟶
-                moduleSkyscraperSheaf X x (D.I x) from
-              Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x))
     rw [Functor.map_comp]
     simpa only [Category.assoc] using congrArg
       (fun k => k ≫

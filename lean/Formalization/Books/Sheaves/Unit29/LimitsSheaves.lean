@@ -614,7 +614,14 @@ theorem exists_sheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
     Nonempty ((sheafLimit F).presheaf.stalk x ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         TopCat.Presheaf.stalkFunctor (Type v) x)) := by
-  sorry
+  letI := Formalization.Books.Sheaves.Unit28.presheafStalkPreservesFiniteLimits x
+  let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
+  let e' := preservesLimitIso (TopCat.Presheaf.stalkFunctor (Type v) x)
+    (F ⋙ TopCat.Sheaf.forget (Type v) X)
+  let e'' := ((TopCat.Presheaf.stalkFunctor (Type v) x).mapIso e).trans e'
+  change Nonempty ((TopCat.Presheaf.stalkFunctor (Type v) x).obj
+    ((TopCat.Sheaf.forget (Type v) X).obj (limit F)) ≅ _)
+  exact Nonempty.intro (by simpa only [CategoryTheory.Functor.assoc] using e'')
 
 /-- A chosen finite-limit/stalk comparison isomorphism. -/
 noncomputable def sheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
@@ -632,7 +639,17 @@ theorem exists_sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
     Nonempty ((sheafColimit F).presheaf.stalk x ≅
       colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         TopCat.Presheaf.stalkFunctor (Type v) x)) := by
-  sorry
+  let G := F ⋙ TopCat.Sheaf.forget (Type v) X
+  let e := Classical.choice (exists_sheafColimitSheafificationIso F)
+  let e₁ := (TopCat.Presheaf.stalkFunctor (Type v) x).mapIso e
+  let e₂ := asIso ((TopCat.Presheaf.stalkFunctor (Type v) x).map
+    (CategoryTheory.toSheafify (Opens.grothendieckTopology X) (colimit G)))
+  let e₃ := preservesColimitIso (TopCat.Presheaf.stalkFunctor (Type v) x) G
+  let e₄ := e₁.trans (e₂.symm.trans e₃)
+  change Nonempty ((TopCat.Presheaf.stalkFunctor (Type v) x).obj
+    (sheafColimit F).presheaf ≅ _)
+  exact Nonempty.intro (by
+    simpa only [G, CategoryTheory.Functor.assoc] using e₄)
 
 /-- A chosen colimit/stalk comparison isomorphism. -/
 noncomputable def sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}

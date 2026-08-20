@@ -3,6 +3,9 @@ import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
 import Formalization.Books.Algebra.Unit135.LocalCompleteIntersections
 import Mathlib.RingTheory.FinitePresentation
+import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
+import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.Polynomial.Basic
 
@@ -92,16 +95,11 @@ def IsRelativeGlobalCompleteIntersection
   ∃ (n c : ℕ) (P : Formalization.Books.Algebra.Unit134.Presentation
       R S (Fin n)) (fs : Fin c → P.Ring),
     IsPolynomialQuotientPresentation P fs ∧
+      c ≤ n ∧
       ∀ p : PrimeSpectrum R,
         Nonempty (PrimeSpectrum (Fiber R S p)) →
           ringKrullDim (Fiber R S p) =
             (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞)
-
-/-- A map out of `R / I` induced by a map out of `R`. -/
-def QuotientMapOfIdeal
-    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
-    (f : R →+* S) (I : Ideal R) (fbar : (R ⧸ I) →+* T) : Prop :=
-  ∃ q : S →+* T, q.comp f = fbar.comp (Ideal.Quotient.mk I)
 
 /-- Every nonempty fibre of a ring map has the displayed dimension. -/
 def HasFiberDimension
@@ -146,12 +144,13 @@ theorem relative_global_complete_intersection_base_change
 
 theorem relative_global_complete_intersection_localization
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
-    (h : IsRelativeGlobalCompleteIntersection f) :
+    :
     letI : Algebra R S := f.toAlgebra
-    ∀ (g₀ : S) (n : ℕ)
+      ∀ (g₀ : S) (n : ℕ)
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (c : ℕ) (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
+      c ≤ n →
       ∀ (h₀ : P.Ring), algebraMap P.Ring S h₀ = g₀ →
         IsRelativeGlobalCompleteIntersection
           (algebraMap R (Localization.Away g₀)) := by
@@ -272,7 +271,7 @@ theorem factorPolynomialMap_is_relative_global_complete_intersection
 abbrev RootsPolynomialBase (n : ℕ) := MvPolynomial (Fin n) ℤ
 
 abbrev RootsPolynomialTarget (n : ℕ) :=
-  MvPolynomial (Sum (Fin n) (Fin n)) ℤ
+  MvPolynomial (Sum (Fin n) Empty) ℤ
 
 def elementarySymmetric
     {A : Type u} [CommRing A] (n k : ℕ) (a : Fin n → A) : A :=
@@ -282,23 +281,23 @@ def elementarySymmetric
 noncomputable def rootsPolynomialMap (n : ℕ) :
     RootsPolynomialBase n →ₐ[ℤ] RootsPolynomialTarget n :=
   MvPolynomial.aeval (fun k =>
-    elementarySymmetric n k.1 (fun i => MvPolynomial.X (Sum.inr i)))
+    elementarySymmetric n k.1 (fun i => MvPolynomial.X (Sum.inl i)))
 
 noncomputable def rootsTargetPolynomial (n : ℕ) :
     Polynomial (RootsPolynomialTarget n) :=
   ∏ i : Fin n, (Polynomial.X +
-    Polynomial.C (MvPolynomial.X (Sum.inr i)))
+    Polynomial.C (MvPolynomial.X (Sum.inl i)))
 
 def RootMonomialIndex (n : ℕ) :=
   ∀ i : Fin n, Fin (n - i.1)
 
 def rootMonomial (n : ℕ) (e : RootMonomialIndex n) :
     RootsPolynomialTarget n :=
-  ∏ i : Fin n, MvPolynomial.X (Sum.inr i) ^ (e i).1
+  ∏ i : Fin n, MvPolynomial.X (Sum.inl i) ^ (e i).1
 
 theorem rootsPolynomialMap_spec (n : ℕ) (k : Fin n) :
     rootsPolynomialMap n (MvPolynomial.X k) =
-      elementarySymmetric n k.1 (fun i => MvPolynomial.X (Sum.inr i)) := by
+      elementarySymmetric n k.1 (fun i => MvPolynomial.X (Sum.inl i)) := by
   sorry
 
 theorem rootsPolynomial_factorization (n : ℕ) :
@@ -308,7 +307,7 @@ theorem rootsPolynomial_factorization (n : ℕ) :
   sorry
 
 theorem rootsPolynomialMap_finite_free
-    {n : ℕ} (hn : 1 ≤ n) :
+    {n : ℕ} :
     letI : Algebra (RootsPolynomialBase n) (RootsPolynomialTarget n) :=
       (rootsPolynomialMap n).toAlgebra
     Module.Finite (RootsPolynomialBase n) (RootsPolynomialTarget n) ∧
@@ -320,13 +319,13 @@ theorem rootsPolynomialMap_finite_free
   sorry
 
 theorem rootsPolynomialMap_is_finite_faithfully_flat
-    {n : ℕ} (hn : 1 ≤ n) :
+    {n : ℕ} :
     RingHom.Finite (rootsPolynomialMap n).toRingHom ∧
       RingHom.FaithfullyFlat (rootsPolynomialMap n).toRingHom := by
   sorry
 
 theorem rootsPolynomialMap_fibre_dimension_zero
-    {n : ℕ} (hn : 1 ≤ n) (p : PrimeSpectrum (RootsPolynomialBase n)) :
+    {n : ℕ} (p : PrimeSpectrum (RootsPolynomialBase n)) :
     letI : Algebra (RootsPolynomialBase n) (RootsPolynomialTarget n) :=
       (rootsPolynomialMap n).toAlgebra
     Nonempty (PrimeSpectrum
@@ -336,7 +335,7 @@ theorem rootsPolynomialMap_fibre_dimension_zero
   sorry
 
 theorem rootsPolynomialMap_is_relative_global_complete_intersection
-    {n : ℕ} (hn : 1 ≤ n) :
+    {n : ℕ} :
     IsRelativeGlobalCompleteIntersection (rootsPolynomialMap n).toRingHom := by
   sorry
 
@@ -350,9 +349,9 @@ theorem localize_relative_complete_intersection
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
       ∀ (I : Ideal R),
-      (∃ fbar : (R ⧸ I) →+* (S ⧸ Ideal.map f I),
-        QuotientMapOfIdeal f I fbar ∧
-          HasFiberDimension fbar (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞)) →
+      HasFiberDimension
+        (Ideal.quotientMap (Ideal.map f I) f Ideal.le_comap_map)
+          (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) →
       ∃ (g : S) (h : P.Ring),
         algebraMap P.Ring S h = g ∧
           Ideal.Quotient.mk (Ideal.map f I) g = 1 ∧
@@ -367,9 +366,9 @@ theorem localize_relative_complete_intersection_at_fibre
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
+      c ≤ n →
       (p : PrimeSpectrum R) →
-      (hdim : Nonempty (PrimeSpectrum (Fiber R S p)) →
-      ringKrullDim (Fiber R S p) =
+      (hdim : ringKrullDim (Fiber R S p) =
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞)) →
     ∃ (g : S) (h : P.Ring),
       algebraMap P.Ring S h = g ∧
@@ -385,6 +384,7 @@ theorem localize_relative_complete_intersection_at_prime
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
+      c ≤ n →
       (p : PrimeSpectrum R) → (q' : PrimeSpectrum P.Ring) →
       (q : PrimeSpectrum S) →
       (hlying : PrimeSpectrum.comap f q = p) →
@@ -406,13 +406,9 @@ def NoetherianApproximationData
   ∃ (R₀ : Subalgebra ℤ R) (fs₀ : Fin c → MvPolynomial (Fin n) R₀),
     RingHom.FiniteType (algebraMap ℤ R₀) ∧
       (∀ i, MvPolynomial.map R₀.val (fs₀ i) = fs i) ∧
-      ∃ (S₀ : Type u) (hS₀ : CommRing S₀) (hA₀ : Algebra R₀ S₀),
-        letI : CommRing S₀ := hS₀
-        letI : Algebra R₀ S₀ := hA₀
-        ∃ (P₀ : Formalization.Books.Algebra.Unit134.Presentation
-            R₀ S₀ (Fin n)),
-          IsPolynomialQuotientPresentation P₀ fs₀ ∧
-            IsRelativeGlobalCompleteIntersection (algebraMap R₀ S₀)
+      let Q := MvPolynomial (Fin n) R₀ ⧸ Ideal.ofList (List.ofFn fs₀)
+      letI : CommRing Q := Ideal.Quotient.commRing _
+      IsRelativeGlobalCompleteIntersection (algebraMap R₀ Q)
 
 theorem relative_global_complete_intersection_noetherian_approximation
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
@@ -454,11 +450,7 @@ def IsCompleteIntersectionOverResidueField
 def FlatQuotientOfRingHom
     {R L : Type u} [CommRing R] [CommRing L]
     (I : Ideal L) (b : R →+* L) : Prop :=
-  ∃ (Q : Type u) (hQ : CommRing Q),
-    letI : CommRing Q := hQ
-    ∃ (φ : R →+* Q) (e : Q ≃+* (L ⧸ I)),
-      RingHom.Flat φ ∧
-        e.toRingHom.comp φ = (Ideal.Quotient.mk I).comp b
+  RingHom.Flat ((Ideal.Quotient.mk I).comp b)
 
 theorem relative_global_complete_intersection_conormal
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)

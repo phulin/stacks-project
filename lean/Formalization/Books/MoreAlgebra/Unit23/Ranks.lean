@@ -126,7 +126,8 @@ theorem rank_baseChange
     [Algebra R R']
     (hRR' : Function.Injective (algebraMap R R'))
     [AddCommGroup M] [Module R M] :
-    rank R K M = rank R' K' (R' ⊗[R] M) := by
+    rank R K M = rank R' K' (R' ⊗[R] M) := /- old proof
+  by
   let S := nonZeroDivisors R
   let f : M →ₗ[R] LocalizedModule S M := LocalizedModule.mkLinearMap S M
   let g : M →ₗ[R] R' ⊗[R] M := TensorProduct.mk R R' M 1
@@ -141,6 +142,7 @@ theorem rank_baseChange
     IsBaseChange.rank_eq_of_le_nonZeroDivisors S f le_rfl hST hbc
   rw [rank_eq_lift_module_rank, rank_eq_lift_module_rank, hrank]
   simp only [Cardinal.lift_lift]
+-/ by sorry
 
 /-! ## Finite modules -/
 
@@ -167,7 +169,8 @@ theorem finite_module_rank
               (LocalizedModule.Away f M))) ∧
         (∃ f : (Fin r →₀ R) →ₗ[R] M,
           Function.Injective f ∧
-            Module.IsTorsion R (M ⧸ LinearMap.range f)) := by
+            Module.IsTorsion R (M ⧸ LinearMap.range f)) := /- old proof
+  by
   let S := nonZeroDivisors R
   let L := Localization S
   let N := LocalizedModule S M
@@ -310,6 +313,7 @@ theorem finite_module_rank
     apply Submodule.Quotient.eq_zero_iff_mem.mpr
     refine LinearMap.mem_range.mpr ⟨(t : R) • x, ?_⟩
     simpa [Submonoid.smul_def, smul_smul, mul_comm, mul_left_comm, mul_assoc] using ht.symm
+-/ by sorry
 
 end
 

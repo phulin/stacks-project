@@ -11,6 +11,9 @@ import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Basis
+import Mathlib.LinearAlgebra.TensorProduct.Free
+import Mathlib.RingTheory.TensorProduct.Free
 import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.RingTheory.LocalProperties.Reduced
 
@@ -2454,6 +2457,113 @@ theorem weaklyAssociatedPrimes_post_bourbaki
     weaklyAssociatedPrimes S N
   rw [← hWAeB, hfirstB, ← hSN]
 
+private theorem weaklyAssociatedPrimes_linearEquiv
+    {A X Y : Type*} [CommRing A] [AddCommGroup X] [AddCommGroup Y]
+    [Module A X] [Module A Y] (e : X ≃ₗ[A] Y) (p : PrimeSpectrum A) :
+    p ∈ weaklyAssociatedPrimes A X ↔
+      p ∈ weaklyAssociatedPrimes A Y := by
+  constructor
+  · rintro ⟨x, hx⟩
+    refine ⟨e x, ?_⟩
+    have hcolon :
+        ((⊥ : Submodule A X).colon ({x} : Set X)) =
+          ((⊥ : Submodule A Y).colon ({e x} : Set Y)) := by
+      ext a
+      simp only [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      constructor
+      · intro h
+        rw [← e.map_smul, h, map_zero]
+      · intro h
+        apply e.injective
+        rw [e.map_smul, h, map_zero]
+    rw [← hcolon]
+    exact hx
+  · rintro ⟨y, hy⟩
+    refine ⟨e.symm y, ?_⟩
+    have hcolon :
+        ((⊥ : Submodule A X).colon ({e.symm y} : Set X)) =
+          ((⊥ : Submodule A Y).colon ({y} : Set Y)) := by
+      ext a
+      simp only [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      constructor
+      · intro h
+        apply e.symm.injective
+        rw [e.symm.map_smul, h, map_zero]
+      · intro h
+        rw [← e.symm.map_smul, h, map_zero]
+    rw [hcolon]
+    exact hy
+
+private theorem weaklyAssociatedPrimes_finsupp
+    {A X ι : Type*} [CommRing A] [AddCommGroup X] [Module A X]
+    (p : PrimeSpectrum A) :
+    p ∈ weaklyAssociatedPrimes A (ι →₀ X) →
+      p ∈ weaklyAssociatedPrimes A X := by
+  classical
+  intro hp
+  change ∃ z : ι →₀ X,
+    p.asIdeal ∈ ((⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X))).minimalPrimes at hp
+  rcases hp with ⟨z, hp⟩
+  let I : ι → Ideal A := fun i =>
+    (⊥ : Submodule A X).colon ({z i} : Set X)
+  have hprod :
+      ∀ (s : Finset ι), (∀ i ∈ s, ¬ I i ≤ p.asIdeal) →
+        ∃ a : A, a ∉ p.asIdeal ∧ ∀ i ∈ s, a ∈ I i := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        intro _
+        have hone : (1 : A) ∉ p.asIdeal := by
+          intro h
+          exact p.2.ne_top ((Ideal.eq_top_iff_one p.asIdeal).2 h)
+        exact ⟨1, hone, by simp⟩
+    | @insert i s hi ih =>
+        intro hs
+        obtain ⟨b, hbI, hbp⟩ := not_subset.mp (hs i (by simp))
+        obtain ⟨a, hap, ha⟩ := ih (by
+          intro j hj
+          exact hs j (by simp [hj]))
+        refine ⟨a * b, ?_, ?_⟩
+        · intro habp
+          exact (p.2.mem_or_mem habp).elim hap hbp
+        · intro j hj
+          by_cases hji : j = i
+          · subst j
+            exact (I i).mul_mem_left a hbI
+          · exact (I j).mul_mem_right b
+              (ha j (by simpa [Finset.mem_insert, hji] using hj))
+  have hsome : ∃ i ∈ z.support, I i ≤ p.asIdeal := by
+    by_contra hnone
+    push_neg at hnone
+    obtain ⟨a, hap, ha⟩ := hprod z.support hnone
+    have hacol :
+        a ∈ (⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X)) := by
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      ext i
+      by_cases hi : i ∈ z.support
+      · have hai := ha i hi
+        simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hai
+      · have hzi : z i = 0 := by
+          by_contra hzi
+          exact hi (Finsupp.mem_support_iff.mpr hzi)
+        simp [hzi]
+    exact hap (hp.1.2 hacol)
+  obtain ⟨i, hi, hIp⟩ := hsome
+  refine ⟨z i, ?_⟩
+  refine ⟨⟨p.2, hIp⟩, ?_⟩
+  intro P hP hPle
+  have hIP : I i ≤ P := by
+    simpa [I] using hP.2
+  have hP' : P.IsPrime ∧
+      (⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X)) ≤ P := by
+    refine ⟨hP.1, ?_⟩
+    intro a ha
+    have hai : a • z i = 0 := by
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot] at ha
+      exact congrArg (fun v : ι →₀ X => v i) ha
+    exact hIP (by simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hai)
+  exact hp.2 hP' hPle
+
 /-! ## Change of fields -/
 
 /-- Weakly associated primes descend along extension of the coefficient
@@ -2471,9 +2581,151 @@ theorem weaklyAssociatedPrimes_change_fields
         q ∈ weaklyAssociatedPrimes (R ⊗[k] K)
           (Formalization.Books.Algebra.Unit14.baseChangeModule
             (M := M) (algebraMap k R) (algebraMap k K)) →
-          p ∈ weaklyAssociatedPrimes R M := by
+        p ∈ weaklyAssociatedPrimes R M := by
+  classical
+  let oldAlgR : Algebra k R := inferInstance
+  let oldAlgK : Algebra k K := inferInstance
+  have hAlgR : oldAlgR = (algebraMap k R).toAlgebra := by
+    exact Algebra.algebra_ext _ _ (fun r => rfl)
+  have hAlgK : oldAlgK = (algebraMap k K).toAlgebra := by
+    exact Algebra.algebra_ext _ _ (fun r => rfl)
+  let : Algebra k R := (algebraMap k R).toAlgebra
+  let : Algebra k K := (algebraMap k K).toAlgebra
+  let B := R ⊗[k] K
+  let Pobj :=
+    (ModuleCat.extendScalars (Unit14.baseChangeAlgebraMap
+      (algebraMap k R) (algebraMap k K))).obj (ModuleCat.of R M)
+  let : AddCommGroup (Pobj : Type _) := Pobj.isAddCommGroup
+  let : AddCommMonoid (Pobj : Type _) := Pobj.isAddCommGroup.toAddCommMonoid
+  let : Module B (Pobj : Type _) := Pobj.isModule
+  change ∀ (q : PrimeSpectrum B) (p : PrimeSpectrum R),
+    PrimeSpectrum.comap (Algebra.TensorProduct.includeLeftRingHom : R →+* B) q = p →
+      q ∈ weaklyAssociatedPrimes B (Pobj : Type _) →
+        p ∈ weaklyAssociatedPrimes R M
+  intro q p hpq hq
+  let b := Module.Free.chooseBasis k K
+  let Bobj :=
+    (ModuleCat.restrictScalars (Unit14.baseChangeAlgebraMap
+      (algebraMap k R) (algebraMap k K))).obj
+      (ModuleCat.of B B)
+  let : IsScalarTower R B (Bobj : Type _) :=
+    IsScalarTower.of_compHom R B (Bobj : Type _)
+  let eU : B ≃ₗ[B] (Bobj : Type _) :=
+    { toFun := fun x => x
+      invFun := fun x => x
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  let eP : TensorProduct R B M ≃ₗ[B] (Pobj : Type _) :=
+    TensorProduct.AlgebraTensorModule.congr eU (LinearEquiv.refl R M)
+  have hqstd : q ∈ weaklyAssociatedPrimes B (TensorProduct R B M) := by
+    exact (weaklyAssociatedPrimes_linearEquiv eP q).2 hq
+  let eB : B ≃ₗ[R] ((Module.Free.ChooseBasisIndex k K) →₀ R) :=
+    Algebra.TensorProduct.equivFinsuppOfBasis R b
+  let ePstd : TensorProduct R B M ≃ₗ[R]
+      TensorProduct R ((Module.Free.ChooseBasisIndex k K) →₀ R) M :=
+    LinearEquiv.rTensor M eB
+  let eF : TensorProduct R ((Module.Free.ChooseBasisIndex k K) →₀ R) M ≃ₗ[R]
+      ((Module.Free.ChooseBasisIndex k K) →₀ M) :=
+    TensorProduct.equivFinsuppOfBasisLeft (Finsupp.basisSingleOne
+      (R := R) (ι := Module.Free.ChooseBasisIndex k K))
+  let eall : TensorProduct R B M ≃ₗ[R]
+      ((Module.Free.ChooseBasisIndex k K) →₀ M) := ePstd.trans eF
+  let : Module R (Pobj : Type _) :=
+    Module.compHom _ (Algebra.TensorProduct.includeLeftRingHom : R →+* B)
+  let : IsScalarTower R B (Pobj : Type _) :=
+    IsScalarTower.of_compHom R B (Pobj : Type _)
+  let ePR : TensorProduct R B M ≃ₗ[R] (Pobj : Type _) := eP.restrictScalars R
+  have hp_of_regular :
+      (∀ f : B, f ∉ p.asIdeal.map
+          (Algebra.TensorProduct.includeLeftRingHom : R →+* B) →
+        IsSMulRegular (Pobj : Type _) f) →
+        p ∈ weaklyAssociatedPrimes R (Pobj : Type _) := by
+    intro hreg
+    change ∃ z : (Pobj : Type _),
+      p.asIdeal ∈ ((⊥ : Submodule R (Pobj : Type _)).colon
+        ({z} : Set (Pobj : Type _))).minimalPrimes
+    change ∃ z : (Pobj : Type _),
+      q.asIdeal ∈ ((⊥ : Submodule B (Pobj : Type _)).colon
+        ({z} : Set (Pobj : Type _))).minimalPrimes at hq
+    rcases hq with ⟨z, hz⟩
+    let IR : Ideal R :=
+      (⊥ : Submodule R (Pobj : Type _)).colon ({z} : Set (Pobj : Type _))
+    let IB : Ideal B :=
+      (⊥ : Submodule B (Pobj : Type _)).colon ({z} : Set (Pobj : Type _))
+    have hcomap : q.asIdeal.comap
+        (Algebra.TensorProduct.includeLeftRingHom : R →+* B) = p.asIdeal := by
+      simpa only [PrimeSpectrum.comap_asIdeal] using
+        congrArg (fun x : PrimeSpectrum R => x.asIdeal) hpq
+    have hIRle : IR ≤ p.asIdeal := by
+      intro r hr
+      have hrB : Algebra.TensorProduct.includeLeftRingHom r ∈ q.asIdeal := by
+        apply hz.1.2
+        rw [Submodule.mem_colon_singleton, Submodule.mem_bot]
+        change r • z = 0
+        simpa [IR, Submodule.mem_colon_singleton, Submodule.mem_bot] using hr
+      have : r ∈ q.asIdeal.comap
+          (Algebra.TensorProduct.includeLeftRingHom : R →+* B) := hrB
+      rw [hcomap] at this
+      exact this
+    have hpRad : p.asIdeal ≤ IR.radical := by
+      intro r hr
+      have hrq : Algebra.TensorProduct.includeLeftRingHom r ∈ q.asIdeal := by
+        have hr' : r ∈ q.asIdeal.comap
+            (Algebra.TensorProduct.includeLeftRingHom : R →+* B) := by
+          rw [hcomap]
+          exact hr
+        exact hr'
+      let A := Localization.AtPrime (R := B) q.asIdeal
+      have hradloc :
+          (IB.map (algebraMap B A)).radical =
+            q.asIdeal.map (algebraMap B A) := by
+        exact IsLocalization.AtPrime.radical_map_of_mem_minimalPrimes
+          (R := B) (A := A) q.asIdeal IB (by simpa [IB] using hz)
+      have hmul (x : B) (hx : x ∈ q.asIdeal) :
+          ∃ n : ℕ, ∃ g : B, g ∉ q.asIdeal ∧ g * x ^ n ∈ IB := by
+        have hxloc : algebraMap B A x ∈
+            (IB.map (algebraMap B A)).radical := by
+          rw [hradloc]
+          exact Ideal.mem_map_of_mem (algebraMap B A) hx
+        obtain ⟨n, hn⟩ := Ideal.mem_radical_iff.mp hxloc
+        have hpowloc : algebraMap B A (x ^ n) ∈
+            IB.map (algebraMap B A) := by
+          simpa only [map_pow] using hn
+        obtain ⟨g, hg, hgmul⟩ :=
+          (IsLocalization.algebraMap_mem_map_algebraMap_iff
+            q.asIdeal.primeCompl A IB (x ^ n)).mp hpowloc
+        exact ⟨n, g, by simpa using hg, hgmul⟩
+      obtain ⟨n, g, hgq, hgr⟩ := hmul
+        (Algebra.TensorProduct.includeLeftRingHom r) hrq
+      have hgr0 : (g * (Algebra.TensorProduct.includeLeftRingHom r) ^ n) • z = 0 := by
+        rw [Submodule.mem_colon_singleton, Submodule.mem_bot] at hgr
+        exact hgr
+      have hpow :
+          ((Algebra.TensorProduct.includeLeftRingHom : R →+* B) r) ^ n • z = 0 := by
+        have hmaple : p.asIdeal.map
+            (Algebra.TensorProduct.includeLeftRingHom : R →+* B) ≤ q.asIdeal := by
+          rw [Ideal.map_le_iff_le_comap, hcomap]
+        have hgmap : g ∉ p.asIdeal.map
+            (Algebra.TensorProduct.includeLeftRingHom : R →+* B) := by
+          intro hg
+          exact hgq (hmaple hg)
+        have hreg' := hreg g hgmap
+        exact hreg'.right_eq_zero_of_smul (by
+          simpa [mul_smul] using hgr0)
+      have hpowR : r ^ n • z = 0 := by
+        change ((Algebra.TensorProduct.includeLeftRingHom : R →+* B) (r ^ n)) • z = 0
+        simpa only [map_pow] using hpow
+      exact Ideal.mem_radical_iff.mpr ⟨n, by
+        simpa [IR, Submodule.mem_colon_singleton, Submodule.mem_bot] using hpowR⟩
+    have hrad : IR.radical = p.asIdeal := le_antisymm
+      ((Ideal.IsPrime.radical_le_iff p.2).mpr hIRle) hpRad
+    refine ⟨z, ⟨⟨p.2, hIRle⟩, ?_⟩⟩
+    intro P hP hPle
+    rw [← hrad]
+    exact (Ideal.IsPrime.radical_le_iff hP.1).mpr (by simpa [IR] using hP.2)
   sorry
-
 end
 
 end Formalization.Books.Algebra.Unit66

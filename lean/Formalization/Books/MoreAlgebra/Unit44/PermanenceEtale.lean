@@ -895,6 +895,50 @@ theorem isFiniteProductOfDedekindDomains_of_etale
   let : IsDedekindRing (S i : Type v) := hdedRing
   infer_instance
 
+private theorem not_isField_localization_atPrime_of_etale
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
+    (f : A →+* B) (hf : RingHom.Etale f) [IsDedekindDomain A]
+    (q : PrimeSpectrum B) (hq : q.asIdeal.comap f ≠ ⊥) :
+    ¬ IsField (Localization.AtPrime q.asIdeal) := by
+  let p : PrimeSpectrum A := q.comap f
+  have hpq : p.asIdeal = q.asIdeal.comap f := rfl
+  let : Algebra A B := f.toAlgebra
+  let g := Localization.localRingHom p.asIdeal q.asIdeal f hpq
+  have hflat : g.Flat := by
+    exact RingHom.Flat.localRingHom
+      (RingHom.Etale.iff_flat_and_formallyUnramified.mp hf).1
+      q.asIdeal p.asIdeal hpq
+  let R := Localization.AtPrime p.asIdeal
+  let S := Localization.AtPrime q.asIdeal
+  let : Algebra R S := g.toAlgebra
+  let : Module.Flat R S := hflat
+  let : IsLocalHom (algebraMap R S) := by
+    change IsLocalHom g
+    exact Localization.isLocalHom_localRingHom
+      (I := p.asIdeal) (R := A) (P := B) q.asIdeal f hpq
+  let : Module.FaithfullyFlat R S :=
+    Module.FaithfullyFlat.of_flat_of_isLocalHom
+  have hnotfieldR : ¬ IsField R :=
+    IsLocalization.AtPrime.not_isField A (P := p.asIdeal) (by simpa [p] using hq)
+      (Localization.AtPrime p.asIdeal)
+  intro hfieldS
+  let : Field S := hfieldS.toField
+  have hmaxS : IsLocalRing.maximalIdeal S = ⊥ := by
+    rw [IsLocalRing.maximalIdeal_eq_bot]
+  have hmap : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) ≤
+      IsLocalRing.maximalIdeal S :=
+    ((IsLocalRing.local_hom_TFAE (algebraMap R S)).out 0 2).mp
+      (inferInstance : IsLocalHom (algebraMap R S))
+  have hmapbot : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) = ⊥ := by
+    apply le_antisymm
+    · rw [hmaxS] at hmap
+      exact hmap
+    · exact bot_le
+  have hmaxR : IsLocalRing.maximalIdeal R = ⊥ := by
+    apply Ideal.map_injective_of_faithfullyFlat (A := R) (B := S)
+    rw [hmapbot, Ideal.map_bot]
+  exact hnotfieldR (IsLocalRing.isField_iff_maximalIdeal_eq.mpr hmaxR)
+
 /-- A localization at a maximal ideal lying over a nonzero prime of an étale
 extension of a Dedekind domain is a discrete valuation ring.
 
@@ -907,6 +951,24 @@ theorem isDiscreteValuationRing_localization_atPrime_of_etale
       q.asIdeal.comap f ≠ ⊥ →
       ∃ hq : IsDomain (Localization.AtPrime q.asIdeal),
         @IsDiscreteValuationRing (Localization.AtPrime q.asIdeal) _ hq := by
-  sorry
+  intro q hq
+  let : Algebra A B := f.toAlgebra
+  let : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
+  let : Algebra.EssFiniteType A B := inferInstance
+  let : IsNoetherianRing B := Algebra.EssFiniteType.isNoetherianRing A B
+  let q' : PrimeSpectrum B := ⟨q.asIdeal, q.isMaximal.isPrime⟩
+  have hq' : q'.asIdeal.comap f ≠ ⊥ := by
+    simpa [q'] using hq
+  have hnotfield : ¬ IsField (Localization.AtPrime q.asIdeal) := by
+    simpa [q'] using not_isField_localization_atPrime_of_etale f hf q' hq'
+  have hded : IsDedekindDomain (Localization.AtPrime q.asIdeal) :=
+    isDedekindDomain_localization_atPrime_of_etale f hf q'
+  let : IsDedekindDomain (Localization.AtPrime q.asIdeal) := hded
+  have hdomain : IsDomain (Localization.AtPrime q.asIdeal) :=
+    IsDedekindDomain.toIsDomain
+  let : IsDomain (Localization.AtPrime q.asIdeal) := hdomain
+  exact ⟨hdomain,
+    ((IsDiscreteValuationRing.TFAE (Localization.AtPrime q.asIdeal) hnotfield).out 0 2).mpr
+      hded⟩
 
 end Formalization.Books.MoreAlgebra.Unit44

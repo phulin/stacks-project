@@ -1,6 +1,5 @@
 import Formalization.Books.Derived.Unit14.DerivedFunctors
 import Formalization.Books.Derived.Unit15.ClassicalDerivedFunctors
-import Formalization.Books.Derived.Unit16.Core
 import Mathlib.CategoryTheory.Functor.Derived.Adjunction
 
 /-!
@@ -189,35 +188,25 @@ variable {A : Type u} [Category.{v} A] [Abelian A]
   {B : Type u'} [Category.{v'} B] [Abelian B]
   [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
 
-/-- `RF` is an exact right derived functor on the unbounded derived category
-when it carries the canonical localization comparison map, satisfies
-Mathlib's right-derived universal property, and is exact as a triangulated
-functor. -/
+/-- The source's existence hypothesis is represented directly by a comparison
+map and Mathlib's right-derived universal property. -/
 def IsUnboundedRightDerivedFunctor
     (F : A ⥤ B) [F.Additive]
     (RF : DerivedCategory A ⥤ DerivedCategory B) : Prop :=
-  ∃ R : Formalization.Books.Derived.Unit16.UnboundedRightDerivedFunctorData F,
-    R.functor = RF
+  ∃ α : classicalHomotopyToDerived F ⟶
+      (DerivedCategory.Qh (C := A)) ⋙ RF,
+    Functor.IsRightDerivedFunctor RF α (quasiIsoHomotopyProperty A)
 
-/- A chosen everywhere-defined left derived functor on the unbounded derived
-category. Chapter 16 provides the corresponding right-derived package; the
-left package is introduced here because that chapter does not need it. -/
-structure UnboundedLeftDerivedFunctorData
-    (G : B ⥤ A) [G.Additive]
-    where
-  functor : DerivedCategory B ⥤ DerivedCategory A
-  counit : (DerivedCategory.Qh (C := B)) ⋙ functor ⟶
-    classicalHomotopyToDerived G
-  isLeftDerived : Functor.IsLeftDerivedFunctor functor counit
-    (quasiIsoHomotopyProperty B)
-  exact : Nonempty (ExactTriangulatedFunctorData functor)
-
-/- `LG` is an exact left derived functor on the unbounded derived category
-when it is represented by the package above. -/
+/- The source's existence hypotheses are represented directly by Mathlib's
+  comparison-map and universal-property interfaces.  Exactness is a
+  consequence of the everywhere-defined triangulated construction, but is not
+  part of the assertion that a chosen derived functor exists. -/
 def IsUnboundedLeftDerivedFunctor
     (G : B ⥤ A) [G.Additive]
     (LG : DerivedCategory B ⥤ DerivedCategory A) : Prop :=
-  ∃ L : UnboundedLeftDerivedFunctorData G, L.functor = LG
+  ∃ β : (DerivedCategory.Qh (C := B)) ⋙ LG ⟶
+      classicalHomotopyToDerived G,
+    Functor.IsLeftDerivedFunctor LG β (quasiIsoHomotopyProperty B)
 
 /- The generic Mathlib construction of a derived adjunction requires the
    two comparison transformations for the original adjunction and the

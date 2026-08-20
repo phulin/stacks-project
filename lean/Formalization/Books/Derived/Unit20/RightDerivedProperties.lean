@@ -193,16 +193,14 @@ theorem rightDerivedFunctorPlus_isExact
           ((P.lift (𝟭 (KPlus A)) hDef).map g).hom = g := by
         rfl
       convert (Formalization.Books.Derived.Unit14.rightDerivedMap_condition hS
-        (rightDerivedSourceFunctor F) f (hDef X) (hDef Y) q) using 1 <;>
+        (rightDerivedSourceFunctor F) f (hDef X) (hDef Y) q) using 1 ;
         simp [Formalization.Books.Derived.Unit14.rightDerivedCanonicalMap,
           Formalization.Books.Derived.Unit14.rightDerivedValue,
           Formalization.Books.Derived.Unit14.rightDerivedDiagram,
           Formalization.Books.Derived.Unit14.rightDerivedIdentityIndex,
-          Formalization.Books.Derived.Unit14.rightDerivedFunctor,
-          J, P, G0, q, MorphismProperty.Under.mk] <;>
+          P, q, MorphismProperty.Under.mk] ;
         constructor <;> intro h <;>
           simpa [hJobj, hJmap, J, P, G0,
-            Formalization.Books.Derived.Unit14.rightDerivedFunctor,
             Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor] using h }
   have hβ : ∀ (Y : HomotopyCategory.Plus (InjectiveObject A)),
       IsIso (β.app ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj Y)) := by
@@ -253,7 +251,7 @@ theorem rightDerivedFunctorPlus_isExact
     exact Functor.commShiftOfLocalization
       (DerivedCategory.Plus.Qh (C := A)) (quasiIsoPlusProperty A) ℤ G0 H
   let : H.CommShift ℤ := hHC
-  letI : ∀ n : ℤ, (shiftFunctor (DPlus A) n).Additive := by
+  let : ∀ n : ℤ, (shiftFunctor (DPlus A) n).Additive := by
     intro n
     have := Functor.additive_of_iso
       ((ObjectProperty.ι ((DerivedCategory.TStructure.t (C := A)).plus)).commShiftIso n).symm
@@ -276,20 +274,20 @@ theorem rightDerivedFunctorPlus_isExact
       (rightDerivedSourceFunctor F)).isRightDerivedFunctor_of_isIso α
     intro Y
     dsimp [α]
-    letI : IsIso (β.app ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj Y)) := hβ Y
+    let : IsIso (β.app ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj Y)) := hβ Y
     infer_instance
   let S : MorphismProperty (KPlus A) := quasiIsoPlusProperty A
   have hHrightS : H.IsRightDerivedFunctor
       (F := rightDerivedSourceFunctor F)
       (L := DerivedCategory.Plus.Qh (C := A)) α
         S := by simpa [S] using hHright
-  haveI instHright : H.IsRightDerivedFunctor
+  have instHright : H.IsRightDerivedFunctor
       (F := rightDerivedSourceFunctor F)
       (L := DerivedCategory.Plus.Qh (C := A)) α S := hHrightS
-  haveI : H.IsRightDerivedFunctor α S := hHrightS
-  haveI instCanonical : F.rightDerivedFunctorPlus.IsRightDerivedFunctor
+  have : H.IsRightDerivedFunctor α S := hHrightS
+  have instCanonical : F.rightDerivedFunctorPlus.IsRightDerivedFunctor
       F.rightDerivedFunctorPlusUnit S := by infer_instance
-  haveI : F.rightDerivedFunctorPlus.IsRightDerivedFunctor
+  have : F.rightDerivedFunctorPlus.IsRightDerivedFunctor
       (F := rightDerivedSourceFunctor F)
       (L := DerivedCategory.Plus.Qh (C := A)) F.rightDerivedFunctorPlusUnit S := by
     simpa [rightDerivedSourceFunctor] using instCanonical
@@ -362,8 +360,9 @@ theorem rightDerivedComplexFunctor_isDeltaFunctor
       rw [Category.assoc]
       have hcomm := (F.rightDerivedFunctorPlus.commShiftIso (1 : ℤ)).hom.naturality
         ((DerivedCategory.Plus.Q (C := A)).map φ.τ₁)
-      simpa [Category.assoc] using congrArg
+      have hcomm' := congrArg
         (fun k => F.rightDerivedFunctorPlus.map (d.delta S₁ h₁) ≫ k) hcomm
+      simp [Category.assoc] at hcomm' ⊢
   }⟩
 
 /-- The right-derived functor on objects carries the induced δ-functor
@@ -379,13 +378,12 @@ theorem rightDerivedObjectFunctor_isDeltaFunctor
     (CochainComplex.plus A).lift (CochainComplex.singleFunctor A 0) (by
       intro X
       exact ⟨0, inferInstance⟩)
-  letI : K.PreservesZeroMorphisms := by
+  let : K.PreservesZeroMorphisms := by
     dsimp [K, ObjectProperty.lift]
     constructor
     intro X Y
-    simpa [K, ObjectProperty.lift] using
-      congrArg (fun f => ObjectProperty.homMk f)
-        (Functor.map_zero (CochainComplex.singleFunctor A 0) X Y)
+    exact congrArg (fun f => ObjectProperty.homMk f)
+      (Functor.map_zero (CochainComplex.singleFunctor A 0) X Y)
   have hmap : ∀ (S : ShortComplex A), S.ShortExact →
       (S.map K).ShortExact := by
     intro S hS

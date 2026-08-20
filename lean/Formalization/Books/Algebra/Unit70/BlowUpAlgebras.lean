@@ -581,9 +581,241 @@ def polynomialReesRelationIdeal (R : Type u) [CommRing R] (n : ℕ) :
 
 /-- The image of a variable in degree one of the polynomial Rees algebra. -/
 def polynomialReesVariable (R : Type u) [CommRing R] (n : ℕ) (i : Fin n) :
-    _root_.reesAlgebra (polynomialVariableIdeal R n) :=
+  _root_.reesAlgebra (polynomialVariableIdeal R n) :=
   reesDegreeOneElement (polynomialVariableIdeal R n)
     ⟨MvPolynomial.X (R := R) i, Ideal.subset_span ⟨i, rfl⟩⟩
+
+private theorem polynomial_rees_one_exchange
+    (R : Type u) [CommRing R] (n : ℕ)
+    (e d : Fin n →₀ ℕ) (i j : Fin n) (c : R)
+    (hei : e i ≠ 0) (hdj : d j ≠ 0) :
+    MvPolynomial.C (MvPolynomial.monomial e c) * MvPolynomial.monomial d 1 -
+        MvPolynomial.C (MvPolynomial.monomial (e - Finsupp.single i 1 +
+          Finsupp.single j 1) c) *
+          MvPolynomial.monomial (d - Finsupp.single j 1 +
+            Finsupp.single i 1) 1 ∈ polynomialReesRelationIdeal R n := by
+  classical
+  let e₀ := e - Finsupp.single i 1
+  let d₀ := d - Finsupp.single j 1
+  have he : e₀ + Finsupp.single i 1 = e := by
+    exact Finsupp.sub_add_single_one_cancel hei
+  have hd : d₀ + Finsupp.single j 1 = d := by
+    exact Finsupp.sub_add_single_one_cancel hdj
+  have he' : e₀ + Finsupp.single j 1 = e - Finsupp.single i 1 +
+      Finsupp.single j 1 := by rfl
+  have hd' : d₀ + Finsupp.single i 1 = d - Finsupp.single j 1 +
+      Finsupp.single i 1 := by rfl
+  have hstep := (polynomialReesRelationIdeal R n).mul_mem_left
+    (MvPolynomial.C (MvPolynomial.monomial e₀ c) * MvPolynomial.monomial d₀ 1)
+    (Ideal.subset_span ⟨(i, j), rfl⟩)
+  have hmon_e : MvPolynomial.monomial e c =
+      MvPolynomial.monomial e₀ c * MvPolynomial.X i := by
+    rw [← he, MvPolynomial.monomial_add_single]
+    simp
+  have hmon_d :
+      (MvPolynomial.monomial d
+        (1 : MvPolynomial (Fin n) (MvPolynomial (Fin n) R))) =
+      MvPolynomial.monomial d₀ 1 * MvPolynomial.X j := by
+    rw [← hd, MvPolynomial.monomial_add_single]
+    simp
+  have hmon_e' : MvPolynomial.monomial (e - Finsupp.single i 1 +
+      Finsupp.single j 1) c =
+      MvPolynomial.monomial e₀ c * MvPolynomial.X j := by
+    rw [← he', MvPolynomial.monomial_add_single]
+    simp [e₀]
+  have hmon_d' :
+      (MvPolynomial.monomial (d - Finsupp.single j 1 +
+        Finsupp.single i 1)
+        (1 : MvPolynomial (Fin n) (MvPolynomial (Fin n) R))) =
+      MvPolynomial.monomial d₀ 1 * MvPolynomial.X i := by
+    rw [← hd', MvPolynomial.monomial_add_single]
+    simp [d₀]
+  have hleft :
+      MvPolynomial.C (MvPolynomial.monomial e c) * MvPolynomial.monomial d 1 =
+        (MvPolynomial.C (MvPolynomial.monomial e₀ c) *
+          MvPolynomial.monomial d₀ 1) *
+          (MvPolynomial.C (MvPolynomial.X i) * MvPolynomial.X j) := by
+    rw [hmon_e, ← hd, MvPolynomial.monomial_add_single]
+    simp only [map_mul]
+    ring
+  have hright :
+      MvPolynomial.C (MvPolynomial.monomial (e - Finsupp.single i 1 +
+        Finsupp.single j 1) c) *
+          MvPolynomial.monomial (d - Finsupp.single j 1 +
+            Finsupp.single i 1) 1 =
+        (MvPolynomial.C (MvPolynomial.monomial e₀ c) *
+          MvPolynomial.monomial d₀ 1) *
+          (MvPolynomial.C (MvPolynomial.X j) * MvPolynomial.X i) := by
+    rw [hmon_e', ← hd', MvPolynomial.monomial_add_single]
+    simp only [map_mul]
+    ring
+  rw [hleft, hright]
+  simpa only [mul_sub] using hstep
+
+private theorem polynomial_rees_monomial_exchange
+    (R : Type u) [CommRing R] (n : ℕ)
+    (e e' d d' : Fin n →₀ ℕ) (c : R)
+    (hdeg : d.degree = d'.degree) (hsum : e + d = e' + d') :
+    MvPolynomial.C (MvPolynomial.monomial e c) * MvPolynomial.monomial d 1 -
+        MvPolynomial.C (MvPolynomial.monomial e' c) * MvPolynomial.monomial d' 1 ∈
+      polynomialReesRelationIdeal R n := by
+  classical
+  induction hD : (∑ k : Fin n, (e k - e' k)) using Nat.strong_induction_on
+      generalizing e e' d d' with
+  | h D ih =>
+      by_cases heq : e = e'
+      · subst e
+        have hd_eq : d = d' := by
+          apply Finsupp.ext
+          intro k
+          have hk := congrArg (fun f => f k) hsum
+          simp only [Finsupp.add_apply] at hk
+          omega
+        subst d
+        simp
+      · have hdeg_sum : (∑ k : Fin n, d k) = ∑ k : Fin n, d' k := by
+          simpa [Finsupp.degree_eq_sum] using hdeg
+        have hsum_sum :
+            (∑ k : Fin n, e k) + ∑ k : Fin n, d k =
+              (∑ k : Fin n, e' k) + ∑ k : Fin n, d' k := by
+          simpa [Finsupp.add_apply, Finset.sum_add_distrib] using
+            congrArg (fun f : Fin n →₀ ℕ => ∑ k : Fin n, f k) hsum
+        have hedeg_sum : (∑ k : Fin n, e k) = ∑ k : Fin n, e' k := by
+          omega
+        have hex : ∃ i : Fin n, e' i < e i := by
+          by_contra hn
+          push_neg at hn
+          apply heq
+          apply Finsupp.ext
+          intro k
+          by_contra hne
+          have hlt : e k < e' k := lt_of_le_of_ne (hn k) hne
+          have hsumlt : (∑ k : Fin n, e k) < ∑ k : Fin n, e' k := by
+            exact Finset.sum_lt_sum (fun k _ => hn k)
+              ⟨k, Finset.mem_univ _, hlt⟩
+          omega
+        have hd_ne : d ≠ d' := by
+          intro hdd
+          apply heq
+          apply Finsupp.ext
+          intro k
+          have hk := congrArg (fun f : Fin n →₀ ℕ => f k) hsum
+          rw [hdd] at hk
+          simp only [Finsupp.add_apply] at hk
+          omega
+        have hdex : ∃ j : Fin n, d' j < d j := by
+          by_contra hn
+          push_neg at hn
+          apply hd_ne
+          apply Finsupp.ext
+          intro k
+          by_contra hne
+          have hlt : d k < d' k := lt_of_le_of_ne (hn k) hne
+          have hsumlt : (∑ k : Fin n, d k) < ∑ k : Fin n, d' k := by
+            exact Finset.sum_lt_sum (fun k _ => hn k)
+              ⟨k, Finset.mem_univ _, hlt⟩
+          exact (Nat.not_lt_of_ge (Nat.le_of_eq hdeg_sum.symm)) hsumlt
+        obtain ⟨i, hi⟩ := hex
+        obtain ⟨j, hj⟩ := hdex
+        have hij : i ≠ j := by
+          intro hij
+          subst j
+          have hk := congrArg (fun f : Fin n →₀ ℕ => f i) hsum
+          simp only [Finsupp.add_apply] at hk
+          omega
+        have he_j : e j < e' j := by
+          have hk := congrArg (fun f : Fin n →₀ ℕ => f j) hsum
+          simp only [Finsupp.add_apply] at hk
+          omega
+        let e₁ := e - Finsupp.single i 1 + Finsupp.single j 1
+        let d₁ := d - Finsupp.single j 1 + Finsupp.single i 1
+        have hD₁ : (∑ k : Fin n, (e₁ k - e' k)) < D := by
+          have hrest :
+              (∑ k ∈ (Finset.univ.erase i).erase j, (e₁ k - e' k)) =
+                ∑ k ∈ (Finset.univ.erase i).erase j, (e k - e' k) := by
+            apply Finset.sum_congr rfl
+            intro k hk
+            rcases Finset.mem_erase.mp hk with ⟨hkj, hkiu⟩
+            have hki := (Finset.mem_erase.mp hkiu).1
+            simp [e₁, Finsupp.single_apply, hki, hkj]
+          have hvi : e₁ i - e' i = e i - e' i - 1 := by
+            simp [e₁, Finsupp.single_apply, hij, hi.ne'] <;> omega
+          have hvj : e₁ j - e' j = 0 := by
+            simp [e₁, Finsupp.single_apply, hij, he_j] <;> omega
+          have hsplit₁ :
+              (∑ k : Fin n, (e₁ k - e' k)) =
+                (e₁ i - e' i) + ((e₁ j - e' j) +
+                  ∑ k ∈ (Finset.univ.erase i).erase j, (e₁ k - e' k)) := by
+            calc
+              (∑ k : Fin n, (e₁ k - e' k)) =
+                  (e₁ i - e' i) +
+                    ∑ k ∈ Finset.univ.erase i, (e₁ k - e' k) :=
+                (Finset.add_sum_erase (Finset.univ)
+                  (fun k => e₁ k - e' k) (a := i) (by simp)).symm
+              _ = (e₁ i - e' i) +
+                    ((e₁ j - e' j) +
+                      ∑ k ∈ (Finset.univ.erase i).erase j, (e₁ k - e' k)) := by
+                simpa only [add_assoc] using
+                  congrArg (fun z => (e₁ i - e' i) + z)
+                    (Finset.add_sum_erase (Finset.univ.erase i)
+                      (fun k => e₁ k - e' k) (a := j)
+                      (by simp [hij, Ne.symm hij])).symm
+          have hsplit :
+              (∑ k : Fin n, (e k - e' k)) =
+                (e i - e' i) + ((e j - e' j) +
+                  ∑ k ∈ (Finset.univ.erase i).erase j, (e k - e' k)) := by
+            calc
+              (∑ k : Fin n, (e k - e' k)) =
+                  (e i - e' i) +
+                    ∑ k ∈ Finset.univ.erase i, (e k - e' k) :=
+                (Finset.add_sum_erase (Finset.univ)
+                  (fun k => e k - e' k) (a := i) (by simp)).symm
+              _ = (e i - e' i) +
+                    ((e j - e' j) +
+                      ∑ k ∈ (Finset.univ.erase i).erase j, (e k - e' k)) := by
+                simpa only [add_assoc] using
+                  congrArg (fun z => (e i - e' i) + z)
+                    (Finset.add_sum_erase (Finset.univ.erase i)
+                      (fun k => e k - e' k) (a := j)
+                      (by simp [hij, Ne.symm hij])).symm
+          have hstepD :
+              (∑ k : Fin n, (e₁ k - e' k)) + 1 =
+                ∑ k : Fin n, (e k - e' k) := by
+            rw [hsplit₁, hsplit, hvi, hvj, hrest]
+            omega
+          rw [← hD]
+          omega
+        have he₁d₁ : e₁ + d₁ = e' + d' := by
+          apply Finsupp.ext
+          intro k
+          have hk := congrArg (fun f : Fin n →₀ ℕ => f k) hsum
+          simp only [Finsupp.add_apply] at hk
+          by_cases hki : k = i
+          · subst k
+            simp [e₁, d₁, Finsupp.single_apply, hij, hi.ne'] at hk ⊢
+            omega
+          · by_cases hkj : k = j
+            · subst k
+              simp [e₁, d₁, Finsupp.single_apply, hij, hki, hj.ne'] at hk ⊢
+              omega
+            · simp [e₁, d₁, Finsupp.single_apply, hki, hkj] at hk ⊢
+              omega
+        have hd₁deg : d₁.degree = d'.degree := by
+          have hdj0 : d j ≠ 0 := by omega
+          have hcancel := congrArg Finsupp.degree
+            (Finsupp.sub_add_single_one_cancel (u := d) (i := j) hdj0)
+          have hcancel' : (d - Finsupp.single j 1).degree + 1 = d.degree := by
+            simpa using hcancel
+          calc
+            d₁.degree = (d - Finsupp.single j 1).degree + 1 := by
+              simp [d₁]
+            _ = d.degree := hcancel'
+            _ = d'.degree := hdeg
+        have hrec := ih (∑ k : Fin n, (e₁ k - e' k)) hD₁ e₁ e' d₁ d' hd₁deg he₁d₁ rfl
+        have hstep := polynomial_rees_one_exchange R n e d i j c
+          (by omega) (by omega)
+        have hadd := add_mem hstep hrec
+        convert hadd using 1 <;> simp [e₁, d₁] <;> ring
 
 /-- The polynomial Rees presentation, including the images of the variables. -/
 structure PolynomialReesPresentation (R : Type u) [CommRing R] (n : ℕ) where
@@ -597,7 +829,107 @@ structure PolynomialReesPresentation (R : Type u) [CommRing R] (n : ℕ) where
 /-- The polynomial Rees algebra is presented by the `2 × 2` relations. -/
 theorem polynomial_rees_presentation
     (R : Type u) [CommRing R] (n : ℕ) :
-    Nonempty (PolynomialReesPresentation R n) := by sorry
+    Nonempty (PolynomialReesPresentation R n) := by
+  classical
+  let B := polynomialRing R n
+  let I := polynomialVariableIdeal R n
+  let S := _root_.reesAlgebra I
+  let A := MvPolynomial (Fin n) B
+  let φ : A →ₐ[B] S :=
+    MvPolynomial.aeval (fun i => polynomialReesVariable R n i)
+  have hsurj : Function.Surjective φ := by
+    intro z
+    rcases z with ⟨z, hz⟩
+    change z ∈ _root_.reesAlgebra I at hz
+    rw [← _root_.adjoin_monomial_eq_reesAlgebra] at hz
+    induction hz using Algebra.adjoin_induction with
+    | mem z hmem =>
+        rcases Submodule.mem_map.mp hmem with ⟨x, hx, rfl⟩
+        rcases Ideal.mem_span_range_iff_exists_fun.mp hx with ⟨c, hc⟩
+        refine ⟨∑ i : Fin n, MvPolynomial.C (c i) * MvPolynomial.X i, ?_⟩
+        apply Subtype.ext
+        change (↑(MvPolynomial.aeval (fun i => polynomialReesVariable R n i)
+          (∑ i : Fin n, MvPolynomial.C (c i) * MvPolynomial.X i)) :
+          _root_.Polynomial B) = _root_.Polynomial.monomial 1 x
+        rw [← hc]
+        simp only [map_sum, map_mul, MvPolynomial.aeval_C, MvPolynomial.aeval_X]
+        simp [polynomialReesVariable, reesDegreeOneElement, reesElement,
+          Subalgebra.coe_algebraMap, MvPolynomial.algebraMap_apply]
+        simp [B]
+    | algebraMap r =>
+        refine ⟨MvPolynomial.C r, ?_⟩
+        apply Subtype.ext
+        change (↑(MvPolynomial.aeval (fun i => polynomialReesVariable R n i)
+          (MvPolynomial.C r)) : _root_.Polynomial B) = _root_.Polynomial.C r
+        rw [MvPolynomial.aeval_C, Subalgebra.coe_algebraMap]
+        rfl
+    | add x y hx hy ihx ihy =>
+        have hx' : x ∈ _root_.reesAlgebra I := by
+          rw [← _root_.adjoin_monomial_eq_reesAlgebra]
+          exact hx
+        have hy' : y ∈ _root_.reesAlgebra I := by
+          rw [← _root_.adjoin_monomial_eq_reesAlgebra]
+          exact hy
+        rcases ihx hx' with ⟨u, hu⟩
+        rcases ihy hy' with ⟨v, hv⟩
+        refine ⟨u + v, ?_⟩
+        rw [map_add, hu, hv]
+        apply Subtype.ext
+        rfl
+    | mul x y hx hy ihx ihy =>
+        have hx' : x ∈ _root_.reesAlgebra I := by
+          rw [← _root_.adjoin_monomial_eq_reesAlgebra]
+          exact hx
+        have hy' : y ∈ _root_.reesAlgebra I := by
+          rw [← _root_.adjoin_monomial_eq_reesAlgebra]
+          exact hy
+        rcases ihx hx' with ⟨u, hu⟩
+        rcases ihy hy' with ⟨v, hv⟩
+        refine ⟨u * v, ?_⟩
+        rw [map_mul, hu, hv]
+        apply Subtype.ext
+        rfl
+  have hrel : ∀ ij : Fin n × Fin n,
+      φ (MvPolynomial.C (MvPolynomial.X ij.1) * MvPolynomial.X ij.2 -
+        MvPolynomial.C (MvPolynomial.X ij.2) * MvPolynomial.X ij.1) = 0 := by
+    rintro ⟨i, j⟩
+    apply Subtype.ext
+    change (↑(MvPolynomial.aeval (fun i => polynomialReesVariable R n i)
+        (MvPolynomial.C (MvPolynomial.X i) * MvPolynomial.X j -
+        MvPolynomial.C (MvPolynomial.X j) * MvPolynomial.X i) : S) :
+      _root_.Polynomial B) = 0
+    rw [map_sub, map_mul, map_mul, MvPolynomial.aeval_C, MvPolynomial.aeval_X,
+      MvPolynomial.aeval_C, MvPolynomial.aeval_X]
+    change _root_.Polynomial.C (MvPolynomial.X i) *
+        _root_.Polynomial.monomial 1 (MvPolynomial.X j) -
+      _root_.Polynomial.C (MvPolynomial.X j) *
+        _root_.Polynomial.monomial 1 (MvPolynomial.X i) = 0
+    simp only [← _root_.Polynomial.C_mul_X_pow_eq_monomial]
+    ring
+  have hJ : ∀ x : A, x ∈ polynomialReesRelationIdeal R n → φ x = 0 := by
+    intro x hx
+    rcases Ideal.mem_span_range_iff_exists_fun.mp hx with ⟨c, hc⟩
+    rw [← hc]
+    simp only [map_sum, map_mul, hrel, mul_zero, Finset.sum_const_zero]
+  have hker : RingHom.ker φ.toRingHom = polynomialReesRelationIdeal R n := by sorry
+  let e : (A ⧸ polynomialReesRelationIdeal R n) ≃ₐ[B] S :=
+    (Ideal.quotientEquivAlgOfEq B hker.symm).trans
+      (Ideal.quotientKerAlgEquivOfSurjective hsurj)
+  refine ⟨{ equivalence := e, sends_variable := ?_ }⟩
+  intro i
+  change (Ideal.quotientKerAlgEquivOfSurjective hsurj)
+      ((Ideal.quotientEquivAlgOfEq B hker.symm)
+        (Ideal.Quotient.mk (polynomialReesRelationIdeal R n)
+          (MvPolynomial.X i))) = polynomialReesVariable R n i
+  rw [Ideal.quotientEquivAlgOfEq_mk]
+  change (Ideal.quotientKerAlgEquivOfSurjective hsurj)
+      (Ideal.Quotient.mk (RingHom.ker φ)
+        (MvPolynomial.X i)) = polynomialReesVariable R n i
+  rw [Ideal.quotientKerAlgEquivOfSurjective_mk]
+  change φ (MvPolynomial.X i) = polynomialReesVariable R n i
+  change (MvPolynomial.aeval (fun i => polynomialReesVariable R n i))
+      (MvPolynomial.X i) = polynomialReesVariable R n i
+  rw [MvPolynomial.aeval_X]
 
 /-- A multi-index and its total degree. -/
 abbrev multiIndex (n : ℕ) := Fin n →₀ ℕ

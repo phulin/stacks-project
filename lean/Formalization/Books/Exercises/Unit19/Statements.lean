@@ -953,7 +953,432 @@ quadratic there, as follows.
      `(Ideal.Quotient.isDomain_iff_prime
        (I := sourceRelationsIdeal)).mpr sourceRelationsIdeal_isPrime`.
 -/
-instance sourceRing_isDomain : IsDomain sourceRing := by sorry
+private def sourceFullReindexAuxEquiv : MvPolynomial (Fin 2) ℚ ≃+*
+    Polynomial (Polynomial ℚ) :=
+  (MvPolynomial.finSuccEquiv ℚ 1).toRingEquiv.trans
+    (Polynomial.mapEquiv (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingEquiv)
+
+private def sourceFullReindexEquiv : sourcePolynomialRing ≃+*
+    Polynomial (Polynomial (Polynomial ℚ)) :=
+  (((MvPolynomial.renameEquiv ℚ (Equiv.swap (0 : Fin 3) 2)).toRingEquiv.trans
+      (MvPolynomial.finSuccEquiv ℚ 2).toRingEquiv).trans
+    (Polynomial.mapEquiv sourceFullReindexAuxEquiv))
+
+private lemma sourceFullReindex_sRelation :
+    sourceFullReindex sourceSRelation = Polynomial.C sourceSPolynomial := by
+  have hfin :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ))
+        (fun k : Fin 2 => Polynomial.C (MvPolynomial.X k)) (2 : Fin 3)) =
+        Polynomial.C (MvPolynomial.X 1) := by
+    rfl
+  have hfinOne :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ))
+        (fun k : Fin 2 => Polynomial.C (MvPolynomial.X k)) (1 : Fin 3)) =
+        Polynomial.C (MvPolynomial.X 0) := by
+    rfl
+  have hfin' :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 1) ℚ))
+        (fun k : Fin 1 => Polynomial.C (MvPolynomial.X k)) (1 : Fin 2)) =
+        Polynomial.C (MvPolynomial.X 0) := by
+    rfl
+  have hswap : (Equiv.swap (0 : Fin 3) 2) 1 = 1 := by
+    decide
+  simp [sourceFullReindex, sourceSRelation, sourceSPolynomial, sourceFullReindexAux,
+    MvPolynomial.renameEquiv_apply, Equiv.swap_apply_left,
+    MvPolynomial.finSuccEquiv_apply, hswap, Polynomial.map_C]
+  rw [hfinOne, hfin]
+  simp [MvPolynomial.finSuccEquiv_apply,
+    Polynomial.map_C, Polynomial.map_X]
+  rw [hfin']
+  simp [sourceBaseRelation]
+
+private lemma planeSecond_quadratic_irreducible : Irreducible
+    (Polynomial.X ^ 2 - Polynomial.C planeSecondPolynomial) := by
+  have hprime :
+      (Ideal.span ({Polynomial.X - Polynomial.C (-1 : ℚ)} : Set (Polynomial ℚ))).IsPrime :=
+    Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (-1 : ℚ))
+  have hE :
+      (Polynomial.X ^ 2 - Polynomial.C planeSecondPolynomial).IsEisensteinAt
+        (Ideal.span ({Polynomial.X - Polynomial.C (-1 : ℚ)} : Set (Polynomial ℚ))) := by
+    refine ⟨?_, ?_, ?_⟩
+    · have hm := Polynomial.monic_X_pow_sub_C (n := 2) planeSecondPolynomial
+        (by simp)
+      rw [hm.leadingCoeff]
+      exact hprime.one_notMem
+    · intro n hn
+      have hdeg :
+          (Polynomial.X ^ 2 - Polynomial.C planeSecondPolynomial).natDegree = 2 := by
+        rw [Polynomial.natDegree_X_pow_sub_C]
+      have hn' : n ≤ 1 := by
+        rw [Polynomial.natDegree_X_pow_sub_C] at hn
+        omega
+      replace hn := hn'
+      interval_cases n
+      · simp [planeSecondPolynomial, Ideal.mem_span_singleton, sub_neg_eq_add]
+        exact ⟨(Polynomial.X + Polynomial.C (2 : ℚ)) *
+          (Polynomial.X + Polynomial.C (3 : ℚ)), by ring⟩
+      · simp
+    · intro h
+      have h' : planeSecondPolynomial ∈
+          Ideal.span ({Polynomial.X - Polynomial.C (-1 : ℚ)} : Set (Polynomial ℚ)) ^ 2 := by
+        simpa [planeSecondPolynomial, sub_neg_eq_add] using h
+      rw [Ideal.span_singleton_pow, Ideal.mem_span_singleton] at h'
+      obtain ⟨q, hq⟩ := h'
+      have hcancel :
+          (Polynomial.X + Polynomial.C (2 : ℚ)) *
+              (Polynomial.X + Polynomial.C (3 : ℚ)) =
+            (Polynomial.X - Polynomial.C (-1 : ℚ)) * q := by
+        apply mul_left_cancel₀ (Polynomial.X_sub_C_ne_zero (-1 : ℚ))
+        calc
+          (Polynomial.X - Polynomial.C (-1 : ℚ)) *
+              ((Polynomial.X + Polynomial.C (2 : ℚ)) *
+                (Polynomial.X + Polynomial.C (3 : ℚ))) =
+              planeSecondPolynomial := by
+                simp [planeSecondPolynomial, sub_neg_eq_add]
+                ring
+          _ = (Polynomial.X - Polynomial.C (-1 : ℚ)) ^ 2 * q := hq
+          _ = (Polynomial.X - Polynomial.C (-1 : ℚ)) *
+              ((Polynomial.X - Polynomial.C (-1 : ℚ)) * q) := by ring
+      have hroot : Polynomial.IsRoot
+          ((Polynomial.X + Polynomial.C (2 : ℚ)) *
+            (Polynomial.X + Polynomial.C (3 : ℚ))) (-1) := by
+        rw [← Polynomial.dvd_iff_isRoot]
+        exact ⟨q, hcancel⟩
+      norm_num [Polynomial.IsRoot] at hroot
+  exact hE.irreducible hprime
+    (Polynomial.monic_X_pow_sub_C planeSecondPolynomial (by norm_num)).isPrimitive
+    (by rw [Polynomial.natDegree_X_pow_sub_C]; norm_num)
+
+private lemma sourceBase_mul_planeSecond_quadratic_irreducible : Irreducible
+    (Polynomial.X ^ 2 - Polynomial.C (sourceBaseRelation * planeSecondPolynomial)) := by
+  have hprime :
+      (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))).IsPrime :=
+    Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (1 : ℚ))
+  have hE :
+      (Polynomial.X ^ 2 - Polynomial.C (sourceBaseRelation * planeSecondPolynomial)).IsEisensteinAt
+        (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))) := by
+    refine ⟨?_, ?_, ?_⟩
+    · have hm := Polynomial.monic_X_pow_sub_C (n := 2)
+        (sourceBaseRelation * planeSecondPolynomial) (by simp)
+      rw [hm.leadingCoeff]
+      exact hprime.one_notMem
+    · intro n hn
+      have hn' : n ≤ 1 := by
+        rw [Polynomial.natDegree_X_pow_sub_C] at hn
+        omega
+      replace hn := hn'
+      interval_cases n
+      · simp [sourceBaseRelation, planeSecondPolynomial, Ideal.mem_span_singleton]
+        exact ⟨(Polynomial.X - Polynomial.C (2 : ℚ)) *
+          (Polynomial.X - Polynomial.C (3 : ℚ)) * planeSecondPolynomial, by
+            simp [planeSecondPolynomial]
+            ring⟩
+      · simp
+    · intro h
+      have h' : sourceBaseRelation * planeSecondPolynomial ∈
+          Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ)) ^ 2 := by
+        simpa [sourceBaseRelation, planeSecondPolynomial] using h
+      rw [Ideal.span_singleton_pow, Ideal.mem_span_singleton] at h'
+      obtain ⟨q, hq⟩ := h'
+      have hcancel :
+          (Polynomial.X - Polynomial.C (2 : ℚ)) *
+              (Polynomial.X - Polynomial.C (3 : ℚ)) * planeSecondPolynomial =
+            (Polynomial.X - Polynomial.C (1 : ℚ)) * q := by
+        apply mul_left_cancel₀ (Polynomial.X_sub_C_ne_zero (1 : ℚ))
+        calc
+          (Polynomial.X - Polynomial.C (1 : ℚ)) *
+              ((Polynomial.X - Polynomial.C (2 : ℚ)) *
+                (Polynomial.X - Polynomial.C (3 : ℚ)) * planeSecondPolynomial) =
+              sourceBaseRelation * planeSecondPolynomial := by
+                simp [sourceBaseRelation]
+                ring
+          _ = (Polynomial.X - Polynomial.C (1 : ℚ)) ^ 2 * q := hq
+          _ = (Polynomial.X - Polynomial.C (1 : ℚ)) *
+              ((Polynomial.X - Polynomial.C (1 : ℚ)) * q) := by ring
+      have hroot : Polynomial.IsRoot
+          ((Polynomial.X - Polynomial.C (2 : ℚ)) *
+            (Polynomial.X - Polynomial.C (3 : ℚ)) * planeSecondPolynomial) 1 := by
+        rw [← Polynomial.dvd_iff_isRoot]
+        exact ⟨q, hcancel⟩
+      norm_num [Polynomial.IsRoot, sourceBaseRelation, planeSecondPolynomial] at hroot
+  exact hE.irreducible hprime
+    (Polynomial.monic_X_pow_sub_C (sourceBaseRelation * planeSecondPolynomial)
+      (by norm_num [sourceBaseRelation, planeSecondPolynomial])).isPrimitive
+    (by rw [Polynomial.natDegree_X_pow_sub_C]; norm_num)
+
+instance sourceRing_isDomain : IsDomain sourceRing := by
+  have hP : ∀ z : FractionRing (Polynomial ℚ),
+      z ^ 2 ≠ algebraMap (Polynomial ℚ) _ sourceBaseRelation := by
+    intro z hz
+    have hmonic : sourceSPolynomial.Monic := by
+      simpa [sourceSPolynomial] using
+        (Polynomial.monic_X_pow_sub_C sourceBaseRelation (by norm_num))
+    have hbase :
+        (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))).IsPrime :=
+      Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (1 : ℚ))
+    have hirrR : Irreducible sourceSPolynomial :=
+      sourceSPolynomial_isEisenstein.irreducible
+        hbase hmonic.isPrimitive (by simp [sourceSPolynomial])
+    have hirrK : Irreducible
+        (sourceSPolynomial.map (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)))) :=
+      hmonic.irreducible_iff_irreducible_map_fraction_map.mp hirrR
+    have hirrK' : Irreducible
+        (Polynomial.X ^ 2 - Polynomial.C
+          (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)) sourceBaseRelation)) := by
+      convert hirrK using 1; simp [sourceSPolynomial]
+    exact (X_pow_sub_C_irreducible_iff_of_prime Nat.prime_two).mp hirrK' z hz
+  have hQ : ∀ z : FractionRing (Polynomial ℚ),
+      z ^ 2 ≠ algebraMap (Polynomial ℚ) _ planeSecondPolynomial := by
+    intro z hz
+    have hmonic : (Polynomial.X ^ 2 - Polynomial.C planeSecondPolynomial).Monic :=
+      Polynomial.monic_X_pow_sub_C planeSecondPolynomial (by norm_num)
+    have hirrK : Irreducible
+        ((Polynomial.X ^ 2 - Polynomial.C planeSecondPolynomial).map
+          (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)))) :=
+      hmonic.irreducible_iff_irreducible_map_fraction_map.mp
+        planeSecond_quadratic_irreducible
+    have hirrK' : Irreducible
+        (Polynomial.X ^ 2 - Polynomial.C
+          (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)) planeSecondPolynomial)) := by
+      convert hirrK using 1; simp
+    exact (X_pow_sub_C_irreducible_iff_of_prime Nat.prime_two).mp hirrK' z hz
+  have hPQ : ∀ z : FractionRing (Polynomial ℚ),
+      z ^ 2 ≠ algebraMap (Polynomial ℚ) _ (sourceBaseRelation * planeSecondPolynomial) := by
+    intro z hz
+    have hmonic :
+        (Polynomial.X ^ 2 - Polynomial.C (sourceBaseRelation * planeSecondPolynomial)).Monic :=
+      Polynomial.monic_X_pow_sub_C _ (by norm_num [sourceBaseRelation, planeSecondPolynomial])
+    have hirrK : Irreducible
+        ((Polynomial.X ^ 2 - Polynomial.C
+          (sourceBaseRelation * planeSecondPolynomial)).map
+          (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)))) :=
+      hmonic.irreducible_iff_irreducible_map_fraction_map.mp
+        sourceBase_mul_planeSecond_quadratic_irreducible
+    have hirrK' : Irreducible
+        (Polynomial.X ^ 2 - Polynomial.C
+          (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ))
+            (sourceBaseRelation * planeSecondPolynomial))) := by
+      convert hirrK using 1; simp
+    exact (X_pow_sub_C_irreducible_iff_of_prime Nat.prime_two).mp hirrK' z hz
+  let Pk : FractionRing (Polynomial ℚ) :=
+    algebraMap (Polynomial ℚ) _ sourceBaseRelation
+  let Qk : FractionRing (Polynomial ℚ) :=
+    algebraMap (Polynomial ℚ) _ planeSecondPolynomial
+  let : Fact (∀ z : FractionRing (Polynomial ℚ), z ^ 2 ≠ Pk + 0 * z) := by
+    refine ⟨?_⟩
+    intro z
+    simpa [Pk] using hP z
+  let L := QuadraticAlgebra (FractionRing (Polynomial ℚ)) Pk 0
+  have hLQ : ∀ z : L, z ^ 2 ≠ algebraMap _ L Qk := by
+    intro z hz
+    have hre := congrArg QuadraticAlgebra.re hz
+    have him := congrArg QuadraticAlgebra.im hz
+    dsimp [L] at hre him
+    simp only [pow_two, QuadraticAlgebra.re_mul, QuadraticAlgebra.im_mul,
+      zero_mul, add_zero] at hre him
+    have him0 : 2 * z.re * z.im = 0 := by
+      linear_combination him
+    have hcases : z.re = 0 ∨ z.im = 0 := by
+      rcases mul_eq_zero.mp him0 with h | h
+      · rcases mul_eq_zero.mp h with h | h
+        · norm_num at h
+        · exact Or.inl h
+      · exact Or.inr h
+    rcases hcases with hre0 | him0
+    · have hrel : Pk * z.im ^ 2 = Qk := by
+        simpa [hre0, pow_two, mul_assoc] using hre
+      have hsq : (Pk * z.im) ^ 2 = Pk * Qk := by
+        calc
+          (Pk * z.im) ^ 2 = Pk * (Pk * z.im ^ 2) := by ring
+          _ = Pk * Qk := by rw [hrel]
+      apply hPQ (Pk * z.im)
+      simpa [Pk, Qk] using hsq
+    · have hrel : z.re ^ 2 = Qk := by
+        simpa [him0, pow_two, mul_assoc] using hre
+      apply hQ z.re
+      simpa [Qk] using hrel
+  let A := Polynomial (Polynomial ℚ) ⧸ Ideal.span {sourceSPolynomial}
+  let qA : Polynomial (Polynomial ℚ) →+* A := Ideal.Quotient.mk _
+  let fRK : Polynomial ℚ →+* FractionRing (Polynomial ℚ) := algebraMap _ _
+  let iR : Polynomial ℚ →+* L := (algebraMap _ L).comp fRK
+  let evalHom : Polynomial (Polynomial ℚ) →+* L :=
+    Polynomial.eval₂RingHom iR QuadraticAlgebra.omega
+  have hsroot : evalHom sourceSPolynomial = 0 := by
+    change Polynomial.eval₂ iR (QuadraticAlgebra.omega : L) sourceSPolynomial = 0
+    simp only [sourceSPolynomial, Polynomial.eval₂_sub, Polynomial.eval₂_pow,
+      Polynomial.eval₂_X, Polynomial.eval₂_C]
+    change (QuadraticAlgebra.omega : L) ^ 2 -
+        algebraMap (FractionRing (Polynomial ℚ)) L
+          (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)) sourceBaseRelation) = 0
+    rw [pow_two, QuadraticAlgebra.omega_mul_omega_eq_algebraMap]
+    dsimp [L, Pk]
+    simp
+  let iA : A →+* L :=
+    Ideal.Quotient.lift _ evalHom (by
+      intro p hp
+      rw [Ideal.mem_span_singleton] at hp
+      obtain ⟨u, hu⟩ := hp
+      change evalHom p = 0
+      rw [hu, map_mul, hsroot, zero_mul])
+  have hiA : Function.Injective iA := by
+    intro x y hxy
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+    obtain ⟨q, rfl⟩ := Ideal.Quotient.mk_surjective y
+    rw [Ideal.Quotient.lift_mk, Ideal.Quotient.lift_mk] at hxy
+    apply (Ideal.Quotient.mk_eq_mk_iff_sub_mem p q).2
+    have heval : evalHom (p - q) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hsirrK : Irreducible (sourceSPolynomial.map fRK) := by
+      have hs := X_pow_sub_C_irreducible_of_prime Nat.prime_two
+        (a := Pk) (by simpa [Pk] using hP)
+      convert hs using 1; simp [sourceSPolynomial, fRK, Pk]
+    have hrootK :
+        (sourceSPolynomial.map fRK).aeval
+          (QuadraticAlgebra.omega : L) = 0 := by
+      rw [Polynomial.aeval_def, Polynomial.eval₂_map]
+      simp only [sourceSPolynomial, Polynomial.eval₂_sub, Polynomial.eval₂_pow,
+        Polynomial.eval₂_X, Polynomial.eval₂_C]
+      change (QuadraticAlgebra.omega : L) ^ 2 -
+          algebraMap (FractionRing (Polynomial ℚ)) L
+            (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)) sourceBaseRelation) = 0
+      rw [pow_two, QuadraticAlgebra.omega_mul_omega_eq_algebraMap]
+      dsimp [L, Pk]
+      simp
+    have hzeroK : ((p - q).map fRK).aeval
+        (QuadraticAlgebra.omega : L) = 0 := by
+      change ((p - q).map fRK).eval₂ (algebraMap _ L)
+          (QuadraticAlgebra.omega : L) = 0
+      rw [Polynomial.eval₂_map]
+      exact heval
+    have hdivK : sourceSPolynomial.map fRK ∣ (p - q).map fRK :=
+      (hsirrK.dvd_iff_aeval_eq_zero hrootK).mp hzeroK
+    have hdivR : sourceSPolynomial ∣ p - q :=
+      (Polynomial.map_dvd_map fRK
+        (IsFractionRing.injective (Polynomial ℚ) (FractionRing (Polynomial ℚ)))
+        (by simpa [sourceSPolynomial] using
+          (Polynomial.monic_X_pow_sub_C sourceBaseRelation (by norm_num)))).mp hdivK
+    exact Ideal.mem_span_singleton.mpr hdivR
+  have hTmonic : sourceTPolynomial.Monic := by
+    rw [sourceTPolynomial, ← Polynomial.C_mul, ← Polynomial.C_mul]
+    exact Polynomial.monic_X_pow_sub_C _ (by norm_num)
+  let g : Polynomial A := sourceTPolynomial.map qA
+  have hgmonic : g.Monic := hTmonic.map qA
+  have hgmap : g.map iA = Polynomial.X ^ 2 - Polynomial.C (algebraMap _ L Qk) := by
+    have hcoeff (f : Polynomial ℚ) :
+        iA (qA (Polynomial.C f)) =
+          algebraMap (FractionRing (Polynomial ℚ)) L
+            (algebraMap (Polynomial ℚ) (FractionRing (Polynomial ℚ)) f) := by
+      dsimp [iA, qA]
+      rw [Ideal.Quotient.lift_mk]
+      simp [evalHom, iR, fRK]
+    simp [g, sourceTPolynomial, planeSecondPolynomial, hcoeff, Qk, Pk, L,
+      Polynomial.map_C, Polynomial.map_X]
+  have hprimeG : (Ideal.span {g} : Ideal (Polynomial A)).IsPrime := by
+    refine monic_span_isPrime_of_map_isPrime (R := A) (S := L)
+      iA hiA g hgmonic ?_
+    rw [hgmap]
+    exact Ideal.isPrime_span_singleton_of_prime
+      (UniqueFactorizationMonoid.irreducible_iff_prime.mp
+        (X_pow_sub_C_irreducible_of_prime Nat.prime_two hLQ))
+  let qJ :=
+    (Ideal.polynomialQuotientEquivQuotientPolynomial
+      (Ideal.span {sourceSPolynomial})).toRingHom.comp
+      (Polynomial.mapRingHom qA)
+  have hmapG :
+      (Ideal.span {g} : Ideal (Polynomial A)).map
+          (Ideal.polynomialQuotientEquivQuotientPolynomial
+            (Ideal.span {sourceSPolynomial})) =
+        (Ideal.span {sourceTPolynomial} :
+          Ideal (Polynomial (Polynomial (Polynomial ℚ)))).map qJ := by
+    simp only [Ideal.map_span, Set.image_singleton]
+    congr 1
+  have hprimeMapped :
+      ((Ideal.span {sourceTPolynomial} :
+        Ideal (Polynomial (Polynomial (Polynomial ℚ)))).map qJ).IsPrime := by
+    rw [← hmapG]
+    exact @Ideal.map_isPrime_of_equiv _ _ _ _ _ _ _
+      (Ideal.polynomialQuotientEquivQuotientPolynomial
+        (Ideal.span {sourceSPolynomial})) _ hprimeG
+  have hqAsurj : Function.Surjective (Polynomial.mapRingHom qA) :=
+    Polynomial.map_surjective _ Ideal.Quotient.mk_surjective
+  have hqJsurj : Function.Surjective qJ := by
+    intro z
+    obtain ⟨p, hp⟩ :=
+      (Ideal.polynomialQuotientEquivQuotientPolynomial
+        (Ideal.span {sourceSPolynomial})).surjective z
+    obtain ⟨r, hr⟩ := hqAsurj p
+    refine ⟨r, ?_⟩
+    change (Ideal.polynomialQuotientEquivQuotientPolynomial
+      (Ideal.span {sourceSPolynomial})) (r.map qA) = z
+    change r.map qA = p at hr
+    rw [hr, hp]
+  have hkerqJ : RingHom.ker qJ =
+      Ideal.map (Polynomial.C : Polynomial (Polynomial ℚ) →+*
+        Polynomial (Polynomial (Polynomial ℚ)))
+        (Ideal.span {sourceSPolynomial}) := by
+    ext p
+    change qJ p = 0 ↔ p ∈ _
+    rw [show qJ p =
+        (Ideal.polynomialQuotientEquivQuotientPolynomial
+          (Ideal.span {sourceSPolynomial})) (p.map qA) by rfl]
+    rw [RingEquiv.map_eq_zero_iff]
+    change p ∈ RingHom.ker (Polynomial.mapRingHom qA) ↔ p ∈ _
+    rw [Polynomial.ker_mapRingHom, Ideal.mk_ker]
+  have hprimeSup :
+      ((Ideal.span {sourceTPolynomial} :
+        Ideal (Polynomial (Polynomial (Polynomial ℚ)))).map qJ).comap qJ |>.IsPrime :=
+    Ideal.comap_isPrime qJ
+      (K := (Ideal.span {sourceTPolynomial} :
+        Ideal (Polynomial (Polynomial (Polynomial ℚ)))).map qJ)
+      (H := hprimeMapped)
+  rw [Ideal.comap_map_of_surjective qJ hqJsurj,
+    ← RingHom.ker_eq_comap_bot, hkerqJ] at hprimeSup
+  have hC :
+      Ideal.map (Polynomial.C : Polynomial (Polynomial ℚ) →+*
+        Polynomial (Polynomial (Polynomial ℚ)))
+          (Ideal.span {sourceSPolynomial}) =
+        Ideal.span {Polynomial.C sourceSPolynomial} := by
+    rw [Ideal.map_span]
+    simp only [Set.image_singleton]
+  have hprimeJ :
+      ((Ideal.span {Polynomial.C sourceSPolynomial, sourceTPolynomial} :
+        Ideal (Polynomial (Polynomial (Polynomial ℚ))))).IsPrime := by
+    simpa [Ideal.span_insert, hC, sup_comm] using hprimeSup
+  have hmapRelations :
+      Ideal.map (sourceFullReindexEquiv : sourcePolynomialRing →+*
+        Polynomial (Polynomial (Polynomial ℚ))) sourceRelationsIdeal =
+        Ideal.span {Polynomial.C sourceSPolynomial, sourceTPolynomial} := by
+    rw [sourceRelationsIdeal, Ideal.map_span]
+    simp only [Set.image_insert_eq, Set.image_singleton]
+    have hS : (sourceFullReindexEquiv : sourcePolynomialRing →+*
+        Polynomial (Polynomial (Polynomial ℚ))) sourceSRelation =
+        Polynomial.C sourceSPolynomial := by
+      change sourceFullReindex sourceSRelation = Polynomial.C sourceSPolynomial
+      exact sourceFullReindex_sRelation
+    have hT : (sourceFullReindexEquiv : sourcePolynomialRing →+*
+        Polynomial (Polynomial (Polynomial ℚ))) sourceTRelation = sourceTPolynomial := by
+      change sourceFullReindex sourceTRelation = sourceTPolynomial
+      exact sourceFullReindex_tRelation
+    rw [hS, hT]
+  have hsourcePrime :
+      (Ideal.span {Polynomial.C sourceSPolynomial, sourceTPolynomial} :
+        Ideal (Polynomial (Polynomial (Polynomial ℚ)))).comap
+          (sourceFullReindexEquiv : sourcePolynomialRing →+*
+            Polynomial (Polynomial (Polynomial ℚ))) |>.IsPrime :=
+    Ideal.comap_isPrime (sourceFullReindexEquiv : sourcePolynomialRing →+*
+      Polynomial (Polynomial (Polynomial ℚ)))
+      (K := Ideal.span {Polynomial.C sourceSPolynomial, sourceTPolynomial})
+      (H := hprimeJ)
+  have hcancel :
+      (Ideal.span {Polynomial.C sourceSPolynomial, sourceTPolynomial} :
+        Ideal (Polynomial (Polynomial (Polynomial ℚ)))).comap
+          (sourceFullReindexEquiv : sourcePolynomialRing →+*
+            Polynomial (Polynomial (Polynomial ℚ))) = sourceRelationsIdeal := by
+    rw [← hmapRelations, Ideal.map_comap_of_equiv]
+    exact Ideal.comap_of_equiv sourceFullReindexEquiv
+  rw [hcancel] at hsourcePrime
+  exact (Ideal.Quotient.isDomain_iff_prime (I := sourceRelationsIdeal)).mpr
+    hsourcePrime
 instance planeCurveRing_isDomain : IsDomain planeCurveRing := by
   exact (Ideal.Quotient.isDomain_iff_prime (I := Ideal.span {planeRelation})).mpr
     planeIdeal_isPrime

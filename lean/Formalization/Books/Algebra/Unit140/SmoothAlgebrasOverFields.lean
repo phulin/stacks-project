@@ -84,6 +84,27 @@ theorem characterize_smooth_kbar
           (MaximalSpectrum.toPrimeSpectrum m) ] := by
   sorry
 
+theorem smoothAt_iff_regularLocal_of_isAlgClosed
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] [IsAlgClosed k]
+    (m : MaximalSpectrum S) :
+    Formalization.Books.Algebra.Unit137.IsSmoothAt k S
+        (MaximalSpectrum.toPrimeSpectrum m) ↔
+      IsRegularLocalRing (Localization.AtPrime m.asIdeal) := by
+  exact (characterize_smooth_kbar m).out 3 0
+
+theorem smoothAt_iff_differentialFiber_rank_eq_of_isAlgClosed
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] [IsAlgClosed k]
+    (m : MaximalSpectrum S) :
+    Formalization.Books.Algebra.Unit137.IsSmoothAt k S
+        (MaximalSpectrum.toPrimeSpectrum m) ↔
+      ((Module.finrank
+          (MaximalSpectrum.toPrimeSpectrum m).asIdeal.ResidueField
+          (DifferentialFiber k S (MaximalSpectrum.toPrimeSpectrum m)) : ℕ∞) :
+        WithBot ℕ∞) = ringKrullDim (Localization.AtPrime m.asIdeal) := by
+  exact (characterize_smooth_kbar m).out 3 2
+
 /-! ## Smoothness over an arbitrary field -/
 
 theorem characterize_smooth_over_field
@@ -100,6 +121,15 @@ theorem characterize_smooth_over_field
       (Formalization.Books.Algebra.Unit137.IsSmoothAt k S q →
         IsRegularLocalRing (Localization.AtPrime q.asIdeal)) := by
   sorry
+
+theorem smoothAt_iff_differentialFiber_rank_eq
+    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] (q : PrimeSpectrum S) :
+    Formalization.Books.Algebra.Unit137.IsSmoothAt k S q ↔
+      ((Module.finrank q.asIdeal.ResidueField
+          (DifferentialFiber k S q) : ℕ∞) : WithBot ℕ∞) =
+        Formalization.Books.Topology.Unit10.krullDimensionAt q := by
+  exact (characterize_smooth_over_field q).1.out 0 2
 
 /-! ## The differential from the cotangent space -/
 
@@ -198,6 +228,20 @@ theorem characteristic_zero_local_smooth
         Formalization.Books.Algebra.Unit137.DifferentialsFiniteFreeAt k S q,
         IsRegularLocalRing (Localization.AtPrime q.asIdeal) ] := by
   sorry
+
+theorem characteristicZero_smoothAt_iff_differentialsFiniteFree
+    {k S : Type u} [Field k] [CharZero k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] (q : PrimeSpectrum S) :
+    Formalization.Books.Algebra.Unit137.IsSmoothAt k S q ↔
+      Formalization.Books.Algebra.Unit137.DifferentialsFiniteFreeAt k S q := by
+  exact (characteristic_zero_local_smooth q).out 0 1
+
+theorem characteristicZero_smoothAt_iff_regularLocal
+    {k S : Type u} [Field k] [CharZero k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] (q : PrimeSpectrum S) :
+    Formalization.Books.Algebra.Unit137.IsSmoothAt k S q ↔
+      IsRegularLocalRing (Localization.AtPrime q.asIdeal) := by
+  exact (characteristic_zero_local_smooth q).out 0 2
 
 /-! ## Characteristic-p counterexamples -/
 

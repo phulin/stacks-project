@@ -1821,7 +1821,7 @@ theorem openPresheafExtension_restrict_iso (C : Type u) [Category.{v} C]
             (Opens.map f).map (hf.functor.map i.unop) =
               eqToHom hobjW ≫ i.unop ≫ eqToHom hobjV.symm := by
           simpa using (Functor.congr_hom hfun i.unop)
-        simp [hmap, f, Functor.map_comp, eqToHom_map, Category.assoc] <;> rfl)
+        simp [hmap, f, Functor.map_comp, eqToHom_map, Category.assoc] ; rfl)
   exact ⟨(hf.isOpenMap.pullbackObjIso
     ((openPresheafExtensionByInitial C U).obj F)) ≪≫ e⟩
 

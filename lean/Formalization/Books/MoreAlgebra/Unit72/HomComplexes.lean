@@ -126,7 +126,12 @@ theorem homComplexCohomologyEquiv_exists {R : Type u} [CommRing R]
     Nonempty ((homComplex L M).homology n ≃+
       ((HomotopyCategory.quotient (ModuleCat.{u} R) (.up ℤ)).obj L ⟶
         (HomotopyCategory.quotient (ModuleCat.{u} R) (.up ℤ)).obj (M⟦n⟧))) := by
-  sorry
+  let F := forget₂ (ModuleCat.{u} R) Ab
+  let S := (homComplex L M).sc n
+  let e₁ := (S.mapHomologyIso F).symm.addCommGroupIsoToAddEquiv
+  let H := (F.mapHomologicalComplex (.up ℤ)).obj (homComplex L M)
+  let e₂ := (HomologicalComplex.homologyMapIso (Iso.refl H) n).addCommGroupIsoToAddEquiv
+  exact ⟨e₁.trans (e₂.trans (canonicalAdditiveHomComplexCohomologyEquiv L M n))⟩
 
 noncomputable def homComplexCohomologyEquiv {R : Type u} [CommRing R]
     (L M : Comp R) (n : ℤ) :
@@ -155,7 +160,14 @@ written in the source order. -/
 theorem componentHomTensorEquiv_exists {R : Type u} [CommRing R]
     (A B C : ModuleCat.{u} R) :
     Nonempty ((A ⟶ ModuleCat.of R (B ⟶ C)) ≃ (A ⊗ B ⟶ C)) := by
-  sorry
+  let e : (A ⟶ ModuleCat.of R (B ⟶ C)) ≃
+      (A ⊗ B ⟶ C) :=
+    (moduleHomTensorHomEquiv A B C).symm.trans
+      { toFun := fun f => (β_ B A).inv ≫ f
+        invFun := fun f => (β_ B A).hom ≫ f
+        left_inv := by intro f; simp
+        right_inv := by intro f; simp }
+  exact ⟨e⟩
 
 noncomputable def componentHomTensorEquiv {R : Type u} [CommRing R]
     (A B C : ModuleCat.{u} R) :
@@ -168,14 +180,48 @@ theorem equation_identification_exists {R : Type u} [CommRing R]
     (K L M : Comp R) (r s q : ℤ) :
     Nonempty ((K.X (-q) ⟶ ModuleCat.of R (L.X (-s) ⟶ M.X r)) ≃
       ((K.X (-q) ⊗ L.X (-s)) ⟶ M.X r)) := by
-  sorry
+  exact componentHomTensorEquiv_exists (K.X (-q)) (L.X (-s)) (M.X r)
 
 /-- The source's product-indexed description of a degree-n cochain. -/
 theorem homCochain_product_equiv_exists {R : Type u} [CommRing R]
     (L M : Comp R) (n : ℤ) :
     Nonempty (homCochain L M n ≃
       ∀ (p q : ℤ) (_ : n = p + q), L.X (-q) ⟶ M.X p) := by
-  sorry
+  let fwd : homCochain L M n →
+      (∀ (p q : ℤ) (_ : n = p + q), L.X (-q) ⟶ M.X p) :=
+    fun z p q h => z ⟨-q, p, (by omega)⟩
+  let e : (homCochain L M n ≃
+      ∀ (p q : ℤ) (_ : n = p + q), L.X (-q) ⟶ M.X p) :=
+    Equiv.ofBijective fwd (by
+      constructor
+      · intro z z' h
+        apply CochainComplex.HomComplex.Cochain.ext z z'
+        intro p q hpq
+        have hh := congrFun (congrFun (congrFun h q) (-p)) (by omega)
+        change z ⟨-(-p), q, _⟩ = z' ⟨-(-p), q, _⟩ at hh
+        have hT : (⟨-(-p), q, (by omega)⟩ :
+            CochainComplex.HomComplex.Triplet n) = ⟨p, q, hpq⟩ := by
+          congr 1
+          simp only [neg_neg]
+        rw [hT] at hh
+        exact hh
+      · intro f
+        let z : homCochain L M n := fun T =>
+          (CategoryTheory.eqToHom (congrArg L.X (by
+            have h : T.p = - -T.p := by omega
+            exact h))) ≫
+            f T.q (-T.p) (by have h := T.hpq; omega)
+        refine ⟨z, ?_⟩
+        funext p q h
+        simp [fwd, z]
+        apply eq_of_heq
+        rw [CategoryTheory.eqToHom_comp_heq_iff]
+        have hf : HEq (f p (- -q) (by omega)) (f p q h) := by
+          congr 1
+          · omega
+          · exact proof_irrel_heq _ _
+        exact hf)
+  exact ⟨e⟩
 
 noncomputable def homCochainProductEquiv {R : Type u} [CommRing R]
     (L M : Comp R) (n : ℤ) :
@@ -193,8 +239,20 @@ theorem homDifferential_as_composition {R : Type u} [CommRing R]
           (CochainComplex.HomComplex.Cochain.diff G) (by omega) +
         (n + 1).negOnePow •
           CochainComplex.HomComplex.Cochain.comp
-            (CochainComplex.HomComplex.Cochain.diff F) z (by omega) := by
-  sorry
+          (CochainComplex.HomComplex.Cochain.diff F) z (by omega) := by
+  apply CochainComplex.HomComplex.Cochain.ext
+  intro p q hpq
+  rw [CochainComplex.HomComplex.δ_v n (n + 1) rfl z p q hpq
+      (p + n) (p + 1) (by omega) (by omega)]
+  rw [CochainComplex.HomComplex.Cochain.add_v,
+      CochainComplex.HomComplex.Cochain.units_smul_v]
+  rw [CochainComplex.HomComplex.Cochain.comp_v z
+      (CochainComplex.HomComplex.Cochain.diff G) (by omega)
+      p (p + n) q rfl (by omega)]
+  rw [CochainComplex.HomComplex.Cochain.comp_v
+      (CochainComplex.HomComplex.Cochain.diff F) z (by omega)
+      p (p + 1) q (by omega) (by omega)]
+  rfl
 
 /-- The component form of the preceding identity is the source's β equation
 when `F` is a Hom complex. -/
@@ -260,7 +318,54 @@ theorem componentEvaluation_exists {R : Type u} [CommRing R]
         ModuleCat.of R (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p)) //
       ∀ (φ : L.X (-q) ⟶ M.X p) (k : K.X r) (ψ : K.X r ⟶ L.X (-q)),
         c.hom (φ ⊗ₜ[R] k) ψ = φ (ψ k)} := by
-  sorry
+  let b :
+      (L.X (-q) ⟶ M.X p) →ₗ[R]
+        K.X r →ₗ[R] (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p) :=
+    { toFun := fun φ =>
+        { toFun := fun k =>
+            ModuleCat.ofHom
+              { toFun := fun ψ => φ (ψ k)
+                map_add' := by intros; simp
+                map_smul' := by intros; simp }
+          map_add' := by
+            intros k₁ k₂
+            apply ModuleCat.hom_ext
+            apply LinearMap.ext
+            intro ψ
+            simp
+          map_smul' := by
+            intros a k
+            apply ModuleCat.hom_ext
+            apply LinearMap.ext
+            intro ψ
+            simp }
+      map_add' := by
+        intros φ₁ φ₂
+        apply LinearMap.ext
+        intro k
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro ψ
+        simp
+      map_smul' := by
+        intros a φ
+        apply LinearMap.ext
+        intro k
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro ψ
+        simp }
+  let raw := (TensorProduct.lift.equiv (RingHom.id R)
+    (L.X (-q) ⟶ M.X p) (K.X r)
+    (ModuleCat.of R (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p))) b
+  let c : ((ModuleCat.of R (L.X (-q) ⟶ M.X p)) ⊗ K.X r ⟶
+      ModuleCat.of R (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p)) :=
+    ModuleCat.ofHom raw
+  refine ⟨⟨c, ?_⟩⟩
+  intro φ k ψ
+  change (raw (φ ⊗ₜ[R] k)) ψ = φ (ψ k)
+  rw [TensorProduct.lift.equiv_apply]
+  rfl
 
 /-- A usable chosen representative of the canonical component evaluation. -/
 noncomputable def componentEvaluation {R : Type u} [CommRing R]

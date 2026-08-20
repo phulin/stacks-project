@@ -1332,16 +1332,13 @@ private theorem silly_normal_right_apply
       ratioLocalization R x y) = (a : ratioLocalization R x y) + b := by
   simp only [sillyNormalRight, LinearMap.add_apply, LinearMap.comp_apply,
     LinearMap.fst_apply, LinearMap.snd_apply]
-  simp only [ratioXYToBoth, ratioYXToBoth, map_add, Subalgebra.coe_add,
-    AlgHom.toLinearMap_apply]
+  simp only [Subalgebra.coe_add, AlgHom.toLinearMap_apply]
   have ha :
-      ((Subalgebra.inclusion (show ratioXYSubalgebra x y ≤
-          ratioBothSubalgebra x y from le_sup_left) a : ratioBothSubalgebra x y) :
+      (((ratioXYToBoth x y) a : ratioBothSubalgebra x y) :
         ratioLocalization R x y) = a := by
     exact Subalgebra.coe_inclusion _ _
   have hb :
-      ((Subalgebra.inclusion (show ratioYXSubalgebra x y ≤
-          ratioBothSubalgebra x y from le_sup_right) b : ratioBothSubalgebra x y) :
+      (((ratioYXToBoth x y) b : ratioBothSubalgebra x y) :
         ratioLocalization R x y) = b := by
     exact Subalgebra.coe_inclusion _ _
   rw [ha, hb]

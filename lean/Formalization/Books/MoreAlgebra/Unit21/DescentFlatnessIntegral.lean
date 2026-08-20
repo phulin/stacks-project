@@ -311,9 +311,8 @@ private theorem mvPolynomial_sub_eval_mem_span
       have hright := (Ideal.span (Set.range (fun i =>
         MvPolynomial.X i - MvPolynomial.C (a i)))).mul_mem_right
           (MvPolynomial.X i) hp
-      convert add_mem hright hmul using 1 <;>
-        simp only [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂_mul,
-          MvPolynomial.eval₂Hom_C, map_sub, map_mul]
+      convert add_mem hright hmul using 1
+      simp only [MvPolynomial.eval₂Hom_X', map_mul]
       ring
 
 private theorem exists_iInf_le_of_isPrime
@@ -361,7 +360,6 @@ theorem split_image
       change Ideal.comap (algebraMap R S) q.asIdeal =
         (Ideal.comap e.toRingHom q.asIdeal).comap
           (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal))
-      rw [Ideal.comap_comap]
       change Ideal.comap (algebraMap R S) q.asIdeal =
         Ideal.comap (e.toRingHom.comp
           (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal)))
@@ -407,7 +405,8 @@ theorem split_image
     have hconst : MvPolynomial.C (φ a) ∈ q''.asIdeal := by
       have haQ : a ∈ q''.asIdeal := hq'' ha
       have := q''.asIdeal.sub_mem haQ hsub'
-      convert this using 1 <;> ring
+      convert this using 1
+      all_goals ring
     have hconst' : Ideal.Quotient.mk presentation.ideal (MvPolynomial.C (φ a)) ∈ q'.asIdeal :=
       hconst
     change φ a ∈ (PrimeSpectrum.comap (algebraMap R S) q).asIdeal

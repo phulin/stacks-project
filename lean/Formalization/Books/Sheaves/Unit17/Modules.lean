@@ -559,14 +559,130 @@ noncomputable def tensorProductSheaf {X : TopCat.{v}}
    A convenient implementation may instead identify both sides as left
    adjoints to the same restriction-of-scalars functor and invoke uniqueness
    of left adjoints. -/
-theorem moduleSheafification_changeOfRings_iso
-    {X : TopCat.{v}} {O O' : RingPresheaf.{v, v} X}
-    (α : O ⟶ O') (F : PMod O) :
-    Nonempty
-      (moduleSheafification ((changeOfRings α).obj F) ≅
-        tensorProductSheaf (ringSheafificationMap α)
-          (moduleSheafification F)) := by
-  sorry
+private noncomputable def moduleSheafification_changeOfRings_presheafIso
+    {X : TopCat.{v}} {O O' : RingPresheaf.{v, v} X} (α : O ⟶ O')
+    (hβ : (ringSheafificationUnit O) ≫ (ringSheafificationMap α).hom =
+      α ≫ ringSheafificationUnit O') :
+    (H : SheafOfModules.{v} (ringSheafification O')) →
+      ((PresheafOfModules.restrictScalars (ringSheafificationUnit O)).obj
+        ((SheafOfModules.restrictScalars (ringSheafificationMap α)).obj H).val) ≅
+      (PresheafOfModules.restrictScalars
+        (asIdentityRingPresheafMorphism α)).obj
+        ((PresheafOfModules.restrictScalars (ringSheafificationUnit O')).obj
+          H.val) := by
+  intro H
+  let β := ringSheafificationMap α
+  refine PresheafOfModules.isoMk (fun U => ?_) ?_
+  · have hs :
+        (((PresheafOfModules.restrictScalars (ringSheafificationUnit O)).obj
+          ((SheafOfModules.restrictScalars β).obj H).val).obj U) =
+          (ModuleCat.restrictScalars ((ringSheafificationUnit O).app U).hom).obj
+            ((ModuleCat.restrictScalars (β.hom.app U).hom).obj (H.val.obj U)) := by
+      rw [SheafOfModules.restrictScalars_obj_val,
+        PresheafOfModules.restrictScalars_obj,
+        PresheafOfModules.restrictScalars_obj,
+        PresheafOfModules.restrictScalarsObj_obj,
+        PresheafOfModules.restrictScalarsObj_obj]
+    have hobj :
+        (((PresheafOfModules.restrictScalars
+          (asIdentityRingPresheafMorphism α)).obj
+          ((PresheafOfModules.restrictScalars (ringSheafificationUnit O')).obj
+            H.val)).obj U) =
+          (ModuleCat.restrictScalars
+            ((asIdentityRingPresheafMorphism α).app U).hom).obj
+            ((ModuleCat.restrictScalars ((ringSheafificationUnit O').app U).hom).obj
+              (H.val.obj U)) := by
+      rw [PresheafOfModules.restrictScalars_obj,
+        PresheafOfModules.restrictScalars_obj,
+        PresheafOfModules.restrictScalarsObj_obj,
+        PresheafOfModules.restrictScalarsObj_obj]
+    have ht := hobj.symm
+    have hU :
+        (β.hom.app U).hom.comp ((ringSheafificationUnit O).app U).hom =
+          ((ringSheafificationUnit O').app U).hom.comp (α.app U).hom := by
+      rw [← RingCat.hom_comp, ← RingCat.hom_comp]
+      rw [← NatTrans.comp_app, ← NatTrans.comp_app]
+      exact congrArg (fun m => (m.app U).hom) hβ
+    have hαU : (α.app U).hom =
+        ((asIdentityRingPresheafMorphism α).app U).hom := by
+      simpa using (congrArg RingCat.Hom.hom
+        (asIdentityRingPresheafMorphism_app α U)).symm
+    exact
+      eqToIso hs ≪≫
+      ((ModuleCat.restrictScalarsComp'App
+          ((ringSheafificationUnit O).app U).hom (β.hom.app U).hom
+          ((β.hom.app U).hom.comp ((ringSheafificationUnit O).app U).hom)
+          rfl (H.val.obj U)).symm ≪≫
+        (ModuleCat.restrictScalarsCongr
+          (f := (β.hom.app U).hom.comp ((ringSheafificationUnit O).app U).hom)
+          (g := ((ringSheafificationUnit O').app U).hom.comp (α.app U).hom)
+          hU).app (H.val.obj U) ≪≫
+        (ModuleCat.restrictScalarsComp'App
+          (α.app U).hom ((ringSheafificationUnit O').app U).hom
+          (((ringSheafificationUnit O').app U).hom.comp (α.app U).hom)
+          rfl (H.val.obj U)) ≪≫
+        (ModuleCat.restrictScalarsCongr
+          (f := (α.app U).hom)
+          (g := ((asIdentityRingPresheafMorphism α).app U).hom)
+          hαU).app
+          ((ModuleCat.restrictScalars ((ringSheafificationUnit O').app U).hom).obj
+            (H.val.obj U))) ≪≫
+      eqToIso ht
+  · intro U V f
+    ext x
+    change (H.val.map f).hom x = (H.val.map f).hom x
+    rfl
+
+private noncomputable def moduleSheafification_changeOfRings_restrictionIso
+    {X : TopCat.{v}} {O O' : RingPresheaf.{v, v} X} (α : O ⟶ O') :
+    (SheafOfModules.restrictScalars (ringSheafificationMap α) ⋙
+      sheafModuleRestriction O) ≅
+        (sheafModuleRestriction O' ⋙ restrictionOfScalars α) := by
+  have hβ : (ringSheafificationUnit O) ≫ (ringSheafificationMap α).hom =
+      α ≫ ringSheafificationUnit O' := by
+    change
+      CategoryTheory.toSheafify (Opens.grothendieckTopology X) O ≫
+          ((CategoryTheory.presheafToSheaf
+            (Opens.grothendieckTopology X) RingCat).map α).hom =
+        α ≫ (CategoryTheory.toSheafify
+          (Opens.grothendieckTopology X) O')
+    exact (CategoryTheory.toSheafify_naturality
+      (Opens.grothendieckTopology X) α).symm
+  let β := ringSheafificationMap α
+  let R₂ : SheafOfModules.{v} (ringSheafification O') ⥤ PMod O :=
+    SheafOfModules.restrictScalars β ⋙ sheafModuleRestriction O
+  let R₁ : SheafOfModules.{v} (ringSheafification O') ⥤ PMod O :=
+    sheafModuleRestriction O' ⋙ restrictionOfScalars α
+  let eH := moduleSheafification_changeOfRings_presheafIso α hβ
+  let hα (M : PMod O') :
+      (PresheafOfModules.restrictScalars
+        (asIdentityRingPresheafMorphism α)).obj M ≅
+        (restrictionOfScalars α).obj M := by
+    refine PresheafOfModules.isoMk (fun U => ?_) ?_
+    · simpa [PresheafOfModules.restrictScalars, SheafOfModules.restrictScalars,
+        PresheafOfModules.pushforward₀Obj, restrictionOfScalars] using
+        (ModuleCat.restrictScalarsCongr
+          (f := ((asIdentityRingPresheafMorphism α).app U).hom)
+          (g := ((asIdentityRingPresheafMorphism α).app U).hom)
+          rfl).app (M.obj U)
+    · intro U V f
+      ext x
+      change M.map f x = M.map f x
+      rfl
+  refine NatIso.ofComponents (fun H => ?_) ?_
+  · simpa [R₂, R₁, sheafModuleRestriction, restrictionOfScalars] using
+      (eH H ≪≫ hα
+        ((PresheafOfModules.restrictScalars (ringSheafificationUnit O')).obj
+          H.val))
+  intro H H' f
+  ext U x
+  rfl
+
+private noncomputable def leftAdjointIsoOfNatIsoRight
+    {C D : Type*} [Category C] [Category D]
+    {L₁ L₂ : C ⥤ D} {R₁ R₂ : D ⥤ C}
+    (adj₁ : L₁ ⊣ R₁) (adj₂ : L₂ ⊣ R₂) (eR : R₂ ≅ R₁) : L₁ ≅ L₂ :=
+  Adjunction.leftAdjointUniq adj₁ (adj₂.ofNatIsoRight eR)
 
 /-- The sheaf change-of-rings functor. -/
 noncomputable def sheafChangeOfRings {X : TopCat.{v}}
@@ -731,6 +847,34 @@ noncomputable def sheafChangeOfRingsAdjunction {X : TopCat.{v}}
       (α : O₁ ⟶ O₂) :
     sheafChangeOfRings α ⊣ sheafRestrictionOfScalars α :=
   Classical.choice (exists_sheafChangeOfRingsAdjunction α)
+
+private noncomputable def moduleSheafification_changeOfRings_functorIso
+    {X : TopCat.{v}} {O O' : RingPresheaf.{v, v} X} (α : O ⟶ O') :
+    (changeOfRings α ⋙ moduleSheafificationFunctor O') ≅
+      (moduleSheafificationFunctor O ⋙
+        sheafChangeOfRings (ringSheafificationMap α)) := by
+  let adj₁ :
+      (changeOfRings α ⋙ moduleSheafificationFunctor O') ⊣
+        (sheafModuleRestriction O' ⋙ restrictionOfScalars α) :=
+    (changeOfRingsAdjunction α).comp (moduleSheafificationAdjunction O')
+  let adj₂ :
+      (moduleSheafificationFunctor O ⋙
+        sheafChangeOfRings (ringSheafificationMap α)) ⊣
+        (sheafRestrictionOfScalars (ringSheafificationMap α) ⋙
+          sheafModuleRestriction O) :=
+    (moduleSheafificationAdjunction O).comp
+      (sheafChangeOfRingsAdjunction (ringSheafificationMap α))
+  exact leftAdjointIsoOfNatIsoRight adj₁ adj₂
+    (moduleSheafification_changeOfRings_restrictionIso α)
+
+theorem moduleSheafification_changeOfRings_iso
+    {X : TopCat.{v}} {O O' : RingPresheaf.{v, v} X}
+    (α : O ⟶ O') (F : PMod O) :
+    Nonempty
+      (moduleSheafification ((changeOfRings α).obj F) ≅
+          tensorProductSheaf (ringSheafificationMap α)
+            (moduleSheafification F)) := by
+  exact ⟨(moduleSheafification_changeOfRings_functorIso α).app F⟩
 
 /-- The source-facing Hom bijection for tensor product sheaves and
 restriction of scalars. -/

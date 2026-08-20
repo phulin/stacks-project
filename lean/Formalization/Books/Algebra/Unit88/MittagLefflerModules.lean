@@ -2105,22 +2105,21 @@ theorem isMittagLefflerModule_of_restrictScalars
         ((b.restrictScalars R).comp ι) := by
     refine (dominates_iff_finitelyPresented
       ((a.restrictScalars R).comp ι) ((b.restrictScalars R).comp ι)).2 ?_
-    intro X _ _ hX
-    intro z hz
-    letI : Module.FinitePresentation R (X : Type (max u v w)) := hX
+    intro X _ _ hX z hz
+    let : Module.FinitePresentation R (X : Type (max u v w)) := hX
     let T : Type (max u v w) := S ⊗[R] (X : Type (max u v w))
-    letI : AddCommGroup T := inferInstance
-    letI : Module S T := inferInstance
-    letI : IsScalarTower R S T := inferInstance
-    letI : Module.FinitePresentation S T := by
+    let : AddCommGroup T := inferInstance
+    let : Module S T := inferInstance
+    let : IsScalarTower R S T := inferInstance
+    let : Module.FinitePresentation S T := by
       dsimp [T]
       infer_instance
     obtain ⟨L, iL, mL, K, e, hLfree, hLfinite, hK⟩ :=
       Module.FinitePresentation.equiv_quotient (R := S) (M := T)
-    letI : AddCommGroup L := iL
-    letI : Module S L := mL
-    letI : Module.Free S L := hLfree
-    letI : Module.Finite S L := hLfinite
+    let : AddCommGroup L := iL
+    let : Module S L := mL
+    let : Module.Free S L := hLfree
+    let : Module.Finite S L := hLfinite
     let Y : Type v := L ⧸ K
     let Y' : Type (max v w) := ULift.{w} Y
     let e' : T ≃ₗ[S] Y' := e.trans ULift.moduleEquiv.symm
@@ -2146,12 +2145,9 @@ theorem isMittagLefflerModule_of_restrictScalars
           induction t using TensorProduct.induction_on with
           | zero => simp [cP, cN₁]
           | add x y hx hy =>
-              simpa only [TensorProduct.tmul_add, map_add,
-                LinearMap.map_add, hx, hy]
+              simp only [TensorProduct.tmul_add, map_add, hx, hy]
           | tmul s x =>
-              simp only [cP, cN₁,
-                TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
-                LinearMap.rTensor_tmul]
+              simp only [cP, cN₁, LinearMap.rTensor_tmul]
               exact congrArg (fun q => q ⊗ₜ[R] x) (a.map_smul s p').symm
     have hcancel₂ (a₀ : (P' : Type (max v w)) ⊗[S] T) :
         cN₂ (b.rTensor T a₀) =
@@ -2163,12 +2159,9 @@ theorem isMittagLefflerModule_of_restrictScalars
           induction t using TensorProduct.induction_on with
           | zero => simp [cP, cN₂]
           | add x y hx hy =>
-              simpa only [TensorProduct.tmul_add, map_add,
-                LinearMap.map_add, hx, hy]
+              simp only [TensorProduct.tmul_add, map_add, hx, hy]
           | tmul s x =>
-              simp only [cP, cN₂,
-                TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
-                LinearMap.rTensor_tmul]
+              simp only [cP, cN₂, LinearMap.rTensor_tmul]
               exact congrArg (fun q => q ⊗ₜ[R] x) (b.map_smul s p').symm
     have hz₂ :
         ((b.restrictScalars R).comp ι).rTensor
@@ -2306,7 +2299,7 @@ theorem exists_dualNumber_restriction_counterexample
       apply Prod.ext
       · simpa [p] using congrArg TrivSqZeroExt.fst hxy
       · simpa [p] using congrArg TrivSqZeroExt.snd hxy
-    letI : Module.FinitePresentation R (DualNumber R) := by
+    let : Module.FinitePresentation R (DualNumber R) := by
       apply Module.finitePresentation_of_free_of_surjective p hp
       rw [LinearMap.ker_eq_bot.mpr hi]
       exact Submodule.fg_bot

@@ -1015,7 +1015,7 @@ theorem fullyFaithfulSpacesOverX
               ePull.inv.hom.app (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
                 TopCat.Presheaf.germ ((TopCat.Sheaf.pullback CommRingCat p.base).obj X.𝒪).obj
                   ((TopologicalSpace.Opens.map p.base).obj U) y hy := by
-            convert hmap2 using 1 <;> rfl
+            convert hmap2 using 1; rfl
           calc
             _ = ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
                   ((TopCat.Sheaf.forget CommRingCat X.toTopCat).obj X.𝒪)).app
@@ -1062,7 +1062,7 @@ theorem fullyFaithfulSpacesOverX
                     convert Adjunction.unit_leftAdjointUniq_hom_app
                       (Functor.sheafAdjunctionContinuous
                         (TopologicalSpace.Opens.map p.base) CommRingCat J K)
-                      adj' X.𝒪 using 1 <;> rfl
+                      adj' X.𝒪 using 1; rfl
                   have hP : adj.homEquiv X.𝒪 Y.𝒪 P = c := by
                     dsimp [P, structureSheafPullbackMap, c, adj]
                     exact (adj.homEquiv X.𝒪 Y.𝒪).apply_symm_apply _
@@ -1111,15 +1111,6 @@ theorem fullyFaithfulSpacesOverX
                             (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
                           P.hom.app
                             (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) := by
-                    change
-                      ((adj.unit.app X.𝒪).hom.app (Opposite.op U) ≫
-                        P.hom.app
-                          (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U))) =
-                        ((adj'.unit.app X.𝒪).hom.app (Opposite.op U) ≫
-                          ePull.inv.hom.app
-                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)) ≫
-                          P.hom.app
-                            (Opposite.op ((TopologicalSpace.Opens.map p.base).obj U)))
                     exact hfactor_app
                   have hunit_app :
                       ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat p.base).unit.app
@@ -1290,7 +1281,7 @@ theorem fullyFaithfulSpacesOverX
           rw [PresheafedSpace.congr_app hgcomp U]
           rw [Category.assoc, ← Z.presheaf.map_comp]
           rw [eqToHom_app]
-          simp only [eqToHom_trans, eqToHom_refl, Functor.map_id, Z.presheaf.map_id]
+          simp only [eqToHom_trans, eqToHom_refl, Z.presheaf.map_id]
           exact Category.comp_id _
         have hfpush_map :
             (TopCat.Sheaf.forget CommRingCat X.toTopCat).map (eqToHom hfpush) =

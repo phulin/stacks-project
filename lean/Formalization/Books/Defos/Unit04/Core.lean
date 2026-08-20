@@ -1,0 +1,592 @@
+import Formalization.Books.Defos.Unit03
+import Formalization.Books.Defos.Unit02.DeformationsOfRings
+import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+import Mathlib.CategoryTheory.Abelian.Ext
+import Mathlib.Algebra.Torsor
+
+/-!
+# Deformation Theory, Chapter 4: Modules on first order thickenings of ringed spaces
+
+This file formalizes `books/defos.tex:575-1251`.  Chapter 3 supplies the
+ringed-space thickening, kernel ideal, pushforward, and kernel-module APIs.
+The source tensor product is exposed through an explicit interface because
+the project’s generic ringed spaces use `RingCat`; a tensor of two left
+modules needs commutativity or a bimodule convention.
+-/
+
+namespace Formalization.Books.Defos.Unit04
+
+open CategoryTheory CategoryTheory.Limits Opposite
+open Formalization.Books.Sheaves.Unit10
+open Formalization.Books.Sheaves.Unit22
+open Formalization.Books.Defos.Unit03
+
+universe v
+
+noncomputable section
+
+/-! ## The tensor appearing in the source -/
+
+/-- The tensor product of sheaf modules needed by the source-facing
+deformation statements. -/
+class ModuleTensorProduct (X : RingedSpace.{v}) where
+  tensor : Mod X.structureSheaf → Mod X.structureSheaf → Mod X.structureSheaf
+  map : ∀ {I I' F F' : Mod X.structureSheaf},
+    (I ⟶ I') → (F ⟶ F') → tensor I F ⟶ tensor I' F'
+  map_id : ∀ {I F : Mod X.structureSheaf},
+    map (𝟙 I) (𝟙 F) = 𝟙 (tensor I F)
+  map_comp : ∀ {I₁ I₂ I₃ F₁ F₂ F₃ : Mod X.structureSheaf}
+    (u₁ : I₁ ⟶ I₂) (u₂ : I₂ ⟶ I₃)
+    (v₁ : F₁ ⟶ F₂) (v₂ : F₂ ⟶ F₃),
+    map (u₁ ≫ u₂) (v₁ ≫ v₂) = map u₁ v₁ ≫ map u₂ v₂
+
+/-- The source notation `I ⊗_{O_X} F`. -/
+abbrev moduleTensor {X : RingedSpace.{v}} [ModuleTensorProduct X]
+    (I F : Mod X.structureSheaf) : Mod X.structureSheaf :=
+  ModuleTensorProduct.tensor I F
+
+/-- Functoriality of the source tensor notation. -/
+abbrev moduleTensorMap {X : RingedSpace.{v}} [ModuleTensorProduct X]
+    {I I' F F' : Mod X.structureSheaf}
+    (u : I ⟶ I') (v : F ⟶ F') : moduleTensor I F ⟶ moduleTensor I' F' :=
+  ModuleTensorProduct.map u v
+
+/-! ## The kernel module and extensions -/
+
+/-- The chosen `O_X`-module representing the first-order kernel ideal. -/
+noncomputable def firstOrderKernelModule
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) : Mod X.structureSheaf :=
+  Classical.choose (firstOrderThickening_kernel_is_module i hi)
+
+/-- The pushforward realization of the chosen kernel module. -/
+noncomputable def firstOrderKernelModuleIso
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) :
+    (ringedSpaceModulePushforward i).obj (firstOrderKernelModule i hi) ≅
+      (thickeningIdeal i).carrier :=
+  Classical.choose_spec (firstOrderThickening_kernel_is_module i hi)
+
+/-- A short exact `O_{X'}`-module extension with fixed `O_X` end terms
+and its infinitesimal action map retained as source-facing data. -/
+structure ModuleExtension
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (F K : Mod X.structureSheaf) where
+  middle : Mod X'.structureSheaf
+  inclusion : (ringedSpaceModulePushforward i).obj K ⟶ middle
+  projection : middle ⟶ (ringedSpaceModulePushforward i).obj F
+  zero : inclusion ≫ projection = 0
+  shortExact : (ShortComplex.mk inclusion projection zero).ShortExact
+  infinitesimalMap : moduleTensor (firstOrderKernelModule i hi) F ⟶ K
+
+namespace ModuleExtension
+
+variable {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+  {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+  {F K : Mod X.structureSheaf}
+
+/-- The inclusion in the extension sequence. -/
+abbrev inclusion (E : ModuleExtension i hi F K) :
+    (ringedSpaceModulePushforward i).obj K ⟶ E.middle :=
+  E.inclusion
+
+/-- The projection in the extension sequence. -/
+abbrev projection (E : ModuleExtension i hi F K) :
+    E.middle ⟶ (ringedSpaceModulePushforward i).obj F :=
+  E.projection
+
+/-- The underlying sequence is short exact. -/
+theorem shortExact (E : ModuleExtension i hi F K) :
+    (ShortComplex.mk E.inclusion E.projection E.zero).ShortExact :=
+  E.shortExact
+
+end ModuleExtension
+
+/-- A map of two fixed-endpoint extension sequences. -/
+structure CompatibleExtensionMap
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L) where
+  middle : E.middle ⟶ E'.middle
+  comm_left : E.inclusion ≫ middle =
+    (ringedSpaceModulePushforward i).map ψ ≫ E'.inclusion
+  comm_right : middle ≫ E'.projection =
+    E.projection ≫ (ringedSpaceModulePushforward i).map φ
+
+/-- The commutative square of infinitesimal maps required for lifting a map
+of extensions. -/
+structure InfinitesimalCompatibility
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L) where
+  commutes : E.infinitesimalMap ≫ ψ =
+    moduleTensorMap (𝟙 (firstOrderKernelModule i hi)) φ ≫
+      E'.infinitesimalMap
+
+/-! ## Maps between extensions and their obstruction -/
+
+/-- A compatible map forces commutativity of the infinitesimal square. -/
+theorem compatibleMap_infinitesimal_compatibility
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L)
+    (h : CompatibleExtensionMap E E' φ ψ) :
+    InfinitesimalCompatibility E E' φ ψ := by
+  sorry
+
+/-- If one compatible map exists, compatible maps form a principal
+homogeneous space under the Hom module from F to L. -/
+theorem compatibleExtensionMaps_is_principalHomogeneousSpace
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L)
+    (h : Nonempty (CompatibleExtensionMap E E' φ ψ)) :
+    Nonempty (Formalization.Books.Defos.Unit02.PrincipalHomogeneousSpace
+      (F ⟶ L) (CompatibleExtensionMap E E' φ ψ)) := by
+  sorry
+
+/-- Existence and vanishing criterion for the obstruction to lifting a map. -/
+theorem exists_mapObstruction
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L)
+    (h : InfinitesimalCompatibility E E' φ ψ) :
+    ∃ o : CategoryTheory.Abelian.Ext F L 1,
+      (o = 0 ↔ Nonempty (CompatibleExtensionMap E E' φ ψ)) := by
+  sorry
+
+/-- The obstruction class for lifting a map of extensions. -/
+noncomputable def mapObstruction
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L)
+    (h : InfinitesimalCompatibility E E' φ ψ) :
+    CategoryTheory.Abelian.Ext F L 1 :=
+  Classical.choose (exists_mapObstruction E E' φ ψ h)
+
+theorem mapObstruction_vanishes_iff
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K G L : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) (E' : ModuleExtension i hi G L)
+    (φ : F ⟶ G) (ψ : K ⟶ L)
+    (h : InfinitesimalCompatibility E E' φ ψ) :
+    mapObstruction E E' φ ψ h = 0 ↔
+      Nonempty (CompatibleExtensionMap E E' φ ψ) :=
+  Classical.choose_spec (exists_mapObstruction E E' φ ψ h)
+
+/-! ## The classification and obstruction for extensions -/
+
+/-- An isomorphism of extensions preserving the fixed end terms and their
+infinitesimal maps. -/
+structure ModuleExtensionIso
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K : Mod X.structureSheaf}
+    (E E' : ModuleExtension i hi F K) where
+  middle : E.middle ≅ E'.middle
+  comm_left : E.inclusion ≫ middle.hom = E'.inclusion
+  comm_right : middle.hom ≫ E'.projection = E.projection
+  comm_infinitesimal : E.infinitesimalMap = E'.infinitesimalMap
+
+/-- The setoid used for isomorphism classes of fixed-action extensions. -/
+def moduleExtensionIsoSetoid
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    (F K : Mod X.structureSheaf) : Setoid (ModuleExtension i hi F K) := by
+  refine { r := fun E E' => Nonempty (ModuleExtensionIso E E'), iseqv := ?_ }
+  refine ⟨?_, ?_, ?_⟩
+  · intro E
+    exact ⟨{ middle := Iso.refl _, comm_left := by simp,
+      comm_right := by simp, comm_infinitesimal := rfl }⟩
+  · intro E E' h
+    sorry
+  · intro E E' E'' h₁ h₂
+    sorry
+
+/-- Isomorphism classes of extensions with prescribed infinitesimal map. -/
+abbrev ModuleExtensionClass
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    (F K : Mod X.structureSheaf) :=
+  Quotient (moduleExtensionIsoSetoid (i := i) (hi := hi) F K)
+
+/-- Once one extension exists, its isomorphism classes form a torsor under
+Ext one for F and K. -/
+theorem moduleExtensionClasses_is_principalHomogeneousSpace
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K : Mod X.structureSheaf}
+    (h : Nonempty (ModuleExtension i hi F K)) :
+    Nonempty (Formalization.Books.Defos.Unit02.PrincipalHomogeneousSpace
+      (CategoryTheory.Abelian.Ext F K 1)
+      (ModuleExtensionClass (i := i) (hi := hi) F K)) := by
+  sorry
+
+/-- Existence and vanishing criterion for the obstruction to realizing a
+prescribed infinitesimal map. -/
+theorem exists_extensionObstruction
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (F K : Mod X.structureSheaf)
+    (c : moduleTensor (firstOrderKernelModule i hi) F ⟶ K) :
+    ∃ o : CategoryTheory.Abelian.Ext F K 2,
+      (o = 0 ↔ Nonempty (ModuleExtension i hi F K)) := by
+  sorry
+
+/-- The obstruction class for a prescribed infinitesimal map. -/
+noncomputable def extensionObstruction
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (F K : Mod X.structureSheaf)
+    (c : moduleTensor (firstOrderKernelModule i hi) F ⟶ K) :
+    CategoryTheory.Abelian.Ext F K 2 :=
+  Classical.choose (exists_extensionObstruction i hi F K c)
+
+theorem extensionObstruction_vanishes_iff
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (F K : Mod X.structureSheaf)
+    (c : moduleTensor (firstOrderKernelModule i hi) F ⟶ K) :
+    extensionObstruction i hi F K c = 0 ↔
+      Nonempty (ModuleExtension i hi F K) :=
+  Classical.choose_spec (exists_extensionObstruction i hi F K c)
+
+/-! ## Trivial thickenings and trivial extensions -/
+
+/-- A trivialization is a retraction of a first-order thickening. -/
+structure ThickeningTrivialization
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) where
+  projection : RingedSpaceHom X' X
+  left_inverse : RingedSpaceHom.comp i projection = RingedSpaceHom.id X
+
+/-- A first-order thickening is trivial when it admits a trivialization. -/
+def IsTrivialFirstOrderThickening
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) : Prop :=
+  Nonempty (ThickeningTrivialization i hi)
+
+/-- The splitting datum associated with a trivialization. -/
+structure StructureSheafSplitting
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) where
+  section : RingedSpaceHom X' X
+  retraction : RingedSpaceHom.comp i section = RingedSpaceHom.id X
+
+theorem trivialization_gives_structureSheaf_splitting
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) (π : ThickeningTrivialization i hi) :
+    Nonempty (StructureSheafSplitting i hi) :=
+  ⟨{ section := π.projection, retraction := π.left_inverse }⟩
+
+theorem structureSheaf_splitting_gives_trivialization
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) (s : StructureSheafSplitting i hi) :
+    ThickeningTrivialization i hi :=
+  ⟨s.section, s.retraction⟩
+
+/-- A trivialized first-order thickening, used in the categorical
+equivalence assertion of the source. -/
+structure TrivializedFirstOrderThickening (X : RingedSpace.{v}) where
+  thickeningSpace : RingedSpace
+  inclusion : RingedSpaceHom X thickeningSpace
+  firstOrder : IsFirstOrderThickening inclusion
+  trivialization : ThickeningTrivialization inclusion firstOrder
+
+/-- A morphism of trivialized thickenings over the fixed base. -/
+structure TrivializedFirstOrderThickeningHom
+    {X : RingedSpace.{v}}
+    (A B : TrivializedFirstOrderThickening X) where
+  hom : RingedSpaceHom A.thickeningSpace B.thickeningSpace
+  commutes : RingedSpaceHom.comp A.inclusion hom = B.inclusion
+  trivializations_commute :
+    RingedSpaceHom.comp hom B.trivialization.projection =
+      A.trivialization.projection
+
+instance (X : RingedSpace.{v}) :
+    Category (TrivializedFirstOrderThickening X) where
+  Hom A B := TrivializedFirstOrderThickeningHom A B
+  id A :=
+    { hom := RingedSpaceHom.id A.thickeningSpace
+      commutes := by sorry
+      trivializations_commute := by sorry }
+  comp f g :=
+    { hom := RingedSpaceHom.comp f.hom g.hom
+      commutes := by sorry
+      trivializations_commute := by sorry }
+  id_comp f := by sorry
+  comp_id f := by sorry
+  assoc f g h := by sorry
+
+/-- The category of trivialized first-order thickenings is equivalent to the
+category of modules on the base. -/
+theorem trivializedThickenings_equivalent_to_modules
+    (X : RingedSpace.{v}) :
+    Nonempty (TrivializedFirstOrderThickening X ≌
+      Mod X.structureSheaf) := by
+  sorry
+
+/-- The trivial extension attached to a trivialization and a prescribed map
+from the tensor of the kernel with F to K. -/
+noncomputable def trivialExtension
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (π : ThickeningTrivialization i hi)
+    {F K : Mod X.structureSheaf}
+    (c : moduleTensor (firstOrderKernelModule i hi) F ⟶ K) :
+    ModuleExtension i hi F K :=
+  Classical.choose (exists_trivialExtension i hi π F K c)
+
+theorem exists_trivialExtension
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (π : ThickeningTrivialization i hi)
+    (F K : Mod X.structureSheaf)
+    (c : moduleTensor (firstOrderKernelModule i hi) F ⟶ K) :
+    ∃ E : ModuleExtension i hi F K, E.infinitesimalMap = c := by
+  sorry
+
+/-- The Ext class obtained from an extension after choosing a trivialization
+of the thickening. -/
+theorem extensionClass_exists
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (π : ThickeningTrivialization i hi)
+    {F K : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) :
+    Nonempty (CategoryTheory.Abelian.Ext F K 1) := by
+  sorry
+
+noncomputable def extensionClass
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (π : ThickeningTrivialization i hi)
+    {F K : Mod X.structureSheaf}
+    (E : ModuleExtension i hi F K) :
+    CategoryTheory.Abelian.Ext F K 1 :=
+  Classical.choice (extensionClass_exists i hi π E)
+
+/-- The classification bijection for extensions in a trivialized thickening.
+-/
+theorem trivializedExtensionClasses_equiv_ext
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (π : ThickeningTrivialization i hi)
+    (F K : Mod X.structureSheaf) :
+    Nonempty (ModuleExtensionClass (i := i) (hi := hi) F K ≃
+      CategoryTheory.Abelian.Ext F K 1) := by
+  sorry
+
+/-- The trivial extension gives the zero Ext class after the trivialization
+is used to regard the sequence as an extension over the base. -/
+theorem trivialExtension_class_zero
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i) [ModuleTensorProduct X]
+    (π : ThickeningTrivialization i hi)
+    {F K : Mod X.structureSheaf}
+    (c : moduleTensor (firstOrderKernelModule i hi) F ⟶ K) :
+    extensionClass i hi π (trivialExtension i hi π c) = 0 := by
+  sorry
+
+/-! ## Functoriality in the thickening -/
+
+/-- A morphism between two first-order thickenings of the same base. -/
+structure FirstOrderThickeningMorphism (X : RingedSpace.{v}) where
+  X₁ : RingedSpace
+  X₂ : RingedSpace
+  i₁ : RingedSpaceHom X X₁
+  i₂ : RingedSpaceHom X X₂
+  firstOrder₁ : IsFirstOrderThickening i₁
+  firstOrder₂ : IsFirstOrderThickening i₂
+  hom : RingedSpaceHom X₁ X₂
+  commutes : RingedSpaceHom.comp i₁ hom = i₂
+
+theorem FirstOrderThickeningMorphism.kernelMap_exists
+    {X : RingedSpace.{v}} (M : FirstOrderThickeningMorphism X) :
+    Nonempty (firstOrderKernelModule M.i₂ M.firstOrder₂ ⟶
+      firstOrderKernelModule M.i₁ M.firstOrder₁) := by
+  sorry
+
+/-- The induced map on the chosen kernel modules. -/
+noncomputable def FirstOrderThickeningMorphism.kernelMap
+    {X : RingedSpace.{v}} (M : FirstOrderThickeningMorphism X) :
+    firstOrderKernelModule M.i₂ M.firstOrder₂ ⟶
+      firstOrderKernelModule M.i₁ M.firstOrder₁ :=
+  Classical.choose (M.kernelMap_exists)
+
+/-- Data for functoriality of extensions under a map of thickenings. -/
+structure ExtensionFunctorialityData
+    {X : RingedSpace.{v}} (M : FirstOrderThickeningMorphism X)
+    [ModuleTensorProduct X] (F : Mod X.structureSheaf) where
+  K₁ : Mod X.structureSheaf
+  K₂ : Mod X.structureSheaf
+  c₁ : moduleTensor (firstOrderKernelModule M.i₁ M.firstOrder₁) F ⟶ K₁
+  c₂ : moduleTensor (firstOrderKernelModule M.i₂ M.firstOrder₂) F ⟶ K₂
+  kernelMap : K₂ ⟶ K₁
+  c_square : moduleTensorMap M.kernelMap (𝟙 F) ≫ c₁ = c₂ ≫ kernelMap
+
+/-- Pushout along a morphism of thickenings preserves the prescribed
+infinitesimal action. -/
+theorem extensionFunctoriality_exists
+    {X : RingedSpace.{v}} {M : FirstOrderThickeningMorphism X}
+    [ModuleTensorProduct X] {F : Mod X.structureSheaf}
+    (D : ExtensionFunctorialityData M F)
+    (E₂ : ModuleExtension M.i₂ M.firstOrder₂ F D.K₂)
+    (hE₂ : E₂.infinitesimalMap = D.c₂) :
+    ∃ E₁ : ModuleExtension M.i₁ M.firstOrder₁ F D.K₁,
+      E₁.infinitesimalMap = D.c₁ := by
+  sorry
+
+noncomputable def extensionFunctoriality
+    {X : RingedSpace.{v}} {M : FirstOrderThickeningMorphism X}
+    [ModuleTensorProduct X] {F : Mod X.structureSheaf}
+    (D : ExtensionFunctorialityData M F)
+    (E₂ : ModuleExtension M.i₂ M.firstOrder₂ F D.K₂)
+    (hE₂ : E₂.infinitesimalMap = D.c₂) :
+    ModuleExtension M.i₁ M.firstOrder₁ F D.K₁ :=
+  Classical.choose (extensionFunctoriality_exists D E₂ hE₂)
+
+theorem extensionFunctoriality_infinitesimalMap
+    {X : RingedSpace.{v}} {M : FirstOrderThickeningMorphism X}
+    [ModuleTensorProduct X] {F : Mod X.structureSheaf}
+    (D : ExtensionFunctorialityData M F)
+    (E₂ : ModuleExtension M.i₂ M.firstOrder₂ F D.K₂)
+    (hE₂ : E₂.infinitesimalMap = D.c₂) :
+    (extensionFunctoriality D E₂ hE₂).infinitesimalMap = D.c₁ :=
+  Classical.choose_spec (extensionFunctoriality_exists D E₂ hE₂)
+
+/-- Compatible trivializations for a morphism of thickenings. -/
+structure TrivializedFirstOrderThickeningMorphism
+    {X : RingedSpace.{v}} (M : FirstOrderThickeningMorphism X) where
+  π₁ : ThickeningTrivialization M.i₁ M.firstOrder₁
+  π₂ : ThickeningTrivialization M.i₂ M.firstOrder₂
+  compatible : RingedSpaceHom.comp M.hom π₂.projection = π₁.projection
+
+/-! ## Complexes and short exact sequences of thickenings -/
+
+/-- A complex of three first-order thickenings, with maps on their kernel
+modules displayed explicitly. -/
+structure FirstOrderThickeningComplex (X : RingedSpace.{v}) where
+  X₁ : RingedSpace
+  X₂ : RingedSpace
+  X₃ : RingedSpace
+  i₁ : RingedSpaceHom X X₁
+  i₂ : RingedSpaceHom X X₂
+  i₃ : RingedSpaceHom X X₃
+  firstOrder₁ : IsFirstOrderThickening i₁
+  firstOrder₂ : IsFirstOrderThickening i₂
+  firstOrder₃ : IsFirstOrderThickening i₃
+  h₁₂ : RingedSpaceHom X₁ X₂
+  h₂₃ : RingedSpaceHom X₂ X₃
+  comm₁₂ : RingedSpaceHom.comp i₁ h₁₂ = i₂
+  comm₂₃ : RingedSpaceHom.comp i₂ h₂₃ = i₃
+  idealMap₂₁ : firstOrderKernelModule i₂ firstOrder₂ ⟶
+    firstOrderKernelModule i₁ firstOrder₁
+  idealMap₃₂ : firstOrderKernelModule i₃ firstOrder₃ ⟶
+    firstOrderKernelModule i₂ firstOrder₂
+
+/-- The ideal maps of a thickening sequence form a complex. -/
+def FirstOrderThickeningComplex.IsComplex
+    {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X) : Prop :=
+  C.idealMap₃₂ ≫ C.idealMap₂₁ = 0
+
+/-- The ideal maps form a short exact sequence. -/
+def FirstOrderThickeningComplex.IsShortExact
+    {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X) : Prop :=
+  (ShortComplex.mk C.idealMap₃₂ C.idealMap₂₁ C.IsComplex).ShortExact
+
+/-- A complex of first-order thickenings has a canonical trivialization of
+its first term. -/
+theorem complex_thickening_has_canonical_trivialization
+    {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X)
+    (hC : C.IsComplex) :
+    Nonempty (ThickeningTrivialization C.i₁ C.firstOrder₁) := by
+  sorry
+
+/-! ## Trivialized functoriality and the final Ext-boundary claim -/
+
+/-- A source-facing commutative square of Ext classes for compatible
+trivializations. -/
+structure TrivializedExtClassSquare
+    {X : RingedSpace.{v}} {M : FirstOrderThickeningMorphism X}
+    [ModuleTensorProduct X] {F : Mod X.structureSheaf}
+    (D : ExtensionFunctorialityData M F) where
+  class₂ : CategoryTheory.Abelian.Ext F D.K₂ 1
+  class₁ : CategoryTheory.Abelian.Ext F D.K₁ 1
+  extMap : CategoryTheory.Abelian.Ext F D.K₂ 1 →
+    CategoryTheory.Abelian.Ext F D.K₁ 1
+  commutes : extMap class₂ = class₁
+
+/-- The extension functoriality and the Ext-class map commute for compatible
+trivializations. -/
+theorem trivializedExtensionFunctoriality_ext_commutes
+    {X : RingedSpace.{v}} {M : FirstOrderThickeningMorphism X}
+    [ModuleTensorProduct X] {F : Mod X.structureSheaf}
+    (T : TrivializedFirstOrderThickeningMorphism M)
+    (D : ExtensionFunctorialityData M F)
+    (E₂ : ModuleExtension M.i₂ M.firstOrder₂ F D.K₂)
+    (hE₂ : E₂.infinitesimalMap = D.c₂) :
+    Nonempty (TrivializedExtClassSquare (D := D)) := by
+  sorry
+
+/-- The coefficient short exact sequence used in the final remark. -/
+structure CoefficientShortExactSequence (X : RingedSpace.{v}) where
+  K₃ : Mod X.structureSheaf
+  K₂ : Mod X.structureSheaf
+  K₁ : Mod X.structureSheaf
+  k₃₂ : K₃ ⟶ K₂
+  k₂₁ : K₂ ⟶ K₁
+  zero : k₃₂ ≫ k₂₁ = 0
+  shortExact : (ShortComplex.mk k₃₂ k₂₁ zero).ShortExact
+
+/-- The connecting map on Ext groups associated to a coefficient short exact
+sequence. -/
+structure ExtBoundaryData {X : RingedSpace.{v}}
+    (S : CoefficientShortExactSequence X)
+    (F : Mod X.structureSheaf) where
+  boundary : CategoryTheory.Abelian.Ext F S.K₁ 1 →
+    CategoryTheory.Abelian.Ext F S.K₃ 2
+
+/-- Data for the last source remark, including the compatible coefficient
+squares and an extension over the middle thickening. -/
+structure ComplexThickeningModuleData
+    {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X)
+    [ModuleTensorProduct X] (F : Mod X.structureSheaf)
+    (S : CoefficientShortExactSequence X) where
+  c₁ : moduleTensor (firstOrderKernelModule C.i₁ C.firstOrder₁) F ⟶ S.K₁
+  c₂ : moduleTensor (firstOrderKernelModule C.i₂ C.firstOrder₂) F ⟶ S.K₂
+  c₃ : moduleTensor (firstOrderKernelModule C.i₃ C.firstOrder₃) F ⟶ S.K₃
+  square₂₁ : moduleTensorMap C.idealMap₂₁ (𝟙 F) ≫ c₁ = c₂ ≫ S.k₂₁
+  square₃₂ : moduleTensorMap C.idealMap₃₂ (𝟙 F) ≫ c₂ = c₃ ≫ S.k₃₂
+  middleExtension : ModuleExtension C.i₂ C.firstOrder₂ F S.K₂
+  middleExtension_action : middleExtension.infinitesimalMap = c₂
+  boundaryData : ExtBoundaryData S F
+  ξ₁ : CategoryTheory.Abelian.Ext F S.K₁ 1
+
+/-- The boundary of the induced first extension class is the obstruction
+class of the third coefficient. -/
+theorem ext_boundary_eq_extension_obstruction
+    {X : RingedSpace.{v}} {C : FirstOrderThickeningComplex X}
+    [ModuleTensorProduct X] {F : Mod X.structureSheaf}
+    {S : CoefficientShortExactSequence X}
+    (D : ComplexThickeningModuleData C F S) :
+    D.boundaryData.boundary D.ξ₁ =
+      extensionObstruction C.i₃ C.firstOrder₃ F S.K₃ D.c₃ := by
+  sorry
+
+end
+end Formalization.Books.Defos.Unit04

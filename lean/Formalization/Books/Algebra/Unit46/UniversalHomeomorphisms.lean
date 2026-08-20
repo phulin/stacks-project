@@ -1139,7 +1139,7 @@ theorem twoThreeGenerated_locallyNilpotentKernel
     IsHomeomorph (PrimeSpectrum.comap f) ∧
       residueFieldMapsBijective f ∧
       ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
-          twoThreeGenerated (baseChangeRingMap f g) ∧
+            twoThreeGenerated (baseChangeRingMap f g) ∧
             locallyNilpotentKernel (baseChangeRingMap f g) := by
   letI : Algebra R S := f.toAlgebra
   let U : Set S := {x : S | x ^ 2 ∈ f.range ∧ x ^ 3 ∈ f.range}

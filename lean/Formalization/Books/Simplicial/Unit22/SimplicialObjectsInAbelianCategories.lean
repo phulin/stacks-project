@@ -1304,7 +1304,369 @@ theorem coskeleton_degree_formula
     (A : C) (k n : ℕ) :
       Nonempty ((truncatedCoskeletonObject A k).obj (op ⦋n⦌) ≅
       coskeletonDegreeDirectSum A k n) := by
-  sorry
+  classical
+  let U : SimplicialObject.Truncated C k := concentratedTruncatedObject A k
+  let : ∀ V : SimplicialObject.Truncated C k, Unit19.HasCoskeleton k V :=
+    fun V => Unit19.has_coskeleton_of_has_finite_limits k V
+  let : Unit19.HasCoskeleton k U :=
+    Unit19.has_coskeleton_of_has_finite_limits k U
+  let : (Unit19.truncInclusion k).HasPointwiseRightKanExtension U := by
+    intro X
+    have : Finite (SimplexCategory.Truncated k) :=
+      Finite.of_injective
+        (fun x => ⟨x.1.len, Nat.lt_succ_of_le x.2⟩ :
+          SimplexCategory.Truncated k → Fin (k + 1))
+        (by
+          intro x y h
+          cases x with
+          | mk x hx =>
+            cases y with
+            | mk y hy =>
+              congr
+              exact SimplexCategory.ext (Fin.ext_iff.mp h))
+    have : Fintype (SimplexCategory.Truncated k) := Fintype.ofFinite _
+    have : Fintype ((SimplexCategory.Truncated k)ᵒᵖ) :=
+      Fintype.ofEquiv _ equivToOpposite
+    let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+        Finite (X ⟶ (Unit19.truncInclusion k).obj T) := fun T =>
+      Finite.of_injective (fun f => f.unop.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Opposite.unop_injective
+          apply SimplexCategory.Hom.ext
+          exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+        Fintype (X ⟶ (Unit19.truncInclusion k).obj T) := fun T =>
+      Fintype.ofFinite _
+    let : Fintype (StructuredArrow X (Unit19.truncInclusion k)) :=
+      Fintype.ofInjective
+        (fun j : StructuredArrow X (Unit19.truncInclusion k) =>
+          (⟨j.right, j.hom⟩ : Σ T, X ⟶ (Unit19.truncInclusion k).obj T))
+        (by
+          rintro ⟨⟨⟩, jr, jh⟩ ⟨⟨⟩, kr, kh⟩ h
+          cases h
+          rfl)
+    let : ∀ j k : StructuredArrow X (Unit19.truncInclusion k),
+        Finite (j ⟶ k) := fun j k =>
+      Finite.of_injective (fun f => f.right.unop.hom.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Comma.hom_ext f g
+          · exact Subsingleton.elim _ _
+          · apply Opposite.unop_injective
+            apply SimplexCategory.Truncated.Hom.ext
+            exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : FinCategory (StructuredArrow X (Unit19.truncInclusion k)) :=
+      { fintypeObj := inferInstance
+        fintypeHom := fun j k => Fintype.ofFinite _ }
+    infer_instance
+  let I := Unit19.coskeletonIndex k n
+  let D := Unit19.coskeletonIndexDiagram k n U
+  let E : C := ∐ (fun _ : InjectiveSimplexIndex k n => A)
+  let T : (SimplexCategory.Truncated k)ᵒᵖ := op (topTruncatedSimplex k)
+  have eTop : U.obj T = A := by
+    change (concentratedTruncatedObject A k).obj (op (topTruncatedSimplex k)) = A
+    exact concentratedTruncatedObject_top A k
+  have obj_eq_of_len_eq {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (h : P.unop.obj.len = Q.unop.obj.len) : P = Q := by
+    apply Opposite.unop_injective
+    apply ObjectProperty.FullSubcategory.ext
+    exact SimplexCategory.ext h
+  have topObjEq {X : I} (hX : X.right = T) :
+      X.right.unop = topTruncatedSimplex k := by
+    exact congrArg Opposite.unop hX
+  let topMap : ∀ {X : I}, X.right = T →
+      (⦋k⦌ ⟶ ⦋n⦌) := fun {X} hX =>
+    eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+      (topObjEq hX)).symm ≫ X.hom.unop
+  have topObjValueEq {X : I} (hX : X.right = T) : D.obj X = A := by
+    have hx : X.right.unop.obj.len = k := by
+      rw [topObjEq hX]
+    change U.obj X.right = A
+    simp [U, concentratedTruncatedObject, concentratedTruncatedValue, hx]
+  let leg : ∀ X : I, E ⟶ D.obj X := fun X => by
+    by_cases hX : X.right = T
+    · by_cases hβ : Mono (topMap hX)
+      · let β : InjectiveSimplexIndex k n := ⟨topMap hX, hβ⟩
+        exact (biproduct.isoCoproduct
+            (fun _ : InjectiveSimplexIndex k n => A)).inv ≫
+          biproduct.π (fun _ : InjectiveSimplexIndex k n => A) β ≫
+          eqToHom (topObjValueEq hX).symm
+      · exact 0
+    · exact 0
+  have map_zero_of_nontrivial {X Y : I} (f : X ⟶ Y)
+      (hXY : X.right = Y.right) (hf : f.right ≠ eqToHom hXY) : D.map f = 0 := by
+    let q := eqToHom hXY.symm ≫ f.right
+    have hq : q ≠ 𝟙 Y.right := by
+      intro hq
+      apply hf
+      calc
+        f.right = 𝟙 _ ≫ f.right := by simp
+        _ = (eqToHom hXY ≫ eqToHom hXY.symm) ≫ f.right := by simp
+        _ = eqToHom hXY ≫ q := by simp [q]
+        _ = eqToHom hXY ≫ 𝟙 _ := by rw [hq]
+        _ = _ := by simp
+    change U.map f.right = 0
+    have hfac : f.right = eqToHom hXY ≫ q := by simp [q]
+    rw [hfac, U.map_comp, concentratedTruncatedObject_map_of_ne_id A k q hq]
+    simp
+  let c : Cone D := Cone.mk E
+    { app := fun X => leg X
+      naturality := by
+        intro X Y f
+        by_cases hX : X.right = T
+        · by_cases hY : Y.right = T
+          · have hrel :
+                topMap hY =
+                  (eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hY)).symm ≫ f.right.unop.hom ≫
+                    eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq hX))) ≫ topMap hX := by
+              have hbase : f.right.unop.hom ≫ X.hom.unop = Y.hom.unop := by
+                simpa using congrArg Quiver.Hom.unop f.w
+              simpa [topMap, Category.assoc] using
+                congrArg (fun z =>
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hY)).symm ≫ z)
+                  hbase |>.symm
+            by_cases hβX : Mono (topMap hX)
+            · by_cases hβY : Mono (topMap hY)
+              · let q : ⦋k⦌ ⟶ ⦋k⦌ :=
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hY)).symm ≫ f.right.unop.hom ≫
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hX))
+                have hq : Mono q := by
+                  let : Mono (topMap hY) := hβY
+                  have hfac : q ≫ topMap hX = topMap hY := hrel.symm
+                  let : Mono (q ≫ topMap hX) := by
+                    rw [hfac]
+                    exact hβY
+                  exact mono_of_mono q (topMap hX)
+                have hqid : q = 𝟙 _ := SimplexCategory.eq_id_of_mono q
+                have hXY : X.right = Y.right := hX.trans hY.symm
+                have hfr : f.right = eqToHom hXY := by
+                  apply Quiver.Hom.unop_inj
+                  apply ObjectProperty.hom_ext
+                  have hq' :
+                      f.right.unop.hom =
+                        eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq hY)) ≫ q ≫
+                        eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq hX)).symm := by
+                    simp [q]
+                  simpa [hqid] using hq'
+                have hobj : X = Y := by
+                  apply StructuredArrow.obj_ext X Y hXY
+                  simpa [hfr] using f.w
+                subst Y
+                have hf : f = 𝟙 X := by
+                  apply StructuredArrow.ext
+                  simpa using hfr
+                subst f
+                simp [leg]
+              · have hfr : f.right ≠ eqToHom (hX.trans hY.symm) := by
+                  intro hfr
+                  have heq : topMap hX = topMap hY := by
+                    simpa [hfr, topMap, Category.assoc] using hrel.symm
+                  apply hβY
+                  simpa [heq] using hβX
+                have hzero := map_zero_of_nontrivial f
+                  (hX.trans hY.symm) hfr
+                simp [leg, hX, hY, hβX, hβY, hzero]
+            · by_cases hβY : Mono (topMap hY)
+              · have hbase : f.right.unop.hom ≫ X.hom.unop = Y.hom.unop := by
+                  simpa using congrArg Quiver.Hom.unop f.w
+                let q :=
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hY)).symm ≫ f.right.unop.hom ≫
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hX))
+                have hfac : q ≫ topMap hX = topMap hY := hrel.symm
+                let : Mono (topMap hY) := hβY
+                let : Mono (q ≫ topMap hX) := by
+                  rw [hfac]
+                  exact hβY
+                have hq : Mono q := mono_of_mono q (topMap hX)
+                have hqid : q = 𝟙 _ := SimplexCategory.eq_id_of_mono q
+                exfalso
+                have heq : topMap hX = topMap hY := by
+                  simpa [hqid] using hfac
+                exact hβX (heq ▸ hβY)
+              · simp [leg, hX, hY, hβX, hβY]
+          · by_cases hβX : Mono (topMap hX)
+            · have hI : IsZero (D.obj Y) := by
+                change IsZero (U.obj Y.right)
+                have hlen : Y.right.unop.obj.len ≠ k := by
+                  intro hlen
+                  apply hY
+                  exact obj_eq_of_len_eq (by simpa using hlen)
+                simpa [U, concentratedTruncatedObject, concentratedTruncatedValue, hlen] using
+                  (isZero_zero C)
+              exact hI.eq_of_tgt _ _
+            · simp [leg, hX, hY, hβX]
+        · by_cases hY : Y.right = T
+          · by_cases hβY : Mono (topMap hY)
+            · have hbase : f.right.unop.hom ≫ X.hom.unop = Y.hom.unop := by
+                simpa using congrArg Quiver.Hom.unop f.w
+              let q :=
+                eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                  (topObjEq hY)).symm ≫ f.right.unop.hom
+              have hfac : q ≫ X.hom.unop =
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq hY)).symm ≫ Y.hom.unop := by
+                dsimp [q]
+                simpa only [Category.assoc] using
+                  congrArg (fun z =>
+                    eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq hY)).symm ≫ z) hbase
+              let : Mono (topMap hY) := hβY
+              let : Mono (q ≫ X.hom.unop) := by
+                rw [hfac]
+                simpa [topMap] using hβY
+              have hq : Mono q := mono_of_mono q X.hom.unop
+              have hle : k ≤ X.right.unop.obj.len := SimplexCategory.le_of_mono q
+              have hlt : X.right.unop.obj.len < k := by
+                apply lt_of_le_of_ne X.right.unop.property
+                intro hlen
+                apply hX
+                exact obj_eq_of_len_eq (by simpa using hlen)
+              exact (Nat.not_lt_of_ge hle hlt).elim
+            · simp [leg, hX, hY, hβY]
+          · simp [leg, hX, hY]
+    }
+  have cone_π_zero {s : Cone D} {X : I}
+      (hX : X.right = T) (hβ : ¬Mono (topMap hX)) :
+      s.π.app X = 0 := by
+    cases k with
+    | zero =>
+        exfalso
+        apply hβ
+        rw [SimplexCategory.mono_iff_injective]
+        intro x y hxy
+        exact (Fin.eq_zero x).trans (Fin.eq_zero y).symm
+    | succ k =>
+        have hni : ¬Function.Injective (topMap hX).toOrderHom := by
+          intro hi
+          apply hβ
+          exact SimplexCategory.mono_iff_injective.mpr hi
+        obtain ⟨i, θ, hfac⟩ :=
+          SimplexCategory.eq_σ_comp_of_not_injective (topMap hX) hni
+        let σ' := SimplexCategory.Truncated.Hom.tr (n := k + 1)
+          (SimplexCategory.σ i) (ha := by simp) (hb := by simp)
+        let Yright : (SimplexCategory.Truncated (k + 1))ᵒᵖ :=
+          op ⟨⦋k⦌, by simp⟩
+        let Yhom : op ⦋n⦌ ⟶ (Unit19.truncInclusion (k + 1)).obj Yright := by
+          exact θ.op
+        let Y : I := StructuredArrow.mk Yhom
+        let q : Y.right ⟶ X.right :=
+          σ'.op ≫ eqToHom (congrArg op (topObjEq hX)).symm
+        let f : Y ⟶ X := StructuredArrow.homMk q (by
+          apply Quiver.Hom.unop_inj
+          dsimp [q, Y, Yhom, Yright, σ']
+          rw [Category.assoc, ← hfac]
+          simp [topMap])
+        have hzero : D.map f = 0 := by
+          have hI : IsZero (D.obj Y) := by
+            change IsZero (U.obj Y.right)
+            simpa [Y, Yright, U, concentratedTruncatedObject, concentratedTruncatedValue] using
+              (isZero_zero C)
+          exact hI.eq_of_src _ _
+        have hnat := (Cone.w s f)
+        simpa [hzero] using hnat.symm
+  have hc : IsLimit c := by
+    let Xβ (β : InjectiveSimplexIndex k n) : I :=
+      StructuredArrow.mk (Y := T) β.1.op
+    let desc (s : Cone D) : s.pt ⟶ E :=
+      biproduct.lift (fun β =>
+        s.π.app (Xβ β) ≫
+          eqToHom (topObjValueEq (X := Xβ β) (by simp [Xβ]))) ≫
+        (biproduct.isoCoproduct (fun _ : InjectiveSimplexIndex k n => A)).hom
+    let fac : ∀ (s : Cone D) (X : I),
+        desc s ≫ leg X = s.π.app X := by
+      intro s X
+      by_cases hX : X.right = T
+      · by_cases hβX : Mono (topMap hX)
+        · let β : InjectiveSimplexIndex k n := ⟨topMap hX, hβX⟩
+          have hXZ : X = Xβ β := by
+            have hright : X.right = (Xβ β).right := by
+              change X.right = T
+              exact hX
+            apply StructuredArrow.obj_ext X (Xβ β) hright
+            apply Quiver.Hom.unop_inj
+            dsimp [Xβ, β, topMap]
+            simp
+          rw [hXZ]
+          have hright : (Xβ β).right = T := by simp [Xβ]
+          have htop : topMap hright = β.1 := by simp [topMap, Xβ, β]
+          have hβright : Mono (topMap hright) := by
+            rw [htop]
+            exact β.property
+          have hleg : leg (Xβ β) =
+              (biproduct.isoCoproduct
+                (fun _ : InjectiveSimplexIndex k n => A)).inv ≫
+                biproduct.π (fun _ : InjectiveSimplexIndex k n => A) β ≫
+                eqToHom (topObjValueEq hright).symm := by
+            dsimp [leg]
+            rw [dif_pos hright, dif_pos hβright]
+            simp [htop]
+          change desc s ≫ leg (Xβ β) = s.π.app (Xβ β)
+          rw [hleg]
+          simp only [desc, Category.assoc, Iso.hom_inv_id_assoc]
+          simp [Xβ]
+        · have hs := cone_π_zero (s := s) hX hβX
+          simp [leg, hX, hβX, hs]
+      · have hI : IsZero (D.obj X) := by
+          change IsZero (U.obj X.right)
+          have hlen : X.right.unop.obj.len ≠ k := by
+            intro hlen
+            apply hX
+            exact obj_eq_of_len_eq (by simpa using hlen)
+          simpa [U, concentratedTruncatedObject, concentratedTruncatedValue, hlen] using
+            (isZero_zero C)
+        exact hI.eq_of_tgt _ _
+    let uniq : ∀ (s : Cone D) (m : s.pt ⟶ E),
+        (∀ X, m ≫ leg X = s.π.app X) → m = desc s := by
+      intro s m hm
+      apply (cancel_mono (biproduct.isoCoproduct
+        (fun _ : InjectiveSimplexIndex k n => A)).inv).1
+      apply biproduct.hom_ext
+      intro β
+      let hright : (Xβ β).right = T := by simp [Xβ]
+      have hleg := hm (Xβ β)
+      have htop : topMap hright = β.1 := by simp [topMap, Xβ]
+      have hβright : Mono (topMap hright) := by
+        rw [htop]
+        exact β.property
+      have hleg' : leg (Xβ β) =
+          (biproduct.isoCoproduct
+            (fun _ : InjectiveSimplexIndex k n => A)).inv ≫
+            biproduct.π (fun _ : InjectiveSimplexIndex k n => A) β ≫
+            eqToHom (topObjValueEq hright).symm := by
+        dsimp [leg]
+        rw [dif_pos hright, dif_pos hβright]
+        simp [htop]
+      have h := congrArg (fun z => z ≫ eqToHom (topObjValueEq hright)) hleg
+      rw [hleg'] at h
+      have hfac' := congrArg (fun z => z ≫ eqToHom (topObjValueEq hright))
+        (fac s (Xβ β))
+      rw [hleg'] at hfac'
+      calc
+        _ = s.π.app (Xβ β) ≫ eqToHom (topObjValueEq hright) := by
+          simpa [Category.assoc] using h
+        _ = _ := by
+          symm
+          simpa [Category.assoc] using hfac'
+    exact { lift := desc, fac := fac, uniq := uniq }
+  let hD : HasLimit D := by
+    dsimp [D, Unit19.coskeletonIndexDiagram]
+    infer_instance
+  let := hD
+  let eKan : (truncatedCoskeletonObject A k).obj (op ⦋n⦌) ≅ limit D := by
+    change (Unit19.coskeleton k U).obj (op ⦋n⦌) ≅ limit D
+    exact Functor.ranObjObjIsoLimit (Unit19.truncInclusion k) U (op ⦋n⦌)
+  let eLim : limit D ≅ E := (hc.conePointUniqueUpToIso (limit.isLimit D)).symm
+  exact ⟨eKan ≪≫ eLim⟩
 
 theorem coskeleton_map_formula
     {C : Type u} [Category.{v} C] [Abelian C]

@@ -182,7 +182,53 @@ theorem continuousFunctionAlgebraSharp_exists {X Y : TopCat} (f : X ⟶ Y) :
       (AlgebraicFMap (C := AlgCat ℝ) f
         (realContinuousFunctionAlgebraSheaf Y)
         (realContinuousFunctionAlgebraSheaf X)) := by
-  sorry
+  let preimageMap (V : Opens Y) :
+      (Opens.toTopCat X).obj ((Opens.map f).obj V) ⟶
+        (Opens.toTopCat Y).obj V :=
+    TopCat.ofHom
+      { toFun := fun x => ⟨f.hom x.1, x.2⟩
+        continuous_toFun :=
+          Continuous.subtype_mk
+            (f.hom.continuous.comp continuous_subtype_val) (fun x => by
+              simpa using (Opens.mem_map.mp x.2)) }
+  let α : realContinuousFunctionAlgebraPresheaf Y ⟶
+      (TopCat.Presheaf.pushforward (AlgCat ℝ) f).obj
+        (realContinuousFunctionAlgebraPresheaf X) :=
+    { app := fun V =>
+        AlgCat.ofHom
+          { toFun := fun g => preimageMap V.unop ≫ g
+            map_one' := by
+              apply TopCat.ext
+              intro x
+              rfl
+            map_zero' := by
+              apply TopCat.ext
+              intro x
+              rfl
+            map_add' := by
+              intro x y
+              apply TopCat.ext
+              intro z
+              rfl
+            map_mul' := by
+              intro x y
+              apply TopCat.ext
+              intro z
+              rfl
+            commutes' := by
+              intro r
+              apply TopCat.ext
+              intro x
+              rfl }
+      naturality := by
+        intro U V i
+        apply AlgCat.hom_ext
+        apply AlgHom.ext
+        intro φ
+        apply TopCat.ext
+        intro z
+        rfl }
+  exact ⟨ObjectProperty.homMk α⟩
 
 /-- The continuous-function construction gives a ringed-space morphism. -/
 noncomputable def continuousFunctionRingedSpaceHom {X Y : TopCat}

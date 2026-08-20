@@ -1,9 +1,8 @@
-import Formalization.Books.Algebra.Unit17.Spectrum
-import Formalization.Books.Schemes.Unit03.OpenImmersions
+import Mathlib.AlgebraicGeometry.Scheme
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
-import Mathlib.AlgebraicGeometry.Morphisms.OpenImmersion
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.LocalIso
+import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.TensorProduct.Basic
 

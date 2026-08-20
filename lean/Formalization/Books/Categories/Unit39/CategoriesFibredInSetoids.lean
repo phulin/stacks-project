@@ -101,7 +101,7 @@ instance setoidCategoryCategory (X : Type*) (r : Setoid X) :
     cases f
     cases g
     cases h
-    rfl
+    simp
 
 instance setoidCategoryGroupoid (X : Type*) (r : Setoid X) :
     Groupoid (SetoidCategory X r) where
@@ -522,16 +522,304 @@ theorem fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf
   exact (Classical.choose_spec
     (fibredSetoid_object_presheaf_exists p hp)).1
 
+private theorem representable_of_setPresheaf_equivalence_over_slice
+    {C : Type uC} [Category.{vC} C]
+    {F : Cᵒᵖ ⥤ Type uS} {X : C}
+    (A : setPresheafCategory F ⥤ Over X)
+    (B : Over X ⥤ setPresheafCategory F)
+    (hA : A ⋙ Over.forget X = setPresheafProjection F)
+    (hB : B ⋙ setPresheafProjection F = Over.forget X) :
+    (∃ e, ∃ (over :
+      (A ⋙ B) ⋙ setPresheafProjection F =
+        (𝟭 (setPresheafCategory F)) ⋙ setPresheafProjection F),
+      Formalization.Books.Categories.Unit34.IsOverNaturalIso
+        (setPresheafProjection F) over e) →
+    (∃ e, ∃ (over :
+      (B ⋙ A) ⋙ Over.forget X =
+        (𝟭 (Over X)) ⋙ Over.forget X),
+      Formalization.Books.Categories.Unit34.IsOverNaturalIso
+        (Over.forget X) over e) → F.IsRepresentable := by
+  intro hAB hBA
+  refine Exists.elim hAB (fun eAB hAB' => ?_)
+  refine Exists.elim hAB' (fun overAB heAB => ?_)
+  refine Exists.elim hBA (fun eBA hBA' => ?_)
+  refine Exists.elim hBA' (fun overBA heBA => ?_)
+  have eqToHom_comp {Y Z W : C} (p : Y = Z) (q : Z = W) :
+      eqToHom p ≫ eqToHom q = eqToHom (p.trans q) :=
+    CategoryTheory.eqToHom_trans p q
+  have hA_base {U : C} (x : F.obj (Opposite.op U)) :
+      (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).left = U := by
+    have hh := congrArg
+      (fun K : setPresheafCategory F ⥤ C =>
+        K.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F)) hA
+    change (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).left = U at hh
+    exact hh
+  have hB_base {U : C} (g : U ⟶ X) :
+      (B.obj (Over.mk g)).base = U := by
+    have hh := congrArg
+      (fun K : Over X ⥤ C => K.obj (Over.mk g)) hB
+    change (B.obj (Over.mk g)).base = U at hh
+    exact hh
+  have hBA_base {U : C} (x : F.obj (Opposite.op U)) :
+      (B.obj (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F))).base = U := by
+    have hh := congrArg
+      (fun K : Over X ⥤ C => K.obj
+        (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F))) hB
+    have hh' :
+        (B.obj (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F))).base =
+          (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).left := by
+      change (B.obj (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F))).base =
+        (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).left at hh
+      exact hh
+    exact hh'.trans (hA_base x)
+  have hB_map_base {Y Z : Over X} (i : Y ⟶ Z)
+      (hY : (B.obj Y).base = Y.left) (hZ : (B.obj Z).base = Z.left) :
+      (B.map i).base = eqToHom hY ≫ i.left ≫ eqToHom hZ.symm := by
+    have hh := Functor.congr_hom hB i
+    change (B.map i).base = eqToHom hY ≫ i.left ≫ eqToHom hZ.symm at hh
+    exact hh
+  have hA_map_base {Y Z : setPresheafCategory F} (i : Y ⟶ Z) :
+      (A.map i).left =
+        eqToHom (congrArg (fun K : setPresheafCategory F ⥤ C => K.obj Y) hA) ≫
+          (setPresheafProjection F).map i ≫
+            eqToHom (congrArg (fun K : setPresheafCategory F ⥤ C => K.obj Z) hA).symm := by
+    have hh := Functor.congr_hom hA i
+    change (A.map i).left =
+      eqToHom (congrArg (fun K : setPresheafCategory F ⥤ C => K.obj Y) hA) ≫
+        (setPresheafProjection F).map i ≫
+          eqToHom (congrArg (fun K : setPresheafCategory F ⥤ C => K.obj Z) hA).symm at hh
+    exact hh
+  have hP_eqToHom {Y Z : setPresheafCategory F} (h : Y = Z) :
+      (setPresheafProjection F).map (eqToHom h) =
+        eqToHom (congrArg (fun K : setPresheafCategory F =>
+          (setPresheafProjection F).obj K) h) := by
+    cases h
+    symm
+    apply CategoryTheory.eqToHom_refl
+  have hunit_base {U : C} (x : F.obj (Opposite.op U)) :
+      (eAB.hom.app (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).base =
+        eqToHom (hBA_base x) := by
+    have hh := heAB (⟨U, Discrete.mk x⟩ : setPresheafCategory F)
+    change (eAB.hom.app (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).base =
+      eqToHom (congrArg (fun K : setPresheafCategory F ⥤ C => K.obj
+        (⟨U, Discrete.mk x⟩ : setPresheafCategory F)) overAB) at hh
+    have hproof :
+        congrArg (fun K : setPresheafCategory F ⥤ C => K.obj
+          (⟨U, Discrete.mk x⟩ : setPresheafCategory F)) overAB = hBA_base x :=
+      Subsingleton.elim _ _
+    rw [hproof] at hh
+    exact hh
+  let toHom {U : C} (x : F.obj (Opposite.op U)) : U ⟶ X :=
+    eqToHom (hA_base x).symm ≫
+      (A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F)).hom
+  let fromHom {U : C} (g : U ⟶ X) : F.obj (Opposite.op U) :=
+    cast (congrArg (fun V : C => F.obj (Opposite.op V)) (hB_base g))
+      (setPresheafObjectValue F (B.obj (Over.mk g)))
+  have setObject_eq {U : C} (Y : setPresheafCategory F)
+      (x : F.obj (Opposite.op U)) (hbase : Y.base = U)
+      (hvalue : cast (congrArg (fun V : C => F.obj (Opposite.op V)) hbase)
+        (setPresheafObjectValue F Y) = x) :
+      Y = (⟨U, Discrete.mk x⟩ : setPresheafCategory F) := by
+    cases Y with
+    | mk Y Yfiber =>
+      cases Yfiber with
+      | mk y =>
+        subst U
+        have hyx : y = x := by
+          simpa only [setPresheafObjectValue, cast_eq] using hvalue
+        subst x
+        rfl
+  have hB_obj {U : C} (g : U ⟶ X) :
+      B.obj (Over.mk g) =
+        (⟨U, Discrete.mk (fromHom g)⟩ : setPresheafCategory F) := by
+    apply setObject_eq (B.obj (Over.mk g)) (fromHom g) (hB_base g)
+    rfl
+  let hA_iso {U : C} (x : F.obj (Opposite.op U)) :
+      A.obj (⟨U, Discrete.mk x⟩ : setPresheafCategory F) ≅
+        Over.mk (toHom x) := by
+    refine Over.isoMk (eqToIso (hA_base x)) ?_
+    dsimp [toHom]
+    simp
+  have F_map_eqToHom {V U : C} (h : V = U) (x : F.obj (Opposite.op U)) :
+      F.map (eqToHom h).op x =
+        cast (congrArg (fun W : C => F.obj (Opposite.op W)) h.symm) x := by
+    cases h
+    simp
+  have fromHom_map {U V : C} (f : U ⟶ V) (g : V ⟶ X) :
+      fromHom (f ≫ g) = F.map f.op (fromHom g) := by
+    let j : Over.mk (f ≫ g) ⟶ Over.mk g := by
+      refine Over.homMk f ?_
+      simp
+    have hY : (B.obj (Over.mk (f ≫ g))).base =
+        (Over.mk (f ≫ g)).left := by
+      change (B.obj (Over.mk (f ≫ g))).base = U
+      exact hB_base (f ≫ g)
+    have hZ : (B.obj (Over.mk g)).base = (Over.mk g).left := by
+      change (B.obj (Over.mk g)).base = V
+      exact hB_base g
+    have hj := hB_map_base j hY hZ
+    have hvalue := setPresheafHom_fibre_condition F (B.map j)
+    rw [hj] at hvalue
+    dsimp [j] at hvalue
+    simp only [Functor.map_comp, ConcreteCategory.comp_apply] at hvalue
+    rw [F_map_eqToHom hZ.symm, F_map_eqToHom hY] at hvalue
+    have hvalue' := congrArg
+      (fun y => cast (congrArg (fun W : C => F.obj (Opposite.op W)) hY) y)
+      hvalue
+    simpa [fromHom] using hvalue'.symm
+  let e {U : C} : (U ⟶ X) ≃ F.obj (Opposite.op U) :=
+    { toFun := fromHom
+      invFun := toHom
+      left_inv := by
+        intro g
+        have hobj := hB_obj g
+        have hk := heBA (Over.mk g)
+        change (eBA.hom.app (Over.mk g)).left =
+          eqToHom (congrArg (fun K : Over X ⥤ C => K.obj (Over.mk g)) overBA) at hk
+        let k :
+            A.obj (⟨U, Discrete.mk (fromHom g)⟩ : setPresheafCategory F) ⟶
+              Over.mk g :=
+          A.map (eqToHom hobj.symm) ≫ eBA.hom.app (Over.mk g)
+        have hkbase : k.left = eqToHom (hA_base (fromHom g)) := by
+          dsimp [k]
+          rw [hA_map_base (eqToHom hobj.symm)]
+          rw [hP_eqToHom hobj.symm]
+          rw [hk]
+          simp only [eqToHom_comp]
+          exact eqToHom_comp _ _
+        have hw := Over.w k
+        dsimp [toHom]
+        rw [← hw, hkbase]
+        change eqToHom (hA_base (fromHom g)).symm ≫
+          eqToHom (hA_base (fromHom g)) ≫ g = g
+        rw [← Category.assoc, eqToHom_trans]
+        have hproof :
+            (hA_base (fromHom g)).symm.trans (hA_base (fromHom g)) = rfl :=
+          Subsingleton.elim _ _
+        rw [hproof]
+        simp
+      right_inv := by
+        intro x
+        let Y : setPresheafCategory F := ⟨U, Discrete.mk x⟩
+        have hAY : (A.obj Y).left = U := by
+          dsimp [Y]
+          exact hA_base x
+        let i : A.obj Y ⟶
+            Over.mk (toHom x) := by
+          refine Over.homMk (eqToHom hAY) ?_
+          dsimp [Y, toHom]
+          simp
+        let hsource :
+            (B.obj (A.obj Y)).base = (A.obj Y).left :=
+          by
+            have hh := congrArg (fun K : Over X ⥤ C => K.obj
+              (A.obj Y)) hB
+            change (B.obj (A.obj Y)).base =
+              (Over.forget X).obj (A.obj Y) at hh
+            simpa only [Over.forget_obj] using hh
+        let htarget :
+            (B.obj (Over.mk (toHom x))).base = U := hB_base (toHom x)
+        let hmapEq : (B.obj (A.obj Y)).base =
+              (B.obj (Over.mk (toHom x))).base :=
+          hsource.trans (hAY.trans htarget.symm)
+        have htargetB : (B.obj (Over.mk (toHom x))).base =
+            (Over.mk (toHom x)).left := by
+          change (B.obj (Over.mk (toHom x))).base = U
+          exact htarget
+        have hm_base0 : (B.map i).base =
+            eqToHom (hsource.trans (hAY.trans htarget.symm)) := by
+          rw [hB_map_base i hsource htargetB]
+          have hi0 : i.left = eqToHom hAY := by
+            rfl
+          rw [hi0]
+          simp only [eqToHom_comp]
+        have hm_base : (B.map i).base = eqToHom hmapEq := by
+          calc
+            _ = eqToHom (hsource.trans (hAY.trans htarget.symm)) := hm_base0
+            _ = eqToHom hmapEq :=
+              congrArg (fun h => eqToHom h) (Subsingleton.elim _ _)
+        have hvalueB := setPresheafHom_fibre_condition F (B.map i)
+        rw [hm_base, F_map_eqToHom hmapEq] at hvalueB
+        have hvalueAB := setPresheafHom_fibre_condition F
+          (eAB.hom.app Y)
+        rw [hunit_base x, F_map_eqToHom (hBA_base x)] at hvalueAB
+        have hvalue :
+            cast (congrArg (fun V : C => F.obj (Opposite.op V)) hmapEq.symm)
+                (setPresheafObjectValue F (B.obj (Over.mk (toHom x)))) =
+              cast (congrArg (fun V : C => F.obj (Opposite.op V)) (hBA_base x).symm) x :=
+          hvalueB.trans hvalueAB.symm
+        have hproof : hmapEq.symm.trans (hBA_base x) = htarget :=
+          Subsingleton.elim _ _
+        have hvalue' := congrArg
+          (fun y => cast
+            (congrArg (fun V : C => F.obj (Opposite.op V)) (hBA_base x)) y)
+          hvalue
+        simpa [fromHom, hproof] using hvalue' }
+  refine Functor.RepresentableBy.isRepresentable (Y := X)
+    { homEquiv := e
+      homEquiv_comp := by
+        intro U V f g
+        apply (e.symm).injective
+        change toHom (e (f ≫ g)) = toHom (F.map f.op (e g))
+        dsimp [toHom, e]
+        rw [fromHom_map f g] }
+
 theorem fibredSetoidObjectPresheaf_isRepresentable_of_exists_slice
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p)
     (h : ∃ X : C, IsFibredEquivalenceOver p (Over.forget X)) :
     Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp) := by
-  /- Proof plan: convert the slice equivalence and the chosen setoidification
-  equivalence into an isomorphism of set presheaves, identify the slice with
-  the representable presheaf, and apply `Functor.IsRepresentable.mk'`. -/
-  sorry
+  rcases h with ⟨X, hX⟩
+  have hF := fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf p hp
+  have hFX := isFibredEquivalenceOver_trans
+    (isFibredEquivalenceOver_symm hF) hX
+  let A := Classical.choose hFX
+  have hFX' := Classical.choose_spec hFX
+  let B := Classical.choose hFX'
+  have hFX'' := Classical.choose_spec hFX'
+  have hrest :
+      B ⋙ setPresheafProjection (fibredSetoidObjectPresheaf p hp) =
+          Over.forget X ∧
+        MapsStronglyCartesian
+          (setPresheafProjection (fibredSetoidObjectPresheaf p hp))
+          (Over.forget X) A ∧
+        MapsStronglyCartesian
+          (Over.forget X)
+          (setPresheafProjection (fibredSetoidObjectPresheaf p hp)) B ∧
+        (∃ e, ∃ (over :
+          (A ⋙ B) ⋙ setPresheafProjection (fibredSetoidObjectPresheaf p hp) =
+            (𝟭 (setPresheafCategory (fibredSetoidObjectPresheaf p hp))) ⋙
+              setPresheafProjection (fibredSetoidObjectPresheaf p hp)),
+          Formalization.Books.Categories.Unit34.IsOverNaturalIso
+            (setPresheafProjection (fibredSetoidObjectPresheaf p hp))
+            over e) ∧
+        (∃ e, ∃ (over :
+          (B ⋙ A) ⋙ Over.forget X =
+            (𝟭 (Over X)) ⋙ Over.forget X),
+          Formalization.Books.Categories.Unit34.IsOverNaturalIso
+            (Over.forget X) over e) := by
+    exact hFX''.2
+  have hA : A ⋙ Over.forget X =
+      setPresheafProjection (fibredSetoidObjectPresheaf p hp) := by
+    simpa only [] using hFX''.1
+  have hB : B ⋙ setPresheafProjection
+      (fibredSetoidObjectPresheaf p hp) = Over.forget X := by
+    simpa only [] using hrest.1
+  have hAB : ∃ e, ∃ (over :
+      (A ⋙ B) ⋙ setPresheafProjection (fibredSetoidObjectPresheaf p hp) =
+        (𝟭 (setPresheafCategory (fibredSetoidObjectPresheaf p hp))) ⋙
+          setPresheafProjection (fibredSetoidObjectPresheaf p hp)),
+      Formalization.Books.Categories.Unit34.IsOverNaturalIso
+        (setPresheafProjection (fibredSetoidObjectPresheaf p hp)) over e := by
+    simpa only [] using hrest.2.2.2.1
+  have hBA : ∃ e, ∃ (over :
+      (B ⋙ A) ⋙ Over.forget X =
+        (𝟭 (Over X)) ⋙ Over.forget X),
+      Formalization.Books.Categories.Unit34.IsOverNaturalIso
+        (Over.forget X) over e := by
+    simpa only [] using hrest.2.2.2.2
+  exact representable_of_setPresheaf_equivalence_over_slice A B hA hB hAB hBA
 
 theorem fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable
     {S : Type uS} [Category.{vS} S]

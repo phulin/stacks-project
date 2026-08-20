@@ -62,6 +62,96 @@ theorem universallyInjective_of_left_inverse
   have h := congrArg (fun z => (g.rTensor Q) z) hxy
   simpa [LinearMap.rTensor, TensorProduct.map_map, hgf] using h
 
+/-! A free source is the filtered union of its finite free coordinate stages.
+The following lemma records the tensor-injectivity consequence in the form
+needed by the projective-module application below. -/
+
+theorem universallyInjective_of_free_source_of_finite_stages
+    {R : Type u} {F : Type v} {P : Type w} [CommRing R]
+    [AddCommGroup F] [Module R F] [Module.Free R F]
+    [AddCommGroup P] [Module R P]
+    (hstage : ∀ {F' : Type (max u v)} [AddCommGroup F'] [Module R F']
+      [Module.Finite R F'] [Module.Free R F']
+      (g : F' →ₗ[R] P), Function.Injective g → universallyInjective g)
+    (f : F →ₗ[R] P) (hf : Function.Injective f) :
+    universallyInjective f := by
+  classical
+  intro Q _ _ x y hxy
+  let d : F ⊗[R] Q := x - y
+  have hd : (f.rTensor Q) d = 0 := by
+    dsimp [d]
+    rw [map_sub, hxy, sub_self]
+  obtain ⟨c, hc⟩ := TensorProduct.exists_finsupp_left d
+  let b : Module.Basis (Module.Free.ChooseBasisIndex R F) R F :=
+    Module.Free.chooseBasis R F
+  let s : Finset (Module.Free.ChooseBasisIndex R F) :=
+    c.support.biUnion (fun z => (b.repr z).support)
+  have hsupport (z : F) (hz : z ∈ c.support) :
+      ((b.repr z).support : Set (Module.Free.ChooseBasisIndex R F)) ⊆
+        (s : Set (Module.Free.ChooseBasisIndex R F)) := by
+    intro i hi
+    exact Finset.mem_biUnion.mpr ⟨z, hz, hi⟩
+  let a : (s →₀ R) →ₗ[R] F :=
+    Finsupp.linearCombination R (fun i : s => b i)
+  have ha : Function.Injective a := by
+    exact LinearIndependent.finsuppLinearCombination_injective
+      (b.linearIndependent.comp
+        (fun i : s => (i : Module.Free.ChooseBasisIndex R F)) Subtype.val_injective)
+  have hfa : Function.Injective (f.comp a) := hf.comp ha
+  have hu : universallyInjective (f.comp a) := hstage (f.comp a) hfa
+  let lift : F → s →₀ R := fun z =>
+    if hz : z ∈ c.support then
+      Finsupp.comapDomain (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
+        (b.repr z) Subtype.val_injective.injOn
+    else 0
+  have hlift (z : F) (hz : z ∈ c.support) : a (lift z) = z := by
+    have hrange : ((b.repr z).support : Set (Module.Free.ChooseBasisIndex R F)) ⊆
+        Set.range (fun i : s => (i : Module.Free.ChooseBasisIndex R F)) := by
+      intro i hi
+      exact ⟨⟨i, hsupport z hz hi⟩, rfl⟩
+    have hmap : Finsupp.mapDomain
+        (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
+        (Finsupp.comapDomain
+          (fun i : s => (i : Module.Free.ChooseBasisIndex R F)) (b.repr z)
+          Subtype.val_injective.injOn) = b.repr z :=
+      Finsupp.mapDomain_comapDomain _ Subtype.val_injective (b.repr z)
+        hrange
+    simp only [lift, dif_pos hz]
+    change Finsupp.linearCombination R (fun i : s => b i)
+        (Finsupp.comapDomain
+          (fun i : s => (i : Module.Free.ChooseBasisIndex R F)) (b.repr z)
+          Subtype.val_injective.injOn) = z
+    calc
+      _ = Finsupp.linearCombination R b
+          (Finsupp.mapDomain
+            (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
+            (Finsupp.comapDomain
+              (fun i : s => (i : Module.Free.ChooseBasisIndex R F)) (b.repr z)
+              Subtype.val_injective.injOn)) := by
+            rw [Finsupp.linearCombination_mapDomain]
+            rfl
+      _ = z := by rw [hmap, b.linearCombination_repr]
+  let z : (s →₀ R) ⊗[R] Q := c.sum (fun m q => (lift m) ⊗ₜ[R] q)
+  have hz : (a.rTensor Q) z = d := by
+    dsimp [z]
+    rw [Finsupp.sum]
+    simp only [map_sum, LinearMap.rTensor_tmul]
+    calc
+      (∑ x ∈ c.support, a (lift x) ⊗ₜ[R] c x) =
+          ∑ x ∈ c.support, x ⊗ₜ[R] c x := by
+            apply Finset.sum_congr rfl
+            intro x hx
+            rw [hlift x hx]
+      _ = d := hc.symm
+  have hz0 : z = 0 := by
+    apply hu Q
+    rw [LinearMap.rTensor_comp_apply, hz, hd]
+    simp
+  have hxy0 : d = 0 := by
+    rw [← hz, hz0]
+    simp
+  exact sub_eq_zero.mp hxy0
+
 /-- A short exact sequence is universally exact when its first map remains
 injective after every tensor base change. -/
 def universallyExact
@@ -1046,6 +1136,73 @@ theorem universallyInjective_of_comp
   apply hgf Q
   rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q]
   exact congrArg (fun z => (g.rTensor Q) z) hxy
+
+/-- Universal injectivity of finite-free stages extends to injective maps between
+projective modules.  The stage hypothesis is deliberately independent of any
+later property-(P) predicate. -/
+theorem universallyInjective_of_projective_of_finite_stages
+    {R : Type u} {N : Type v} {M : Type w} [CommRing R]
+    [AddCommGroup N] [Module R N] [Module.Projective R N]
+    [AddCommGroup M] [Module R M] [Module.Projective R M]
+    (hstage : ∀ {F' : Type (max u v)} {P' : Type (max u v w)}
+      [AddCommGroup F'] [Module R F'] [Module.Finite R F'] [Module.Free R F']
+      [AddCommGroup P'] [Module R P'] [Module.Projective R P']
+      (g : F' →ₗ[R] P'), Function.Injective g → universallyInjective g)
+    (f : N →ₗ[R] M) (hf : Function.Injective f) :
+    universallyInjective f := by
+  obtain ⟨F, hAddF, hModF, hFreeF, i, s, his⟩ :=
+    (Module.Projective.iff_split (R := R) (P := N)).mp inferInstance
+  letI : AddCommMonoid F := hAddF
+  letI : AddCommGroup F := Module.addCommMonoidToAddCommGroup R
+  letI : Module R F := hModF
+  letI : Module.Free R F := hFreeF
+  let U : F →ₗ[R] M × F :=
+    LinearMap.prod (f.comp s)
+      ((LinearMap.id : F →ₗ[R] F) - i.comp s)
+  have hU : Function.Injective U := by
+    intro x y hxy
+    have hfirst : f (s x) = f (s y) := by
+      exact congrArg Prod.fst hxy
+    have hsxy : s x = s y := hf hfirst
+    have hsecond : x - i (s x) = y - i (s y) := by
+      exact congrArg Prod.snd hxy
+    calc
+      x = (x - i (s x)) + i (s x) := by rw [sub_add_cancel]
+      _ = (y - i (s y)) + i (s x) := by rw [hsecond]
+      _ = (y - i (s y)) + i (s y) := by rw [hsxy]
+      _ = y := by rw [sub_add_cancel]
+  have hUu : universallyInjective U :=
+    universallyInjective_of_free_source_of_finite_stages hstage U hU
+  have hUi : universallyInjective (U.comp i) := by
+    intro Q _ _ x y hxy
+    have hiQ : Function.Injective (i.rTensor Q) := by
+      intro x y hxy'
+      have h := congrArg (fun z => (s.rTensor Q) z) hxy'
+      simpa [LinearMap.rTensor, TensorProduct.map_map, his] using h
+    apply hiQ
+    apply hUu Q
+    rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q] at hxy
+    exact hxy
+  have hUi_eq : U.comp i = (LinearMap.inl R M F).comp f := by
+    apply LinearMap.ext
+    intro x
+    apply Prod.ext
+    · have hsi := congrArg (fun g => g x) his
+      change f (s (i x)) = f x
+      simpa only [LinearMap.comp_apply, LinearMap.id_apply] using congrArg f hsi
+    · have hsi := congrArg (fun g => g x) his
+      change i x - i (s (i x)) = 0
+      have hsix : s (i x) = x := by
+        simpa only [LinearMap.comp_apply, LinearMap.id_apply] using hsi
+      rw [hsix]
+      simp
+  have hsplit : universallyInjective ((LinearMap.inl R M F).comp f) := by
+    rw [← hUi_eq]
+    exact hUi
+  intro Q _ _ x y hxy
+  apply hsplit Q
+  rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q]
+  exact congrArg (fun z => ((LinearMap.inl R M F).rTensor Q) z) hxy
 
 /-- Finite products of universally exact sequences are universally exact. -/
 theorem universallyExact_prod

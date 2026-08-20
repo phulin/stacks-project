@@ -1,8 +1,10 @@
 import Formalization.Books.Defos.Unit02.DeformationsOfRings
 import Formalization.Books.Defos.Unit03.ThickeningsOfRingedSpaces
+import Formalization.Books.Defos.Unit04.Core
 import Formalization.Books.Modules.Unit16.TensorProduct
 import Formalization.Books.Modules.Unit20.FlatMorphisms
 import Mathlib.Algebra.Homology.DerivedCategory.Ext.Basic
+import Mathlib.Algebra.Homology.DerivedCategory.Basic
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Torsor
 import Mathlib.CategoryTheory.Limits.Shapes.Kernels
@@ -85,6 +87,17 @@ theorem structureSheafShortComplex_shortExact
     (structureSheafShortComplex i).ShortExact :=
   thickeningKernelShortComplex_shortExact i hi
 
+/- The pullback of the structure sheaf and the pullback of its reduction
+   ideal are canonically the structure sheaf and the thickening ideal. -/
+theorem structureSheaf_reduction_iso
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    [((SheafOfModules.pushforward (F := Opens.map i.continuous)
+      i.sharp).IsRightAdjoint)] :
+    Nonempty
+      (reducedModule i (SheafOfModules.unit X'.structureSheaf) ≅
+        SheafOfModules.unit X.structureSheaf) := by
+  sorry
+
 /-! ## Lifts of maps -/
 
 /-- The type of lifts of a map phi : i^* F' -> i^* G'. -/
@@ -102,6 +115,32 @@ abbrev idealTimesModuleOnReducedSpace
       i.sharp).IsRightAdjoint)] (G' : Mod X'.structureSheaf) :
     Mod X.structureSheaf :=
   reducedModule i (idealTimesModule i G')
+
+/- The kernel in the reduction sequence is annihilated by the square-zero
+   thickening ideal, so it is represented on the reduced space.  We retain
+   the representation as an isomorphism rather than identifying the two
+   module objects definitionally. -/
+theorem idealTimesModule_pushforward_iso
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i)
+    [((SheafOfModules.pushforward (F := Opens.map i.continuous)
+      i.sharp).IsRightAdjoint)] (F' : Mod X'.structureSheaf) :
+    Nonempty
+      ((ringedSpaceModulePushforward i).obj
+        (idealTimesModuleOnReducedSpace i F') ≅
+        idealTimesModule i F') := by
+  sorry
+
+theorem structureSheaf_idealTimes_iso
+    {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
+    (hi : IsFirstOrderThickening i)
+    [((SheafOfModules.pushforward (F := Opens.map i.continuous)
+      i.sharp).IsRightAdjoint)] :
+    Nonempty
+      (idealTimesModuleOnReducedSpace i
+          (SheafOfModules.unit X'.structureSheaf) ≅
+        Formalization.Books.Defos.Unit04.firstOrderKernelModule i hi) := by
+  sorry
 
 /-- Lemma inf-map-special: the nonempty lift type is a torsor under
 Hom_X(i^*F', I G'). -/
@@ -125,20 +164,17 @@ abbrev FlatOver {X S : RingedSpace.{v}} (f : RingedSpaceHom X S)
     (F : Mod X.structureSheaf) : Prop :=
   Formalization.Books.Modules.Unit20.flatOver f F
 
-/-- A chosen module presentation of the source square-zero ideal. -/
-noncomputable def sourceIdealModule (M : MorphismOfThickenings)
+/- The source ideal presentation is the canonical chosen presentation from
+   the preceding thickening chapter. -/
+abbrev sourceIdealModule (M : MorphismOfThickenings)
     (hi : IsFirstOrderThickening M.i) : Mod M.X.structureSheaf :=
-  Classical.choose
-    (Formalization.Books.Defos.Unit03.firstOrderThickening_kernel_is_module M.i hi)
+  Formalization.Books.Defos.Unit04.firstOrderKernelModule M.i hi
 
-/-- The chosen source-ideal presentation isomorphism. -/
-noncomputable def sourceIdealModuleIso (M : MorphismOfThickenings)
+abbrev sourceIdealModuleIso (M : MorphismOfThickenings)
     (hi : IsFirstOrderThickening M.i) :
     (ringedSpaceModulePushforward M.i).obj (sourceIdealModule M hi) ≅
       M.sourceIdeal.carrier :=
-  Classical.choice
-    (Classical.choose_spec
-      (Formalization.Books.Defos.Unit03.firstOrderThickening_kernel_is_module M.i hi))
+  Formalization.Books.Defos.Unit04.firstOrderKernelModuleIso M.i hi
 
 /-- A chosen module presentation of the base square-zero ideal. -/
 noncomputable def baseIdealModule (M : MorphismOfThickenings)
@@ -166,6 +202,16 @@ noncomputable abbrev relativeLiftCoefficient
   tensorProductSheaf M.X.structureSheaf G
     ((ringedSpaceModulePullback M.f).obj (baseIdealModule M ht))
 
+/- The flatness criterion uses the source order
+`f^* J ⊗ F`, whereas the map-lifting torsor uses `G ⊗ f^* J`. -/
+noncomputable abbrev flatnessCoefficient
+    (M : MorphismOfThickenings) (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)] (F : Mod M.X.structureSheaf) :
+    Mod M.X.structureSheaf :=
+  tensorProductSheaf M.X.structureSheaf
+    ((ringedSpaceModulePullback M.f).obj (baseIdealModule M ht)) F
+
 /-! ## Flatness criterion for a lifted module -/
 
 /-- The three canonical maps used in Lemma inf-deform-module. The
@@ -181,16 +227,46 @@ structure FlatnessComparison
       M.i.sharp).IsRightAdjoint)]
     (F' : Mod M.X'.structureSheaf) where
   baseToIdeal :
-    relativeLiftCoefficient M ht (reducedModule M.i F') ⟶
+    flatnessCoefficient M ht (reducedModule M.i F') ⟶
       idealTimesModuleOnReducedSpace M.i F'
   baseToSourceTensor :
-    relativeLiftCoefficient M ht (reducedModule M.i F') ⟶
+    flatnessCoefficient M ht (reducedModule M.i F') ⟶
       tensorProductSheaf M.X.structureSheaf (sourceIdealModule M hi)
         (reducedModule M.i F')
   sourceTensorToIdeal :
     tensorProductSheaf M.X.structureSheaf (sourceIdealModule M hi)
         (reducedModule M.i F') ⟶ idealTimesModuleOnReducedSpace M.i F'
   factorization : baseToSourceTensor ≫ sourceTensorToIdeal = baseToIdeal
+
+theorem flatnessComparison_exists
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.i.continuous)
+      M.i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)]
+    (hstrict : MorphismOfThickenings.IsStrict M)
+    (F' : Mod M.X'.structureSheaf) :
+    Nonempty (FlatnessComparison M hi ht F') := by
+  sorry
+
+noncomputable def flatnessComparison
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.i.continuous)
+      M.i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)]
+    (hstrict : MorphismOfThickenings.IsStrict M)
+    (F' : Mod M.X'.structureSheaf) :
+    FlatnessComparison M hi ht F' :=
+  Classical.choice (flatnessComparison_exists M hi ht hstrict F')
 
 /-- Lemma inf-deform-module: flatness over S' is equivalent to the canonical
 map f^*J tensor F -> I F' being an isomorphism. -/
@@ -206,9 +282,9 @@ theorem deform_module_iff
       M.f'.sharp).IsRightAdjoint)]
     (hstrict : MorphismOfThickenings.IsStrict M)
     (F' : Mod M.X'.structureSheaf)
-    (hF : FlatOver M.f (reducedModule M.i F'))
-    (c : FlatnessComparison M hi ht F') :
-    FlatOver M.f' F' ↔ IsIso c.baseToIdeal := by
+    (hF : FlatOver M.f (reducedModule M.i F')) :
+    FlatOver M.f' F' ↔
+      IsIso (flatnessComparison M hi ht hstrict F').baseToIdeal := by
   sorry
 
 /-- The moreover clause of Lemma inf-deform-module. -/
@@ -225,9 +301,9 @@ theorem deform_module_moreover
     (hstrict : MorphismOfThickenings.IsStrict M)
     (F' : Mod M.X'.structureSheaf)
     (hF : FlatOver M.f (reducedModule M.i F'))
-    (hF' : FlatOver M.f' F')
-    (c : FlatnessComparison M hi ht F') :
-    IsIso c.baseToSourceTensor ∧ IsIso c.sourceTensorToIdeal := by
+    (hF' : FlatOver M.f' F') :
+    IsIso (flatnessComparison M hi ht hstrict F').baseToSourceTensor ∧
+      IsIso (flatnessComparison M hi ht hstrict F').sourceTensorToIdeal := by
   sorry
 
 /-- Lemma inf-map-rel. -/
@@ -259,16 +335,43 @@ abbrev ModuleExt {X : RingedSpace.{v}} (F G : Mod X.structureSheaf)
     (n : ℕ) [CategoryTheory.HasExt.{v} (Mod X.structureSheaf)] : Type v :=
   CategoryTheory.Abelian.Ext F G n
 
+/- The special obstruction lemma is stated with the derived pullback
+   `Li^*`.  The project has the derived-category API but no canonical
+   derived pullback functor for these sheaf-module pullbacks, so we expose
+   the exact object-level interface needed by this chapter. -/
+abbrev DerivedModule {X : RingedSpace.{v}}
+    [HasDerivedCategory (Mod X.structureSheaf)] :=
+  DerivedCategory (Mod X.structureSheaf)
+
+structure DerivedPullbackData {X X' : RingedSpace.{v}}
+    (i : RingedSpaceHom X X')
+    [HasDerivedCategory (Mod X.structureSheaf)] where
+  object : Mod X'.structureSheaf → DerivedModule
+
+noncomputable abbrev derivedModuleOf
+    {X : RingedSpace.{v}}
+    [HasDerivedCategory (Mod X.structureSheaf)]
+    (F : Mod X.structureSheaf) : DerivedModule :=
+  (DerivedCategory.singleFunctor (Mod X.structureSheaf) 0).obj F
+
+abbrev DerivedModuleExt {X : RingedSpace.{v}}
+    [HasDerivedCategory (Mod X.structureSheaf)]
+    (K : DerivedModule) (G : Mod X.structureSheaf) (n : ℕ) : Type _ :=
+  K ⟶
+    (shiftFunctor (DerivedCategory (Mod X.structureSheaf)) (n : ℤ)).obj
+      (derivedModuleOf G)
+
 /-- Lemma inf-obs-map-special. -/
 theorem inf_obs_map_special
     {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
     (hi : IsFirstOrderThickening i)
     [((SheafOfModules.pushforward (F := Opens.map i.continuous)
       i.sharp).IsRightAdjoint)]
-    [CategoryTheory.HasExt.{v} (Mod X.structureSheaf)]
+    [HasDerivedCategory (Mod X.structureSheaf)]
+    (D : DerivedPullbackData i)
     (F' G' : Mod X'.structureSheaf)
     (φ : reducedModule i F' ⟶ reducedModule i G') :
-    ∃ o : ModuleExt (reducedModule i F')
+    ∃ o : DerivedModuleExt (D.object F')
         (idealTimesModuleOnReducedSpace i G') 1,
       (o = 0 ↔ Nonempty (ModuleLift i F' G' φ)) := by
   sorry
@@ -407,9 +510,28 @@ structure CanonicalIdealTensorComparison
     (F : Mod M.X.structureSheaf)
     [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
       M.f.sharp).IsRightAdjoint)] where
-  map : tensorProductSheaf M.X.structureSheaf
-      ((ringedSpaceModulePullback M.f).obj (baseIdealModule M ht)) F ⟶
+  map : flatnessCoefficient M ht F ⟶
     tensorProductSheaf M.X.structureSheaf (sourceIdealModule M hi) F
+
+theorem canonicalIdealTensorComparison_exists
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    (F : Mod M.X.structureSheaf) :
+    Nonempty (CanonicalIdealTensorComparison M hi ht F) := by
+  sorry
+
+noncomputable def canonicalIdealTensorComparison
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    (F : Mod M.X.structureSheaf) :
+    CanonicalIdealTensorComparison M hi ht F :=
+  Classical.choice (canonicalIdealTensorComparison_exists M hi ht F)
 
 /-- The Ext2 obstruction group for a flat lift. -/
 abbrev FlatLiftObstruction
@@ -418,6 +540,59 @@ abbrev FlatLiftObstruction
     [CategoryTheory.HasExt.{v} (Mod M.X.structureSheaf)] : Type v :=
   ModuleExt F
     (tensorProductSheaf M.X.structureSheaf (sourceIdealModule M hi) F) 2
+
+theorem exists_flatLiftObstructionClass
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.i.continuous)
+      M.i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)]
+    (hstrict : MorphismOfThickenings.IsStrict M)
+    [CategoryTheory.HasExt.{v} (Mod M.X.structureSheaf)]
+    (F : Mod M.X.structureSheaf) (hF : FlatOver M.f F)
+    (c : CanonicalIdealTensorComparison M hi ht F) :
+    ∃ o : FlatLiftObstruction M hi F,
+      (o = 0 ↔ IsIso c.map ∧ Nonempty (FlatModuleLift M hi F)) := by
+  sorry
+
+noncomputable def flatLiftObstructionClass
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.i.continuous)
+      M.i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)]
+    (hstrict : MorphismOfThickenings.IsStrict M)
+    [CategoryTheory.HasExt.{v} (Mod M.X.structureSheaf)]
+    (F : Mod M.X.structureSheaf) (hF : FlatOver M.f F)
+    (c : CanonicalIdealTensorComparison M hi ht F) :
+    FlatLiftObstruction M hi F :=
+  Classical.choose (exists_flatLiftObstructionClass M hi ht hstrict F hF c)
+
+theorem flatLiftObstructionClass_vanishes_iff
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.i.continuous)
+      M.i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)]
+    (hstrict : MorphismOfThickenings.IsStrict M)
+    [CategoryTheory.HasExt.{v} (Mod M.X.structureSheaf)]
+    (F : Mod M.X.structureSheaf) (hF : FlatOver M.f F)
+    (c : CanonicalIdealTensorComparison M hi ht F) :
+    flatLiftObstructionClass M hi ht hstrict F hF c = 0 ↔
+      IsIso c.map ∧ Nonempty (FlatModuleLift M hi F) :=
+  Classical.choose_spec (exists_flatLiftObstructionClass M hi ht hstrict F hF c)
 
 /-- Lemma inf-obs-ext-rel. -/
 theorem inf_obs_ext_rel
@@ -435,7 +610,29 @@ theorem inf_obs_ext_rel
     (F : Mod M.X.structureSheaf) (hF : FlatOver M.f F)
     (c : CanonicalIdealTensorComparison M hi ht F) :
     (Nonempty (FlatModuleLift M hi F) ↔
-      (IsIso c.map ∧ ∃ o : FlatLiftObstruction M hi F, o = 0)) := by
+      (IsIso c.map ∧
+        flatLiftObstructionClass M hi ht hstrict F hF c = 0)) := by
+  sorry
+
+/- Source-facing form using the canonical comparison map and its chosen
+   obstruction class. -/
+theorem inf_obs_ext_rel_canonical
+    (M : MorphismOfThickenings)
+    (hi : IsFirstOrderThickening M.i)
+    (ht : IsFirstOrderThickening M.t)
+    [((SheafOfModules.pushforward (F := Opens.map M.f.continuous)
+      M.f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.i.continuous)
+      M.i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)]
+    (hstrict : MorphismOfThickenings.IsStrict M)
+    [CategoryTheory.HasExt.{v} (Mod M.X.structureSheaf)]
+    (F : Mod M.X.structureSheaf) (hF : FlatOver M.f F) :
+    (Nonempty (FlatModuleLift M hi F) ↔
+      (IsIso (canonicalIdealTensorComparison M hi ht F).map ∧
+        flatLiftObstructionClass M hi ht hstrict F hF
+          (canonicalIdealTensorComparison M hi ht F) = 0)) := by
   sorry
 
 end

@@ -29,18 +29,28 @@ def IsPrimeChainBetween
     c.head = (⟨p, hpq⟩ : Set.Iic q) ∧
     c.last = (⟨q, Set.mem_Iic.mpr le_rfl⟩ : Set.Iic q)
 
-private def IsGlobalChainBetween {α : Type*} [Preorder α]
+/-- A finite strict chain in an ambient preorder with prescribed endpoints.
+
+Unlike `IsPrimeChainBetween`, this formulation does not choose an interval
+subtype.  It is useful when transporting chains along order equivalences. -/
+def IsGlobalChainBetween {α : Type*} [Preorder α]
     (p q : α) (c : LTSeries α) : Prop :=
   c.head = p ∧ c.last = q
 
-private def IsGlobalMaximalChainBetween {α : Type*} [Preorder α]
+/-- A chain with prescribed endpoints which is maximal among chains with
+those endpoints.  The range formulation makes this invariant under order
+equivalences and avoids choosing an enumeration of an extending chain. -/
+def IsGlobalMaximalChainBetween {α : Type*} [Preorder α]
     (p q : α) (c : LTSeries α) : Prop :=
   c.head = p ∧ c.last = q ∧
     ∀ d : LTSeries α,
       d.head = p → d.last = q →
         Set.range c ⊆ Set.range d → Set.range d ⊆ Set.range c
 
-private def IsGlobalCatenary (α : Type*) [Preorder α] : Prop :=
+/-- The source-neutral order-theoretic catenary condition: chains in every
+strict interval have bounded length, and maximal chains in the interval have
+equal length. -/
+def IsGlobalCatenary (α : Type*) [Preorder α] : Prop :=
     ∀ ⦃p q : α⦄ (_hpq : p < q),
     ∃ n : ℕ,
       (∀ c : LTSeries α,
@@ -197,7 +207,10 @@ private lemma isGlobalCatenary_iff_isCatenaryRing
           rw [forgetChain_liftChain hd.1 hd.2.1]
           exact hd)
 
-private def IsIntervalCatenary (α : Type*) [PartialOrder α] : Prop :=
+/-- A coheight formulation of catenarity.  It packages both finiteness of
+each strict interval and the assertion that every maximal chain realizes the
+interval coheight. -/
+def IsIntervalCatenary (α : Type*) [PartialOrder α] : Prop :=
   ∀ ⦃p q : α⦄ (hpq : p < q),
     Order.coheight (⟨p, le_of_lt hpq⟩ : Set.Iic q) < ⊤ ∧
       ∀ c : LTSeries (Set.Iic q),
@@ -268,7 +281,7 @@ private lemma exists_maximal_interval_chain
           exact range_subset_of_range_subset_of_length_le' hcd hlen
       exact ⟨c, hc_max, by simpa [hc] using hc_len⟩
 
-private lemma isGlobalCatenary_iff_isIntervalCatenary
+theorem isGlobalCatenary_iff_isIntervalCatenary
     {α : Type*} [PartialOrder α] :
     IsGlobalCatenary α ↔ IsIntervalCatenary α := by
   constructor
@@ -342,6 +355,33 @@ private lemma isGlobalCatenary_iff_isIntervalCatenary
           have hc_len := hmax c' hc'max
           have hd_len := hmax d' hd'max
           exact_mod_cast (hc_len.trans hd_len.symm)
+
+/-- Catenarity of a ring is equivalently the source-neutral interval
+condition on its prime spectrum.  This is the preferred bridge for proofs
+which compute lengths of prime intervals. -/
+theorem isCatenaryRing_iff_isIntervalCatenary_primeSpectrum
+    (R : Type u) [CommRing R] :
+    IsCatenaryRing R ↔ IsIntervalCatenary (PrimeSpectrum R) := by
+  rw [← isGlobalCatenary_iff_isCatenaryRing,
+    isGlobalCatenary_iff_isIntervalCatenary]
+
+/-- In a catenary ring every prime interval has finite coheight. -/
+theorem IsCatenaryRing.interval_coheight_lt_top
+    {R : Type u} [CommRing R] (hR : IsCatenaryRing R)
+    {p q : PrimeSpectrum R} (hpq : p < q) :
+    Order.coheight (⟨p, le_of_lt hpq⟩ : Set.Iic q) < ⊤ :=
+  ((isCatenaryRing_iff_isIntervalCatenary_primeSpectrum R).mp hR hpq).1
+
+/-- A maximal prime chain in a catenary interval realizes its coheight. -/
+theorem IsCatenaryRing.maximalChainBetween_length_eq_coheight
+    {R : Type u} [CommRing R] (hR : IsCatenaryRing R)
+    {p q : PrimeSpectrum R} (hpq : p < q)
+    (c : LTSeries (Set.Iic q))
+    (hc : Formalization.Books.Topology.Unit11.IsMaximalChainBetween
+      p q (le_of_lt hpq) c) :
+    (c.length : ℕ∞) =
+      Order.coheight (⟨p, le_of_lt hpq⟩ : Set.Iic q) :=
+  ((isCatenaryRing_iff_isIntervalCatenary_primeSpectrum R).mp hR hpq).2 c hc
 
 private lemma globalMax_map_forward
     {α β : Type*} [Preorder α] [Preorder β] (e : α ≃o β)

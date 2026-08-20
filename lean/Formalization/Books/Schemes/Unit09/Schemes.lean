@@ -220,32 +220,49 @@ theorem puncturedAffinePlane_open_cover (k : Type u) [Field k] :
 
 theorem puncturedAffinePlaneDX_is_affine (k : Type u) [Field k] :
     IsAffine (puncturedAffinePlaneDX k).toScheme := by
-  sorry
+  let e := Scheme.Opens.isoOfLE (X := affinePlane k)
+    (U := affinePlaneDX k) (V := affinePlanePuncturedOpen k) le_sup_left
+  exact @AlgebraicGeometry.IsAffine.of_isIso _ _ e.hom (by infer_instance)
+    (affinePlaneDX_is_affine k)
 
 theorem puncturedAffinePlaneDY_is_affine (k : Type u) [Field k] :
     IsAffine (puncturedAffinePlaneDY k).toScheme := by
-  sorry
+  let e := Scheme.Opens.isoOfLE (X := affinePlane k)
+    (U := affinePlaneDY k) (V := affinePlanePuncturedOpen k) le_sup_right
+  exact @AlgebraicGeometry.IsAffine.of_isIso _ _ e.hom (by infer_instance)
+    (affinePlaneDY_is_affine k)
 
 theorem puncturedAffinePlaneDXY_is_affine (k : Type u) [Field k] :
     IsAffine (puncturedAffinePlaneDXY k).toScheme := by
-  sorry
+  have h : affinePlaneDXY k ≤ affinePlanePuncturedOpen k := by
+    rw [affinePlaneDXY_eq_inter]
+    exact le_trans inf_le_left le_sup_left
+  let e := Scheme.Opens.isoOfLE (X := affinePlane k)
+    (U := affinePlaneDXY k) (V := affinePlanePuncturedOpen k) h
+  exact @AlgebraicGeometry.IsAffine.of_isIso _ _ e.hom (by infer_instance)
+    (affinePlaneDXY_is_affine k)
 
 theorem puncturedAffinePlaneDXY_eq_inter (k : Type u) [Field k] :
     puncturedAffinePlaneDXY k =
       puncturedAffinePlaneDX k ⊓ puncturedAffinePlaneDY k := by
-  sorry
+  dsimp only [puncturedAffinePlaneDXY, puncturedAffinePlaneDX, puncturedAffinePlaneDY]
+  rw [affinePlaneDXY_eq_inter, Scheme.Hom.preimage_inf]
 
 theorem puncturedAffinePlaneDX_localization (k : Type u) [Field k] :
     Nonempty
       ((puncturedAffinePlaneDX k).toScheme ≅
         Spec (CommRingCat.of (Localization.Away (affinePlaneX k)))) := by
-  sorry
+  let e := Scheme.Opens.isoOfLE (X := affinePlane k)
+    (U := affinePlaneDX k) (V := affinePlanePuncturedOpen k) le_sup_left
+  exact ⟨e ≪≫ affinePlaneDX_iso k⟩
 
 theorem puncturedAffinePlaneDY_localization (k : Type u) [Field k] :
     Nonempty
       ((puncturedAffinePlaneDY k).toScheme ≅
         Spec (CommRingCat.of (Localization.Away (affinePlaneY k)))) := by
-  sorry
+  let e := Scheme.Opens.isoOfLE (X := affinePlane k)
+    (U := affinePlaneDY k) (V := affinePlanePuncturedOpen k) le_sup_right
+  exact ⟨e ≪≫ affinePlaneDY_iso k⟩
 
 theorem puncturedAffinePlaneDXY_localization (k : Type u) [Field k] :
     Nonempty

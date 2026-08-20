@@ -983,10 +983,10 @@ theorem differentialObjectSelfMap_page_formula
     have hcoeS : eqToHom (Subobject.representative_coe
         (Subobject.mk α.hom.hom)) ≫ (Subobject.mk α.hom.hom).arrow =
         (Subobject.representative.obj (Subobject.mk α.hom.hom)).arrow := by
-      simpa [Subobject.representative_arrow]
+      simp [Subobject.representative_arrow]
     have hcoeP' : eqToHom (Subobject.representative_coe P') ≫ P'.arrow =
         (Subobject.representative.obj P').arrow := by
-      simpa [Subobject.representative_arrow]
+      simp [Subobject.representative_arrow]
     have hfP : P'.Factors f := by
       obtain ⟨g, hg⟩ :=
         (Subobject.factors_iff (Subobject.mk α.hom.hom) f).mp hfS
@@ -999,11 +999,6 @@ theorem differentialObjectSelfMap_page_formula
         (Subobject.mk α.hom.hom)) ≫
         Subobject.ofLE (Subobject.mk α.hom.hom) P' hSP' ≫
         eqToHom (Subobject.representative_coe P').symm, ?_⟩
-      change (g ≫ eqToHom (Subobject.representative_coe
-          (Subobject.mk α.hom.hom)) ≫
-          Subobject.ofLE (Subobject.mk α.hom.hom) P' hSP' ≫
-          eqToHom (Subobject.representative_coe P').symm) ≫
-        (Subobject.representative.obj P').arrow = f
       simp only [Category.assoc]
       rw [hcoeP_inv, Subobject.ofLE_arrow, hcoeS]
       exact hg

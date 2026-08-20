@@ -1,10 +1,16 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit54.EssentiallyFiniteType
+import Formalization.Books.Algebra.Unit63.AssociatedPrimes
+import Formalization.Books.Algebra.Unit81.CharacterizingFlatness
 import Formalization.Books.Algebra.Unit82.UniversallyInjective
+import Formalization.Books.Algebra.Unit85.ProjectiveModulesLocalRing
+import Formalization.Books.Algebra.Unit128.MoreFlatnessCriteria
 import Mathlib.Algebra.GroupWithZero.NonZeroDivisors
 import Mathlib.LinearAlgebra.TensorProduct.Map
+import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Basic
 import Mathlib.RingTheory.Localization.Module
+import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 
@@ -54,6 +60,64 @@ conjunct is the semilocality assertion; the second records the associated-
 prime criterion for primes disjoint from the regular-element submonoid and the
 correspondence for maximal ideals after localization.
 -/
+/-
+Proof roadmap.
+
+Use `I := homothetyIdeal f`, `Mbar := homothetyReduction (N := N) f`,
+`Sigma := homothetySigma (N := N) f`, and `pi := Ideal.Quotient.mk I` throughout.
+
+1. First package the quotient-ring change of scalars.  Apply
+   `Formalization.Books.Algebra.Unit63.ass_quotient_ring I`
+   (`Formalization/Books/Algebra/Unit63/AssociatedPrimes.lean`) and rewrite its
+   `PrimeSpectrum` sets with `Unit63.associatedPrimes_toIdeal_eq_mathlib`.  Record
+   the resulting equality
+   `associatedPrimes S Mbar =
+      {p.comap pi | p \in associatedPrimes (S ⧸ I) Mbar}`.
+   The set on the right is finite by `Unit63.finite_ass`, equivalently by
+   `_root_.associatedPrimes.finite` from
+   `Mathlib/RingTheory/Ideal/AssociatedPrime/Finiteness.lean`.  Keep this as a
+   named finite set; it is used both in the prime-avoidance step and in the
+   final `Finite` instance.
+
+2. Over `S ⧸ I`, use
+   `_root_.biUnion_associatedPrimes_eq_zero_divisors` from
+   `Mathlib/RingTheory/Ideal/AssociatedPrime/Basic.lean`.  Transport it along
+   the surjection `pi` to prove the explicit identity
+   `(Sigma : Set S)ᶜ = ⋃ p ∈ associatedPrimes S Mbar, (p : Set S)`.
+   Membership in `Sigma` unfolds with
+   `mem_nonZeroSMulDivisors_iff`; the only non-definitional step is replacing
+   scalar multiplication by `r : S` with multiplication by `pi r` on `Mbar`.
+
+3. For a prime `q : Ideal S`, combine that identity with
+   `Ideal.subset_union_prime_finite` from
+   `Mathlib/RingTheory/Ideal/Operations.lean`.  This gives exactly
+   `Disjoint (q : Set S) Sigma` iff `q ≤ p` for one associated prime `p`.
+   In the reverse direction, use the same complement identity to show every
+   associated prime is disjoint from `Sigma`; do not try to prove regularity
+   element-by-element.
+
+4. For a maximal ideal `P` of `Localization Sigma`, put
+   `q := P.comap (algebraMap S (Localization Sigma))`.  The forward half of
+   `IsLocalization.isPrime_iff_isPrime_disjoint Sigma (Localization Sigma) P`
+   (`Mathlib/RingTheory/Localization/Ideal.lean`) makes `q` prime and disjoint.
+   Step 3 gives `q ≤ p₀` for an associated prime `p₀`.  Map `p₀` to the
+   localization.  Maximality of `P`, together with
+   `IsLocalization.map_under` and `IsLocalization.under_le_under_iff`, forces
+   `q = p₀`.  Step 1 then supplies a quotient associated prime `p` with
+   `q = p.comap pi`, which is the third conjunct of the theorem.
+
+5. To build `Finite (MaximalSpectrum (Localization Sigma))`, send a maximal
+   ideal to the quotient associated prime obtained in step 4.  Equality of
+   images implies equality of contractions by `pi`, then equality of the
+   localized ideals by injectivity of `IsLocalization.orderEmbedding`; hence
+   this map is injective.  Transfer finiteness from the finite subtype in
+   step 1 with `Finite.of_injective`.  Assemble the semilocality assertion,
+   the equivalence from step 3, and the correspondence from step 4.
+
+Known dead end: `_root_.associatedPrimes.finite S Mbar` cannot be applied
+directly because only `S ⧸ I`, not `S`, is Noetherian.  The quotient-ring
+comparison in step 1 is essential.
+-/
 theorem homothety_spectrum
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R]
@@ -84,6 +148,63 @@ in the source are proof scaffolding for the following interface.  They are
 not separate chapter declarations: the theorem records their mathematical
 conclusion, namely universal injectivity of each homothety and of the map to
 the localized module.
+-/
+/-
+Proof roadmap.
+
+After introducing the five hypotheses, install the displayed algebra,
+restricted-scalar, and scalar-tower instances once.  Also install the
+`IsLocalHom f` proof as an instance.
+
+1. For `s : homothetySigma (N := N) f`, set
+   `u_s : N →ₗ[S] N := LinearMap.lsmul S N (s : S)`.  Prove
+   `Formalization.Books.Algebra.Unit128.residueMapInjective f u_s` by
+   quotient induction.  Here `Unit128.mappedMaximalIdeal f` is definitionally
+   `homothetyIdeal f`, and the induced quotient map sends `[n]` to `[s • n]`.
+   Its injectivity is exactly
+   `s.property`, unfolded with `mem_nonZeroSMulDivisors_iff`.
+
+2. Convert the Unit54 hypothesis to the root
+   `RingHom.EssFinitePresentation f` expected by
+   `Formalization.Books.Algebra.Unit128.mod_injective_general`
+   (`Formalization/Books/Algebra/Unit128/MoreFlatnessCriteria.lean`) by
+   unpacking and repacking the identical finite-presentation/localization
+   witness; all rings here are in `Type u`.  Apply that theorem with both its
+   source and target modules instantiated by `N`, and with `u := u_s`.
+   The restricted `ModuleCat` carrier in its flatness premise is
+   definitionally `N`; use `change Module.Flat R N` to supply the given
+   instance.  The result is
+   `Function.Injective u_s` and `Module.Flat R (N ⧸ LinearMap.range u_s)`.
+
+3. Put `q_s := (LinearMap.range u_s).mkQ`.  The preceding injectivity,
+   `LinearMap.exact_map_mkQ_range`, and `Submodule.mkQ_surjective` form the
+   short exact sequence for `u_s, q_s`.  Apply the forward direction of
+   `Unit82.flat_iff_exact_ending_universallyExact` to the flat cokernel and
+   take the fourth field.  This proves universal injectivity of
+   `u_s.restrictScalars R`; unfold `universallyInjectiveOver` to obtain the
+   first requested conjunct.
+
+4. Avoid constructing the source's directed system explicitly.  To prove the
+   localization map universally injective, fix
+   `Q : Type u`, set `Sigma := homothetySigma (N := N) f`, and consider
+   `gQ := TensorProduct.AlgebraTensorModule.rTensor R Q
+      (LocalizedModule.mkLinearMap Sigma N)`.
+   `IsLocalizedModule.rTensor` from
+   `Mathlib/RingTheory/Localization/BaseChange.lean` makes `gQ` a localization
+   of the `S`-module `N ⊗[R] Q`.  Apply
+   `IsLocalizedModule.injective_iff_isRegular`.  For `s : Sigma`, regularity
+   of its action on `N ⊗[R] Q` is the result of step 3 applied to `Q`; verify
+   the equality of maps on `n ⊗ₜ q` with
+   `LinearMap.rTensor_tmul`.  Finally `change` `gQ` back to
+   `((LocalizedModule.mkLinearMap Sigma N).restrictScalars R).rTensor Q`.
+
+Keep the residue-map comparison in step 1 and the localization argument in
+step 4 as small private helper lemmas before this theorem: the latter is used
+again by `invert_universally_injective`.
+
+Known dead end: applying `Unit99.mod_injective` requires
+`IsNoetherianRing S`, which does not follow from the hypotheses.  Use the
+general Unit128 interface above; do not strengthen this statement.
 -/
 theorem homothety_universally_injective
     {R S N : Type u} [CommRing R] [CommRing S]
@@ -158,6 +279,76 @@ hypotheses.  The declaration follows the statement and uses
 `scalarBaseChangeMap`; the square of localization maps and the faithful-flat
 comparison in the proof are proof scaffolding rather than separate interfaces.
 -/
+/-
+Proof roadmap.
+
+Introduce the hypotheses and install the displayed instances.  Write
+`Sigma := homothetySigma (N := N) f`,
+`A := Localization Sigma`, `SigmaT := Sigma.map g`, and
+`B := Localization SigmaT`.  Let
+`gLoc : A →+* B := IsLocalization.map B g Sigma.le_comap_map`.
+
+1. Obtain the prime criterion and maximal-prime correspondence from
+   `homothety_spectrum f`.  Prove `RingHom.Flat gLoc` by applying
+   `RingHom.Flat.isStableUnderBaseChange.localizationPreserves`
+   (`Mathlib/RingTheory/RingHom/Flat.lean`) to the given `RingHom.Flat g`.
+
+2. Show that every maximal point of `Spec A` lies in the image of
+   `PrimeSpectrum.comap gLoc`.  For a maximal ideal `P` of `A`, the third
+   component of `homothety_spectrum f` gives an associated prime
+   `pbar : Ideal (S ⧸ homothetyIdeal f)` whose comap to `S` is the contraction
+   of `P`.  This contraction lies over `IsLocalRing.maximalIdeal R`: the ideal
+   `homothetyIdeal f` is contained in it, and `IsLocalHom f` identifies the
+   contraction of the maximal ideal of `S` with the maximal ideal of `R`.
+   Apply the theorem's spectrum-image hypothesis to the corresponding
+   `PrimeSpectrum S` point and obtain `Q : PrimeSpectrum T` above it.
+
+3. The ideal `Q.asIdeal` is disjoint from `SigmaT`: if `g s ∈ Q`, contraction
+   puts `s` in the contraction of `P`, contradicting
+   `IsLocalization.isPrime_iff_isPrime_disjoint Sigma A P`.  Hence
+   `Ideal.map (algebraMap T B) Q.asIdeal` is prime by
+   `IsLocalization.isPrime_of_isPrime_disjoint`.  Its contraction along
+   `gLoc` is `P`; prove this by taking contractions to `S` and using
+   `IsLocalization.under_map_of_isPrime_disjoint`, then use injectivity of
+   `IsLocalization.orderEmbedding`.  Feed this maximal-point lifting to
+   `(Formalization.Books.Algebra.Unit39.faithfullyFlat_ringHom_criteria
+      gLoc hgLoc).out 2 0` to obtain `RingHom.FaithfullyFlat gLoc`.
+
+4. Let `L := LocalizedModule Sigma N`.  The unit
+   `etaL : L →ₗ[A] B ⊗[A] L`, `x ↦ 1 ⊗ₜ x`, is universally injective over
+   `R`.  For a test module `Q : Type u`, give `L ⊗[R] Q` its left `A`-action
+   and use `Module.FaithfullyFlat.tensorProduct_mk_injective (L ⊗[R] Q)`
+   from `Mathlib/RingTheory/Flat/FaithfullyFlat/Algebra.lean`.  Conjugate that
+   map to `(etaL.restrictScalars R).rTensor Q` with
+   `TensorProduct.assoc` and `TensorProduct.comm`; check the conjugacy on pure
+   tensors.  This proves `universallyInjectiveOver (R := R) etaL` without
+   incorrectly replacing `R`-test modules by `A`-test modules.
+
+5. Build the target comparison
+   `e : B ⊗[A] L ≃ₗ[A]
+      LocalizedModule SigmaT (T ⊗[S] N)`.
+   Construct it from `LocalizedModule.equivTensorProduct` twice and
+   `TensorProduct.assoc`; alternatively show directly that
+   `T ⊗[S] N → LocalizedModule SigmaT (T ⊗[S] N)` is the base change of
+   `N → L` and use `IsLocalizedModule.linearEquiv`.  Record the pure-tensor
+   formula
+   `e (1 ⊗ₜ LocalizedModule.mkLinearMap Sigma N n) =
+      LocalizedModule.mkLinearMap SigmaT (T ⊗[S] N) (1 ⊗ₜ n)`.
+
+6. The localization square says that the composite
+   `N → L → B ⊗[A] L → LocalizedModule SigmaT (T ⊗[S] N)` is the composite of
+   `scalarBaseChangeMap f g` with the target localization map.  The first map
+   is universally injective by `homothety_universally_injective f`, the second
+   by step 4, and the equivalence by
+   `universallyInjective_of_left_inverse`; combine them with
+   `universallyInjective_comp`.  Then apply `universallyInjective_of_comp` to
+   the target-localization factorization to obtain the desired universal
+   injectivity of `scalarBaseChangeMap f g`.
+
+Known dead end: faithful flatness of `gLoc` is not an instance obtained from
+flatness alone.  It uses precisely the maximal-spectrum coverage in steps
+2--3 and the semilocal description from `homothety_spectrum`.
+-/
 theorem base_change_universally_injective_local
     {R S T N : Type u} [CommRing R] [CommRing S] [CommRing T]
     [AddCommGroup N] [Module S N] [IsLocalRing R] [IsLocalRing S]
@@ -188,6 +379,96 @@ theorem base_change_universally_injective_local
                 universallyInjective (scalarBaseChangeMap (N := N) f g) := by
   sorry
 
+/-
+Proof roadmap.
+
+After installing the displayed instances, define the `S`-linear unit map
+`eta : N →ₗ[S] T ⊗[S] N := (TensorProduct.mk S T N) (1 : T)`; its restriction
+to `R` is `scalarBaseChangeMap f g` by definition.
+
+1. Use the at-prime component
+   `((universallyInjective_iff_check_stalks (R := R) (A := S) eta).2.2.1)`
+   from `Formalization/Books/Algebra/Unit82/UniversallyInjective.lean`.
+   Thus it suffices, for every `q : Ideal S` with `[q.IsPrime]`, to prove
+   `universallyInjectiveAtPrimeOver (R := R) (A := S) q eta`.  Do not apply
+   the stalk theorem directly to `scalarBaseChangeMap`: that map is only
+   presented as `R`-linear, while the stalk interface requires the `S`-linear
+   `eta`.
+
+2. At a fixed `q`, set
+   `p := q.comap f`, `Rp := Localization.AtPrime p`,
+   `Sq := Localization.AtPrime q`,
+   `Tq := Localization (q.primeCompl.map g)`,
+   `fq := Localization.localRingHom p q f rfl`,
+   `gq := IsLocalization.map Tq g q.primeCompl.le_comap_map`, and
+   `Nq := LocalizedModule q.primeCompl N`.
+   Use `Localization.isLocalHom_localRingHom` for `fq`.  The map `gq` is flat
+   by `RingHom.Flat.isStableUnderBaseChange.localizationPreserves` applied to
+   `g`.
+
+3. Supply the finiteness hypotheses required by the local theorem.
+   `RingHom.finitePresentation_localizationPreserves`
+   (`Mathlib/RingTheory/RingHom/FinitePresentation.lean`) localizes the given
+   finite-presentation map at `p`; compose it with the further localization
+   to `Sq` and use
+   `Formalization.Books.Algebra.Unit54.essFinitePresentation_comp` to obtain
+   the Unit54 essential-finite-presentation predicate for `fq`.  The instance
+   `Module.FinitePresentation (Localization q.primeCompl)
+      (LocalizedModule q.primeCompl N)` is in
+   `Mathlib/Algebra/Module/FinitePresentation.lean`.  Flatness of `Nq` over
+   `Rp` is
+   `(Formalization.Books.Algebra.Unit39.flat_iff_localized_over_primes).mp
+      ‹Module.Flat R N› q` after rewriting its `flat_at_prime_over` algebra.
+
+4. The special-fibre ring of `fq` is Noetherian.  Finite presentation implies
+   essential finite type; use `Algebra.EssFiniteType.quotient_map` and then
+   `Algebra.EssFiniteType.isNoetherianRing` over the field `p.ResidueField`
+   (`Mathlib/RingTheory/EssentialFiniteness.lean` and
+   `Mathlib/RingTheory/Localization/Submodule.lean`).  The special-fibre
+   module is finite: base-change the finite-presentation instance for `Nq`
+   to the quotient and transport it through
+   `TensorProduct.quotTensorEquivQuotSMul`.  Install these two facts as the
+   instances expected by `base_change_universally_injective_local fq gq`.
+
+5. Prove the local spectrum-image hypothesis.  Put
+   `Fp := N ⊗[R] p.ResidueField`, with its left `S`-action.  The quotient ring
+   `S ⧸ Ideal.map f p` is Noetherian and `Fp` is finite by the same argument
+   as step 4.  Use
+   `Formalization.Books.Algebra.Unit63.ass_quotient_ring` followed by
+   `Unit63.ass_localize_eq_of_noetherian`
+   (`Formalization/Books/Algebra/Unit63/AssociatedPrimes.lean`) to turn an
+   associated prime of the special fibre of `Nq` into an associated prime
+   `q₀ : PrimeSpectrum S` of `Fp` with `q₀.asIdeal ≤ q`.  Its contraction
+   along `f` is `p` because `Fp` is annihilated by `p` and `q₀ ≤ q`.
+   The global hypothesis gives `Q : PrimeSpectrum T` above `q₀`.
+   Since `q₀ ≤ q`, `Q.asIdeal` is disjoint from
+   `q.primeCompl.map g`; localize it with
+   `IsLocalization.isPrime_of_isPrime_disjoint`.  The contraction identities
+   `IsLocalization.under_map_of_isPrime_disjoint` and
+   `IsLocalization.orderEmbedding.injective` show that this localized prime
+   maps to the originally chosen prime of `Sq`.
+
+6. Apply `base_change_universally_injective_local fq gq` with steps 2--5.
+   Its source is `Nq` and its target is `Tq ⊗[Sq] Nq`.  Construct a linear
+   equivalence from this target to
+   `LocalizedModule q.primeCompl (T ⊗[S] N)` using
+   `LocalizedModule.equivTensorProduct`, `TensorProduct.assoc`, and
+   `IsLocalizedModule.linearEquiv`, and prove on representatives that it
+   conjugates the local scalar-base-change map to
+   `LocalizedModule.map q.primeCompl eta`.  Universal injectivity is preserved
+   under this conjugacy by `universallyInjective_of_left_inverse` and
+   `universallyInjective_comp`.  This closes the at-prime goal from step 1.
+
+7. The stalk theorem now gives
+   `universallyInjectiveAsAlgebra (R := R) (A := S) eta`.  Unfold
+   `universallyInjectiveAsAlgebra`, `universallyInjectiveOver`,
+   `scalarBaseChangeMap`, and use `RingHom.algebraMap_toAlgebra` to identify
+   its restricted map with the theorem's conclusion.
+
+Known dead end: applying the local theorem without steps 4--5 leaves exactly
+the two inherited special-fibre instances and the associated-prime transport
+unsolved; broad `simp` does not discover either quotient/localization bridge.
+-/
 theorem base_change_universally_injective
     {R S T N : Type u} [CommRing R] [CommRing S] [CommRing T]
     [AddCommGroup N] [Module S N]
@@ -223,6 +504,77 @@ flat-cokernel criteria; it introduces no additional interface.  The induced
 map modulo the maximal ideal is represented by the existing
 `quotientMapByIdeal` construction.
 -/
+/-
+Proof roadmap.
+
+Write `m := IsLocalRing.maximalIdeal R` and `k := IsLocalRing.ResidueField R`.
+Keep the finite-free case separate from the arbitrary projective case.
+
+1. Prove a private tensor/quotient bridge: for any `v : X →ₗ[R] Y`, the
+   equivalences
+   `(TensorProduct.comm R X (R ⧸ m)).trans
+      (TensorProduct.quotTensorEquivQuotSMul X m)` and the analogous one for
+   `Y` conjugate `v.rTensor (R ⧸ m)` to `quotientMapByIdeal m v`.
+   Compose with the linear equivalence induced by
+   `m.bijective_algebraMap_quotient_residueField` to obtain
+   `Function.Injective (quotientMapByIdeal m v)` iff
+   `Function.Injective (v.lTensor k)`.  The pure-tensor computations are the
+   same as the forward branch of `Unit82.universallyInjective_into_flat_iff`
+   (`Formalization/Books/Algebra/Unit82/UniversallyInjective.lean`).
+
+2. Prove a private finite-free-source lemma.  Let `F : Type u` be finite free,
+   `v : F →ₗ[R] N`, and assume its map modulo `m` is injective.  Obtain a
+   `C : Unit81.DirectedFreeFiniteSystem (R := R) (M := N)` from
+   `Formalization.Books.Algebra.Unit81.lazard.mp ‹Module.Flat R N›`
+   (`Formalization/Books/Algebra/Unit81/CharacterizingFlatness.lean`).  Choose
+   `e : DirectLimit C.stage C.map ≃ₗ[R] N` from `C.targetIso`.
+
+3. Factor `e.symm.toLinearMap.comp v` through one stage `C.stage i`.  Use the
+   finite basis `Module.Free.chooseBasis R F`.  Transport once through
+   `Module.DirectLimit.linearEquiv` and represent each basis image with
+   `Module.DirectLimit.exists_of`; use `Finset.exists_le` to move the finitely
+   many representatives to one common index.  This gives
+   `v_i : F →ₗ[R] C.stage i` and
+   `e.toLinearMap.comp (DirectLimit.Module.of R C.index C.stage C.map i)
+      |>.comp v_i = v`.
+
+4. For every `j ≥ i`, let `v_j := C.map i j hij ∘ₗ v_i`.  Its residue
+   map is injective: if `v_j.lTensor k` kills an element, compose to the direct
+   limit and then through `e`; the result is killed by `v.lTensor k`, which is
+   injective by step 1.  Apply
+   `IsLocalRing.split_injective_iff_lTensor_residueField_injective v_j`
+   (`Mathlib/RingTheory/LocalRing/Module.lean`) to get a left inverse of every
+   `v_j`.  Hence each `v_j.rTensor Q` is injective for every `Q`, by
+   `universallyInjective_of_left_inverse`.
+
+5. Tensor the direct-limit presentation with an arbitrary `Q : Type u` using
+   `TensorProduct.directLimitLeft C.map Q`
+   (`Mathlib/LinearAlgebra/TensorProduct/DirectLimit.lean`).  If two elements
+   of `F ⊗[R] Q` have equal images under `v.rTensor Q`, their images from stage
+   `i` are equal in the tensor direct limit.  Use
+   `Module.DirectLimit.linearEquiv` and
+   `Module.DirectLimit.exists_eq_of_of_eq` to move that equality to a common
+   `j ≥ i`, then injectivity of `v_j.rTensor Q` from step 4.  This proves the
+   finite-free-source lemma.
+
+6. Turn the given projective module into a free module with
+   `Formalization.Books.Algebra.Unit85.projective_free_over_local_ring`
+   (`Formalization/Books/Algebra/Unit85/ProjectiveModulesLocalRing.lean`).
+   For fixed `Q` and `x,y : M ⊗[R] Q`, repeat the finite-support construction
+   in the proof of
+   `Unit82.universallyInjective_of_free_source_of_finite_stages`: use
+   `TensorProduct.exists_finsupp_left`, the chosen free basis, and the finite
+   union of coordinate supports to obtain a finite free coordinate module
+   `F'`, a split inclusion `a : F' →ₗ[R] M`, and lifts of `x-y` through
+   `a.rTensor Q`.  The quotient map of `u.comp a` is injective because `a` has
+   a left inverse and `hu` is injective.  Apply the finite-free lemma to
+   `u.comp a`; its tensor injectivity forces the lifted difference, hence
+   `x-y`, to vanish.
+
+The use of the Lazard system is essential: `universallyInjective_into_flat_iff`
+asks for all finitely generated ideals, while the hypothesis only controls the
+single maximal ideal.
+-/
 theorem universally_injective_local
     {R M N : Type u} [CommRing R] [IsLocalRing R]
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
@@ -235,6 +587,67 @@ theorem universally_injective_local
 
 /-! ## Projective modules -/
 
+/-
+Proof roadmap.
+
+Introduce the projectivity hypothesis and install the displayed `Algebra`,
+restricted-scalar, and scalar-tower instances once.  Put
+`Sigma := homothetySigma (N := N) f`.
+
+1. For `s : Sigma`, set
+   `u_s : N →ₗ[S] N := LinearMap.lsmul S N (s : S)`.  Build an explicit
+   quotient equivalence relating the two scalar structures.  With
+   `m := IsLocalRing.maximalIdeal R` and
+   `P := homothetyIdeal f • (⊤ : Submodule S N)`, first prove
+   `P.restrictScalars R = m • (⊤ : Submodule R N)`.  After rewriting
+   `homothetyIdeal` and `RingHom.algebraMap_toAlgebra`, this is
+   `Ideal.smul_restrictScalars m (⊤ : Submodule S N)` from
+   `Mathlib/RingTheory/Ideal/Maps.lean`, followed by
+   `Submodule.restrictScalars_top`.
+
+2. Compose
+   `(Submodule.Quotient.restrictScalarsEquiv R P).symm` from
+   `Mathlib/LinearAlgebra/Quotient/Basic.lean` with
+   `Submodule.quotEquivOfEq` for the equality in step 1.  This gives an
+   `R`-linear equivalence
+   `e : homothetyReduction (N := N) f ≃ₗ[R]
+      N ⧸ (m • (⊤ : Submodule R N))`.
+   Check by `Submodule.Quotient.induction_on` that `e` conjugates the map
+   induced by `u_s` to
+   `quotientMapByIdeal m (u_s.restrictScalars R)`.  The induced map on the
+   homothety reduction is multiplication by `(s : S)`, so its injectivity is
+   exactly `s.property`, unfolded with `mem_nonZeroSMulDivisors_iff`.
+
+3. The projectivity hypothesis supplies `Module.Flat R N` through the
+   Mathlib instance `Module.Flat.of_projective` in
+   `Mathlib/RingTheory/Flat/Basic.lean`.  Apply
+   `universally_injective_local (u_s.restrictScalars R)` to the quotient
+   injectivity from step 2.  This yields `universallyInjective
+   (u_s.restrictScalars R)`; unfold `universallyInjectiveOver` to obtain the
+   first conjunct for every `s : Sigma`.
+
+4. Reuse the localization helper described in step 4 of the roadmap for
+   `homothety_universally_injective`.  For every `Q : Type u`, the map
+   `TensorProduct.AlgebraTensorModule.rTensor R Q
+      (LocalizedModule.mkLinearMap Sigma N)` is a localization map by
+   `IsLocalizedModule.rTensor` in
+   `Mathlib/RingTheory/Localization/BaseChange.lean`.  Apply
+   `IsLocalizedModule.injective_iff_isRegular` from
+   `Mathlib/Algebra/Module/LocalizedModule/Basic.lean`; regularity of every
+   `s : Sigma` on `N ⊗[R] Q` is precisely step 3 evaluated at `Q`, after
+   checking the two maps agree on `n ⊗ₜ q` with
+   `LinearMap.rTensor_tmul`.  This is the second conjunct.
+
+The Noetherian and finite-special-fibre instances are retained because they
+belong to the book's preceding homothety setup, but this projective proof does
+not consume them; that is harmless and is not a statement defect.
+
+Known dead end: the two quotient submodules in step 1 are not definitionally
+equal: one uses the `S`-submodule generated by `Ideal.map f m`, while the
+other uses the restricted `R`-module.  Do not try to close the residue goal
+with `rfl` or broad `simp`; use `Ideal.smul_restrictScalars` and the quotient
+equivalences explicitly.
+-/
 theorem invert_universally_injective
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R]

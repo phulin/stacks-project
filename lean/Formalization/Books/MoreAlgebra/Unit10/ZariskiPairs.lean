@@ -21,7 +21,7 @@ ring maps, and Jacobson rings use the canonical Mathlib constructions.
 
 namespace Formalization.Books.MoreAlgebra.Unit10
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -57,7 +57,7 @@ theorem idempotents_determined_modulo_radical
 /-- A flat, integral, finitely presented map which is an isomorphism after
 reduction modulo a Zariski-pair ideal is already an isomorphism. -/
 theorem check_isomorphism_zariski
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (I : Ideal A) (hI : ZariskiPair I)
     (f : A →+* B) (hflat : f.Flat) (hintegral : f.IsIntegral)
     (hfp : f.FinitePresentation)
@@ -75,9 +75,9 @@ induced ideal `I` are canonically the factors themselves.  The displayed
 condition `A ⧸ I → B₁/IB₁` is therefore represented by surjectivity of the
 canonical algebra map to `B₁`. -/
 def FiniteHelperFactorization
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (I : Ideal A)
-    (B₁ B₂ : Type v) [CommRing B₁] [CommRing B₂]
+    (B₁ B₂ : Type w) [CommRing B₁] [CommRing B₂]
     [Algebra (A ⧸ I) B₁] [Algebra (A ⧸ I) B₂]
     (b : B) : Prop :=
   letI : Algebra A B := f.toAlgebra
@@ -97,10 +97,10 @@ hypotheses. -/
 the distinguished element `(1, 0)` produce a monic annihilating polynomial
 whose reduction is `(X - 1) X^d` for some positive `d`. -/
 theorem helper_finite
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (I : Ideal A) (hI : ZariskiPair I)
     (f : A →+* B) (hfinite : RingHom.Finite f)
-    (B₁ B₂ : Type v) [CommRing B₁] [CommRing B₂]
+    (B₁ B₂ : Type w) [CommRing B₁] [CommRing B₂]
     [Algebra (A ⧸ I) B₁] [Algebra (A ⧸ I) B₂]
     (b : B) (hfactor : FiniteHelperFactorization f I B₁ B₂ b) :
     ∃ p : Polynomial A, p.Monic ∧ Polynomial.eval₂ f b p = 0 ∧

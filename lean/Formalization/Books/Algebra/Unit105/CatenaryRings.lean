@@ -1211,6 +1211,32 @@ theorem isCatenaryRing_localization_iff
     exact isCatenaryRing_of_globalCatenary_iic hglobalIic hpq hqJ
   tfae_finish
 
+/-- Catenarity can be checked at all prime localizations.  This named `Iff`
+wrapper is easier to reuse than selecting entries from the corresponding
+`List.TFAE`. -/
+theorem isCatenaryRing_iff_forall_localizationAtPrime
+    (R : Type u) [CommRing R] :
+    IsCatenaryRing R ↔
+      ∀ p : PrimeSpectrum R,
+        IsCatenaryRing (Localization.AtPrime p.asIdeal) := by
+  exact (isCatenaryRing_localization_iff R).out 0 1
+    (a := IsCatenaryRing R)
+    (b := ∀ p : PrimeSpectrum R,
+      IsCatenaryRing (Localization.AtPrime p.asIdeal))
+    (h₁ := rfl) (h₂ := rfl)
+
+/-- Catenarity can be checked at maximal localizations. -/
+theorem isCatenaryRing_iff_forall_localizationAtMaximal
+    (R : Type u) [CommRing R] :
+    IsCatenaryRing R ↔
+      ∀ m : MaximalSpectrum R,
+        IsCatenaryRing (Localization.AtPrime m.asIdeal) := by
+  exact (isCatenaryRing_localization_iff R).out 0 2
+    (a := IsCatenaryRing R)
+    (b := ∀ m : MaximalSpectrum R,
+      IsCatenaryRing (Localization.AtPrime m.asIdeal))
+    (h₁ := rfl) (h₂ := rfl)
+
 theorem isUniversallyCatenary_localization_iff
     (R : Type u) [CommRing R] [IsNoetherianRing R] :
     List.TFAE
@@ -1372,11 +1398,90 @@ theorem isUniversallyCatenary_iff_quotient_minimalPrime
 
 /-! ## Cohen--Macaulay rings and modules -/
 
+/-- A local ring admitting a finite Cohen--Macaulay module with full support
+is catenary.  This is the local chain calculation underlying both statements
+of `lemma-CM-ring-catenary` in the source. -/
+theorem isCatenaryRing_of_isCohenMacaulay_fullSupport
+    (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R] [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (hM : Formalization.Books.Algebra.Unit103.IsCohenMacaulay R M)
+    (hsupp : Module.support R M = Set.univ) :
+    IsCatenaryRing R := by
+  /-
+  Checked roadmap, following the textbook proof.
+
+  1. Use `isCatenaryRing_iff_isIntervalCatenary_primeSpectrum`.  For
+     `p < q`, transport the interval below `q` to
+     `Spec (Localization.AtPrime q)`.  Its coheight is finite because this is
+     a Noetherian local ring (`FiniteRingKrullDim`).  This supplies the bound
+     on arbitrary chains without any Cohen--Macaulay input.
+
+  2. Given a maximal chain `c` from `p` to `q`, choose a maximal chain below
+     `p` in `Spec R_q` and concatenate it with the transported `c`.  The
+     generic concatenation/maximality lemmas belong with the `LTSeries`
+     interval API above; do not restate them for ideals.
+
+  3. Localize `M` at `q`.  Use
+     `Unit103.isCohenMacaulay_localize` and
+     `Unit103.support_localizedModuleAtPrime_eq_univ_of_support_eq_univ`.
+     The concatenated chain is now a global maximal prime chain in a local
+     ring, so `Unit103.maximalPrimeChain_length_eq_ringKrullDim` computes its
+     length.
+
+  4. Repeat with a second maximal chain `d` from `p` to `q`, using the same
+     lower chain.  Both concatenations have length `dim R_q`; cancellation of
+     the common lower-chain length gives `c.length = d.length`, equivalently
+     both lengths equal the interval coheight.
+
+  The remaining implementation gap is thus order-theoretic chain splicing
+  plus the two explicit localization transports, not a new dimension
+  theorem and not Unit 105 vocabulary duplicated in Unit 103.
+  -/
+  sorry
+
+/-- A Cohen--Macaulay local ring is catenary. -/
+theorem isCatenaryRing_of_isCohenMacaulayLocalRing
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (hR : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing R) :
+    IsCatenaryRing R := by
+  apply isCatenaryRing_of_isCohenMacaulay_fullSupport R R hR
+  rw [Module.support_eq_zeroLocus, Module.annihilator_eq_bot.mpr inferInstance]
+  simp
+
+/-- A globally Cohen--Macaulay ring is catenary. -/
+theorem isCatenaryRing_of_isCohenMacaulayRing
+    (R : Type u) [CommRing R] [IsNoetherianRing R]
+    (hR : Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing R) :
+    IsCatenaryRing R := by
+  rw [isCatenaryRing_iff_forall_localizationAtPrime]
+  intro p
+  exact isCatenaryRing_of_isCohenMacaulayLocalRing _ (hR p)
+
+/-- A global Cohen--Macaulay module with full support forces its base ring to
+be catenary. -/
+theorem isCatenaryRing_of_isCohenMacaulayModule
+    (R : Type u) (M : Type v) [CommRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (hM : Formalization.Books.Algebra.Unit103.IsCohenMacaulayModule R M)
+    (hsupp : Module.support R M = Set.univ) :
+    IsCatenaryRing R := by
+  rw [isCatenaryRing_iff_forall_localizationAtPrime]
+  intro p
+  apply isCatenaryRing_of_isCohenMacaulay_fullSupport
+    (Localization.AtPrime p.asIdeal) (LocalizedModule.AtPrime p.asIdeal M)
+    (hM p)
+  exact Formalization.Books.Algebra.Unit103.support_localizedModuleAtPrime_eq_univ_of_support_eq_univ
+    hsupp p
+
 theorem isUniversallyCatenary_of_isCohenMacaulayRing
     (R : Type u) [CommRing R] [IsNoetherianRing R]
     (hR : Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing R) :
     IsUniversallyCatenary R := by
-  sorry
+  rw [isUniversallyCatenary_iff_mPolynomial]
+  refine ⟨inferInstance, ?_⟩
+  intro n
+  exact isCatenaryRing_of_isCohenMacaulayRing _
+    (Formalization.Books.Algebra.Unit104.isCohenMacaulayRing_mPolynomial R hR n)
 
 theorem isUniversallyCatenary_of_isCohenMacaulayModule
     (R : Type u) (M : Type v) [CommRing R] [IsNoetherianRing R]
@@ -1384,7 +1489,16 @@ theorem isUniversallyCatenary_of_isCohenMacaulayModule
     (hM : Formalization.Books.Algebra.Unit103.IsCohenMacaulayModule R M)
     (hsupp : Module.support R M = Set.univ) :
     IsUniversallyCatenary R := by
-  sorry
+  rw [isUniversallyCatenary_iff_mPolynomial]
+  refine ⟨inferInstance, ?_⟩
+  intro n
+  apply isCatenaryRing_of_isCohenMacaulayModule
+    (MvPolynomial (Fin n) R)
+    (Formalization.Books.Algebra.Unit103.polynomialModuleExtension R M n)
+  · exact Formalization.Books.Algebra.Unit103.isCohenMacaulayModule_polynomialModuleExtension
+      hM n
+  · exact Formalization.Books.Algebra.Unit103.support_polynomialModuleExtension_eq_univ
+      hsupp n
 
 /-! ## Dimension functions on a Noetherian local ring -/
 

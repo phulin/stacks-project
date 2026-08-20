@@ -819,6 +819,25 @@ theorem isCohenMacaulay_localize
       (LocalizedModule.AtPrime p.asIdeal M) := by
   sorry
 
+/-- Localizing a finite module of full support again gives a module of full
+support.  This is the support half of the localization step used in maximal
+chain arguments; it is intentionally independent of Cohen--Macaulayness. -/
+theorem support_localizedModuleAtPrime_eq_univ_of_support_eq_univ
+    {R : Type u} {M : Type v} [CommRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (hsupp : Module.support R M = Set.univ) (p : PrimeSpectrum R) :
+    Module.support (Localization.AtPrime p.asIdeal)
+      (LocalizedModule.AtPrime p.asIdeal M) = Set.univ := by
+  /-
+  Roadmap.  A prime of `R_p` corresponds to a prime `q ⊆ p` of `R`.
+  Membership of `q` in `support R M` is equivalent to nonvanishing of
+  `M_q`; transitivity of localization identifies this with the localization
+  at the corresponding prime of `R_p` of `M_p`.  Package that equivalence as
+  a general `Module.mem_support_localizedModule_iff` lemma near the existing
+  support/localization API, then this theorem is `simpa [hsupp]`.
+  -/
+  sorry
+
 def IsCohenMacaulayModule
     (R : Type u) (M : Type v) [CommRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]

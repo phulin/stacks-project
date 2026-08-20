@@ -315,16 +315,23 @@ structure CartanEilenbergSpectralSequenceData
   bounded :
     filteredComplexBounded (cartanEilenbergFirstSpectralSequence F hF R) ∧
       filteredComplexBounded (cartanEilenbergSecondSpectralSequence F hF R)
-  /-- Both spectral sequences converge in the filtered-complex sense. -/
+  /-- Both selected spectral sequences converge in the filtered-complex sense.
+
+  The source asserts convergence of the two spectral sequences constructed
+  from `F(I^{\bullet,\bullet})`, so this records `filteredComplexConvergesAt`
+  for those particular choices rather than the weaker existence of some
+  spectral sequence on each filtered total complex. -/
   converges :
-    filteredComplexConverges
+    filteredComplexConvergesAt
         (doubleComplexFirstFilteredTotal
           (mapDoubleComplex F (left_or_right_exact_additive F (Or.inl hF))
-            R.doubleComplex)) ∧
-      filteredComplexConverges
+            R.doubleComplex))
+        (cartanEilenbergFirstSpectralSequence F hF R) ∧
+      filteredComplexConvergesAt
         (doubleComplexSecondFilteredTotal
           (mapDoubleComplex F (left_or_right_exact_additive F (Or.inl hF))
             R.doubleComplex))
+        (cartanEilenbergSecondSpectralSequence F hF R)
   /-- The induced filtrations on every abutment cohomology object are finite. -/
   finite_filtration :
     FilteredComplexCohomologyFiniteFiltration
@@ -449,6 +456,17 @@ structure CartanEilenbergResolutionMap
     f ≫ S.augmentation = R.augmentation ≫
       doubleComplexMapRow doubleComplexMap 0
 
+/-- A comparison morphism between Cartan–Eilenberg resolutions can be chosen
+for a morphism of the resolved complexes.  This is the comparison-map form
+of the functoriality assertion in the source remark. -/
+theorem cartanEilenbergResolutionMap_exists
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {K L : BookComplex A} {hK : IsBoundedBelow K} {hL : IsBoundedBelow L}
+    (R : CartanEilenbergResolution K hK)
+    (S : CartanEilenbergResolution L hL) (f : K ⟶ L) :
+    Nonempty (CartanEilenbergResolutionMap R S f) := by
+  sorry
+
 /-- The two spectral sequences are functorial in the complex, once the usual
 map of Cartan–Eilenberg resolutions has been chosen. -/
 theorem cartanEilenberg_spectral_sequences_functorial
@@ -469,13 +487,13 @@ theorem cartanEilenberg_spectral_sequences_functorial
           (cartanEilenbergFirstSpectralSequence F hF R)
           (cartanEilenbergFirstSpectralSequence F hF S)) ∧
       Nonempty
-        (FilteredComplexSpectralSequenceHom
+      (FilteredComplexSpectralSequenceHom
           (cartanEilenbergSecondFilteredTotalMap
             (mapDoubleComplexMap F
               (left_or_right_exact_additive F (Or.inl hF))
               h.doubleComplexMap))
           (cartanEilenbergSecondSpectralSequence F hF R)
-          (cartanEilenbergSecondSpectralSequence F hF S)) := by
+      (cartanEilenbergSecondSpectralSequence F hF S)) := by
   let hF' := left_or_right_exact_additive F (Or.inl hF)
   let fF := mapDoubleComplexMap F hF' h.doubleComplexMap
   refine ⟨?_, ?_⟩
@@ -487,5 +505,35 @@ theorem cartanEilenberg_spectral_sequences_functorial
       (cartanEilenbergSecondFilteredTotalMap fF)
       (cartanEilenbergSecondSpectralSequence F hF R)
       (cartanEilenbergSecondSpectralSequence F hF S)
+
+/-- The functoriality assertion for the two spectral sequences, with the
+comparison morphism supplied by the preceding existence theorem. -/
+theorem cartanEilenberg_spectral_sequences_functorial_exists
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasCountableCoproducts B]
+    (F : A ⥤ B) (hF : IsLeftExact F)
+    {K L : BookComplex A} {hK : IsBoundedBelow K} {hL : IsBoundedBelow L}
+    (R : CartanEilenbergResolution K hK)
+    (S : CartanEilenbergResolution L hL) (f : K ⟶ L) :
+    Nonempty
+        (FilteredComplexSpectralSequenceHom
+          (cartanEilenbergFirstFilteredTotalMap
+            (mapDoubleComplexMap F
+              (left_or_right_exact_additive F (Or.inl hF))
+              (Classical.choice (cartanEilenbergResolutionMap_exists R S f)).doubleComplexMap))
+          (cartanEilenbergFirstSpectralSequence F hF R)
+          (cartanEilenbergFirstSpectralSequence F hF S)) ∧
+      Nonempty
+        (FilteredComplexSpectralSequenceHom
+          (cartanEilenbergSecondFilteredTotalMap
+            (mapDoubleComplexMap F
+              (left_or_right_exact_additive F (Or.inl hF))
+              (Classical.choice (cartanEilenbergResolutionMap_exists R S f)).doubleComplexMap))
+          (cartanEilenbergSecondSpectralSequence F hF R)
+          (cartanEilenbergSecondSpectralSequence F hF S)) := by
+  let h : CartanEilenbergResolutionMap R S f :=
+    Classical.choice (cartanEilenbergResolutionMap_exists R S f)
+  exact cartanEilenberg_spectral_sequences_functorial F hF R S f h
 
 end Formalization.Books.Derived.Unit21

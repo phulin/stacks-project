@@ -3797,6 +3797,101 @@ private theorem card_primeSpectrum_le_finrank
     _ = Module.finrank ℚ Q :=
       (IsArtinianRing.finrank_eq_sum_primeSpectrum Q ℚ).symm
 
+private theorem affine_second_aeval_surjective (a : ℚ) :
+    let d : ℚ := 2 - a
+    let c : ℚ := 2 * a * (1 - a)
+    let I : Ideal affineBaseSubalgebra := Ideal.span {affineG a}
+    let Q := affineBaseSubalgebra ⧸ I
+    let Abar : Q := Ideal.Quotient.mk I affineA
+    Function.Surjective (Polynomial.aeval Abar : Polynomial ℚ →ₐ[ℚ] Q) := by
+  dsimp only
+  let d : ℚ := 2 - a
+  let c : ℚ := 2 * a * (1 - a)
+  let I : Ideal affineBaseSubalgebra := Ideal.span {affineG a}
+  let Q := affineBaseSubalgebra ⧸ I
+  let Abar : Q := Ideal.Quotient.mk I affineA
+  let fA : Polynomial ℚ →ₐ[ℚ] Q := Polynomial.aeval Abar
+  have hG : affineG a = affineB +
+      algebraMap ℚ affineBaseSubalgebra d * affineA +
+      algebraMap ℚ affineBaseSubalgebra c := by
+    simpa [d, c, affineSecondOffset, affineSecondConstant] using
+      affine_second_generator_formula a
+  have hGmem : affineG a ∈ I := Ideal.subset_span (by simp)
+  intro q
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective q
+  have hxpoly : (x : Polynomial ℚ) ∈ Algebra.adjoin ℚ
+      ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} : Set (Polynomial ℚ)) := by
+    rw [← affine_base_is_generated_by_A_and_B]
+    exact x.property
+  have hrep : ∃ (hy : (x : Polynomial ℚ) ∈ affineBaseSubalgebra)
+      (p : Polynomial ℚ), fA p = Ideal.Quotient.mk I ⟨x, hy⟩ := by
+    refine Algebra.adjoin_induction (R := ℚ) (A := Polynomial ℚ)
+      (s := {(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)})
+      (p := fun y _ => ∃ (hy : y ∈ affineBaseSubalgebra) (p : Polynomial ℚ),
+        fA p = Ideal.Quotient.mk I ⟨y, hy⟩) ?_ ?_ ?_ ?_ hxpoly
+    · intro y hy
+      rcases Set.mem_insert_iff.mp hy with rfl | hy
+      · refine ⟨affineA.property, Polynomial.X, ?_⟩
+        simp [fA, Abar]
+      · have hy' : y = (affineB : Polynomial ℚ) := by simpa using hy
+        subst y
+        have hGzero : Ideal.Quotient.mk I (affineG a) = 0 :=
+          Ideal.Quotient.eq_zero_iff_mem.mpr hGmem
+        refine ⟨affineB.property, -(Polynomial.C d) * Polynomial.X - Polynomial.C c, ?_⟩
+        rw [hG] at hGzero
+        have hsum : Ideal.Quotient.mk I affineB + Ideal.Quotient.mk I
+            (algebraMap ℚ affineBaseSubalgebra d * affineA +
+              algebraMap ℚ affineBaseSubalgebra c) = 0 := by
+          simpa only [map_add, map_mul, add_assoc] using hGzero
+        have hBq := eq_neg_of_add_eq_zero_left hsum
+        have hBq' : -(Ideal.Quotient.mk I
+            (algebraMap ℚ affineBaseSubalgebra d * affineA) +
+          Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra c)) =
+          Ideal.Quotient.mk I affineB := by
+          rw [← map_add]
+          exact hBq.symm
+        have hBq'' : -((algebraMap ℚ Q) d * Ideal.Quotient.mk I affineA) -
+            (algebraMap ℚ Q) c = Ideal.Quotient.mk I affineB := by
+          have hscalar (r : ℚ) : Ideal.Quotient.mk I
+              (algebraMap ℚ affineBaseSubalgebra r) = algebraMap ℚ Q r := rfl
+          calc
+            _ = -(Ideal.Quotient.mk I
+                (algebraMap ℚ affineBaseSubalgebra d * affineA) +
+              Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra c)) := by
+                conv_rhs => rw [map_mul, hscalar d, hscalar c]
+                ring
+            _ = _ := hBq'
+        simpa [fA, Abar, Polynomial.aeval_def] using hBq''
+    · intro r
+      have hrmem : Polynomial.C r ∈ affineBaseSubalgebra := by simp [affineBaseSubalgebra]
+      refine ⟨hrmem, Polynomial.C r, ?_⟩
+      calc
+        fA (Polynomial.C r) = algebraMap ℚ Q r := by
+          simp [fA, Polynomial.C_eq_algebraMap]
+        _ = Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra r) := rfl
+        _ = Ideal.Quotient.mk I (⟨Polynomial.C r, hrmem⟩ : affineBaseSubalgebra) := by
+          apply congrArg (Ideal.Quotient.mk I)
+          apply Subtype.ext
+          exact (Polynomial.C_eq_algebraMap r).symm
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨hxmem, p, hp⟩
+      rcases hy' with ⟨hymem, q, hq⟩
+      refine ⟨affineBaseSubalgebra.add_mem hxmem hymem, p + q, ?_⟩
+      rw [map_add, hp, hq]
+      apply congrArg (Ideal.Quotient.mk I)
+      apply Subtype.ext
+      rfl
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨hxmem, p, hp⟩
+      rcases hy' with ⟨hymem, q, hq⟩
+      refine ⟨affineBaseSubalgebra.mul_mem hxmem hymem, p * q, ?_⟩
+      rw [map_mul, hp, hq]
+      apply congrArg (Ideal.Quotient.mk I)
+      apply Subtype.ext
+      rfl
+  rcases hrep with ⟨hy, p, hp⟩
+  exact ⟨p, by simpa only [Subtype.coe_eta] using hp⟩
+
 private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
     (_ha1 : a ≠ 1) (_haHalf : a ≠ 1 / 2) :
     ∃ t : Finset (PrimeSpectrum affineBaseSubalgebra), t.card ≤ 3 ∧
@@ -3839,96 +3934,7 @@ private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
     rw [← hmap]
     exact hzero
   have hf_surj : Function.Surjective fA := by
-    intro q
-    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective q
-    have hxpoly : (x : Polynomial ℚ) ∈
-        Algebra.adjoin ℚ ({(affineA : Polynomial ℚ),
-          (affineB : Polynomial ℚ)} : Set (Polynomial ℚ)) := by
-      rw [← affine_base_is_generated_by_A_and_B]
-      exact x.property
-    have hrep : ∃ (hy : (x : Polynomial ℚ) ∈ affineBaseSubalgebra)
-        (p : Polynomial ℚ), fA p = Ideal.Quotient.mk I ⟨x, hy⟩ := by
-      refine Algebra.adjoin_induction (R := ℚ) (A := Polynomial ℚ)
-        (s := {(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)})
-        (p := fun y _ => ∃ (hy : y ∈ affineBaseSubalgebra) (p : Polynomial ℚ),
-          fA p = Ideal.Quotient.mk I ⟨y, hy⟩) ?_ ?_ ?_ ?_ hxpoly
-      · intro y hy
-        rcases Set.mem_insert_iff.mp hy with rfl | hy
-        · refine ⟨affineA.property, Polynomial.X, ?_⟩
-          simp [fA, Abar]
-        · have hy' : y = (affineB : Polynomial ℚ) := by simpa using hy
-          subst y
-          have hGzero : Ideal.Quotient.mk I (affineG a) = 0 :=
-            Ideal.Quotient.eq_zero_iff_mem.mpr hGmem
-          refine ⟨affineB.property, -(Polynomial.C d) * Polynomial.X -
-            Polynomial.C c, ?_⟩
-          have hGzero' := hGzero
-          rw [hG] at hGzero'
-          have hsum :
-              Ideal.Quotient.mk I affineB +
-                  Ideal.Quotient.mk I
-                    (algebraMap ℚ affineBaseSubalgebra d * affineA +
-                      algebraMap ℚ affineBaseSubalgebra c) = 0 := by
-            simpa only [map_add, map_mul, add_assoc] using hGzero'
-          have hBq := eq_neg_of_add_eq_zero_left hsum
-          have hBq' :
-              -(Ideal.Quotient.mk I
-                  (algebraMap ℚ affineBaseSubalgebra d * affineA) +
-                Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra c)) =
-                Ideal.Quotient.mk I affineB := by
-            calc
-              _ = -Ideal.Quotient.mk I
-                  (algebraMap ℚ affineBaseSubalgebra d * affineA +
-                    algebraMap ℚ affineBaseSubalgebra c) := by rw [map_add]
-              _ = _ := hBq.symm
-          have hBq'' :
-              -((algebraMap ℚ Q) d * Ideal.Quotient.mk I affineA) -
-                (algebraMap ℚ Q) c = Ideal.Quotient.mk I affineB := by
-            have hscalar (r : ℚ) :
-                Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra r) =
-                  algebraMap ℚ Q r := rfl
-            calc
-              _ = -(Ideal.Quotient.mk I
-                  (algebraMap ℚ affineBaseSubalgebra d * affineA) +
-                Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra c)) := by
-                conv_rhs =>
-                  rw [map_mul, hscalar d, hscalar c]
-                ring
-              _ = _ := hBq'
-          simpa [fA, Abar, Polynomial.aeval_def] using hBq''
-      · intro r
-        have hrmem : Polynomial.C r ∈ affineBaseSubalgebra := by
-          simp [affineBaseSubalgebra]
-        refine ⟨hrmem, Polynomial.C r, ?_⟩
-        calc
-          fA (Polynomial.C r) = algebraMap ℚ Q r := by
-            simp [fA, Polynomial.C_eq_algebraMap]
-          _ = Ideal.Quotient.mk I (algebraMap ℚ affineBaseSubalgebra r) := rfl
-          _ = Ideal.Quotient.mk I (⟨Polynomial.C r, hrmem⟩ : affineBaseSubalgebra) := by
-            apply congrArg (Ideal.Quotient.mk I)
-            apply Subtype.ext
-            exact (Polynomial.C_eq_algebraMap r).symm
-      · intro x y hx hy hx' hy'
-        rcases hx' with ⟨hxmem, p, hp⟩
-        rcases hy' with ⟨hymem, q, hq⟩
-        refine ⟨?_, p + q, ?_⟩
-        · exact affineBaseSubalgebra.add_mem hxmem hymem
-        · rw [map_add, hp, hq]
-          apply congrArg (Ideal.Quotient.mk I)
-          apply Subtype.ext
-          rfl
-      · intro x y hx hy hx' hy'
-        rcases hx' with ⟨hxmem, p, hp⟩
-        rcases hy' with ⟨hymem, q, hq⟩
-        refine ⟨?_, p * q, ?_⟩
-        · exact affineBaseSubalgebra.mul_mem hxmem hymem
-        · rw [map_mul, hp, hq]
-          apply congrArg (Ideal.Quotient.mk I)
-          apply Subtype.ext
-          rfl
-    rcases hrep with ⟨hy, p, hp⟩
-    refine ⟨p, ?_⟩
-    simpa only [Subtype.coe_eta] using hp
+    simpa [d, c, I, Q, Abar, fA] using affine_second_aeval_surjective a
   have hqdeg : qP.degree < (3 : WithBot ℕ) := affine_second_remainder_degree a
   have hPmonic : P.Monic := by
     exact Polynomial.monic_X_pow_add (by simpa [P] using hqdeg)

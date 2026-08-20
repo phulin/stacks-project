@@ -192,6 +192,7 @@ structure FlatResolution {X : TopCat.{v}} (O : CommRingSheaf X)
   differential_comp : ∀ i,
     differential (i + 1) ≫ differential i = 0
   differential_augmentation : differential 0 ≫ augmentation = 0
+  augmentation_epi : Epi augmentation
   exact_at_zero :
     (ShortComplex.mk (differential 0) augmentation differential_augmentation).Exact
   exact_at_succ : ∀ i,
@@ -214,6 +215,7 @@ def TensoredResolutionExact {X : TopCat.{v}} {O : CommRingSheaf X}
     {Q : CommRingSheafModule O} (R : FlatResolution O Q)
     (G : CommRingSheafModule O) : Prop :=
   (R.zeroComplex.map (tensorRightFunctor O G)).Exact ∧
+    Epi ((tensorRightFunctor O G).map R.augmentation) ∧
     ∀ i, (R.succComplex i).map (tensorRightFunctor O G) |>.Exact
 
 /-- A flat resolution of a flat module remains exact after tensoring with any

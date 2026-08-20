@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit40.SupportsAndAnnihilators
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
+import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.ProjectiveDimension
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.Torsion.Basic
@@ -758,7 +759,7 @@ private theorem fittingIdealOfSurjection_factor
         rintro ⟨x, y⟩
         apply Prod.ext
         · funext i
-          simp [Function.comp_def, Fin.addCases_left]
+          simp [Fin.addCases_left]
         · funext i
           change Fin.addCases x y (Fin.natAdd n i) = y i
           rw [Fin.addCases_right]
@@ -789,7 +790,6 @@ private theorem fittingIdealOfSurjection_factor
     ext ⟨x, y⟩ <;>
       simp [Cprod, Dprod, LinearMap.comp_apply, sub_eq_add_neg,
         add_assoc, add_comm, add_left_comm]
-    <;> abel
   let C : (Fin (n + n) → R) →ₗ[R] (Fin (n + n) → R) :=
     split.symm.toLinearMap.comp (Cprod.comp split.toLinearMap)
   let D : (Fin (n + n) → R) →ₗ[R] (Fin (n + n) → R) :=
@@ -1079,7 +1079,7 @@ theorem fittingIdeal_baseChange
       apply LinearMap.mem_ker.mpr
       change (p.baseChange S) (e.symm (e (1 ⊗ₜ[R] (z j).1))) = 0
       rw [e.symm_apply_apply, LinearMap.baseChange_tmul]
-      simp [(z j).property]⟩
+      simp⟩
   have hsmul (r : R) : r • (1 : S) = algebraMap R S r := by
     rw [Algebra.smul_def]
     simp
@@ -1186,9 +1186,9 @@ theorem fittingIdeal_baseChange
               ext i j
               by_cases hja : j = a
               · subst j
-                simp [F, A₀]
+                simp [A₀]
                 exact (hA a ha i).symm
-              · simp [F, A₀, hja]
+              · simp [A₀, hja]
             rw [← hFA]
             induction w a using TensorProduct.induction_on with
             | zero =>
@@ -1398,6 +1398,25 @@ theorem fittingIdeal_linearEquiv
         hN.choose_spec.choose_spec k
     _ = fittingIdeal R N k := by
       rfl
+
+/-- Fitting ideals are unchanged by a finite module which is isomorphic to its
+    extension of scalars along an endomorphism of the base ring. -/
+theorem fittingIdeal_extendScalars
+    {R M : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (f : R →+* R)
+    (e : ((ModuleCat.extendScalars f).obj (ModuleCat.of R M)) ≃ₗ[R] M)
+    (k : ℕ) :
+    fittingIdeal R M k = Ideal.map f (fittingIdeal R M k) := by
+  let _ : Algebra R R := f.toAlgebra
+  let _ : Module.Finite R
+      ((ModuleCat.extendScalars f).obj (ModuleCat.of R M) : Type _) :=
+    Module.Finite.equiv e.symm
+  have hbase := fittingIdeal_baseChange (R := R) (S := R) (M := M) k
+  have hequiv := fittingIdeal_linearEquiv
+    (R := R) (M := ((ModuleCat.extendScalars f).obj (ModuleCat.of R M) : Type _))
+    (N := M) e k
+  simpa only [RingHom.algebraMap_toAlgebra] using hequiv.symm.trans hbase
 
 theorem fittingIdeal_fg
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]

@@ -74,8 +74,8 @@ noncomputable instance ftA0IsLocalRing (k : Type u) [Field k] : IsLocalRing (ftA
   unfold ftA0
   infer_instance
 
-abbrev ftAPolynomialRing (k : Type u) [Field k] [h : CommRing (ftA0 k)] :=
-  @MvPolynomial ℕ (ftA0 k) h.toCommSemiring
+abbrev ftAPolynomialRing (k : Type u) [Field k] :=
+  MvPolynomial ℕ (ftA0 k)
 
 def ftX (k : Type u) [Field k] : ftA0 k :=
   algebraMap (ftBasePolynomialRing k) (ftA0 k) (ftBaseX k)

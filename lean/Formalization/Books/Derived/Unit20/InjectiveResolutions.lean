@@ -82,28 +82,28 @@ theorem termwiseInjectiveComplex_computes
     [∀ n : ℤ, (shiftFunctor D n).Additive]
     [Pretriangulated D] [CategoryTheory.IsTriangulated D]
     (F : KPlus A ⥤ D)
-    (hF : Nonempty (ExactTriangulatedFunctorData F))
+    (_hF : Nonempty (ExactTriangulatedFunctorData F))
     (I : CompPlus A) (hI : IsTermwiseInjectiveComplex I) :
     ComputesRightDerivedComplex F I := by
-  letI := HasDerivedCategory.standard A
+  let _ : HasDerivedCategory A := HasDerivedCategory.standard A
   let S : MorphismProperty (KPlus A) := quasiIsoPlusProperty A
   let hS : SaturatedMultiplicativeSystem S :=
     by simpa [S] using (boundedQuasiIsoProperty_properties A).1
   let X : KPlus A := (HomotopyCategory.Plus.quotient A).obj I
-  letI : LeftMultiplicativeSystem S := hS.1.1
-  letI : IsFiltered (LeftDenominatorCategory S X) :=
+  let _ : LeftMultiplicativeSystem S := hS.1.1
+  let _ : IsFiltered (LeftDenominatorCategory S X) :=
     left_denominator_category_is_filtered X
   have hK : CochainComplex.IsKInjective X.1.as := by
     change CochainComplex.IsKInjective I.obj
     obtain ⟨n, hn⟩ := I.property
-    letI : I.obj.IsStrictlyGE n := hn
-    letI : ∀ n : ℤ, Injective (I.obj.X n) := hI
+    let _ : I.obj.IsStrictlyGE n := hn
+    let _ : ∀ n : ℤ, Injective (I.obj.X n) := hI
     exact CochainComplex.isKInjective_of_injective I.obj n
   let Qh := DerivedCategory.Plus.Qh (C := A)
   have hRetract : ∀ s : LeftDenominatorCategory S X,
       ∃ r : s.right ⟶ X, s.hom ≫ r = 𝟙 X := by
     intro s
-    letI : IsIso (Qh.map s.hom) :=
+    let _ : IsIso (Qh.map s.hom) :=
       Localization.inverts Qh S s.hom s.prop
     obtain ⟨r, hr⟩ :=
       (DerivedCategory.Plus.Qh_map_bijective_of_isKInjective s.right X hK).surjective
@@ -120,7 +120,7 @@ theorem termwiseInjectiveComplex_computes
   have hRetractUnique (s : LeftDenominatorCategory S X)
       (a b : s.right ⟶ X) (ha : s.hom ≫ a = 𝟙 X)
       (hb : s.hom ≫ b = 𝟙 X) : a = b := by
-    letI : IsIso (Qh.map s.hom) :=
+    let _ : IsIso (Qh.map s.hom) :=
       Localization.inverts Qh S s.hom s.prop
     apply
       (DerivedCategory.Plus.Qh_map_bijective_of_isKInjective s.right X hK).injective
@@ -201,7 +201,7 @@ theorem termwiseInjectiveComplex_computes
         apply Category.id_comp
         
   have ha : IsIso a := by
-    letI : IsIso a := IsIso.mk ⟨q, haq, by rw [← hbq, hba]; simp⟩
+    let _ : IsIso a := IsIso.mk ⟨q, haq, by rw [← hbq, hba]; simp⟩
     infer_instance
   refine ⟨hX, ?_⟩
   have haFinal : IsIso ((rightDerivedCocone S hS F X hX).ι.app
@@ -220,7 +220,7 @@ theorem termwiseInjectiveComplex_computes
     have hleg : IsIso leg := by
       dsimp [leg]
       exact haFinal
-    letI : IsIso leg := hleg
+    let _ : IsIso leg := hleg
     have hcomp' : IsIso (𝟙 (F.obj X) ≫ leg) := by infer_instance
     simpa [leg, rightDerivedDiagram, MorphismProperty.Under.mk] using hcomp'
   simpa [rightDerivedCanonicalMap, rightDerivedValue, rightDerivedDiagram,

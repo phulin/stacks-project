@@ -119,7 +119,7 @@ private noncomputable def leftExactRightDerivedSourceIso
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughInjectives A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
-    (F : A ⥤ B) (hF : IsLeftExact F) (hAdd : F.Additive) :
+    (F : A ⥤ B) (_hF : IsLeftExact F) (hAdd : F.Additive) :
     F ≅ @Formalization.Books.Derived.Unit16.rightDerivedSourceCohomology
       A _ _ B _ _ _ _ F hAdd := by
   letI : F.Additive := hAdd
@@ -155,7 +155,7 @@ private noncomputable def leftExactRightDerivedSourceIso
       convert congrArg (fun k =>
           (HomotopyCategory.quotient B (ComplexShape.up ℤ)).map k)
           ((HomologicalComplex.singleMapHomologicalComplex
-            F (ComplexShape.up ℤ) 0).hom.naturality f) using 1 <;>
+            F (ComplexShape.up ℤ) 0).hom.naturality f) using 1;
         simp [CochainComplex.singleFunctor, CochainComplex.singleFunctors]
   have eB :
       HomotopyCategory.Plus.singleFunctor B 0 ⋙
@@ -294,7 +294,7 @@ theorem higherRightDerivedFunctor_zero_iso
     (F : A ⥤ B) (hF : IsLeftExact F) :
     Nonempty (higherRightDerivedFunctor F hF 0 ≅ F) := by
   let hAdd : F.Additive := left_or_right_exact_additive F (Or.inl hF)
-  letI : F.Additive := hAdd
+  let _ : F.Additive := hAdd
   let RF := @Functor.rightDerivedFunctorPlus A B _ _ _ _ _ _ F hAdd _
   let R : Formalization.Books.Derived.Unit16.RightDerivedFunctorData F :=
     { functor := RF
@@ -400,7 +400,7 @@ theorem higherRightDerivedFunctor_universal
     (F : A ⥤ B) (hF : IsLeftExact F) :
     IsUniversalHigherRightDerivedDeltaFunctor F hF := by
   let hAdd : F.Additive := left_or_right_exact_additive F (Or.inl hF)
-  letI : F.Additive := hAdd
+  let _ : F.Additive := hAdd
   let RF := @Functor.rightDerivedFunctorPlus A B _ _ _ _ _ _ F hAdd _
   let R : Formalization.Books.Derived.Unit16.RightDerivedFunctorData F :=
     { functor := RF

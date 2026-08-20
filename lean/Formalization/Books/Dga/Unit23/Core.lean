@@ -383,7 +383,7 @@ structure DgKernelData
       ∃ v : DGMap Z object,
         DifferentialGradedModuleHom.comp v inclusion = u
   unique : ∀ {Z : DGModule D} (u : DGMap Z X)
-    (hu : DifferentialGradedModuleHom.comp u q = dgZeroMap Z Y)
+    (_hu : DifferentialGradedModuleHom.comp u q = dgZeroMap Z Y)
     (v v' : DGMap Z object),
     DifferentialGradedModuleHom.comp v inclusion = u →
     DifferentialGradedModuleHom.comp v' inclusion = u → v = v'

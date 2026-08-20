@@ -192,6 +192,7 @@ theorem flattenOnAffineBlowup
     [Field K] [Algebra R K] [IsFractionRing R K]
     [CommRing S] [Algebra R S] [Algebra.FiniteType R S]
     [AddCommGroup M] [Module S M] [Module.Finite S M]
+    (hR : ¬ IsField R)
     (A : ValuationSubring K)
     (hA : DominatesValuationSubring (R := R) (K := K) A) :
     ∃ (I : Ideal R) (a : R), ∃ ha : a ∈ I,

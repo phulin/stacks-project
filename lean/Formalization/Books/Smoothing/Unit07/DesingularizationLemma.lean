@@ -3,6 +3,8 @@ import Mathlib.LinearAlgebra.Determinant
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Noetherian.Basic
+import Mathlib.RingTheory.FinitePresentation
+import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Smoothing.Unit02.SingularIdeals
 import Formalization.Books.Smoothing.Unit06.LiftingLemma
 
@@ -21,7 +23,7 @@ open Set
 open Formalization.Books.Algebra.Unit03
 open Formalization.Books.Smoothing.Unit02
 open Formalization.Books.Smoothing.Unit06
-open scoped BigOperators TensorProduct
+open scoped BigOperators
 
 noncomputable section
 
@@ -304,6 +306,9 @@ structure DesingularizationPolynomialData
     (R : Type u) [CommRing R] (π : R) (n m c : ℕ) where
   relations : Fin m → MvPolynomial (Fin n) R
   c_le_m : c ≤ m
+  /-- The source's displayed (★) condition for the unselected relations. -/
+  starCondition :
+    DesingularizationStarCondition c_le_m π relations
   witness : DesingularizationJacobianWitness R π n c
   corrections : Fin c → MvPolynomial (Fin c ⊕ Fin n) R
   relation_identity :
@@ -376,10 +381,10 @@ theorem desingularizationEvaluation_descends
           desingularizationEvaluation π lambdaValues p := by
   sorry
 
-/-- The displayed polynomial quotient `B` is of finite presentation over a
-Noetherian base. -/
+/-- The displayed polynomial quotient `B` is of finite presentation over any
+commutative base. -/
 theorem desingularizationConstruction_finitePresentation
-    {R : Type u} [CommRing R] [IsNoetherianRing R]
+    {R : Type u} [CommRing R]
     {n m c : ℕ} (π : R)
     (relations : Fin m → MvPolynomial (Fin n) R)
     (s : Fin n → Fin c → R)

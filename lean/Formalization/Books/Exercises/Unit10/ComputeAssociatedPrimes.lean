@@ -618,6 +618,200 @@ def spaceXZPrimeIdeal (k : Type u) [Field k] : Ideal (spacePolynomialRing k) :=
 def spaceMaximalIdeal (k : Type u) [Field k] : Ideal (spacePolynomialRing k) :=
   Ideal.span ({spaceX k, spaceY k, spaceZ k} : Set (spacePolynomialRing k))
 
+private abbrev spaceE0 : Fin 3 →₀ ℕ := Finsupp.single 0 1
+private abbrev spaceE1 : Fin 3 →₀ ℕ := Finsupp.single 1 1
+private abbrev spaceE2 : Fin 3 →₀ ℕ := Finsupp.single 2 1
+
+private lemma space_support_mul_z (k : Type u) [Field k] (q : spacePolynomialRing k) :
+    MvPolynomial.support (q * spaceZ k) =
+      q.support.map (addRightEmbedding spaceE2) := by
+  change MvPolynomial.support (q * MvPolynomial.X (2 : Fin 3)) = _
+  rw [MvPolynomial.support_mul_X]
+
+private lemma space_support_mul_xy (k : Type u) [Field k] (q : spacePolynomialRing k) :
+    MvPolynomial.support (q * (spaceX k * spaceY k)) =
+      (q.support.map (addRightEmbedding spaceE0)).map (addRightEmbedding spaceE1) := by
+  change MvPolynomial.support
+    (q * (MvPolynomial.X (0 : Fin 3) * MvPolynomial.X (1 : Fin 3))) = _
+  rw [← mul_assoc, MvPolynomial.support_mul_X, MvPolynomial.support_mul_X]
+
+private lemma space_support_mul_x_sq (k : Type u) [Field k] (q : spacePolynomialRing k) :
+    MvPolynomial.support (q * spaceX k ^ 2) =
+      (q.support.map (addRightEmbedding spaceE0)).map (addRightEmbedding spaceE0) := by
+  change MvPolynomial.support (q * ((MvPolynomial.X (0 : Fin 3)) ^ 2)) = _
+  rw [pow_two, ← mul_assoc, MvPolynomial.support_mul_X,
+    MvPolynomial.support_mul_X]
+
+private abbrev spaceJExponents : Set (Fin 3 →₀ ℕ) :=
+  {3 • spaceE0, 2 • spaceE0 + spaceE1, spaceE0 + spaceE2}
+
+private abbrev spaceMExponents : Set (Fin 3 →₀ ℕ) := {spaceE0, spaceE1, spaceE2}
+private abbrev spaceXExponents : Set (Fin 3 →₀ ℕ) := {spaceE0}
+private abbrev spacePExponents : Set (Fin 3 →₀ ℕ) := {spaceE0, spaceE2}
+
+private lemma space_colonX_forward (k : Type u) [Field k] (q : spacePolynomialRing k)
+    (hq : ∀ n ∈ (q * spaceZ k).support, ∃ d ∈ spaceJExponents, d ≤ n) :
+    ∀ m ∈ q.support, ∃ d ∈ spaceXExponents, d ≤ m := by
+  intro m hm
+  have hs : (addRightEmbedding spaceE2) m ∈ (q * spaceZ k).support := by
+    rw [space_support_mul_z]
+    exact Finset.mem_map.mpr ⟨m, hm, rfl⟩
+  obtain ⟨d, hd, hde⟩ := hq _ hs
+  have hde' : d ≤ m + spaceE2 := by
+    simpa [addRightEmbedding_apply, add_comm] using hde
+  refine ⟨spaceE0, by simp [spaceXExponents], ?_⟩
+  rcases (show d = 3 • spaceE0 ∨ d = 2 • spaceE0 + spaceE1 ∨
+      d = spaceE0 + spaceE2 by simpa [spaceJExponents] using hd) with rfl | rfl | rfl
+  · intro i; fin_cases i
+    · have hi := hde' (0 : Fin 3); simp [spaceE0, spaceE2] at hi ⊢; omega
+    · simp [spaceE0]
+    · simp [spaceE0]
+  · intro i; fin_cases i
+    · have hi := hde' (0 : Fin 3); simp [spaceE0, spaceE1, spaceE2] at hi ⊢; omega
+    · simp [spaceE0]
+    · simp [spaceE0]
+  · intro i; fin_cases i
+    · have hi := hde' (0 : Fin 3); simpa [spaceE0, spaceE2] using hi
+    · simp [spaceE0]
+    · simp [spaceE0]
+
+private lemma space_colonX_backward (k : Type u) [Field k] (q : spacePolynomialRing k)
+    (hq : ∀ m ∈ q.support, ∃ d ∈ spaceXExponents, d ≤ m) :
+    ∀ n ∈ (q * spaceZ k).support, ∃ d ∈ spaceJExponents, d ≤ n := by
+  intro n hn
+  rw [space_support_mul_z] at hn
+  obtain ⟨m, hm, hmn⟩ := Finset.mem_map.mp hn
+  obtain ⟨d, hd, hde⟩ := hq m hm
+  have hd' : d = spaceE0 := by simpa [spaceXExponents] using hd
+  subst d
+  refine ⟨spaceE0 + spaceE2, by simp [spaceJExponents], ?_⟩
+  rw [← hmn]
+  intro i; fin_cases i
+  · have hi := hde (0 : Fin 3)
+    simp [spaceE0, spaceE2, addRightEmbedding_apply, add_comm] at hi ⊢; omega
+  · simp [spaceE0, spaceE2, addRightEmbedding_apply]
+  · have hi := hde (2 : Fin 3)
+    simpa [spaceE0, spaceE2, addRightEmbedding_apply] using hi
+
+private lemma space_colonP_forward (k : Type u) [Field k] (q : spacePolynomialRing k)
+    (hq : ∀ n ∈ (q * (spaceX k * spaceY k)).support,
+      ∃ d ∈ spaceJExponents, d ≤ n) :
+    ∀ m ∈ q.support, ∃ d ∈ spacePExponents, d ≤ m := by
+  intro m hm
+  have hs : (addRightEmbedding spaceE1) (addRightEmbedding spaceE0 m) ∈
+      (q * (spaceX k * spaceY k)).support := by
+    rw [space_support_mul_xy]
+    exact Finset.mem_map.mpr ⟨addRightEmbedding spaceE0 m,
+      Finset.mem_map.mpr ⟨m, hm, rfl⟩, rfl⟩
+  obtain ⟨d, hd, hde⟩ := hq _ hs
+  have hde' : d ≤ m + spaceE0 + spaceE1 := by
+    simpa [addRightEmbedding_apply, add_comm, add_assoc] using hde
+  rcases (show d = 3 • spaceE0 ∨ d = 2 • spaceE0 + spaceE1 ∨
+      d = spaceE0 + spaceE2 by simpa [spaceJExponents] using hd) with rfl | rfl | rfl
+  · refine ⟨spaceE0, by simp [spacePExponents], ?_⟩
+    intro i; fin_cases i
+    · have hi := hde' (0 : Fin 3); simp [spaceE0, spaceE1] at hi ⊢; omega
+    · simp [spaceE0]
+    · simp [spaceE0]
+  · refine ⟨spaceE0, by simp [spacePExponents], ?_⟩
+    intro i; fin_cases i
+    · have hi := hde' (0 : Fin 3); simp [spaceE0, spaceE1] at hi ⊢; omega
+    · simp [spaceE0]
+    · simp [spaceE0]
+  · refine ⟨spaceE2, by simp [spacePExponents], ?_⟩
+    intro i; fin_cases i
+    · simp [spaceE2]
+    · simp [spaceE2]
+    · have hi := hde' (2 : Fin 3); simpa [spaceE0, spaceE1, spaceE2] using hi
+
+private lemma space_colonP_backward (k : Type u) [Field k] (q : spacePolynomialRing k)
+    (hq : ∀ m ∈ q.support, ∃ d ∈ spacePExponents, d ≤ m) :
+    ∀ n ∈ (q * (spaceX k * spaceY k)).support,
+      ∃ d ∈ spaceJExponents, d ≤ n := by
+  intro n hn
+  rw [space_support_mul_xy] at hn
+  obtain ⟨m, hm, hmn⟩ := Finset.mem_map.mp hn
+  obtain ⟨n0, hn0, hmn0⟩ := Finset.mem_map.mp hm
+  obtain ⟨d, hd, hde⟩ := hq n0 hn0
+  rcases (show d = spaceE0 ∨ d = spaceE2 by
+    simpa [spacePExponents] using hd) with rfl | rfl
+  · refine ⟨2 • spaceE0 + spaceE1, by simp [spaceJExponents], ?_⟩
+    rw [← hmn, ← hmn0]
+    intro i; fin_cases i
+    · have hi := hde (0 : Fin 3)
+      simp [spaceE0, spaceE1, addRightEmbedding_apply] at hi ⊢; omega
+    · simp [spaceE0, spaceE1, addRightEmbedding_apply]
+    · simp [spaceE0, spaceE1, addRightEmbedding_apply]
+  · refine ⟨spaceE0 + spaceE2, by simp [spaceJExponents], ?_⟩
+    rw [← hmn, ← hmn0]
+    intro i; fin_cases i
+    · simp [spaceE0, spaceE2, addRightEmbedding_apply]
+    · simp [spaceE0, spaceE2, addRightEmbedding_apply]
+    · have hi := hde (2 : Fin 3)
+      simp [spaceE0, spaceE2, addRightEmbedding_apply, add_assoc] at hi ⊢; omega
+
+private lemma space_colonM_forward (k : Type u) [Field k] (q : spacePolynomialRing k)
+    (hq : ∀ n ∈ (q * spaceX k ^ 2).support,
+      ∃ d ∈ spaceJExponents, d ≤ n) :
+    ∀ m ∈ q.support, ∃ d ∈ spaceMExponents, d ≤ m := by
+  intro m hm
+  have hs : (addRightEmbedding spaceE0) (addRightEmbedding spaceE0 m) ∈
+      (q * spaceX k ^ 2).support := by
+    rw [space_support_mul_x_sq]
+    exact Finset.mem_map.mpr ⟨addRightEmbedding spaceE0 m,
+      Finset.mem_map.mpr ⟨m, hm, rfl⟩, rfl⟩
+  obtain ⟨d, hd, hde⟩ := hq _ hs
+  have hde' : d ≤ m + spaceE0 + spaceE0 := by
+    simpa [addRightEmbedding_apply, add_comm, add_assoc] using hde
+  rcases (show d = 3 • spaceE0 ∨ d = 2 • spaceE0 + spaceE1 ∨
+      d = spaceE0 + spaceE2 by simpa [spaceJExponents] using hd) with rfl | rfl | rfl
+  · refine ⟨spaceE0, by simp [spaceMExponents], ?_⟩
+    intro i; fin_cases i
+    · have hi := hde' (0 : Fin 3); simp [spaceE0] at hi ⊢; omega
+    · simp [spaceE0]
+    · simp [spaceE0]
+  · refine ⟨spaceE1, by simp [spaceMExponents], ?_⟩
+    intro i; fin_cases i
+    · simp [spaceE1]
+    · have hi := hde' (1 : Fin 3); simpa [spaceE0, spaceE1] using hi
+    · simp [spaceE1]
+  · refine ⟨spaceE2, by simp [spaceMExponents], ?_⟩
+    intro i; fin_cases i
+    · simp [spaceE2]
+    · simp [spaceE2]
+    · have hi := hde' (2 : Fin 3); simpa [spaceE0, spaceE2] using hi
+
+private lemma space_colonM_backward (k : Type u) [Field k] (q : spacePolynomialRing k)
+    (hq : ∀ m ∈ q.support, ∃ d ∈ spaceMExponents, d ≤ m) :
+    ∀ n ∈ (q * spaceX k ^ 2).support, ∃ d ∈ spaceJExponents, d ≤ n := by
+  intro n hn
+  rw [space_support_mul_x_sq] at hn
+  obtain ⟨m, hm, hmn⟩ := Finset.mem_map.mp hn
+  obtain ⟨n0, hn0, hmn0⟩ := Finset.mem_map.mp hm
+  obtain ⟨d, hd, hde⟩ := hq n0 hn0
+  rcases (show d = spaceE0 ∨ d = spaceE1 ∨ d = spaceE2 by
+    simpa [spaceMExponents] using hd) with rfl | rfl | rfl
+  · refine ⟨3 • spaceE0, by simp [spaceJExponents], ?_⟩
+    rw [← hmn, ← hmn0]
+    intro i; fin_cases i
+    · have hi := hde (0 : Fin 3); simp [spaceE0, addRightEmbedding_apply] at hi ⊢; omega
+    · simp [spaceE0, addRightEmbedding_apply]
+    · simp [spaceE0, addRightEmbedding_apply]
+  · refine ⟨2 • spaceE0 + spaceE1, by simp [spaceJExponents], ?_⟩
+    rw [← hmn, ← hmn0]
+    intro i; fin_cases i
+    · simp [spaceE0, spaceE1, addRightEmbedding_apply]
+    · have hi := hde (1 : Fin 3)
+      simpa [spaceE0, spaceE1, addRightEmbedding_apply] using hi
+    · simp [spaceE0, spaceE1, addRightEmbedding_apply]
+  · refine ⟨spaceE0 + spaceE2, by simp [spaceJExponents], ?_⟩
+    rw [← hmn, ← hmn0]
+    intro i; fin_cases i
+    · simp [spaceE0, spaceE2, addRightEmbedding_apply]
+    · simp [spaceE0, spaceE2, addRightEmbedding_apply]
+    · have hi := hde (2 : Fin 3)
+      simpa [spaceE0, spaceE2, addRightEmbedding_apply] using hi
+
 /-- The associated primes of `k[x,y,z]/(x³,x²y,xz)`. -/
 theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
     associatedPrimes (spacePolynomialRing k) (spaceRelationQuotient k) =
@@ -627,9 +821,9 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
   let x : R := spaceX k
   let y : R := spaceY k
   let z : R := spaceZ k
-  let e0 : Fin 3 →₀ ℕ := Finsupp.single 0 1
-  let e1 : Fin 3 →₀ ℕ := Finsupp.single 1 1
-  let e2 : Fin 3 →₀ ℕ := Finsupp.single 2 1
+  let e0 : Fin 3 →₀ ℕ := spaceE0
+  let e1 : Fin 3 →₀ ℕ := spaceE1
+  let e2 : Fin 3 →₀ ℕ := spaceE2
   let sK : Set (Fin 3 →₀ ℕ) := {2 • e0, e0 + e1, e2}
   let sM : Set (Fin 3 →₀ ℕ) := {e0, e1, e2}
   let K : Ideal R := Ideal.span ({x ^ 2, x * y, z} : Set R)
@@ -1121,21 +1315,22 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
     rw [Submodule.Quotient.mk_eq_zero]
   have hmulZ (q : R) :
       MvPolynomial.support (q * z) = q.support.map (addRightEmbedding e2) := by
-    change MvPolynomial.support (q * MvPolynomial.X (2 : Fin 3)) = _
-    rw [MvPolynomial.support_mul_X]
+    exact space_support_mul_z k q
   have hmulXY (q : R) :
       MvPolynomial.support (q * (x * y)) =
         (q.support.map (addRightEmbedding e0)).map (addRightEmbedding e1) := by
-    change MvPolynomial.support
-      (q * (MvPolynomial.X (0 : Fin 3) * MvPolynomial.X (1 : Fin 3))) = _
-    rw [← mul_assoc, MvPolynomial.support_mul_X, MvPolynomial.support_mul_X]
+    exact space_support_mul_xy k q
   have hmulX2 (q : R) :
       MvPolynomial.support (q * x ^ 2) =
         (q.support.map (addRightEmbedding e0)).map (addRightEmbedding e0) := by
-    change MvPolynomial.support (q * ((MvPolynomial.X (0 : Fin 3)) ^ 2)) = _
-    rw [pow_two, ← mul_assoc, MvPolynomial.support_mul_X,
-      MvPolynomial.support_mul_X]
+    exact space_support_mul_x_sq k q
   have hcolonX : J.colon ({z} : Set R) = Xideal := by
+    ext q
+    simp only [Submodule.mem_colon_singleton, smul_eq_mul]
+    rw [hJmon, MvPolynomial.mem_ideal_span_monomial_image,
+      hXmon, MvPolynomial.mem_ideal_span_monomial_image]
+    exact ⟨space_colonX_forward k q, space_colonX_backward k q⟩
+    /-
     ext q
     simp only [Submodule.mem_colon_singleton, smul_eq_mul]
     rw [hJmon, MvPolynomial.mem_ideal_span_monomial_image,
@@ -1191,7 +1386,14 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
       · simp [e0, e2, addRightEmbedding_apply]
       · have hi := hde' (2 : Fin 3)
         simp [e0, e2, addRightEmbedding_apply] at hi ⊢
+    -/
   have hcolonP : J.colon ({x * y} : Set R) = P := by
+      ext q
+      simp only [Submodule.mem_colon_singleton, smul_eq_mul]
+      rw [hJmon, MvPolynomial.mem_ideal_span_monomial_image,
+        hPmon, MvPolynomial.mem_ideal_span_monomial_image]
+      exact ⟨space_colonP_forward k q, space_colonP_backward k q⟩
+      /-
       ext q
       simp only [Submodule.mem_colon_singleton, smul_eq_mul]
       rw [hJmon, MvPolynomial.mem_ideal_span_monomial_image,
@@ -1258,8 +1460,15 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
           · have hi := hde (2 : Fin 3)
             simp [e0, e2, addRightEmbedding_apply, add_assoc] at hi ⊢
             omega
+      -/
 
   have hcolonM : J.colon ({x ^ 2} : Set R) = M := by
+      ext q
+      simp only [Submodule.mem_colon_singleton, smul_eq_mul]
+      rw [hJmon, MvPolynomial.mem_ideal_span_monomial_image,
+        hMmon, MvPolynomial.mem_ideal_span_monomial_image]
+      exact ⟨space_colonM_forward k q, space_colonM_backward k q⟩
+      /-
       ext q
       simp only [Submodule.mem_colon_singleton, smul_eq_mul]
       rw [hJmon, MvPolynomial.mem_ideal_span_monomial_image,
@@ -1335,6 +1544,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
           · have hi := hde (2 : Fin 3)
             simp [e0, e2, addRightEmbedding_apply, add_comm] at hi ⊢
             exact hi
+      -/
   have hAX : Xideal ∈ associatedPrimes R (R ⧸ J) := by
     rw [AssociatedPrimes.mem_iff, isAssociatedPrime_iff]
     refine ⟨hXprime, ?_⟩

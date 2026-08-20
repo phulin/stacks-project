@@ -85,10 +85,10 @@ theorem produce_finite
       IsUnit (algebraMap S' (S' ⊗[R] p.asIdeal.ResidueField) s)) :
     ∃ r : R, r ∉ p.asIdeal ∧
       RingHom.Finite (Localization.awayMap (g.comp f) r) := by
-  letI : Algebra R S' := f.toAlgebra
-  letI : Algebra S' S := g.toAlgebra
-  letI : Algebra R S := (g.comp f).toAlgebra
-  letI : IsScalarTower R S' S := by
+  let : Algebra R S' := f.toAlgebra
+  let : Algebra S' S := g.toAlgebra
+  let : Algebra R S := (g.comp f).toAlgebra
+  let : IsScalarTower R S' S := by
     apply IsScalarTower.of_algebraMap_eq'
     ext x
     rfl
@@ -97,10 +97,10 @@ theorem produce_finite
       commutes' := by
         intro r
         rfl }
-  letI : Algebra.FiniteType R S := hfiniteType
+  let : Algebra.FiniteType R S := hfiniteType
   let hintegral' : (algebraMap R S').IsIntegral := by
     simpa [RingHom.algebraMap_toAlgebra] using hintegral
-  letI : Algebra.IsIntegral R S' := algebraMap_isIntegral_iff.mp hintegral'
+  let : Algebra.IsIntegral R S' := algebraMap_isIntegral_iff.mp hintegral'
   have hsurj : Function.Surjective (Localization.awayMapₐ F s) := by
     have hmap : (Localization.awayMapₐ F s).toRingHom = Localization.awayMap g s := by
       ext x
@@ -174,9 +174,9 @@ theorem etale_makes_quasiFinite_finite_one_prime
     (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFiniteAt f q) :
     letI : Algebra R S := f.toAlgebra
     Nonempty (EtaleFiniteAtPrimeData f p q hq) := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra.FiniteType R S := hfiniteType
-  letI : Algebra.QuasiFiniteAt R q.asIdeal := hquasi.2
+  let : Algebra R S := f.toAlgebra
+  let : Algebra.FiniteType R S := hfiniteType
+  let : Algebra.QuasiFiniteAt R q.asIdeal := hquasi.2
   have hq' : q.asIdeal.LiesOver p.asIdeal := by
     rw [Ideal.liesOver_iff, Ideal.under_def]
     simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
@@ -197,10 +197,10 @@ theorem etale_makes_quasiFinite_finite_one_prime
       Ideal.ResidueField.mapₐ, RingHom.algebraMap_toAlgebra] using hres
   let A := Localization.Away e
   let B := Localization.Away (1 - e)
-  letI : IsLocalization.Away e
+  let : IsLocalization.Away e
       ((R' ⊗[R] S) ⧸ Ideal.span ({1 - e} : Set (R' ⊗[R] S))) :=
     IsLocalization.Away.quotient_of_isIdempotentElem he
-  letI : IsLocalization.Away (1 - e)
+  let : IsLocalization.Away (1 - e)
       ((R' ⊗[R] S) ⧸ Ideal.span ({e} : Set (R' ⊗[R] S))) := by
     have h := IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
     rw [sub_sub_cancel] at h
@@ -362,10 +362,10 @@ theorem etale_makes_quasiFinite_finite_one_prime
       rw [hPq]
       simpa [P'', hright, PrimeSpectrum.comap_asIdeal, Ideal.comap_comap] using
         (congrArg PrimeSpectrum.asIdeal hqeq)
-    letI : P''.IsPrime := hP''prime
-    letI : P''.LiesOver P := hP''over
-    letI : P'.IsPrime := hP'prime
-    letI : P'.LiesOver P := hP'over
+    let : P''.IsPrime := hP''prime
+    let : P''.LiesOver P := hP''over
+    let : P'.IsPrime := hP'prime
+    let : P'.LiesOver P := hP'over
     have hEq : P'' = P' :=
       Ideal.eq_of_comap_eq_comap_of_bijective_residueFieldMap hres P'' P' hP''q
     exact heP' (hEq ▸ heP'')

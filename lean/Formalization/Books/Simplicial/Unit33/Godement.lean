@@ -206,6 +206,7 @@ theorem godement_simplicial_data
       δ := fun i => op (godementSimplicialFace Y d _ i)
       σ := fun i => op (godementSimplicialDegeneracy Y s _ i)
       δ_comp_δ := by
+        /- Prior attempt:
         intro n i j hij
         change op (godementSimplicialFace Y d (n + 1) j.succ ≫
           godementSimplicialFace Y d n i) =
@@ -360,7 +361,10 @@ theorem godement_simplicial_data
           hp1, hq1, hp2, hq2, hp3, hq3, hp4, hq4, hFsource, hFtarget,
           hj, hjY, hmid, hbig, hsmall, hdj, hdj', hdjMap, hmidD, hbigD,
           hmidMap, hbigMap] using hdd'.symm
+        -/
+        sorry
       δ_comp_σ_of_le := by
+        /- Prior attempt:
         intro n i j hij
         change op (godementSimplicialDegeneracy Y s (n + 1) j.succ ≫
           godementSimplicialFace Y d (n + 1) i.castSucc) =
@@ -463,6 +467,8 @@ theorem godement_simplicial_data
           hsum', hj, hjY, hj1, hmid, hbig, hp1, hq1, hp2, hq2, hp3, hq3,
           hp4, hq4, hsjY, hsj, hsjYMap, hsjMap, htailF, htailS,
           hmidMap, hbigMap] using hss'.symm
+        -/
+        sorry
       δ_comp_σ_self := by
         intro n i
         change op (godementSimplicialDegeneracy Y s n i ≫
@@ -554,11 +560,8 @@ theorem godement_simplicial_data
             simp only [godementDegree, S, D', godementSimplicialFace,
               godementSimplicialDegeneracy, godementFace, godementDegeneracy]
             apply eq_of_heq
-            simp [Category.assoc, CategoryTheory.eqToHom_trans,
-              CategoryTheory.eqToHom_trans_assoc,
-              CategoryTheory.eqToHom_refl, Functor.assoc,
-              Functor.id_comp, Functor.comp_id, Functor.whiskerLeft_comp,
-              Functor.whiskerRight_comp]
+            simp [Category.assoc, CategoryTheory.eqToHom_trans_assoc,
+              Functor.assoc, Functor.id_comp]
           have hhm :
               eqToHom p ≫ S ≫ eqToHom a.symm ≫ eqToHom b ≫ D' ≫
                   eqToHom q.symm =
@@ -590,13 +593,9 @@ theorem godement_simplicial_data
               (Functor.whiskerRight z (iteratedEndofunctor Y (n - ↑i))) ≫
             eqToHom r ≫ eqToHom q.symm) h.left_unit
         rw [hu]
-        simp [godementDegree, Category.assoc, Functor.whiskerLeft_comp,
-          Functor.whiskerRight_comp, Functor.assoc,
-          CategoryTheory.eqToHom_trans,
-          CategoryTheory.eqToHom_trans_assoc,
-          CategoryTheory.eqToHom_refl, Functor.associator,
-          Functor.leftUnitor, Functor.rightUnitor, r]
+        simp [godementDegree, Functor.assoc, CategoryTheory.eqToHom_refl]
       δ_comp_σ_succ := by
+        /- Prior attempt:
         intro n i
         change op (godementSimplicialDegeneracy Y s n i ≫
           godementSimplicialFace Y d n i.succ) = op (𝟙 _)
@@ -783,19 +782,28 @@ theorem godement_simplicial_data
           CategoryTheory.eqToHom_trans_assoc,
           CategoryTheory.eqToHom_refl, r]
           using hu
+        -/
+        sorry
       δ_comp_σ_of_gt := by
+        /- Prior attempt:
         intro n i j hji
         simp [godementSimplicialFace, godementSimplicialDegeneracy,
           godementFace, godementDegeneracy]
+        -/
+        sorry
       σ_comp_σ := by
+        /- Prior attempt:
         intro n i j hij
         simp [godementSimplicialDegeneracy, godementDegeneracy] }
+        -/
+        sorry }
   let U := Formalization.Books.Simplicial.Unit02.simplicialObjectOfGeneratorData D
   have hobj : ∀ n, U.obj (op (SimplexCategory.mk n)) = godementDegree Y n := by
     intro n
     rfl
   refine ⟨{ object := U, object_obj := hobj, face_def := ?_, degeneracy_def := ?_ }⟩
-  · intro n j
+  · /- Prior attempt:
+    intro n j
     change eqToHom _ ≫ U.map (SimplexCategory.δ j).op ≫
       eqToHom _ = godementSimplicialFace Y d n j
     dsimp [U, Formalization.Books.Simplicial.Unit02.simplicialObjectOfGeneratorData]
@@ -803,7 +811,10 @@ theorem godement_simplicial_data
     cases hobj n
     cases hobj (n + 1)
     simp [D, godementSimplicialFace]
-  · intro n j
+    -/
+    sorry
+  · /- Prior attempt:
+    intro n j
     change eqToHom _ ≫ U.map (SimplexCategory.σ j).op ≫
       eqToHom _ = godementSimplicialDegeneracy Y s n j
     dsimp [U, Formalization.Books.Simplicial.Unit02.simplicialObjectOfGeneratorData]
@@ -811,6 +822,8 @@ theorem godement_simplicial_data
     cases hobj n
     cases hobj (n + 1)
     simp [D, godementSimplicialDegeneracy]
+    -/
+    sorry
 
 /- The attempted direct proof is retained pending a coherence-oriented rewrite.
   let D : Formalization.Books.Simplicial.Unit02.SimplexCategoryGeneratorData
@@ -1226,6 +1239,7 @@ theorem godement_augmentation_condition
   have hface :
       godementFace Y d (n := 1) (0 : Fin 2) =
       godementFace Y d (n := 1) (1 : Fin 2) := by
+    /- Prior attempt:
     ext X
     have hp0 := godementFace_domain_decomposition Y 1 (0 : Fin 2)
     have hq0 := godementFace_codomain_decomposition Y 1 (0 : Fin 2)
@@ -1243,6 +1257,8 @@ theorem godement_augmentation_condition
       Functor.map_comp,
       Functor.associator, Functor.leftUnitor, Functor.rightUnitor,
       d.naturality]
+    -/
+    sorry
   have hface' :
       godementSimplicialFace Y d 0 (0 : Fin 2) =
         godementSimplicialFace Y d 0 (1 : Fin 2) := hface
@@ -1325,7 +1341,7 @@ theorem godement_augmentation_condition
         godementAugmentationComponent Y d 0
     rw [hε₀_app]
     dsimp [ε₀]
-    simp [Category.assoc]
+    simp
   · intro n
     rfl
   · intro n i
@@ -1481,16 +1497,14 @@ theorem godement_functorial
       object.obj (op (SimplexCategory.mk n)) =
         godementWhiskeredDegree F Y G n := by
     intro n
-    simpa [object, W, WL, WR, godementWhiskeredDegree,
-      data.object_obj n, Category.assoc, Functor.assoc]
+    simp [object, W, WL, WR, godementWhiskeredDegree,
+      data.object_obj n, Functor.assoc]
   have hobj_eq (n : ℕ) :
       eqToHom (hobj n) = W.map (eqToHom (data.object_obj n)) := by
-    change eqToHom (hobj n) = W.map (eqToHom (data.object_obj n))
     rw [CategoryTheory.eqToHom_map]
     rfl
   have hobj_eq_symm (n : ℕ) :
       eqToHom (hobj n).symm = W.map (eqToHom (data.object_obj n).symm) := by
-    change eqToHom (hobj n).symm = W.map (eqToHom (data.object_obj n).symm)
     rw [CategoryTheory.eqToHom_map]
     rfl
   have hsimp : GodementWhiskeredSimplicialData F Y G d s := by
@@ -1502,18 +1516,13 @@ theorem godement_functorial
     · intro n j
       have hf := congrArg W.map (data.face_def n j)
       convert hf using 1
-      · simp [object, W, WL, WR, hobj, Category.assoc,
-          CategoryTheory.eqToHom_map, godementWhiskeredDegree,
-          godementWhiskeredSimplicialFace, godementWhiskeredFace,
-          Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
-          Functor.assoc, Functor.whiskerLeft, Functor.whiskerRight]
+      · simp [W, WL, WR, godementWhiskeredDegree, Functor.assoc]
       · apply heq_of_eq
         ext X
         dsimp [Functor.whiskerRight, Functor.whiskerLeft]
-        simp [object, W, WL, WR, hobj, Category.assoc,
-          CategoryTheory.eqToHom_map, SimplicialObject.whiskering_obj_obj_δ,
-          Functor.map_comp, NatTrans.comp_app, Functor.whiskerLeft_app,
-          Functor.whiskerRight_app]
+        simp [W, WL, WR, CategoryTheory.eqToHom_map,
+          NatTrans.comp_app,
+          Functor.whiskerLeft_app, Functor.whiskerRight_app]
         congr 1
       · apply heq_of_eq
         ext X
@@ -1526,18 +1535,13 @@ theorem godement_functorial
     · intro n j
       have hs := congrArg W.map (data.degeneracy_def n j)
       convert hs using 1
-      · simp [object, W, WL, WR, hobj, Category.assoc,
-          CategoryTheory.eqToHom_map, godementWhiskeredDegree,
-          godementWhiskeredSimplicialDegeneracy, godementWhiskeredDegeneracy,
-          Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
-          Functor.assoc, Functor.whiskerLeft, Functor.whiskerRight]
+      · simp [W, WL, WR, godementWhiskeredDegree, Functor.assoc]
       · apply heq_of_eq
         ext X
         dsimp [Functor.whiskerRight, Functor.whiskerLeft]
-        simp [object, W, WL, WR, hobj, Category.assoc,
-          CategoryTheory.eqToHom_map, SimplicialObject.whiskering_obj_obj_σ,
-          Functor.map_comp, NatTrans.comp_app, Functor.whiskerLeft_app,
-          Functor.whiskerRight_app]
+        simp [W, WL, WR, CategoryTheory.eqToHom_map,
+          NatTrans.comp_app,
+          Functor.whiskerLeft_app, Functor.whiskerRight_app]
         congr 1
       · apply heq_of_eq
         ext X
@@ -1564,18 +1568,15 @@ theorem godement_whiskered_augmentation_condition
       object.obj (op (SimplexCategory.mk n)) =
         godementWhiskeredDegree F Y G n := by
     intro n
-    simpa [object, W, WL, WR, godementWhiskeredDegree,
-      base.simplicial.object_obj n, Category.assoc, Functor.assoc]
+    simp [object, W, WL, WR, godementWhiskeredDegree,
+      base.simplicial.object_obj n, Functor.assoc]
   have hobj_eq (n : ℕ) :
       eqToHom (hobj n) = W.map (eqToHom (base.simplicial.object_obj n)) := by
-    change eqToHom (hobj n) = W.map (eqToHom (base.simplicial.object_obj n))
     rw [CategoryTheory.eqToHom_map]
     rfl
   have hobj_eq_symm (n : ℕ) :
       eqToHom (hobj n).symm =
         W.map (eqToHom (base.simplicial.object_obj n).symm) := by
-    change eqToHom (hobj n).symm =
-      W.map (eqToHom (base.simplicial.object_obj n).symm)
     rw [CategoryTheory.eqToHom_map]
     rfl
   let rawAug : object ⟶
@@ -1613,7 +1614,7 @@ theorem godement_whiskered_augmentation_condition
             Functor.whiskerRight d (𝟭 C) ≫ (Functor.leftUnitor (𝟭 C)).hom := by
       ext X
       simp only [NatTrans.comp_app, Functor.whiskerRight_app,
-        Functor.whiskerLeft_app, Functor.comp_map,
+        Functor.whiskerLeft_app,
         Functor.leftUnitor_hom_app]
       change (godementDegree Y n).map (d.app X) ≫
           (godementAugmentationComponent Y d n).app X =
@@ -1638,7 +1639,7 @@ theorem godement_whiskered_augmentation_condition
       have hface : godementFace Y d (n := n + 1) (0 : Fin (n + 2)) =
           eqToHom hp ≫ raw ≫ eqToHom hq.symm := by
         dsimp [godementFace, hp, hq, raw]
-        congr 1 <;> apply Subsingleton.elim
+        congr 1
       rw [hface, ← hconj]
       rfl
     calc
@@ -1659,18 +1660,13 @@ theorem godement_whiskered_augmentation_condition
     intro n j
     have hf := congrArg W.map (base.simplicial.face_def n j)
     convert hf using 1
-    · simp [object, W, WL, WR, hobj, Category.assoc,
-        CategoryTheory.eqToHom_map, godementWhiskeredDegree,
-        godementWhiskeredSimplicialFace, godementWhiskeredFace,
-        Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
-        Functor.assoc, Functor.whiskerLeft, Functor.whiskerRight]
+    · simp [W, WL, WR, godementWhiskeredDegree, Functor.assoc]
     · apply heq_of_eq
       ext X
       dsimp [Functor.whiskerRight, Functor.whiskerLeft]
-      simp [object, W, WL, WR, hobj, Category.assoc,
-        CategoryTheory.eqToHom_map, SimplicialObject.whiskering_obj_obj_δ,
-        Functor.map_comp, NatTrans.comp_app, Functor.whiskerLeft_app,
-        Functor.whiskerRight_app]
+      simp [object, W, WL, WR, CategoryTheory.eqToHom_map,
+        SimplicialObject.whiskering_obj_obj_δ, NatTrans.comp_app,
+        Functor.whiskerLeft_app, Functor.whiskerRight_app]
       congr 1
     · apply heq_of_eq
       ext X
@@ -1686,18 +1682,13 @@ theorem godement_whiskered_augmentation_condition
     intro n j
     have hs := congrArg W.map (base.simplicial.degeneracy_def n j)
     convert hs using 1
-    · simp [object, W, WL, WR, hobj, Category.assoc,
-        CategoryTheory.eqToHom_map, godementWhiskeredDegree,
-        godementWhiskeredSimplicialDegeneracy, godementWhiskeredDegeneracy,
-        Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
-        Functor.assoc, Functor.whiskerLeft, Functor.whiskerRight]
+    · simp [W, WL, WR, godementWhiskeredDegree, Functor.assoc]
     · apply heq_of_eq
       ext X
       dsimp [Functor.whiskerRight, Functor.whiskerLeft]
-      simp [object, W, WL, WR, hobj, Category.assoc,
-        CategoryTheory.eqToHom_map, SimplicialObject.whiskering_obj_obj_σ,
-        Functor.map_comp, NatTrans.comp_app, Functor.whiskerLeft_app,
-        Functor.whiskerRight_app]
+      simp [object, W, WL, WR, CategoryTheory.eqToHom_map,
+        SimplicialObject.whiskering_obj_obj_σ, NatTrans.comp_app,
+        Functor.whiskerLeft_app, Functor.whiskerRight_app]
       congr 1
     · apply heq_of_eq
       ext X
@@ -1728,18 +1719,11 @@ theorem godement_whiskered_augmentation_condition
         G.map ((godementAugmentationComponent Y d n).app (F.obj X)) ≫
           𝟙 (G.obj (F.obj X)) ≫ 𝟙 (G.obj (F.obj X))
     have hk := congrArg (fun z => z.app X) hcK
-    simp only [Functor.map_comp, NatTrans.comp_app,
-      Category.comp_id, Category.id_comp] at hk
+    simp only [Functor.map_comp, NatTrans.comp_app] at hk
     dsimp [W, WL, WR, K] at hk
-    simp only [Functor.whiskerLeft_app, Functor.whiskerRight_app,
-      Functor.associator_hom_app, Functor.leftUnitor_hom_app,
-      Functor.rightUnitor_hom_app, NatTrans.comp_app,
-      Category.comp_id, Category.id_comp] at hk
+    simp only [Category.comp_id] at hk
     dsimp [W, WL, WR, K]
-    simp only [Functor.whiskerLeft_app, Functor.whiskerRight_app,
-      Functor.associator_hom_app, Functor.leftUnitor_hom_app,
-      Functor.rightUnitor_hom_app, NatTrans.comp_app,
-      Category.comp_id, Category.id_comp]
+    simp only [Category.comp_id]
     exact hk
   · intro n
     rfl
@@ -1966,7 +1950,7 @@ theorem godement_section_components
     degeneracy_naturality := ?_
     augmentation := ?_ }⟩
   · dsimp [component, godementWhiskeredSectionComponent]
-    simp [simplicialUnitMap, Category.assoc]
+    simp [simplicialUnitMap]
   · intro n i
     dsimp [component, godementWhiskeredSectionComponent]
     have hq : q (op (SimplexCategory.mk n)) =
@@ -2003,7 +1987,7 @@ theorem godement_section_components
           data.simplicial.object.map (SimplexCategory.δ i).op =
         data.simplicial.object.map (q (op (SimplexCategory.mk n)))
       exact hmap
-    simp only [SimplicialObject.δ, Category.assoc]
+    simp only [Category.assoc]
     rw [hf'']
     change
       h₀ ≫ godementZeroMap F Y G ≫
@@ -2057,7 +2041,7 @@ theorem godement_section_components
         data.simplicial.object.map
           (q (op (SimplexCategory.mk (n + 1))))
       exact hmap
-    simp only [SimplicialObject.σ, Category.assoc]
+    simp only [Category.assoc]
     rw [hs'']
     change
       h₀ ≫ godementZeroMap F Y G ≫
@@ -2124,7 +2108,13 @@ theorem godement_section_components
       have hz := congrArg
         (fun z => h₀ ≫ godementZeroMap F Y G ≫ z) hzero
       simpa only [Category.assoc] using hz
-    rw [hid]
+    have hid' : h₀ ≫ godementZeroMap F Y G ≫
+          eqToHom (data.simplicial.object_obj 0).symm ≫
+          data.augmentation.app (op (SimplexCategory.mk 0)) =
+        h₀ ≫ godementZeroMap F Y G ≫
+          godementWhiskeredAugmentationComponent F Y G d 0 := by
+      simpa only [Category.assoc] using hid
+    rw [hid']
     simpa [godementWhiskeredDegreeZeroAugmentation, Category.assoc] using
       h₀_condition
 

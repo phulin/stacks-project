@@ -41,7 +41,13 @@ theorem etale_iff_finitePresentation_and_cotangent_vanishing
       Algebra.FinitePresentation R S ∧
         Subsingleton (Algebra.H1Cotangent R S) ∧
           Subsingleton (KaehlerDifferential R S) := by
-  sorry
+  constructor
+  · intro h
+    exact ⟨h.finitePresentation, h.formallyEtale.subsingleton_h1Cotangent,
+      h.formallyEtale.subsingleton_kaehlerDifferential⟩
+  · rintro ⟨hfp, hh1, hkd⟩
+    exact ⟨{ subsingleton_kaehlerDifferential := hkd
+             subsingleton_h1Cotangent := hh1 }, hfp⟩
 
 /- The introductory relative-dimension formulation is already the canonical
    Mathlib theorem; expose it under the chapter namespace without defining a
@@ -66,7 +72,12 @@ theorem smooth_etale_iff_subsingleton_kaehlerDifferential
     [Algebra.Smooth R S] :
     Algebra.Etale R S ↔
       Subsingleton (KaehlerDifferential R S) := by
-  sorry
+  constructor
+  · intro h
+    exact h.formallyEtale.subsingleton_kaehlerDifferential
+  · intro h
+    exact ⟨{ subsingleton_kaehlerDifferential := h
+             subsingleton_h1Cotangent := inferInstance }, inferInstance⟩
 
 /-- The source's basic-open definition of étale at a prime. -/
 def IsEtaleAt
@@ -80,7 +91,15 @@ theorem isEtaleAt_iff_mathlib
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.FinitePresentation R S] (q : PrimeSpectrum S) :
     IsEtaleAt R S q ↔ Algebra.IsEtaleAt R q.asIdeal := by
-  sorry
+  constructor
+  · rintro ⟨g, hg, hEtale⟩
+    have hsub : (↑(PrimeSpectrum.basicOpen g) : Set (PrimeSpectrum S)) ⊆
+        Algebra.etaleLocus R S :=
+      (Algebra.basicOpen_subset_etaleLocus_iff_etale (R := R) (f := g)).2 hEtale
+    exact hsub ((PrimeSpectrum.mem_basicOpen g q).2 hg)
+  · intro h
+    let _ : Algebra.IsEtaleAt R q.asIdeal := h
+    exact Algebra.exists_etale_of_isEtaleAt (R := R) (A := S) q.asIdeal
 
 /-- A source-facing standard-smooth presentation with equally many variables
 and relations.  `SubmersivePresentation` contains the Jacobian invertibility
@@ -96,7 +115,27 @@ theorem etale_exists_standardSmoothPresentation
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.Etale R S] :
     Nonempty (EtaleStandardSmoothPresentation R S) := by
-  sorry
+  have hstd : Algebra.IsStandardSmoothOfRelativeDimension 0 R S :=
+    (Algebra.Etale.iff_isStandardSmoothOfRelativeDimension_zero (R := R) (S := S)).mp
+      (inferInstance : Algebra.Etale R S)
+  obtain ⟨ι, σ, hσ, hι, P, hP⟩ := hstd.out
+  let _ : Finite σ := hσ
+  let _ : Finite ι := hι
+  let _ : Fintype σ := Fintype.ofFinite σ
+  let _ : Fintype ι := Fintype.ofFinite ι
+  have hle : Nat.card ι ≤ Nat.card σ := by
+    apply Nat.sub_eq_zero_iff_le.mp
+    simpa [Algebra.Presentation.dimension] using hP
+  have hge : Nat.card σ ≤ Nat.card ι :=
+    P.toPreSubmersivePresentation.card_relations_le_card_vars_of_isFinite
+  have hcard : Fintype.card ι = Fintype.card σ := by
+    apply Nat.le_antisymm
+    · simpa only [Nat.card_eq_fintype_card] using hle
+    · simpa only [Nat.card_eq_fintype_card] using hge
+  let e : ι ≃ σ := Fintype.equivOfCardEq hcard
+  let P' := P.reindex (Fintype.equivFin ι).symm
+    ((Fintype.equivFin ι).symm.trans e)
+  exact ⟨⟨Fintype.card ι, P'⟩⟩
 
 /-! ## Permanence properties -/
 

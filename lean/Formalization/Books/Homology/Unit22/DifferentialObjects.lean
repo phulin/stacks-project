@@ -679,6 +679,70 @@ private theorem differentialObjectSelfMap_cycle_plus_factors
     _ = Q.arrow ≫ q := by
       rw [← Category.assoc, Subobject.ofLE_arrow]
 
+private theorem differentialObjectSelfMap_boundary_plus_factors
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : DifferentialObject C}
+    (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
+    (differentialObjectSelfMapBoundarySubobject α r).Factors
+      ((differentialObjectSelfMapBoundaryPlus α r).arrow ≫ cokernel.π α.hom.hom) := by
+  let P := differentialObjectSelfMapBoundaryPreimage α r
+  let R := differentialObjectSelfMapBoundarySubobject α r
+  let S := Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
+  let Q := differentialObjectSelfMapBoundaryPlus α r
+  let q : A.carrier ⟶ differentialObjectSelfMapE₀ α := cokernel.π α.hom.hom
+  let : Mono α.hom.hom := α.injective
+  have hP : R.Factors (P.arrow ≫ q) := by
+    apply (Subobject.factors_iff R (P.arrow ≫ q)).mpr
+    refine ⟨Abelian.factorThruImage (P.arrow ≫ q) ≫
+      (Subobject.underlyingIso (Abelian.image.ι
+        (P.arrow ≫ q))).inv, ?_⟩
+    dsimp [R, differentialObjectSelfMapBoundarySubobject,
+      Formalization.Books.Homology.Unit20.selfMapBoundarySubobject,
+      Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject]
+    change (Abelian.factorThruImage (P.arrow ≫ q) ≫
+      (Subobject.underlyingIso (Abelian.image.ι (P.arrow ≫ q))).inv) ≫
+      (Subobject.mk (Abelian.image.ι (P.arrow ≫ q))).arrow = P.arrow ≫ q
+    rw [← Subobject.underlyingIso_hom_comp_eq_mk
+      (Abelian.image.ι (P.arrow ≫ q))]
+    simp [Category.assoc]
+  have hSzero : S.arrow ≫ q = 0 := by
+    dsimp [S, q, Formalization.Books.Homology.Unit20.selfMapAlphaSubobject]
+    change (Subobject.mk α.hom.hom).arrow ≫ cokernel.π α.hom.hom = 0
+    rw [← Subobject.underlyingIso_hom_comp_eq_mk α.hom.hom]
+    rw [Category.assoc, cokernel.condition, comp_zero]
+  have hS : R.Factors (S.arrow ≫ q) := by
+    change R.Factors (S.arrow ≫ cokernel.π α.hom.hom)
+    rw [hSzero]
+    exact Subobject.factors_zero
+  have hPpull : P ≤
+      (Subobject.pullback q).obj R := by
+    let hpb := Subobject.isPullback q R
+    refine Subobject.le_of_comm
+      (hpb.lift (R.factorThru (P.arrow ≫ q) hP) P.arrow ?_) ?_
+    · exact R.factorThru_arrow _ _
+    · simp
+  have hSpull : S ≤
+      (Subobject.pullback q).obj R := by
+    let hpb := Subobject.isPullback q R
+    refine Subobject.le_of_comm
+      (hpb.lift 0 S.arrow (by rw [zero_comp, hSzero])) ?_
+    · simp
+  have hQpull : Q ≤
+      (Subobject.pullback q).obj R := sup_le hPpull hSpull
+  apply (Subobject.factors_iff R (Q.arrow ≫ q)).mpr
+  refine ⟨(Subobject.ofLE Q ((Subobject.pullback q).obj R) hQpull ≫
+      Subobject.pullbackπ q R) ≫
+      eqToHom (Subobject.representative_coe R).symm, ?_⟩
+  simp [Subobject.representative_coe, Subobject.representative_arrow]
+  calc
+    Subobject.ofLE Q ((Subobject.pullback q).obj R) hQpull ≫
+        Subobject.pullbackπ q R ≫ R.arrow =
+      Subobject.ofLE Q ((Subobject.pullback q).obj R) hQpull ≫
+        ((Subobject.pullback q).obj R).arrow ≫ q := by
+          rw [(Subobject.isPullback q R).w]
+    _ = Q.arrow ≫ q := by
+      rw [← Category.assoc, Subobject.ofLE_arrow]
+
 abbrev differentialObjectSelfMapPageClassOfCycle
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ)
@@ -729,7 +793,307 @@ theorem differentialObjectSelfMap_page_formula
         (differentialObjectSelfMapBoundaryPlus α r)
         (differentialObjectSelfMapCyclePlus α r)
         (differentialObjectSelfMap_boundary_plus_le_cycle_plus α r)) := by
-  sorry
+  by_cases hr : r = 0
+  · subst r
+    let E₀ := differentialObjectSelfMapE₀ α
+    let : Mono α.hom.hom := α.injective
+    let S : Subobject A.carrier := Subobject.mk α.hom.hom
+    let T : Subobject A.carrier := ⊤
+    let sIso := Subobject.underlyingIso α.hom.hom
+    let tIso := Subobject.underlyingIso (𝟙 A.carrier)
+    let iS : (S : C) ⟶ (T : C) := Subobject.ofLE S T le_top
+    let qS := cokernel.π iS
+    have hst : tIso.hom = T.arrow := by
+      change (Subobject.underlyingIso (𝟙 A.carrier)).hom =
+        (⊤ : Subobject A.carrier).arrow
+      exact Subobject.underlyingIso_top_hom
+    have hsi : sIso.inv ≫ S.arrow = α.hom.hom := by
+      change (Subobject.underlyingIso α.hom.hom).inv ≫
+        (Subobject.mk α.hom.hom).arrow = α.hom.hom
+      exact Subobject.underlyingIso_arrow α.hom.hom
+    have hsm : sIso.hom ≫ α.hom.hom = S.arrow := by
+      change (Subobject.underlyingIso α.hom.hom).hom ≫ α.hom.hom =
+        (Subobject.mk α.hom.hom).arrow
+      rw [Subobject.underlyingIso_hom_comp_eq_mk]
+    have hα : α.hom.hom ≫ tIso.inv = sIso.inv ≫ iS := by
+      apply (cancel_mono tIso.hom).1
+      calc
+        (α.hom.hom ≫ tIso.inv) ≫ tIso.hom = α.hom.hom := by simp
+        _ = sIso.inv ≫ S.arrow := hsi.symm
+        _ = (sIso.inv ≫ iS) ≫ tIso.hom := by
+          rw [hst]
+          simp only [Category.assoc]
+          rw [Subobject.ofLE_arrow]
+    have hforward : α.hom.hom ≫ tIso.inv ≫ qS = 0 := by
+      rw [← Category.assoc, hα, Category.assoc, cokernel.condition, comp_zero]
+    let f := cokernel.desc α.hom.hom (tIso.inv ≫ qS) hforward
+    have hback : iS ≫ (T.arrow ≫ cokernel.π α.hom.hom) = 0 := by
+      calc
+        iS ≫ (T.arrow ≫ cokernel.π α.hom.hom) =
+            (iS ≫ T.arrow) ≫ cokernel.π α.hom.hom := by simp [Category.assoc]
+        _ = S.arrow ≫ cokernel.π α.hom.hom := by rw [Subobject.ofLE_arrow]
+        _ = (sIso.hom ≫ α.hom.hom) ≫ cokernel.π α.hom.hom := by rw [hsm]
+        _ = 0 := by rw [Category.assoc, cokernel.condition, comp_zero]
+    let g := cokernel.desc iS (T.arrow ≫ cokernel.π α.hom.hom) hback
+    have hqf : cokernel.π α.hom.hom ≫ f = tIso.inv ≫ qS := by
+      exact cokernel.π_desc _ _ _
+    have hqg : qS ≫ g = T.arrow ≫ cokernel.π α.hom.hom := by
+      exact cokernel.π_desc _ _ _
+    have hqS : Epi qS := by infer_instance
+    have hqα : Epi (cokernel.π α.hom.hom) := by infer_instance
+    let e : E₀ ≅
+        Formalization.Books.Homology.Unit20.subquotientObject S T le_top :=
+      { hom := f
+        inv := g
+        hom_inv_id := by
+          change f ≫ g = 𝟙 (cokernel α.hom.hom)
+          apply hqα.left_cancellation
+          rw [← Category.assoc, hqf, Category.assoc, hqg, ← hst]
+          simp
+        inv_hom_id := by
+          change g ≫ f = 𝟙 (cokernel iS)
+          apply hqS.left_cancellation
+          rw [← Category.assoc, hqg, Category.assoc, hqf, ← hst]
+          simp }
+    have hP0 : differentialObjectSelfMapBoundaryPreimage α 0 =
+        (⊥ : Subobject A.carrier) := by
+      rfl
+    have hZ0 : differentialObjectSelfMapCyclePreimage α 0 =
+        (⊤ : Subobject A.carrier) := by
+      rfl
+    have hplusB : differentialObjectSelfMapBoundaryPlus α 0 = S := by
+      change differentialObjectSelfMapBoundaryPreimage α 0 ⊔
+        Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective = S
+      rw [hP0, bot_sup_eq]
+      change Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective =
+        Subobject.mk α.hom.hom
+      rfl
+    have hplusZ : differentialObjectSelfMapCyclePlus α 0 = T := by
+      change differentialObjectSelfMapCyclePreimage α 0 ⊔
+        Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective = T
+      rw [hZ0]
+      simp [T, Formalization.Books.Homology.Unit20.selfMapAlphaSubobject]
+    refine ⟨?_⟩
+    change E₀ ≅ Formalization.Books.Homology.Unit20.subquotientObject
+      (differentialObjectSelfMapBoundaryPlus α 0)
+      (differentialObjectSelfMapCyclePlus α 0) _
+    simpa only [hplusB, hplusZ] using e
+  · let E₀ := differentialObjectSelfMapE₀ α
+    let : Mono α.hom.hom := α.injective
+    let q : A.carrier ⟶ E₀ := cokernel.π α.hom.hom
+    let P := differentialObjectSelfMapBoundaryPreimage α r
+    let Z := differentialObjectSelfMapCyclePreimage α r
+    let S := Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
+    let P' := differentialObjectSelfMapBoundaryPlus α r
+    let Z' := differentialObjectSelfMapCyclePlus α r
+    let B := differentialObjectSelfMapBoundarySubobject α r
+    let D := differentialObjectSelfMapCycleSubobject α r
+    let hBD := differentialObjectSelfMap_boundary_le_cycle α r
+    let hPZ := differentialObjectSelfMap_boundary_plus_le_cycle_plus α r
+    have hB' : B.Factors (P'.arrow ≫ q) := by
+      simpa [B, P', q] using
+        (differentialObjectSelfMap_boundary_plus_factors α r)
+    have hD' : D.Factors (Z'.arrow ≫ q) := by
+      simpa [D, Z', q] using
+        (differentialObjectSelfMap_cycle_plus_factors α r)
+    let qB := B.factorThru (P'.arrow ≫ q) hB'
+    let qD := D.factorThru (Z'.arrow ≫ q) hD'
+    have hqB : qB ≫ B.arrow = P'.arrow ≫ q := by
+      exact B.factorThru_arrow _ _
+    have hqD : qD ≫ D.arrow = Z'.arrow ≫ q := by
+      exact D.factorThru_arrow _ _
+    let eB : (P : C) ⟶ (B : C) := Abelian.factorThruImage (P.arrow ≫ q) ≫
+      (Subobject.underlyingIso (Abelian.image.ι (P.arrow ≫ q))).inv
+    let eD : (Z : C) ⟶ (D : C) := Abelian.factorThruImage (Z.arrow ≫ q) ≫
+      (Subobject.underlyingIso (Abelian.image.ι (Z.arrow ≫ q))).inv
+    let iP : (P : C) ⟶ (P' : C) := Subobject.ofLE P P' le_sup_left
+    let iZ : (Z : C) ⟶ (Z' : C) := Subobject.ofLE Z Z' le_sup_left
+    have hiP_arrow : iP ≫ P'.arrow = P.arrow := by
+      dsimp [iP]
+      rw [Subobject.ofLE_arrow]
+    have hiZ_arrow : iZ ≫ Z'.arrow = Z.arrow := by
+      dsimp [iZ]
+      rw [Subobject.ofLE_arrow]
+    have heBfac : eB ≫ B.arrow = P.arrow ≫ q := by
+      dsimp [eB, B, P, q, differentialObjectSelfMapBoundarySubobject,
+        Formalization.Books.Homology.Unit20.selfMapBoundarySubobject,
+        Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject]
+      simp [Category.assoc]
+    have heDfac : eD ≫ D.arrow = Z.arrow ≫ q := by
+      dsimp [eD, D, Z, q, differentialObjectSelfMapCycleSubobject,
+        Formalization.Books.Homology.Unit20.selfMapCycleSubobject,
+        Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject]
+      simp [Category.assoc]
+    have hiB : iP ≫ qB = eB := by
+      apply (cancel_mono B.arrow).1
+      calc
+        (iP ≫ qB) ≫ B.arrow = iP ≫ (P'.arrow ≫ q) := by
+          rw [Category.assoc, hqB]
+        _ = (iP ≫ P'.arrow) ≫ q := by simp [Category.assoc]
+        _ = P.arrow ≫ q := by rw [hiP_arrow]
+        _ = eB ≫ B.arrow := heBfac.symm
+    have hiD : iZ ≫ qD = eD := by
+      apply (cancel_mono D.arrow).1
+      calc
+        (iZ ≫ qD) ≫ D.arrow = iZ ≫ (Z'.arrow ≫ q) := by
+          rw [Category.assoc, hqD]
+        _ = (iZ ≫ Z'.arrow) ≫ q := by simp [Category.assoc]
+        _ = Z.arrow ≫ q := by rw [hiZ_arrow]
+        _ = eD ≫ D.arrow := heDfac.symm
+    have heB : Epi eB := by
+      dsimp [eB, B, differentialObjectSelfMapBoundarySubobject,
+        Formalization.Books.Homology.Unit20.selfMapBoundarySubobject,
+        Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject]
+      exact epi_comp' (by infer_instance) (by infer_instance)
+    have heD : Epi eD := by
+      dsimp [eD, D, differentialObjectSelfMapCycleSubobject,
+        Formalization.Books.Homology.Unit20.selfMapCycleSubobject,
+        Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject]
+      exact epi_comp' (by infer_instance) (by infer_instance)
+    have hqBepi : Epi qB :=
+      @epi_of_epi_fac C _ _ _ _ _ _ _ heB hiB
+    have hqDepi : Epi qD :=
+      @epi_of_epi_fac C _ _ _ _ _ _ _ heD hiD
+    have hinc :
+        qB ≫ Subobject.ofLE B D hBD =
+          Subobject.ofLE P' Z' hPZ ≫ qD := by
+      apply (cancel_mono D.arrow).1
+      simp [hqB, hqD, Category.assoc, Subobject.ofLE_arrow]
+    let k := kernel.ι qD
+    let f := k ≫ Z'.arrow
+    have hf : f ≫ q = 0 := by
+      dsimp [f, k]
+      rw [Category.assoc, ← hqD, ← Category.assoc, kernel.condition, zero_comp]
+    have hf' : f ≫ cokernel.π α.hom.hom = 0 := by
+      change f ≫ q = 0
+      exact hf
+    have hfS : S.Factors f := by
+      change (Subobject.mk α.hom.hom).Factors f
+      apply (Subobject.factors_iff (Subobject.mk α.hom.hom) f).mpr
+      refine ⟨Abelian.monoLift α.hom.hom f hf' ≫
+        (Subobject.underlyingIso α.hom.hom).inv, ?_⟩
+      dsimp [S]
+      rw [← Subobject.underlyingIso_hom_comp_eq_mk α.hom.hom]
+      simp [Category.assoc]
+    have hSP' : (Subobject.mk α.hom.hom) ≤ P' := by
+      change (Subobject.mk α.hom.hom) ≤
+        differentialObjectSelfMapBoundaryPreimage α r ⊔
+          Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
+      exact le_sup_right
+    have hcoeS : eqToHom (Subobject.representative_coe
+        (Subobject.mk α.hom.hom)) ≫ (Subobject.mk α.hom.hom).arrow =
+        (Subobject.representative.obj (Subobject.mk α.hom.hom)).arrow := by
+      simpa [Subobject.representative_arrow]
+    have hcoeP' : eqToHom (Subobject.representative_coe P') ≫ P'.arrow =
+        (Subobject.representative.obj P').arrow := by
+      simpa [Subobject.representative_arrow]
+    have hfP : P'.Factors f := by
+      obtain ⟨g, hg⟩ :=
+        (Subobject.factors_iff (Subobject.mk α.hom.hom) f).mp hfS
+      have hcoeP_inv : eqToHom (Subobject.representative_coe P').symm ≫
+          (Subobject.representative.obj P').arrow = P'.arrow := by
+        rw [← hcoeP']
+        simp
+      apply (Subobject.factors_iff P' f).mpr
+      refine ⟨g ≫ eqToHom (Subobject.representative_coe
+        (Subobject.mk α.hom.hom)) ≫
+        Subobject.ofLE (Subobject.mk α.hom.hom) P' hSP' ≫
+        eqToHom (Subobject.representative_coe P').symm, ?_⟩
+      change (g ≫ eqToHom (Subobject.representative_coe
+          (Subobject.mk α.hom.hom)) ≫
+          Subobject.ofLE (Subobject.mk α.hom.hom) P' hSP' ≫
+          eqToHom (Subobject.representative_coe P').symm) ≫
+        (Subobject.representative.obj P').arrow = f
+      simp only [Category.assoc]
+      rw [hcoeP_inv, Subobject.ofLE_arrow, hcoeS]
+      exact hg
+    have hkfac : P'.Factors (k ≫ Z'.arrow) := by
+      simpa [f] using hfP
+    obtain ⟨g, hg⟩ := (Subobject.factors_iff P' (k ≫ Z'.arrow)).mp hkfac
+    let iPZ : (P' : C) ⟶ (Z' : C) := Subobject.ofLE P' Z' hPZ
+    let g' : (kernel qD) ⟶ (P' : C) :=
+      g ≫ eqToHom (Subobject.representative_coe P')
+    have hiPZ_arrow : iPZ ≫ Z'.arrow = P'.arrow := by
+      dsimp [iPZ]
+      rw [Subobject.ofLE_arrow]
+    have hg'_arrow : g' ≫ P'.arrow =
+        g ≫ (Subobject.representative.obj P').arrow := by
+      change (g ≫ eqToHom (Subobject.representative_coe P')) ≫ P'.arrow =
+        g ≫ (Subobject.representative.obj P').arrow
+      rw [Category.assoc, hcoeP']
+    have hk : k = g' ≫ iPZ := by
+      apply (cancel_mono Z'.arrow).1
+      rw [Category.assoc, hiPZ_arrow, hg'_arrow]
+      exact hg.symm
+    let pR := cokernel.π iPZ
+    have hpR : Epi pR := by infer_instance
+    have hkR : k ≫ pR = 0 := by
+      rw [hk, Category.assoc, cokernel.condition, comp_zero]
+    let u := @Abelian.epiDesc C _ _ _ _ qD hqDepi _ pR hkR
+    have hqu : qD ≫ u = pR := by
+      exact @Abelian.comp_epiDesc C _ _ _ _ qD hqDepi _ pR hkR
+    let iBD : (B : C) ⟶ (D : C) := Subobject.ofLE B D hBD
+    let qL := cokernel.π iBD
+    have hinc' : qB ≫ iBD = iPZ ≫ qD := by
+      simpa [iBD, iPZ] using hinc
+    have hiBD : iBD ≫ u = 0 := by
+      apply hqBepi.left_cancellation
+      calc
+        qB ≫ (iBD ≫ u) = (qB ≫ iBD) ≫ u := by simp [Category.assoc]
+        _ = (iPZ ≫ qD) ≫ u := by rw [hinc']
+        _ = iPZ ≫ pR := by rw [Category.assoc, hqu]
+        _ = qB ≫ 0 := by
+          dsimp [pR]
+          simp only [cokernel.condition, comp_zero]
+    let n := cokernel.desc iBD u hiBD
+    have hqn : qL ≫ n = u := by
+      exact cokernel.π_desc _ _ _
+    have hiPZ : iPZ ≫ (qD ≫ qL) = 0 := by
+      calc
+        iPZ ≫ (qD ≫ qL) = (qB ≫ iBD) ≫ qL := by
+          rw [← Category.assoc, ← hinc']
+        _ = 0 := by
+          dsimp [qL]
+          rw [Category.assoc, cokernel.condition, comp_zero]
+    let m := cokernel.desc iPZ (qD ≫ qL) hiPZ
+    have hpm : pR ≫ m = qD ≫ qL := by
+      exact cokernel.π_desc _ _ _
+    have hcomp : Epi (qD ≫ qL) := epi_comp' hqDepi (by infer_instance)
+    let e : Formalization.Books.Homology.Unit20.subquotientObject B D hBD ≅
+        Formalization.Books.Homology.Unit20.subquotientObject P' Z' hPZ :=
+      { hom := n
+        inv := m
+        hom_inv_id := by
+          change n ≫ m = 𝟙 (cokernel iBD)
+          apply hcomp.left_cancellation
+          calc
+            (qD ≫ qL) ≫ n ≫ m = qD ≫ (qL ≫ n) ≫ m := by
+              simp [Category.assoc]
+            _ = qD ≫ u ≫ m := by rw [hqn]
+            _ = pR ≫ m := by rw [← Category.assoc, hqu]
+            _ = (qD ≫ qL) ≫ 𝟙 (cokernel iBD) := by
+              simpa only [Category.comp_id] using hpm
+        inv_hom_id := by
+          change m ≫ n = 𝟙 (cokernel iPZ)
+          apply hpR.left_cancellation
+          calc
+            pR ≫ m ≫ n = (pR ≫ m) ≫ n := by simp [Category.assoc]
+            _ = (qD ≫ qL) ≫ n := by rw [hpm]
+            _ = qD ≫ (qL ≫ n) := by simp [Category.assoc]
+            _ = qD ≫ u := by rw [hqn]
+            _ = pR ≫ 𝟙 (cokernel iPZ) := by
+              simpa only [Category.comp_id] using hqu }
+    refine ⟨?_⟩
+    simpa [B, D, P', Z', differentialObjectSelfMapBoundarySubobject,
+      differentialObjectSelfMapCycleSubobject,
+      differentialObjectSelfMapPageComponent,
+      Formalization.Books.Homology.Unit20.selfMapBoundarySubobject,
+      Formalization.Books.Homology.Unit20.selfMapCycleSubobject,
+      Formalization.Books.Homology.Unit20.selfMapBoundaryPlus,
+      Formalization.Books.Homology.Unit20.selfMapCyclePlus,
+      Formalization.Books.Homology.Unit20.selfMapPageComponent,
+      if_neg hr, Formalization.Books.Homology.Unit20.subquotientObject,
+      iPZ, iBD, pR, qL] using e
 
 /-! ### Shifted differential objects -/
 

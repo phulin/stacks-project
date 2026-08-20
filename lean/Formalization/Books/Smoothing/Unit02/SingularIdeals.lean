@@ -45,14 +45,17 @@ defined by smoothness on a basic localization around that prime. -/
 theorem isOpen_smoothLocus
     (R A : Type*) [CommRing R] [CommRing A] [Algebra R A] :
     IsOpen (Formalization.Books.Algebra.Unit137.SmoothLocus R A) := by
-  sorry
+  exact Formalization.Books.Algebra.Unit137.isOpen_smoothLocus (R := R) (S := A)
 
 /-- The singular ideal cuts out exactly the complement of the source-facing
 smooth locus. -/
 theorem singularIdeal_zeroLocus (R A : Type*) [CommRing R] [CommRing A] [Algebra R A] :
     PrimeSpectrum.zeroLocus (singularIdeal R A) =
       (Formalization.Books.Algebra.Unit137.SmoothLocus R A)ᶜ := by
-  sorry
+  unfold singularIdeal
+  rw [PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure]
+  exact (isClosed_compl_iff.mpr
+    (Formalization.Books.Algebra.Unit137.isOpen_smoothLocus (R := R) (S := A))).closure_eq
 
 /-- The radical ideal with this zero locus is unique. -/
 theorem singularIdeal_unique (R A : Type*) [CommRing R] [CommRing A] [Algebra R A]
@@ -60,7 +63,13 @@ theorem singularIdeal_unique (R A : Type*) [CommRing R] [CommRing A] [Algebra R 
     (hzero : PrimeSpectrum.zeroLocus I =
       (Formalization.Books.Algebra.Unit137.SmoothLocus R A)ᶜ) :
     I = singularIdeal R A := by
-  sorry
+  have hrad : I.radical = (singularIdeal R A).radical :=
+    (PrimeSpectrum.zeroLocus_eq_iff).mp
+      (hzero.trans (singularIdeal_zeroLocus R A).symm)
+  calc
+    I = I.radical := hI.radical.symm
+    _ = (singularIdeal R A).radical := hrad
+    _ = singularIdeal R A := (singularIdeal_isRadical R A).radical
 
 /-! ## Presentation-level standard elements -/
 

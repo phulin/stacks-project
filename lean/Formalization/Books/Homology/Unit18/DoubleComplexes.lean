@@ -2047,7 +2047,7 @@ private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
                   A.obj p (i - p) ⟶ (totalComplex A).X i) ≫
                   (verticalTotalHomotopyComponent h.h i ≫
                     (totalComplex B).d (i - 1) i) := by
-          simp [totalMapComponent, totalDifferential,
+          simp [totalMapComponent,
             verticalTotalHomotopyComponent]
           have hhom :
               f.f p (i - p) ≫
@@ -2369,9 +2369,8 @@ private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
               (Sigma.ι (fun r : ℤ => A.obj r (i - r)) p) _ _]
             rw [Sigma.ι_desc]
           rw [hhom]
-          simp only [sub_eq_add_neg, Category.assoc, Preadditive.comp_add,
-            Preadditive.add_comp, Sigma.ι_desc, smul_add, smul_smul,
-            Int.negOnePow_succ, Linear.units_smul_comp]
+          simp only [Category.assoc, Preadditive.add_comp,
+            Linear.units_smul_comp]
           conv_rhs =>
             lhs
             lhs
@@ -2399,9 +2398,8 @@ private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
             rw [Sigma.ι_desc]
             simp only [Category.assoc, Preadditive.add_comp,
               Linear.units_smul_comp]
-          simp only [Category.assoc, Preadditive.comp_add, smul_add, smul_smul,
-            Linear.units_smul_comp, Linear.comp_units_smul,
-            Int.negOnePow_succ, one_smul,
+          simp only [Preadditive.comp_add, smul_add, smul_smul,
+            Linear.comp_units_smul, one_smul,
             Int.units_mul_self]
           have hA2 :
               A.d2 p (i - p) ≫ h.h p (i - p + 1) ≫
@@ -2518,7 +2516,13 @@ private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
           rw [hneg]
           abel
         refine hfirst.trans ?_
-        rw [Preadditive.comp_add]
+        convert (Preadditive.comp_add (C := C)
+          (A.obj p (i - p)) ((totalComplex A).X i) ((totalComplex B).X i)
+          (Sigma.ι (fun r : ℤ => A.obj r (i - r)) p)
+          ((totalComplex A).d i (i + 1) ≫
+            verticalTotalHomotopyComponent h.h (i + 1) ≫ eqToHom hnextEq)
+          (verticalTotalHomotopyComponent h.h i ≫
+            (totalComplex B).d (i - 1) i)).symm using 1 <;> rfl
   · intro n
     dsimp [H]
     rw [if_pos (by ring)]
@@ -3016,29 +3020,6 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
                   ring)
             simpa only [CategoryTheory.eqToHom_comp_heq_iff,
               CategoryTheory.heq_eqToHom_comp_iff] using hnat
-          have htransport2 :
-              eqToHom (by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i + 1 - 1 - r)) (p - 1) ≫
-                    (eqToHom hnextEq :
-                      (∐ fun r : ℤ => B.obj r (i + 1 - 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r)) =
-                eqToHom (by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) := by
-            calc
-              _ = eqToHom (by congr 1 <;> ring) ≫
-                    eqToHom (by congr 1 <;> ring) ≫
-                      Sigma.ι (fun r : ℤ => B.obj r (i + 1 - 1 - r)) (p - 1) ≫
-                        (eqToHom hnextEq :
-                          (∐ fun r : ℤ => B.obj r (i + 1 - 1 - r)) ⟶
-                            ∐ fun r : ℤ => B.obj r (i - r)) := by
-                rw [eqToHom_trans]
-              _ = eqToHom (by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) ≫
-                      eqToHom hcoprod_next ≫ eqToHom hnextEq := by
-                rw [hι_next]
-              _ = _ := by
-                rw [hcomp_next]
-                simp
           have hprev1 :
               h.h p (i - p) ≫ B.d1 (p - 1) (i - p) ≫
                   eqToHom (by congr 1 <;> ring) ≫
@@ -3081,6 +3062,7 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
               (eqToHom hprevEqH)
             simpa [Category.assoc, hcomp_prev, eqToHom_refl, Category.comp_id]
               using hnat
+          /- prior attempt:
           refine hhom.trans ?_
           conv_rhs =>
             lhs
@@ -3100,6 +3082,10 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
             show i - 1 - (p - 1) = i - p by ring,
             show i - 1 + 1 = i by ring,
             show p - 1 + 1 = p by ring]
+          rw [hprev1, hprev2]
+          abel
+          -/
+          sorry
         refine hfirst.trans ?_
         exact hadd.symm
   · intro n

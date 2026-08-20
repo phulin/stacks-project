@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit54.EssentiallyFiniteType
 import Formalization.Books.Algebra.Unit68.RegularSequences
 import Formalization.Books.Algebra.Unit104.CohenMacaulayRings
+import Formalization.Books.Algebra.Unit106.RegularLocalRings
 import Formalization.Books.Algebra.Unit114.DimensionFiniteTypeAlgebras
 import Formalization.Books.Algebra.Unit116.DimensionFiniteTypeAlgebrasReprise
 import Formalization.Books.Algebra.Unit134.NaiveCotangentComplex
@@ -1066,6 +1067,71 @@ def PresentationLocalCompleteIntersectionConditions
         (LocalizedPresentationConormal P q') c,
       IsIdealGeneratedByRegularSequence (LocalizedPresentationIdeal P q') ]
 
+private theorem regular_local_ring_is_cohen_macaulay
+    {R : Type u} [CommRing R] [IsRegularLocalRing R] :
+    Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing R := by
+  classical
+  let S : Set R := (IsLocalRing.maximalIdeal R).generators
+  let hfg : (IsLocalRing.maximalIdeal R).FG :=
+    IsNoetherian.noetherian (IsLocalRing.maximalIdeal R)
+  let hS : S.Finite := Submodule.FG.finite_generators hfg
+  let F : Finset R := hS.toFinset
+  let xs : List R := F.toList
+  have hSF : (F : Set R) = S := hS.coe_toFinset
+  have hspan : Ideal.ofList xs = IsLocalRing.maximalIdeal R := by
+    simpa [Ideal.ofList, xs, hSF] using
+      (IsLocalRing.maximalIdeal R).span_generators
+  have hgen : (IsLocalRing.maximalIdeal R).spanFinrank = F.card := by
+    rw [← Submodule.FG.generators_ncard hfg]
+    simpa [F, S] using Set.ncard_eq_toFinset_card (hs := hS)
+  have hminimal : ∀ i : Fin xs.length,
+      xs.get i ∉ Ideal.ofList (xs.eraseIdx i.1) := by
+    intro i hi
+    have hcard : (xs.eraseIdx i.1).length + 1 = xs.length :=
+      List.length_eraseIdx_add_one i.isLt
+    have hspan_erase : Ideal.ofList (xs.eraseIdx i.1) = IsLocalRing.maximalIdeal R := by
+      apply le_antisymm
+      · rw [← hspan]
+        apply Ideal.span_le.mpr
+        intro y hy
+        change y ∈ Ideal.span {r | r ∈ xs}
+        exact Ideal.subset_span (List.eraseIdx_subset hy)
+      · rw [← hspan]
+        apply Ideal.span_le.mpr
+        intro y hy
+        by_cases hyeq : y = xs.get i
+        · simpa [hyeq] using hi
+        · have hy' : y ∈ xs.eraseIdx i.1 := by
+            change y ∈ xs at hy
+            obtain ⟨j, hj, hget⟩ := (List.mem_iff_getElem.mp hy)
+            have hji : j ≠ i.1 := by
+              intro hji
+              apply hyeq
+              subst j
+              exact hget.symm
+            rw [List.mem_eraseIdx_iff_getElem]
+            exact ⟨j, hj, hji, hget⟩
+          change y ∈ Ideal.span {r | r ∈ xs.eraseIdx i.1}
+          exact Ideal.subset_span hy'
+    let E : Finset R := (xs.eraseIdx i.1).toFinset
+    have hspanE : Ideal.span (↑E : Set R) = IsLocalRing.maximalIdeal R := by
+      simpa [E, Ideal.ofList] using hspan_erase
+    have hspanE' : Submodule.span R (↑E : Set R) = IsLocalRing.maximalIdeal R := hspanE
+    have hle := Submodule.spanFinrank_span_le_ncard_of_finite
+      (R := R) (M := R) (s := (↑E : Set R)) E.finite_toSet
+    rw [hspanE'] at hle
+    rw [hgen] at hle
+    have hcard' : E.card ≤ (xs.eraseIdx i.1).length := by
+      simpa [E] using List.toFinset_card_le (xs.eraseIdx i.1)
+    have hle' : F.card ≤ (xs.eraseIdx i.1).length :=
+      le_trans (by simpa using hle) hcard'
+    have hle'' : xs.length ≤ (xs.eraseIdx i.1).length := by
+      simpa [xs] using hle'
+    omega
+  have hxs : Unit106.IsMinimalIdealGeneratingList
+      (IsLocalRing.maximalIdeal R) xs := ⟨hspan, hminimal⟩
+  exact (Unit106.regular_ring_CM xs hxs).2.2
+
 theorem local_complete_intersection_at_presentation_prime
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
     {n : ℕ} (P : PolynomialPresentation k S n)
@@ -1092,7 +1158,100 @@ theorem regular_sequence_of_minimal_conormal_generators
       (LocalizedPresentationIdeal P q') c x) :
     RingTheory.Sequence.IsRegular (LocalizedPresentationRing P q')
       (List.ofFn x) := by
-  sorry
+  classical
+  let R := LocalizedPresentationRing P q'
+  let I := LocalizedPresentationIdeal P q'
+  letI : IsRegularLocalRing R := by
+    dsimp [R]
+    infer_instance
+  have hx' : (∀ i, x i ∈ I) ∧
+      Ideal.span (Set.range x) ⊔ IsLocalRing.maximalIdeal R * I = I := by
+    simpa [GeneratesModuloMaximalIdeal, R, I] using hx
+  have hspan : Ideal.span (Set.range x) = I := by
+    apply le_antisymm
+    · apply Ideal.span_le.mpr
+      rintro y ⟨i, rfl⟩
+      exact hx'.1 i
+    · apply Submodule.le_of_le_smul_of_le_jacobson_bot
+        (IsNoetherian.noetherian I)
+        (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+      simpa [Ideal.smul_eq_mul] using hx'.2.ge
+  have hqideal : q'.asIdeal = Ideal.comap (algebraMap P.Ring S) q.asIdeal := by
+    change q'.asIdeal = (PrimeSpectrum.comap (algebraMap P.Ring S) q).asIdeal
+    exact congrArg PrimeSpectrum.asIdeal hcorresponding.symm
+  have hkerle : P.ker ≤ q'.asIdeal := by
+    rw [hqideal]
+    intro z hz
+    change algebraMap P.Ring S z ∈ q.asIdeal
+    rw [P.algebraMap_apply, P.aeval_val_eq_zero hz]
+    exact Ideal.zero_mem q.asIdeal
+  have hIle : I ≤ IsLocalRing.maximalIdeal R := by
+    change Ideal.map (algebraMap P.Ring R) P.ker ≤ IsLocalRing.maximalIdeal R
+    apply Ideal.map_le_iff_le_comap.mpr
+    intro z hz
+    exact (IsLocalization.AtPrime.to_map_mem_maximal_iff R q'.asIdeal z).mpr
+      (hkerle hz)
+  have hmem : ∀ i, x i ∈ IsLocalRing.maximalIdeal R := fun i => hIle (hx'.1 i)
+  let f₀ : P.Ring →+* S := algebraMap P.Ring S
+  have hsub : Submonoid.map f₀ q'.asIdeal.primeCompl = q.asIdeal.primeCompl := by
+    simpa [f₀, hqideal] using
+      (Ideal.map_primeCompl_comap_of_surjective (algebraMap P.Ring S)
+        P.algebraMap_surjective q.asIdeal)
+  let locMap : R →+* Localization.AtPrime q.asIdeal :=
+    IsLocalization.map (Localization.AtPrime q.asIdeal) f₀
+      (hsub.symm ▸ Submonoid.le_comap_map q'.asIdeal.primeCompl)
+  have hsurj : Function.Surjective locMap := by
+    intro z
+    obtain ⟨⟨s, t⟩, hst⟩ := IsLocalization.mk'_surjective q.asIdeal.primeCompl z
+    obtain ⟨y, hy⟩ := P.algebraMap_surjective s
+    have ht : (t : S) ∈ Submonoid.map f₀ q'.asIdeal.primeCompl := by
+      rw [hsub]
+      exact t.property
+    rcases Submonoid.mem_map.mp ht with ⟨u, hu, hfu⟩
+    let u' : q'.asIdeal.primeCompl := ⟨u, hu⟩
+    refine ⟨IsLocalization.mk' R y u', ?_⟩
+    change IsLocalization.map (Localization.AtPrime q.asIdeal) f₀ _
+        (IsLocalization.mk' R y u') = z
+    have hle : q'.asIdeal.primeCompl ≤
+        Submonoid.comap f₀ q.asIdeal.primeCompl :=
+      hsub.symm ▸ Submonoid.le_comap_map q'.asIdeal.primeCompl
+    rw [IsLocalization.map_mk' hle, hy, ← hst]
+    congr 1
+    apply Subtype.ext
+    exact hfu
+  have hkerloc : RingHom.ker locMap = P.ker.map (algebraMap P.Ring R) := by
+    change RingHom.ker locMap =
+      (RingHom.ker (algebraMap P.Ring S)).map (algebraMap P.Ring R)
+    simpa [locMap, f₀] using
+      (IsLocalization.ker_map (Localization.AtPrime q.asIdeal) f₀ hsub)
+  have hkerEq : I = RingHom.ker locMap := by
+    change Ideal.map (algebraMap P.Ring R) P.ker = RingHom.ker locMap
+    exact hkerloc.symm
+  let eQuot : (R ⧸ I) ≃+* Localization.AtPrime q.asIdeal :=
+    (Ideal.quotientEquivAlgOfEq R hkerEq).toRingEquiv.trans
+      (RingHom.quotientKerEquivOfSurjective hsurj)
+  have hdimR : ringKrullDim R = q'.asIdeal.height :=
+    IsLocalization.AtPrime.ringKrullDim_eq_height q'.asIdeal R
+  have hdimQ : ringKrullDim (R ⧸ I) = q.asIdeal.height := by
+    rw [ringKrullDim_eq_of_ringEquiv eQuot]
+    exact IsLocalization.AtPrime.ringKrullDim_eq_height q.asIdeal _
+  have hlist0 : (Ideal.ofList (List.ofFn x) : Ideal R) =
+      Ideal.span (Set.range x) := by
+    apply congrArg Ideal.span
+    ext y
+    simp
+  have hlist : (Ideal.ofList (List.ofFn x) : Ideal R) = I := hlist0.trans hspan
+  have hcm : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing R :=
+    regular_local_ring_is_cohen_macaulay
+  apply (Formalization.Books.Algebra.Unit104.regularSequence_iff_expected_quotient_dimension
+    R hcm (List.ofFn x) (by
+      intro y hy
+      obtain ⟨i, rfl⟩ := (List.mem_ofFn.mp hy)
+      exact hmem i)).mpr
+  rw [hlist, hdimQ, hdimR]
+  have hlen : (List.ofFn x).length = c := by simp
+  rw [hlen]
+  exact_mod_cast hc.symm
 
 /-! ## Complete intersections as local rings -/
 

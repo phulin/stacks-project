@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit07.FiniteRingMaps
 import Formalization.Books.Algebra.Unit39.FlatModules
+import Formalization.Books.MoreAlgebra.Unit16.FlatteningStratification
 import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Extension.Generators
@@ -292,6 +293,44 @@ theorem finite_split
    presentation identifies its structure map with the source's `R → S`. -/
 /-- The image of the spectrum of a split polynomial quotient is the union of
 the vanishing loci of the selected-root ideal images. -/
+private theorem mvPolynomial_sub_eval_mem_span
+    {R σ : Type*} [CommRing R] (p : MvPolynomial σ R) (a : σ → R) :
+    p - MvPolynomial.C (MvPolynomial.eval₂Hom (RingHom.id R) a p) ∈
+      Ideal.span (Set.range (fun i => MvPolynomial.X i - MvPolynomial.C (a i))) := by
+  induction p using MvPolynomial.induction_on with
+  | C r => simp
+  | add p q hp hq =>
+      simpa [map_add, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+        add_mem hp hq
+  | mul_X p i hp =>
+      have hxi := Ideal.subset_span (show MvPolynomial.X i - MvPolynomial.C (a i) ∈
+        Set.range (fun i => MvPolynomial.X i - MvPolynomial.C (a i)) from ⟨i, rfl⟩)
+      have hmul := (Ideal.span (Set.range (fun i =>
+        MvPolynomial.X i - MvPolynomial.C (a i)))).mul_mem_left
+          (MvPolynomial.C (MvPolynomial.eval₂Hom (RingHom.id R) a p)) hxi
+      have hright := (Ideal.span (Set.range (fun i =>
+        MvPolynomial.X i - MvPolynomial.C (a i)))).mul_mem_right
+          (MvPolynomial.X i) hp
+      convert add_mem hright hmul using 1 <;>
+        simp only [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂_mul,
+          MvPolynomial.eval₂Hom_C, map_sub, map_mul]
+      ring
+
+private theorem exists_iInf_le_of_isPrime
+    {R ι : Type*} [CommRing R] [Fintype ι]
+    (P : Ideal R) (hP : P.IsPrime) (I : ι → Ideal R)
+    (h : ⨅ i, I i ≤ P) : ∃ i, I i ≤ P := by
+  classical
+  rw [← Finset.inf_univ_eq_iInf] at h
+  obtain ⟨i, hi, hIP⟩ := hP.inf_le'.mp h
+  exact ⟨i, hIP⟩
+
+private theorem toMvPolynomial_splitPolynomial
+    {R : Type*} [CommRing R] {σ : Type*} (i : σ) {d : ℕ} (a : Fin d → R) :
+    Polynomial.toMvPolynomial i (splitPolynomial a) =
+      ∏ j, (MvPolynomial.X i - MvPolynomial.C (a j)) := by
+  simp [splitPolynomial, map_prod]
+
 theorem split_image
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (presentation : SplitPolynomialPresentation R S) :
@@ -299,7 +338,120 @@ theorem split_image
       PrimeSpectrum.zeroLocus
         ((⨅ k : ∀ i, Fin (presentation.degree i),
           splitImageIdeal presentation.ideal presentation.root k : Ideal R) : Set R) := by
-  sorry
+  ext p
+  constructor
+  · rintro ⟨q, rfl⟩
+    let e := presentation.quotientEquiv
+    let q' : PrimeSpectrum (MvPolynomial (Fin presentation.number) R ⧸
+        presentation.ideal) := PrimeSpectrum.comap e.toRingHom q
+    let q'' : PrimeSpectrum (MvPolynomial (Fin presentation.number) R) :=
+      PrimeSpectrum.comap (Ideal.Quotient.mk presentation.ideal) q'
+    have hbase : e.toRingHom.comp
+        (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal)) =
+        algebraMap R S := by
+      ext r
+      exact e.commutes r
+    have hpoint : PrimeSpectrum.comap (algebraMap R S) q =
+        PrimeSpectrum.comap (algebraMap R
+          (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal)) q' := by
+      apply PrimeSpectrum.ext
+      change Ideal.comap (algebraMap R S) q.asIdeal =
+        Ideal.comap (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸
+          presentation.ideal)) q'.asIdeal
+      change Ideal.comap (algebraMap R S) q.asIdeal =
+        (Ideal.comap e.toRingHom q.asIdeal).comap
+          (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal))
+      rw [Ideal.comap_comap]
+      change Ideal.comap (algebraMap R S) q.asIdeal =
+        Ideal.comap (e.toRingHom.comp
+          (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal)))
+          q.asIdeal
+      rw [hbase]
+    have hq'' : presentation.ideal ≤ q''.asIdeal := by
+      intro x hx
+      change Ideal.Quotient.mk presentation.ideal x ∈ q'.asIdeal
+      have hx0 : Ideal.Quotient.mk presentation.ideal x = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hx
+      rw [hx0]
+      exact q'.asIdeal.zero_mem
+    have hfactor : ∀ i, (Finset.univ.prod (fun j : Fin (presentation.degree i) =>
+        MvPolynomial.X i - MvPolynomial.C (presentation.root i j))) ∈ q''.asIdeal := by
+      intro i
+      rw [← toMvPolynomial_splitPolynomial]
+      rw [← presentation.factorization i]
+      exact hq'' (presentation.ideal_contains i)
+    have hroot : ∀ i, ∃ j : Fin (presentation.degree i),
+        MvPolynomial.X i - MvPolynomial.C (presentation.root i j) ∈ q''.asIdeal := by
+      intro i
+      obtain ⟨j, hj, hjq⟩ := Ideal.IsPrime.prod_mem_iff.mp (hfactor i)
+      exact ⟨j, hjq⟩
+    choose k hk using hroot
+    rw [PrimeSpectrum.mem_zeroLocus]
+    change (⨅ k : ∀ i, Fin (presentation.degree i),
+      splitImageIdeal presentation.ideal presentation.root k) ≤
+      (PrimeSpectrum.comap (algebraMap R S) q).asIdeal
+    apply (iInf_le _ k).trans
+    rw [splitImageIdeal, Ideal.map_le_iff_le_comap]
+    intro a ha
+    let φ := splitEvaluationHom presentation.root k
+    have hspan : Ideal.span (Set.range (fun i : Fin presentation.number =>
+        MvPolynomial.X i - MvPolynomial.C (presentation.root i (k i)))) ≤ q''.asIdeal := by
+      refine Ideal.span_le.mpr ?_
+      rintro _ ⟨i, rfl⟩
+      exact hk i
+    have hsub := mvPolynomial_sub_eval_mem_span a
+      (fun i : Fin presentation.number => presentation.root i (k i))
+    have hsub' : a - MvPolynomial.C (φ a) ∈ q''.asIdeal := by
+      apply hspan
+      simpa [φ, splitEvaluationHom, MvPolynomial.aeval_def] using hsub
+    have hconst : MvPolynomial.C (φ a) ∈ q''.asIdeal := by
+      have haQ : a ∈ q''.asIdeal := hq'' ha
+      have := q''.asIdeal.sub_mem haQ hsub'
+      convert this using 1 <;> ring
+    have hconst' : Ideal.Quotient.mk presentation.ideal (MvPolynomial.C (φ a)) ∈ q'.asIdeal :=
+      hconst
+    change φ a ∈ (PrimeSpectrum.comap (algebraMap R S) q).asIdeal
+    rw [congrArg PrimeSpectrum.asIdeal hpoint]
+    change algebraMap R
+        (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal) (φ a) ∈ q'.asIdeal
+    change Ideal.Quotient.mk presentation.ideal (MvPolynomial.C (φ a)) ∈ q'.asIdeal
+    exact hconst'
+  · intro hp
+    rw [PrimeSpectrum.mem_zeroLocus] at hp
+    have hle : (⨅ k : ∀ i, Fin (presentation.degree i),
+        splitImageIdeal presentation.ideal presentation.root k) ≤ p.asIdeal := hp
+    obtain ⟨k, hk⟩ := exists_iInf_le_of_isPrime p.asIdeal p.isPrime _ hle
+    let φ := splitEvaluationHom presentation.root k
+    let ψ : MvPolynomial (Fin presentation.number) R →+*
+        R ⧸ p.asIdeal := (Ideal.Quotient.mk p.asIdeal).comp φ
+    have hker : ∀ a, a ∈ presentation.ideal → ψ a = 0 := by
+      intro a ha
+      have ha' : φ a ∈ p.asIdeal := by
+        apply (Ideal.map_le_iff_le_comap.mp hk) ha
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr ha'
+    let l : MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal →+*
+        R ⧸ p.asIdeal := Ideal.Quotient.lift presentation.ideal ψ hker
+    let q' : PrimeSpectrum (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal) :=
+      ⟨RingHom.ker l, RingHom.ker_isPrime l⟩
+    let e := presentation.quotientEquiv
+    let q : PrimeSpectrum S := PrimeSpectrum.comap e.symm.toRingHom q'
+    have hbase : e.symm.toRingHom.comp (algebraMap R S) =
+        algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal) := by
+      ext r
+      exact e.symm.commutes r
+    have hp' : Ideal.comap
+        (algebraMap R (MvPolynomial (Fin presentation.number) R ⧸ presentation.ideal))
+        q'.asIdeal = p.asIdeal := by
+      ext r
+      change l (Ideal.Quotient.mk presentation.ideal (MvPolynomial.C r)) = 0 ↔
+        r ∈ p.asIdeal
+      simpa [l, ψ, φ, splitEvaluationHom, MvPolynomial.aeval_def] using
+        (Ideal.Quotient.eq_zero_iff_mem (I := p.asIdeal) (a := r))
+    refine ⟨q, ?_⟩
+    apply PrimeSpectrum.ext
+    change Ideal.comap (algebraMap R S) q.asIdeal = p.asIdeal
+    change Ideal.comap (e.symm.toRingHom.comp (algebraMap R S)) q'.asIdeal = p.asIdeal
+    rw [hbase, hp']
 
 /-! ## Descent of flatness -/
 

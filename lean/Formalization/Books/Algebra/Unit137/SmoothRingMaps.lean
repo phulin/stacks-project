@@ -1127,7 +1127,7 @@ theorem jacobian_inversion_is_standard_smooth
           {MvPolynomial.X (Fin.last n) *
               liftPolynomialToSucc (jacobianDeterminant hcn fs) - 1} := by
     ext x
-    simp [or_comm, D]
+    simp [D]
   have hspan :
       Ideal.span (Set.range v) = jacobianInversionIdeal hcn fs := by
     unfold jacobianInversionIdeal

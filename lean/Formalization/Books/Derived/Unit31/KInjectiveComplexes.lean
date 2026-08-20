@@ -659,6 +659,149 @@ variable {A : Type u} [Category.{v} A] [Abelian A]
   [∀ n : ℤ, (shiftFunctor D' n).Additive]
   [Pretriangulated D'] [CategoryTheory.IsTriangulated D']
 
+open Formalization.Books.Categories.Unit27
+open Formalization.Books.Categories.Unit22
+
+private theorem kInjective_computes_rightDerived
+    (F : BookHomotopyCategory A ⥤ D') (I : BookComplex A)
+    (hI : I.IsKInjective) :
+    ComputesRightDerived
+      (quasiIsoHomotopyProperty A)
+      (quasiIsoHomotopyProperty_properties A).1 F
+      ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj I) := by
+  let S : MorphismProperty (BookHomotopyCategory A) := quasiIsoHomotopyProperty A
+  let hS : SaturatedMultiplicativeSystem S :=
+    by simpa [S] using (quasiIsoHomotopyProperty_properties A).1
+  let X : BookHomotopyCategory A :=
+    (HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj I
+  let _ : LeftMultiplicativeSystem S := hS.1.1
+  let _ : IsFiltered (LeftDenominatorCategory S X) :=
+    left_denominator_category_is_filtered X
+  have hK : CochainComplex.IsKInjective X.1 := by
+    change CochainComplex.IsKInjective I
+    exact hI
+  let _ : I.IsKInjective := hI
+  have hRetract : ∀ s : LeftDenominatorCategory S X,
+      ∃ r : s.right ⟶ X, s.hom ≫ r = 𝟙 X := by
+    intro s
+    let _ : IsIso (DerivedCategory.Qh.map s.hom) :=
+      Localization.inverts _ _ _ s.prop
+    obtain ⟨r, hr⟩ :=
+      (CochainComplex.IsKInjective.Qh_map_bijective s.right I).surjective
+        (inv (DerivedCategory.Qh.map s.hom))
+    refine ⟨r, ?_⟩
+    apply (CochainComplex.IsKInjective.Qh_map_bijective X I).injective
+    rw [Functor.map_comp, hr]
+    simp
+  let r : ∀ s : LeftDenominatorCategory S X, s.right ⟶ X :=
+    fun s => (hRetract s).choose
+  have hr (s : LeftDenominatorCategory S X) : s.hom ≫ r s = 𝟙 X :=
+    (hRetract s).choose_spec
+  have hRetractUnique (s : LeftDenominatorCategory S X)
+      (a b : s.right ⟶ X) (ha : s.hom ≫ a = 𝟙 X)
+      (hb : s.hom ≫ b = 𝟙 X) : a = b := by
+    let _ : IsIso (DerivedCategory.Qh.map s.hom) :=
+      Localization.inverts _ _ _ s.prop
+    apply (CochainComplex.IsKInjective.Qh_map_bijective s.right I).injective
+    apply (cancel_epi (DerivedCategory.Qh.map s.hom)).1
+    rw [← DerivedCategory.Qh.map_comp, ← DerivedCategory.Qh.map_comp, ha, hb]
+  let M := rightDerivedDiagram S F X
+  let c : Cocone M :=
+    { pt := F.obj X
+      ι :=
+        { app := fun s => F.map (r s)
+          naturality := by
+            intro s t f
+            change F.map f.right ≫ F.map (r t) = F.map (r s) ≫ 𝟙 _
+            simp only [Category.comp_id]
+            rw [← F.map_comp]
+            exact congrArg (fun q => F.map q)
+              (hRetractUnique s (f.right ≫ r t) (r s)
+                (by rw [← Category.assoc, MorphismProperty.Under.w f, hr]) (hr s)) } }
+  have hr₀ : r (rightDerivedIdentityIndex S X) = 𝟙 X := by
+    apply hRetractUnique (rightDerivedIdentityIndex S X)
+      (r (rightDerivedIdentityIndex S X)) (𝟙 X)
+    · exact hr (rightDerivedIdentityIndex S X)
+    · change (𝟙 X) ≫ 𝟙 X = 𝟙 X
+      simp
+  have hc : IsEssentiallyConstantInd M c := by
+    refine ⟨rightDerivedIdentityIndex S X, 𝟙 _, ?_, ?_⟩
+    · change 𝟙 (F.obj X) ≫ F.map (r (rightDerivedIdentityIndex S X)) = 𝟙 (F.obj X)
+      rw [hr₀]
+      simp
+    · intro j
+      let g : j ⟶ rightDerivedIdentityIndex S X :=
+        MorphismProperty.Under.homMk (r j) (hr j)
+      refine ⟨rightDerivedIdentityIndex S X, 𝟙 _, g, ?_⟩
+      dsimp [rightDerivedIdentityIndex, MorphismProperty.Under.mk]
+      dsimp [M, c, g, rightDerivedDiagram, rightDerivedIdentityIndex,
+        MorphismProperty.Under.mk]
+      simp
+  let hX : rightDerivedDefined S hS F X := ⟨c, hc⟩
+  let c' := rightDerivedCocone S hS F X hX
+  have hc' : IsEssentiallyConstantInd M c' := by
+    exact Classical.choose_spec hX
+  obtain ⟨i, s, hs, hfactor⟩ := hc'
+  let gi : i ⟶ rightDerivedIdentityIndex S X :=
+    MorphismProperty.Under.homMk (r i) (hr i)
+  have hgi : M.map gi ≫ c'.ι.app (rightDerivedIdentityIndex S X) = c'.ι.app i :=
+    c'.w gi
+  obtain ⟨k, f, g, hfg⟩ := hfactor (rightDerivedIdentityIndex S X)
+  let gk : k ⟶ rightDerivedIdentityIndex S X :=
+    MorphismProperty.Under.homMk (r k) (hr k)
+  have hgk : g ≫ gk = 𝟙 (rightDerivedIdentityIndex S X) := by
+    dsimp [rightDerivedIdentityIndex, MorphismProperty.Under.mk] at g gk ⊢
+    apply MorphismProperty.Under.Hom.ext
+    rw [MorphismProperty.Comma.comp_right]
+    dsimp [MorphismProperty.Under.homMk]
+    change g.right ≫ r k = 𝟙 X
+    have hg : g.right = k.hom := by
+      simpa using MorphismProperty.Under.w g
+    rw [hg, hr k]
+  let a := c'.ι.app (rightDerivedIdentityIndex S X)
+  let b := s ≫ M.map gi
+  let q := s ≫ M.map f ≫ M.map gk
+  have hba : b ≫ a = 𝟙 c'.pt := by
+    dsimp [b]
+    rw [Category.assoc, hgi, hs]
+  have haq : a ≫ q = 𝟙 (M.obj (rightDerivedIdentityIndex S X)) := by
+    calc
+      a ≫ q = (a ≫ s ≫ M.map f) ≫ M.map gk := by simp [q, Category.assoc]
+      _ = M.map g ≫ M.map gk := by rw [hfg]
+      _ = M.map (g ≫ gk) := by rw [M.map_comp]
+      _ = 𝟙 (M.obj (rightDerivedIdentityIndex S X)) := by rw [hgk]; simp
+  have hbq : b = q := by
+    calc
+      b = b ≫ 𝟙 (M.obj (rightDerivedIdentityIndex S X)) := by simp
+      _ = b ≫ (a ≫ q) := by rw [haq]
+      _ = (b ≫ a) ≫ q := by simp [Category.assoc]
+      _ = q := by rw [hba]; simp
+  have ha : IsIso a := by
+    let _ : IsIso a := IsIso.mk ⟨q, haq, by rw [← hbq, hba]; simp⟩
+    infer_instance
+  refine ⟨hX, ?_⟩
+  have haFinal : IsIso ((rightDerivedCocone S hS F X hX).ι.app
+      ({ left := ⟨⟨⟩⟩, right := X, hom := 𝟙 X, prop := S.id_mem X } :
+        LeftDenominatorCategory S X)) := by
+    simpa [c', a, rightDerivedIdentityIndex, MorphismProperty.Under.mk] using ha
+  have hcomp : IsIso (𝟙 (F.obj X) ≫
+      (rightDerivedCocone S hS F X hX).ι.app
+        ({ left := ⟨⟨⟩⟩, right := X, hom := 𝟙 X, prop := S.id_mem X } :
+          LeftDenominatorCategory S X)) := by
+    let leg : F.obj X ⟶ (rightDerivedCocone S hS F X hX).pt := by
+      dsimp [rightDerivedDiagram, MorphismProperty.Under.mk]
+      exact (rightDerivedCocone S hS F X hX).ι.app
+        ({ left := ⟨⟨⟩⟩, right := X, hom := 𝟙 X, prop := S.id_mem X } :
+          LeftDenominatorCategory S X)
+    have hleg : IsIso leg := by
+      dsimp [leg]
+      exact haFinal
+    let _ : IsIso leg := hleg
+    have hcomp' : IsIso (𝟙 (F.obj X) ≫ leg) := by infer_instance
+    simpa [leg, rightDerivedDiagram, MorphismProperty.Under.mk] using hcomp'
+  simpa [rightDerivedCanonicalMap, rightDerivedValue, rightDerivedDiagram,
+    rightDerivedIdentityIndex, MorphismProperty.Under.mk] using hcomp
+
 /- The source's first K-injective derived-functor lemma is expressed using
    the canonical `rightDerivedDefined` and `ComputesRightDerived` predicates.
    `HasKInjectiveResolution` is the earlier chapter's source-facing package
@@ -677,7 +820,21 @@ theorem kInjective_rightDerived_defined_and_computes
           (quasiIsoHomotopyProperty A)
           (quasiIsoHomotopyProperty_properties A).1 F
           ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj I)) := by
-  sorry
+  let S : MorphismProperty (BookHomotopyCategory A) := quasiIsoHomotopyProperty A
+  let hS : SaturatedMultiplicativeSystem S :=
+    by simpa [S] using (quasiIsoHomotopyProperty_properties A).1
+  constructor
+  · intro K hK
+    obtain ⟨I, f, hf, hI⟩ := hK
+    have hIcomp := kInjective_computes_rightDerived F I hI
+    have hs : S ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map f) := by
+      change HomotopyCategory.quasiIso A (ComplexShape.up ℤ)
+        ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map f)
+      exact (HomotopyCategory.quotient_map_mem_quasiIso_iff f).2 hf
+    exact (rightDerived_defined_iff_of_mem hS F
+      ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map f) hs).mpr hIcomp.1
+  · intro I hI
+    exact kInjective_computes_rightDerived F I hI
 
 /- The phrase `RF(I) = F(I)` is made precise by requiring the comparison
    component of a right derived functor to be an isomorphism on every
@@ -722,6 +879,34 @@ theorem inverseSystemLimit_isKInjective_of_split_surjective
 
 /-! ## Exact adjoints preserve K-injectives -/
 
+private def adjointComplexMap
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    (u : A ⥤ B) (v : B ⥤ A) [u.Additive] [v.Additive]
+    (adj : v ⊣ u) {K : BookComplex B} {I : BookComplex A}
+    (f : K ⟶ (u.mapHomologicalComplex (ComplexShape.up ℤ)).obj I) :
+    (v.mapHomologicalComplex (ComplexShape.up ℤ)).obj K ⟶ I :=
+  { f := fun i => by
+      change v.obj (K.X i) ⟶ I.X i
+      exact (adj.homEquiv _ _).symm (by
+        simpa [Functor.mapHomologicalComplex] using f.f i)
+    comm' := fun i j hij => by
+      apply (adj.homEquiv _ _).injective
+      dsimp [Functor.mapHomologicalComplex]
+      rw [adj.homEquiv_naturality_left, adj.homEquiv_naturality_right]
+      simpa [Functor.mapHomologicalComplex] using f.comm i j }
+
+private def adjointUnitComplexMap
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    (u : A ⥤ B) (v : B ⥤ A) [u.Additive] [v.Additive]
+    (adj : v ⊣ u) (K : BookComplex B) :
+    K ⟶ (u.mapHomologicalComplex (ComplexShape.up ℤ)).obj
+      ((v.mapHomologicalComplex (ComplexShape.up ℤ)).obj K) :=
+  { f := fun i => adj.unit.app (K.X i)
+    comm' := fun i j hij => by
+      simpa [Functor.mapHomologicalComplex] using adj.unit.naturality (K.d i j) }
+
 theorem additive_right_adjoint_preserves_isKInjective
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
@@ -731,6 +916,45 @@ theorem additive_right_adjoint_preserves_isKInjective
     {I : BookComplex A} (hI : I.IsKInjective) :
     CochainComplex.IsKInjective
       ((u.mapHomologicalComplex (ComplexShape.up ℤ)).obj I) := by
-  sorry
+  letI : PreservesFiniteLimits v := hv.1
+  letI : PreservesFiniteColimits v := hv.2
+  have hvExact : ∀ (S : ShortComplex B), S.Exact → (S.map v).Exact :=
+    ((Functor.exact_tfae v).out 3 1).mp
+      (show PreservesFiniteLimits v ∧ PreservesFiniteColimits v from
+        ⟨hv.1, hv.2⟩)
+  have hAcyclic : ∀ K : BookComplex B, K.Acyclic →
+      ((v.mapHomologicalComplex (ComplexShape.up ℤ)).obj K).Acyclic := by
+    intro K hK n
+    rw [HomologicalComplex.exactAt_iff]
+    exact hvExact _ ((HomologicalComplex.exactAt_iff K n).mp (hK n))
+  letI : I.IsKInjective := hI
+  constructor
+  intro K f hK
+  let f' := adjointComplexMap u v adj f
+  obtain ⟨h'⟩ := CochainComplex.IsKInjective.nonempty_homotopy_zero f'
+    (hAcyclic K hK)
+  let η := adjointUnitComplexMap u v adj K
+  have hEq : f = η ≫
+      (u.mapHomologicalComplex (ComplexShape.up ℤ)).map f' := by
+    ext i
+    dsimp [η, adjointUnitComplexMap, f', adjointComplexMap,
+      Functor.mapHomologicalComplex]
+    rw [← adj.homEquiv_unit]
+    simp
+  have hzero : η ≫
+      (u.mapHomologicalComplex (ComplexShape.up ℤ)).map (0 :
+        (v.mapHomologicalComplex (ComplexShape.up ℤ)).obj K ⟶ I) = 0 := by
+    simp
+  have hEqHom : Homotopy f
+      (η ≫ (u.mapHomologicalComplex (ComplexShape.up ℤ)).map f') :=
+    Homotopy.ofEq hEq
+  have hMap : Homotopy
+      (η ≫ (u.mapHomologicalComplex (ComplexShape.up ℤ)).map f')
+      (η ≫ (u.mapHomologicalComplex (ComplexShape.up ℤ)).map 0) :=
+    (Functor.mapHomotopy u h').compLeft η
+  have hZeroHom : Homotopy
+      (η ≫ (u.mapHomologicalComplex (ComplexShape.up ℤ)).map 0) 0 :=
+    Homotopy.ofEq hzero
+  exact ⟨hEqHom.trans (hMap.trans hZeroHom)⟩
 
 end Formalization.Books.Derived.Unit31

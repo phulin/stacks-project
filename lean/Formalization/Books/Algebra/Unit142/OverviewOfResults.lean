@@ -30,16 +30,28 @@ theorem smooth_iff_cotangent_criterion
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.Smooth R S ↔
       Algebra.FinitePresentation R S ∧
+        Module.Finite S
+          (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) ∧
         Module.Projective S
           (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) ∧
         Subsingleton (Algebra.H1Cotangent R S) := by
-  rw [Formalization.Books.Algebra.Unit137.smooth_iff_formallySmooth_and_finitePresentation,
-    Algebra.formallySmooth_iff]
   constructor
-  · rintro ⟨⟨hprojective, hH1⟩, hfinite⟩
-    exact ⟨hfinite, hprojective, hH1⟩
-  · rintro ⟨hfinite, hprojective, hH1⟩
-    exact ⟨⟨hprojective, hH1⟩, hfinite⟩
+  · intro h
+    have hformal : Algebra.FormallySmooth R S := h.formallySmooth
+    have hcriterion := (Algebra.formallySmooth_iff R S).mp hformal
+    letI : Algebra.FinitePresentation R S := h.finitePresentation
+    refine ⟨h.finitePresentation, ?_⟩
+    refine ⟨(inferInstance : Module.Finite S
+      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)), ?_⟩
+    exact ⟨hcriterion.1, hcriterion.2⟩
+  · intro h
+    have hfinite := h.1
+    have hfiniteModule := h.2.1
+    have hprojective := h.2.2.1
+    have hH1 := h.2.2.2
+    have hformal : Algebra.FormallySmooth R S :=
+      (Algebra.formallySmooth_iff R S).mpr ⟨hprojective, hH1⟩
+    exact { formallySmooth := hformal, finitePresentation := hfinite }
 
 theorem smooth_differentials_finite_projective
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -200,11 +212,13 @@ theorem smooth_at_of_separable_and_regular
 theorem smooth_at_of_characteristic_zero_differentials_free
     {k S : Type u} [Field k] [CharZero k] [CommRing S] [Algebra k S]
     [Algebra.FiniteType k S] (q : PrimeSpectrum S)
-    (hΩ : Formalization.Books.Algebra.Unit137.DifferentialsFiniteFreeAt k S q) :
+    (hΩ : Module.Free (Localization.AtPrime q.asIdeal)
+      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials k
+        (Localization.AtPrime q.asIdeal))) :
     Formalization.Books.Algebra.Unit137.IsSmoothAt k S q := by
   exact
     ((Formalization.Books.Algebra.Unit140.characteristic_zero_local_smooth q).out
-      1 0 rfl rfl).mp hΩ
+      1 0 rfl rfl).mp ⟨inferInstance, hΩ⟩
 
 /- The closing standard-smooth paragraph is already represented by
    `Algebra.IsStandardSmooth`, its permanence results, and the relative

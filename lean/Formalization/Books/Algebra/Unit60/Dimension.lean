@@ -819,7 +819,7 @@ theorem local_dimension_one_characterization
 
 theorem local_dimension_characterization
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
-    (hR : Nontrivial R)
+    (_hR : Nontrivial R)
     (d₀ : ℕ) :
     List.TFAE
       [ ringKrullDim R = d₀

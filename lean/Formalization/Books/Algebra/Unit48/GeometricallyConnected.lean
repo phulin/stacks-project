@@ -156,6 +156,24 @@ theorem IsGeometricallyConnected.isIdempotentElem_eq_zero_or_one
 
 /-- Geometric connectedness can be tested after finite separable extensions of
 the base field. -/
+theorem IsGeometricallyConnected.connectedSpace_finiteSeparable
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsGeometricallyConnected.{u, v, w} k S)
+    (k' : Type w) [Field k'] [Algebra k k']
+    [FiniteDimensional k k'] [Algebra.IsSeparable k k'] :
+    ConnectedSpace (PrimeSpectrum (k' ⊗[k] S)) :=
+  hS.connectedSpace_tensorProduct
+
+/-- Connectedness after every finite separable extension detects geometric
+connectedness. -/
+theorem isGeometricallyConnected_of_connectedSpace_finiteSeparable
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : ∀ (k' : Type w) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [Algebra.IsSeparable k k'],
+      ConnectedSpace (PrimeSpectrum (k' ⊗[k] S))) :
+    IsGeometricallyConnected.{u, v, w} k S := by
+  sorry
+
 theorem isGeometricallyConnected_iff_finiteSeparable
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
     IsGeometricallyConnected.{u, v, w} k S ↔
@@ -199,7 +217,8 @@ theorem isGeometricallyConnected_iff_finiteSeparable
     resulting equality.  This proves the required connectedness for the
     arbitrary `K`.
   -/
-  sorry
+  exact ⟨fun hS k' ↦ hS.connectedSpace_finiteSeparable k',
+    isGeometricallyConnected_of_connectedSpace_finiteSeparable⟩
 
 /- The equivalence above records the source's following remark that it is
    enough to check finite separable field extensions separately. -/

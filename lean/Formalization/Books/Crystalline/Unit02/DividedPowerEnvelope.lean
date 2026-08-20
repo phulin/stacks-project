@@ -213,6 +213,7 @@ theorem preimage_base_ideal_le
     (A : DividedPowerRing.{u}) {B B' : Type u}
     [CommRing B] [CommRing B'] (f : (A : Type u) →+* B)
     (f' : (A : Type u) →+* B') (φ : B' →+* B) (J : Ideal B)
+    (hIJ : Ideal.map f A.ideal ≤ J)
     (hcompat : ∀ x : A, φ (f' x) = f x) :
     Ideal.map f' A.ideal ≤ envelopeIdealPreimage φ J := by
   sorry
@@ -221,13 +222,14 @@ noncomputable def preimageEnvelope
     (A : DividedPowerRing.{u}) {B B' : Type u}
     [CommRing B] [CommRing B'] (f : (A : Type u) →+* B)
     (f' : (A : Type u) →+* B') (φ : B' →+* B) (J : Ideal B)
+    (hIJ : Ideal.map f A.ideal ≤ J)
     (hcompat : ∀ x : A, φ (f' x) = f x) :
     DividedPowerEnvelope A f'
       (envelopeIdealPreimage φ J)
-      (preimage_base_ideal_le A f f' φ J hcompat) :=
+      (preimage_base_ideal_le A f f' φ J hIJ hcompat) :=
   dividedPowerEnvelope A f'
     (envelopeIdealPreimage φ J)
-    (preimage_base_ideal_le A f f' φ J hcompat)
+    (preimage_base_ideal_le A f f' φ J hIJ hcompat)
 
 /-- The quotient theorem with the quotient divided-power ring exposed
 explicitly through EnvelopeQuotientRingData. -/

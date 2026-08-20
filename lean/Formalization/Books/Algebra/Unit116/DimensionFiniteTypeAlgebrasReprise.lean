@@ -218,7 +218,7 @@ theorem dimension_preserved_field_extension
       let cKP : CommRing (K ⊗[k] MvPolynomial (Fin r) k) := inferInstance
       let cKA : CommRing (K ⊗[k] A) := inferInstance
       let cPK : CommRing (MvPolynomial (Fin r) k ⊗[k] K) := inferInstance
-      letI cAK : CommRing (A ⊗[k] K) := inferInstance
+      let cAK : CommRing (A ⊗[k] K) := inferInstance
       let gT : (K ⊗[k] MvPolynomial (Fin r) k) →+*
           (K ⊗[k] A) :=
         (Algebra.TensorProduct.map (AlgHom.id K K) g).toRingHom

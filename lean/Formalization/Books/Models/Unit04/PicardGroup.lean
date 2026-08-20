@@ -64,8 +64,6 @@ def picardGroupToMatrixCokernel (T : NumericalType) :
 /-! The comparison map is injective. -/
 theorem picardGroupToMatrixCokernel_injective (T : NumericalType) :
     Function.Injective (picardGroupToMatrixCokernel T) := by
-  sorry
-/-
   unfold picardGroupToMatrixCokernel
   rw [← LinearMap.ker_eq_bot]
   apply Submodule.ker_liftQ_eq_bot
@@ -95,7 +93,7 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
   let u : Module.Free.ChooseBasisIndex ℚ pQ → Fin m → ℚ :=
     fun i => b i
   have hu : LinearIndependent ℚ u := by
-    simp [u, Function.comp_def] using b.linearIndependent.map' pQ.subtype pQ.ker_subtype
+    simpa [u, Function.comp_def] using b.linearIndependent.map' pQ.subtype pQ.ker_subtype
   have huR : LinearIndependent ℝ
       (fun i => algebraMap ℚ ℝ ∘ u i) := by
     have h := (linearIndependent_algebraMap_comp_iff (R := ℚ) (S := ℝ)).mpr hu
@@ -146,7 +144,7 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       convert Submodule.smul_mem _ (a : ℝ) hcx using 1
       · ext j
         simp
-    · simp [pQ] using hx
+    · simpa [pQ] using hx
   have hcast_u (x : Fin m → ℚ) (hx : x ∈ pQ) :
       (fun j => (x j : ℝ)) ∈
         Submodule.span ℝ
@@ -365,10 +363,6 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
   let : Module.Finite ℤ pZ :=
     Module.Finite.span_of_finite ℤ
       (Set.finite_range (fun j : Fin n => c (fZ (Pi.single j 1))))
-  have hZQ : Module.finrank ℚ (Submodule.span ℚ (pZ : Set (Fin n → ℝ))) =
-      Module.finrank ℤ pZ := by
-    unfold pZ
-    exact Submodule.finrank_span_eq_finrank_span ℤ ℚ S
   have hS : S = Set.range (fun j : Fin n => fun i => (A i j : ℝ)) := by
     apply Set.ext
     intro x
@@ -396,12 +390,16 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
       · intro y z hy hz hpy hpz
         exact Submodule.add_mem _ hpy hpz
       · intro a y hy hpy
-        simp [Algebra.smul_def] using
+        simpa [Algebra.smul_def] using
           Submodule.smul_mem (Submodule.span ℚ S) (a : ℚ) hpy
       · exact hx
     · rw [Submodule.span_le]
       intro x hx
       exact Submodule.subset_span (Submodule.subset_span hx)
+  have hZQ : Module.finrank ℚ (Submodule.span ℚ (pZ : Set (Fin n → ℝ))) =
+      Module.finrank ℤ pZ := by
+    rw [hpZQ]
+    simpa [pZ] using Submodule.finrank_span_eq_finrank_span ℤ ℚ S
   rw [hS] at hspan hpZQ
   have hgeneric := rational_span_finrank_eq_real_span
     (v := fun i j : Fin n => (A j i : ℚ))
@@ -423,14 +421,12 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
         (Submodule.span ℝ (Set.range (fun i j : Fin n => (A j i : ℝ)))) := by
       exact hgeneric.symm
     _ = Module.finrank ℝ (LinearMap.range fR) := by
-      rw [hspan] -/
+      rw [hspan]
 
 /-! The Picard group is a finitely generated abelian group of rank one. -/
 theorem picard_group_finite_rank_one (T : NumericalType) :
     Module.Finite ℤ (picardGroup T) ∧
       Module.finrank ℤ (picardGroup T) = 1 := by
-  sorry
-/-
   constructor
   · infer_instance
   · let fP := Matrix.toLin' (picardMatrix T)
@@ -510,7 +506,7 @@ theorem picard_group_finite_rank_one (T : NumericalType) :
         Module.finrank ℤ ((Fin T.n → ℤ) ⧸ LinearMap.range fP) + (T.n - 1) = T.n := by
       simpa [Module.finrank_pi_fintype] using hdim
     have hn := T.hn
-    omega -/
+    omega
 
 /-! An additive abelian group killed by `2`, i.e. an elementary abelian 2-group. -/
 def IsElementaryAbelianTwo (G : Type*) [AddCommGroup G] : Prop :=

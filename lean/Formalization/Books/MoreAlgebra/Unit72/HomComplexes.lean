@@ -7,9 +7,9 @@ import Formalization.Books.MoreAlgebra.Unit58.TensorProductsOfComplexes
 /-!
 # More on Algebra, Chapter 72: Hom complexes
 
-The source's Hom complex is Mathlib's canonical `CochainComplex.HomComplex`
-construction.  This file records the module-valued presentation used by the
-chapter and its tensor--Hom interfaces.
+The source's Hom complex uses Mathlib's canonical cochain type and differential.
+This file packages those cochains as a complex of `R`-modules and records the
+chapter's tensor--Hom interfaces.
 -/
 
 noncomputable section
@@ -256,8 +256,10 @@ noncomputable def componentInclusion {R : Type u} [CommRing R]
 three displayed module variables. -/
 theorem componentEvaluation_exists {R : Type u} [CommRing R]
     (K L M : Comp R) (p q r : ℤ) :
-    Nonempty ((ModuleCat.of R (L.X (-q) ⟶ M.X p)) ⊗ K.X r ⟶
-      ModuleCat.of R (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p)) := by
+    Nonempty {c : ((ModuleCat.of R (L.X (-q) ⟶ M.X p)) ⊗ K.X r ⟶
+        ModuleCat.of R (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p)) //
+      ∀ (φ : L.X (-q) ⟶ M.X p) (k : K.X r) (ψ : K.X r ⟶ L.X (-q)),
+        c.hom (φ ⊗ₜ[R] k) ψ = φ (ψ k)} := by
   sorry
 
 /-- A usable chosen representative of the canonical component evaluation. -/
@@ -265,14 +267,14 @@ noncomputable def componentEvaluation {R : Type u} [CommRing R]
     (K L M : Comp R) (p q r : ℤ) :
     (ModuleCat.of R (L.X (-q) ⟶ M.X p)) ⊗ K.X r ⟶
       ModuleCat.of R (ModuleCat.of R (K.X r ⟶ L.X (-q)) ⟶ M.X p) :=
-  Classical.choice (componentEvaluation_exists K L M p q r)
+  (Classical.choice (componentEvaluation_exists K L M p q r)).1
 
 theorem componentEvaluation_apply {R : Type u} [CommRing R]
     (K L M : Comp R) (p q r : ℤ)
     (φ : L.X (-q) ⟶ M.X p) (k : K.X r)
     (ψ : K.X r ⟶ L.X (-q)) :
     (componentEvaluation K L M p q r).hom (φ ⊗ₜ[R] k) ψ = φ (ψ k) := by
-  sorry
+  exact (Classical.choice (componentEvaluation_exists K L M p q r)).2 φ k ψ
 
 /-- The sign chosen in the source's evaluation construction. -/
 def evaluationSign (_p q r : ℤ) : ℤˣ := (r + q * r).negOnePow

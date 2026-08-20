@@ -4,6 +4,7 @@ import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.Abelian.FunctorCategory
 import Mathlib.CategoryTheory.Functor.OfSequence
 import Mathlib.CategoryTheory.Functor.ReflectsIso.Exact
+import Mathlib.CategoryTheory.Limits.Constructions.EventuallyConstant
 import Mathlib.CategoryTheory.Limits.FunctorCategory.EpiMono
 
 /-!
@@ -1523,12 +1524,71 @@ noncomputable def abelianSkeletonTransition
     ((SimplicialObject.truncation m).obj V)
     (abelianSkeletonObject V n)).symm q
 
+/-
+Proof roadmap for `abelianSkeletonTransition_id`:
+
+* Work throughout with `C : Type u`, `Category.{v} C`, and `Abelian C`; no
+  further universe or colimit instance is needed.  Put
+  `U := (SimplicialObject.truncation n).obj V`.  Apply injectivity of
+  `Unit21.leftAdjointHomEquiv n U (abelianSkeletonObject V n)` from
+  `Unit21/LeftAdjointsToSkeletonFunctors.lean`.  Before applying adjunction
+  rewrite lemmas, expose `abelianSkeletonObject` with `change` or
+  `dsimp only [abelianSkeletonObject]`; leaving that opaque makes Lean see
+  mismatched sources for the hom-equivalence.
+* Unfold `abelianSkeletonTransition` and use `Equiv.apply_symm_apply` on the
+  left.  On the right use `Adjunction.homEquiv_id` (or equivalently
+  `Adjunction.homEquiv_unit` plus `Functor.map_id` and `Category.comp_id`)
+  for `Unit21.leftAdjunction n`.
+* The remaining equality says that the restriction of
+  `Unit21.leftAdjointUnit n U` along
+  `SimplicialObject.Truncated.trunc C n n le_rfl`, conjugated by
+  `SimplicialObject.truncationCompTrunc le_rfl`, is the same unit.  Prove it
+  by `NatTrans.ext` and component extensionality.  The two truncation
+  functors use proof-carrying full-subcategory objects, so do not expect a
+  top-level `rfl`; after fixing a component, proof irrelevance reduces the
+  `SimplexCategory.Truncated.incl n n` transports and the component is
+  reflexive.  This completes the equality after hom-equivalence injectivity.
+-/
 theorem abelianSkeletonTransition_id
     {C : Type u} [Category.{v} C] [Abelian C]
     (V : SimplicialObject C) (n : ℕ) :
     abelianSkeletonTransition V (le_rfl : n ≤ n) = 𝟙 _ := by
   sorry
 
+/-
+Proof roadmap for `abelianSkeletonTransition_comp`:
+
+* For `a ≤ b`, abbreviate by `q_ab` the truncated morphism occurring in
+  `abelianSkeletonTransition V (a := a) (b := b)`: it has type
+  `(SimplicialObject.truncation a).obj V ⟶
+    (SimplicialObject.truncation a).obj (abelianSkeletonObject V b)`.
+  First prove the local mate formula
+
+    `Unit21.leftAdjointHomEquiv a _ _
+      (abelianSkeletonTransition V hab) = q_ab`
+
+  by unfolding the transition and applying `Equiv.apply_symm_apply`.
+* Apply injectivity of `Unit21.leftAdjointHomEquiv l` to the required
+  equality.  Use `Adjunction.homEquiv_naturality_right` from
+  `Mathlib/CategoryTheory/Adjunction/Basic.lean` on the right-hand composite;
+  it reduces the goal to
+
+    `q_ln = q_lm ≫ (SimplicialObject.truncation l).map
+      (abelianSkeletonTransition V hmn)`.
+
+* Apply `(SimplicialObject.Truncated.trunc C m l hlm).map` to the mate
+  formula for `hmn`.  Expand `Adjunction.homEquiv_unit` for
+  `Unit21.leftAdjunction m`; this identifies the restricted composite of the
+  `m`-unit with the restriction of `q_mn`.  Conjugate with the three
+  `SimplicialObject.truncationCompTrunc` isomorphisms.
+* Finish the resulting coherence equality by `NatTrans.ext` and component
+  extensionality: both sides restrict `Unit21.leftAdjointUnit n` along the
+  same inclusion, and
+  `SimplexCategory.Truncated.incl l m ⋙
+    SimplexCategory.Truncated.incl m n` agrees componentwise with
+  `SimplexCategory.Truncated.incl l n`.  Use proof irrelevance for the
+  bounds `l ≤ m ≤ n`; no preservation hypothesis is involved.
+-/
 theorem abelianSkeletonTransition_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     (V : SimplicialObject C) {l m n : ℕ} (hlm : l ≤ m) (hmn : m ≤ n) :
@@ -1544,6 +1604,32 @@ noncomputable def abelianSkeletonTower
   map_id n := abelianSkeletonTransition_id V n
   map_comp f g := abelianSkeletonTransition_comp V (leOfHom f) (leOfHom g)
 
+/-
+Proof roadmap for `abelianSkeletonTransition_counit`:
+
+* Change the tower map to `abelianSkeletonTransition V h`, unfold
+  `abelianSkeletonObject` only as needed, and apply injectivity of
+  `Unit21.leftAdjointHomEquiv m
+    ((SimplicialObject.truncation m).obj V) V`.
+* By `Adjunction.homEquiv_naturality_right`, the image of the left side is
+  `q_mn ≫ (SimplicialObject.truncation m).map
+    (Unit21.leftAdjointCounit n V)`, where `q_mn` is the mate isolated in the
+  composition roadmap.  The image of the right side is the identity: use
+  `Adjunction.homEquiv_symm_id` followed by `Equiv.apply_symm_apply` for
+  `Unit21.leftAdjunction m`.
+* Expand `q_mn`.  The remaining composite is the restriction to level `m`
+  of
+
+    `Unit21.leftAdjointUnit n ((SimplicialObject.truncation n).obj V) ≫
+      (SimplicialObject.truncation n).map
+        (Unit21.leftAdjointCounit n V)`.
+
+  Rewrite this with
+  `(Unit21.leftAdjunction n).right_triangle_components V` from
+  `Mathlib/CategoryTheory/Adjunction/Basic.lean`.  As in the composition
+  proof, close the restriction/coercion residue componentwise using
+  `SimplicialObject.truncationCompTrunc h` and proof irrelevance.
+-/
 theorem abelianSkeletonTransition_counit
     {C : Type u} [Category.{v} C] [Abelian C]
     (V : SimplicialObject C) {m n : ℕ} (h : m ≤ n) :
@@ -1565,12 +1651,69 @@ noncomputable def abelianSkeletonCocone
       rw [Category.comp_id]
       exact abelianSkeletonTransition_counit V (Nat.le_add_right n 1))
 
+/-
+Proof roadmap for `abelianSkeleton_is_colimit`:
+
+* Do not add `HasColimits C`: the evaluated tower is eventually constant.
+  First prove a local fact saying that for `Δ : SimplexCategoryᵒᵖ` and
+  `hΔ : Δ.unop.len ≤ n`, the component
+  `(Unit21.leftAdjointCounit n V).app Δ` is an isomorphism.  Set
+  `U := (SimplicialObject.truncation n).obj V`, install
+  `Unit21.leftAdjoint_unit_is_iso n U` from
+  `Unit21/LeftAdjointsToSkeletonFunctors.lean`, and apply
+  `isIso_of_hom_comp_eq_id` to
+  `(Unit21.leftAdjunction n).right_triangle_components V`.  This makes
+  `(SimplicialObject.truncation n).map
+    (Unit21.leftAdjointCounit n V)` an isomorphism.  Its component at
+  `op ⟨Δ.unop, hΔ⟩` is the desired map (finish the harmless `op/unop` and
+  bound-proof transport by `change` and proof irrelevance).
+* Apply `evaluationJointlyReflectsColimits` from
+  `Mathlib/CategoryTheory/Limits/FunctorCategory/Basic.lean`.  For fixed
+  `Δ`, let
+
+    `F := abelianSkeletonTower V ⋙
+      (evaluation SimplexCategoryᵒᵖ C).obj Δ`
+    and `d := Δ.unop.len`.
+
+  Prove `hF : F.IsEventuallyConstantFrom d`.  Given `f : d ⟶ j`, replace
+  it by `homOfLE (leOfHom f)` using `Subsingleton.elim`.  The component at
+  `Δ` of `abelianSkeletonTransition_counit V (leOfHom f)` expresses
+  `F.map f` followed by the level-`j` counit component as the level-`d`
+  counit component.  Both counit components are isomorphisms by the local
+  fact, so `IsIso.of_isIso_fac_right` from
+  `Mathlib/CategoryTheory/Iso.lean` makes `F.map f` an isomorphism.
+* The evaluated cocone's leg at `d` is definitionally (up to the same
+  `op/unop` transport) `(Unit21.leftAdjointCounit d V).app Δ`, hence is an
+  isomorphism.  Apply `hF.isColimitOfIsIso` from the newly imported
+  `Mathlib/CategoryTheory/Limits/Constructions/EventuallyConstant.lean` to
+  that evaluated cocone.  These pointwise colimit proofs assemble through
+  `evaluationJointlyReflectsColimits`; wrap the result in `Nonempty`.
+-/
 theorem abelianSkeleton_is_colimit
     {C : Type u} [Category.{v} C] [Abelian C]
     (V : SimplicialObject C) :
     Nonempty (IsColimit (abelianSkeletonCocone V)) := by
   sorry
 
+/-
+Proof roadmap for `abelianSkeleton_transition_mono`:
+
+* Establish locally that `Unit21.leftAdjointCounit k V` is mono for every
+  `k`.  Destructure
+  `Unit21.leftAdjoint_identifies_abelian_skeleton k V` from
+  `Unit21/LeftAdjointsToSkeletonFunctors.lean` as
+  `⟨U', i, hi, _, _, _, e, he⟩`.  Here `hi : Mono i` and
+  `he : e.hom ≫ i = Unit21.leftAdjointCounit k V`; install `hi`, rewrite by
+  `← he`, and infer mono for the composite with the isomorphism `e.hom`.
+  This is the required mono-counit interface; left-adjoint preservation
+  alone does not prove it.
+* Change the tower map to `abelianSkeletonTransition V h`.  Install the
+  mono instances for the level-`m` and level-`n` counits.  Apply
+  `mono_of_mono_fac (Unit21.leftAdjointCounit n V)` from
+  `Mathlib/CategoryTheory/EpiMono.lean`; by
+  `abelianSkeletonTransition_counit V h`, the composite is the mono
+  level-`m` counit.  Thus the transition itself is mono.
+-/
 theorem abelianSkeleton_transition_mono
     {C : Type u} [Category.{v} C] [Abelian C]
     (V : SimplicialObject C) {m n : ℕ} (h : m ≤ n) :

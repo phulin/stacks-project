@@ -250,6 +250,140 @@ theorem projectiveLineQuotient_graded
   simpa [Q, projectiveLineQuotientComponent, C] using
     (show Nonempty (GradedRing Q) from ⟨hgraded⟩)
 
+/-
+Proof roadmap for `projectiveLine_finite_locally_free`.
+
+The coefficient hypothesis is sufficient and the target should not be changed.  At a prime `p`,
+it says exactly that the specialization of `F` to `p.asIdeal.ResidueField` is nonzero.  The proof
+should use the cokernel criterion
+`Formalization.Books.Algebra.Unit78.finiteLocallyFreeOfRank_cokernel_of_fiber_injective`
+from `Formalization/Books/Algebra/Unit78/FiniteProjectiveModules.lean`, as follows.
+
+1. Keep the following types in `Type u` and name them near the start of the proof:
+   ```
+   H k := MvPolynomial.homogeneousSubmodule (Fin 2) R k
+   P₁ := H (n - d)
+   P₂ := H n
+   C  := P₂ ⧸ LinearMap.range φ
+   ```
+   Define `φ : P₁ →ₗ[R] P₂` by restricting `LinearMap.mulLeft R F`.  Its codomain proof is
+   `hF.mul x.property`, after rewriting `d + (n - d) = n` with `Nat.add_sub_of_le hn` (and
+   commuting the summands if necessary).  Do not use `projectiveLineComponentMultiplication` or
+   `projectiveLine_localize`: both occur later in this file, and the latter currently proves only
+   that multiplication by one localizes to the identity.
+
+2. Build once, preferably as a small local helper, the standard basis of every `H k`.
+   Put `D k := {m : Fin 2 →₀ ℕ // m.degree = k}` and construct
+   `binaryDegreeEquiv k : D k ≃ Fin (k + 1)` by sending `m` to `m 0`; its inverse sends `i` to
+   `Finsupp.single 0 i + Finsupp.single 1 (k - i)`.  The coordinate checks reduce with
+   `Finsupp.degree_eq_sum`, `Fin.sum_univ_two`, `Fin.forall_fin_two`, and
+   `Finsupp.single_apply`.  Transport
+   `MvPolynomial.basisRestrictSupport R {m | m.degree = k}` along
+   `MvPolynomial.homogeneousSubmodule_eq_finsupp_supported` and reindex it by
+   `binaryDegreeEquiv k`.  This gives
+   `b k : Basis (Fin (k + 1)) R (H k)`.  Install
+   `Module.Free.of_basis (b k)` and `Module.Finite.of_basis (b k)` only for `P₁` and `P₂` before
+   applying the Unit78 theorem.  These declarations are in
+   `Mathlib/RingTheory/MvPolynomial/Basic.lean`,
+   `Mathlib/RingTheory/MvPolynomial/Homogeneous.lean`, and
+   `Mathlib/LinearAlgebra/FreeModule/Finite/Basic.lean`.
+
+3. Identify the component with `C`.  Define
+   `q : P₂ →ₗ[R] projectiveLineQuotientComponent F n` by restricting
+   `(Ideal.Quotient.mkₐ R (projectiveLineQuotientIdeal F)).toLinearMap` and using the defining
+   `Submodule.map` membership of the component.  `Submodule.mem_map` gives surjectivity of `q`.
+   Prove
+   ```
+   LinearMap.ker q = LinearMap.range φ.
+   ```
+   The easy inclusion uses `Ideal.Quotient.eq_zero_iff_mem` and
+   `Ideal.mem_span_singleton`.  Conversely, from `q x = 0`, obtain `T` with `x.1 = F * T`.
+   Give `MvPolynomial.homogeneousSubmodule (Fin 2) R` its existing
+   `MvPolynomial.gradedAlgebra`/`MvPolynomial.decomposition` instances and project this equality
+   to degree `n`.  Use `DirectSum.decompose_coe` on `x.property` and
+   `DirectSum.coe_decompose_mul_of_left_mem_of_le _ hF hn` to get
+   ```
+   x.1 = F * (DirectSum.decompose (H ·) T (n - d)).1.
+   ```
+   Thus the projected factor, which already has type `P₁`, is a preimage under `φ`.  This avoids
+   the false start of trying to prove the arbitrary factor `T` homogeneous by cancellation.
+   Form the equivalence
+   ```
+   eComponent : C ≃ₗ[R] projectiveLineQuotientComponent F n
+   ```
+   as `Submodule.quotEquivOfEq` for the kernel equality followed by
+   `q.quotKerEquivOfSurjective`.  The latter API is in
+   `Mathlib/LinearAlgebra/Isomorphisms.lean`.
+
+4. For the fiber-injectivity input to the Unit78 theorem, fix
+   ```
+   S := p.asIdeal.primeCompl
+   A := Localization.AtPrime p.asIdeal
+   K := p.asIdeal.ResidueField
+      -- definitionally IsLocalRing.ResidueField A
+   l := LocalizedModule.map S φ.
+   ```
+   Localize `b (n - d)` and `b n` with
+   `Module.Basis.ofIsLocalizedModule A S (LocalizedModule.mkLinearMap S _)`.  Use
+   `TensorProduct.equivFinsuppOfBasisRight` and its `_apply_tmul` lemma from
+   `Mathlib/LinearAlgebra/TensorProduct/Basis.lean` to put `l.lTensor K` in the same monomial
+   coordinates.  Prove a separate commuting-square claim (by `TensorProduct.induction_on`, then
+   `Basis.sum_repr`) saying that this coordinate map is multiplication by
+   ```
+   Fbar := MvPolynomial.map (algebraMap R K) F
+   ```
+   between the degree-`n-d` and degree-`n` homogeneous submodules over `K`; use
+   `hF.map (algebraMap R K)` for its degree.  The simplification
+   lemmas needed on pure tensors are `Module.Basis.ofIsLocalizedModule_apply`,
+   `LocalizedModule.map_mk`, `TensorProduct.equivFinsuppOfBasisRight_apply_tmul`,
+   `MvPolynomial.map_monomial`, and the generic `map_mul` lemma.  If the tensor coordinate API is
+   not already visible through the current imports, add only the focused import
+   `Mathlib.LinearAlgebra.TensorProduct.Basis`.
+
+   Choose `m` from `hF_coeff p`.  Then `Fbar ≠ 0`: apply `MvPolynomial.coeff m` to a proposed
+   equality `Fbar = 0`, simplify with `MvPolynomial.coeff_map`, and contradict
+   `Ideal.algebraMap_residueField_eq_zero`, whose statement is
+   `algebraMap R K (F.coeff m) = 0 ↔ F.coeff m ∈ p.asIdeal`
+   (`Mathlib/RingTheory/LocalRing/ResidueField/Ideal.lean`).  Since `K` is a field,
+   `MvPolynomial (Fin 2) K` is a domain, so multiplication by `Fbar` is injective
+   (`mul_left_cancel₀`/`mul_eq_zero`).  The commuting square and the injectivity of the two basis
+   coordinate equivalences now give exactly
+   `Function.Injective (l.lTensor K)`.
+
+5. For the stalk-rank input, retain the fiber-injectivity result from step 4.  The localized
+   bases give
+   ```
+   Module.finrank A (LocalizedModule S (H k)) = k + 1
+   ```
+   via `Module.finrank_eq_card_basis` and `Fintype.card_fin`.  Apply
+   `IsLocalRing.split_injective_iff_lTensor_residueField_injective` from
+   `Mathlib/RingTheory/LocalRing/Module.lean` to `l`; a left inverse makes `l` injective.  Hence
+   `LinearMap.finrank_range_of_inj` and `Submodule.finrank_quotient_add_finrank` give
+   ```
+   Module.finrank A (LocalizedModule S P₂ ⧸ LinearMap.range l)
+     = (n + 1) - ((n - d) + 1) = d.
+   ```
+   Finish the arithmetic from `hn` with `omega`.  Transport this equality to
+   `LocalizedModule S C` using `localizedQuotientEquiv S (LinearMap.range φ)` and rewrite its
+   localized submodule with
+   `LinearMap.localized'_range_eq_range_localizedMap`; copy the explicit instantiations
+   `(S := A) (p := S) (f := LocalizedModule.mkLinearMap S P₁)
+   (f' := LocalizedModule.mkLinearMap S P₂)` from the proof of the Unit78 cokernel theorem.
+   Both localization declarations are in
+   `Mathlib/Algebra/Module/LocalizedModule/Submodule.lean`.
+
+6. Apply the Unit78 cokernel theorem with `φ` and rank `d`, obtaining
+   `FiniteLocallyFreeOfRank R C d`.  Finally unpack its basic-open cover.  For each `f` in that
+   cover, localize `eComponent.toLinearMap`; `LocalizedModule.map_injective` and
+   `LocalizedModule.map_surjective` show it is bijective, so `LinearEquiv.ofBijective` gives
+   ```
+   LocalizedModule.Away f C ≃ₗ[Localization.Away f]
+     LocalizedModule.Away f (projectiveLineQuotientComponent F n).
+   ```
+   Compose the inverse of this equivalence with the rank-`d` equivalence supplied for `C`.
+   Reuse the same set of basic opens and the same proof that its span is `⊤`; this is precisely the
+   required target.
+-/
 theorem projectiveLine_finite_locally_free
     {R : Type u} [CommRing R] (F : BinaryPolynomial R) (d : ℕ)
     (hF : F.IsHomogeneous d)

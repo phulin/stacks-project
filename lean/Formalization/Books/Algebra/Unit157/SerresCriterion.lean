@@ -4,7 +4,10 @@ import Formalization.Books.Algebra.Unit62.SupportAndDimension
 import Formalization.Books.Algebra.Unit63.AssociatedPrimes
 import Formalization.Books.Algebra.Unit67.EmbeddedPrimes
 import Formalization.Books.Algebra.Unit72.Depth
+import Formalization.Books.Algebra.Unit106.RegularLocalRings
+import Formalization.Books.Algebra.Unit119.AroundKrullAkizuki
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Basic
+import Mathlib.RingTheory.DiscreteValuationRing.TFAE
 import Mathlib.RingTheory.Ideal.Height
 import Mathlib.RingTheory.Localization.AsSubring
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -378,6 +381,45 @@ theorem criterion_no_embedded_primes
 theorem criterion_reduced
     {R : Type u} [CommRing R] [IsNoetherianRing R] :
     IsReduced R ↔ HasPropertyRk R 0 ∧ HasPropertySk R 1 := by
+  /-
+  Proof roadmap (all module localizations stay in `Type u`; no `ULift` is
+  needed here).
+
+  * Forward direction.  Install the assumed `IsReduced R` as a local
+    instance.  For `(R₀)`, turn `p.asIdeal.height ≤ (0 : ℕ∞)` into
+    equality, use `Ideal.height_eq_zero_iff` from
+    `Mathlib/RingTheory/Ideal/Height.lean`, and regard `p` as a
+    `Unit25.MinimalPrimeSpectrum R`.  Then
+    `Unit25.isField_localizationAt_minimalPrime_of_isReduced` in
+    `Unit25/ZerodivisorsAndTotalRingsOfFractions.lean` makes
+    `Localization.AtPrime p.asIdeal` a field; after installing
+    `hfield.toField`, its `IsRegularLocalRing` instance is automatic.
+    For `(S₁)`, apply `criterion_no_embedded_primes.mpr`.  If an associated
+    prime `p` were embedded, choose its exact-annihilator witness from
+    `Unit63.IsAssociatedPrime`.  For every prime `q ≤ p`, reducedness shows
+    that the witness is not in `q` (otherwise its square is zero), while
+    primality applied to `r * witness = 0` gives `p ≤ q`.  Thus `p` is
+    minimal, contradicting membership in
+    `Unit67.embeddedAssociatedPrimes`.
+
+  * Reverse direction.  Apply `criterion_no_embedded_primes.mp` to `(S₁)`.
+    Hence every associated prime of the regular module `R` is minimal among
+    associated primes.  Given such a `p`, choose a minimal prime `q ≤ p`
+    with `Ideal.exists_minimalPrimes_le`; `q` is a minimal point of
+    `Module.support R R`, so `Unit63.ass_of_minimal_support` makes it
+    associated, and minimality forces `p = q`.  Consequently
+    `p.asIdeal.height = 0` by `Ideal.height_eq_zero_iff`, and `(R₀)` gives
+    `IsRegularLocalRing (Localization.AtPrime p.asIdeal)`.  Install the
+    domain supplied by `Unit106.regular_domain`.
+
+    Now prove `IsReduced R` elementwise.  If `x` is nilpotent, its image in
+    every associated-prime localization is zero because those local rings
+    are domains.  Use
+    `Unit63.localizationAtAssociatedPrimesMap_injective` (with `M := R`;
+    `Localization S = LocalizedModule S R` is the theorem in
+    `Mathlib/Algebra/Module/LocalizedModule/Basic.lean`) to conclude `x = 0`.
+    Finish with `isReduced_iff`/`isNilpotent_iff_eq_zero`.
+  -/
   sorry
 
 /-- Serre's criterion for normality: normal is equivalent to `(R_1)` plus
@@ -385,6 +427,83 @@ theorem criterion_reduced
 theorem criterion_normal
     {R : Type u} [CommRing R] [IsNoetherianRing R] :
     IsNormalRing R ↔ HasPropertyRk R 1 ∧ HasPropertySk R 2 := by
+  /-
+  Proof roadmap.  This is the one genuinely long proof in the cluster; use
+  the source's local induction, not an attempted inference of a global
+  `IsDomain R` (a normal ring need not be a domain).
+
+  Reusable local ingredients are:
+
+  * `Unit37.normalDomain_local_iff` and `Unit37.localization_isNormalDomain`
+    in `Unit37/NormalRings.lean`;
+  * `IsLocalization.AtPrime.ringKrullDim_eq_height` in
+    `Mathlib/RingTheory/Ideal/Height.lean`;
+  * `IsDiscreteValuationRing.TFAE` and
+    `tfae_of_isNoetherianRing_of_isLocalRing_of_isDomain` in
+    `Mathlib/RingTheory/DiscreteValuationRing/TFAE.lean`;
+  * `Unit119.kollar_local_ring_alternative` and
+    `Unit119.IsFiniteLocalModification` in
+    `Unit119/AroundKrullAkizuki.lean`;
+  * `Unit72.ideal_contains_regular_iff`, `Unit72.localDepth_shortExact`, and
+    `Unit72.depth_eq_zero_iff` in `Unit72/Depth.lean`.
+
+  * Normal implies `(R₁)+(S₂)`.  Fix `p` and put
+    `A := Localization.AtPrime p.asIdeal`; install `(hR p).1` and `(hR p).2`
+    as `IsDomain A` and `IsIntegrallyClosed A`.  The displayed dimension of
+    `A` is `p.asIdeal.height`.  If it is zero, use
+    `Ring.KrullDimLE.isField_of_isDomain`; if it is one, the DVR TFAE turns
+    integral closedness plus the fact that every nonzero prime is the local
+    maximal ideal into a PID/DVR.  Both cases give `IsRegularLocalRing A`,
+    proving `(R₁)`.
+
+    For `(S₂)`, dimensions zero and one are handled by the same
+    field/DVR calculation.  In dimension at least two, apply
+    `Unit119.kollar_local_ring_alternative` to `A`.  Alternatives 0 and 1
+    contradict the dimension.  Exclude alternative 3 as follows.  For its
+    finite map `f : A →+* B`, the annihilated-kernel condition and the
+    domain hypothesis make `f` injective.  Since the maximal ideal is not
+    associated to the finite `A`-module `B`,
+    `Unit63.ideal_contains_regular_iff` supplies `t` in the maximal ideal
+    which is `B`-regular.  The annihilated-cokernel condition makes `f`
+    an isomorphism after inverting `t`; hence injectivity embeds `B` into the
+    fraction field of `A`.  `RingHom.Finite.isIntegral` makes every element
+    of `B` integral over `A`, and `IsIntegrallyClosed.isIntegral_iff`
+    (equivalently `isIntegrallyClosed_iff`) puts it in the range of `f`,
+    contradicting `IsFiniteLocalModification`'s non-bijectivity.  Therefore
+    alternative 2 holds, i.e. `2 ≤ localDepth A A`, which is exactly the
+    remaining `min 2 (ringKrullDim A)` inequality.  Keep all depth values in
+    `WithBot ℕ∞` until the final `simpa [HasPropertySk]`.
+
+  * `(R₁)+(S₂)` implies normal.  First weaken the two minima and height
+    bounds to `(R₀)+(S₁)` and invoke `criterion_reduced`; install the
+    resulting `IsReduced R`.  Prove normality by well-founded induction on
+    the finite natural height of `p` (Noetherianity supplies
+    `p.asIdeal.FiniteHeight`), with
+    `A := Localization.AtPrime p.asIdeal`.  Heights zero and one are the
+    field/DVR cases above, now using `(R₁)`.
+
+    In height at least two, every nonmaximal prime localization of `A`
+    corresponds, via `PrimeSpectrum.localization_comap_injective`, to a
+    strictly smaller prime of `R`, and is a normal domain by induction.
+    For an element integral over `A` in
+    `Unit09.totalQuotientRing A`, let `B := Algebra.adjoin A {x}`.  It is
+    finite (`Algebra.adjoin.finite`) and agrees with `A` after every
+    nonmaximal localization, so the support of `B/A` is the closed point.
+    The `(S₂)` inequality gives depth at least two; apply
+    `Unit72.localDepth_shortExact` to `0 → A → B → B/A → 0`
+    (or, equivalently, rule out alternative 3 of
+    `Unit119.kollar_local_ring_alternative`) to force `B/A = 0`.
+    Thus `A` is integrally closed in its total quotient ring.  Noetherianity
+    makes its minimal-prime set finite, so
+    `Unit37.normalRing_reduced_finite_minimalPrimes_TFAE` yields
+    `IsNormalRing A`; transport its value at the closed point through
+    `IsLocalization.atUnits` to obtain `IsNormalDomain A`.
+
+  Dead end to avoid: `Unit37.normalDomain_local_iff` requires an existing
+  `IsDomain` instance and therefore cannot establish that the local reduced
+  ring `A` is a domain in the induction step.  Derive local normality through
+  the total-quotient-ring TFAE as above instead.
+  -/
   sorry
 
 /-- A regular ring is normal.  `IsRegularRing` is Mathlib's canonical
@@ -393,6 +512,29 @@ normal-ring predicate from Chapter 37. -/
 theorem regularRing_isNormal
     {R : Type u} [CommRing R] [IsRegularRing R] :
     IsNormalRing R := by
+  /-
+  Proof roadmap.  Apply `criterion_normal.mpr`.  The `(R₁)` component is
+  immediate from the low-priority instance
+  `IsRegularRing.isRegularLocalRing_localization` in
+  `Mathlib/RingTheory/RegularLocalRing/Defs.lean`.
+
+  For `(S₂)`, fix `p` and set `A := Localization.AtPrime p.asIdeal`.
+  Reproduce the finite-generator construction used by the private helper at
+  the start of `Unit106/RegularLocalRings.lean`: take
+  `(IsLocalRing.maximalIdeal A).generators`, use its `FG` instance to make a
+  finite list `xs`, and prove
+  `Unit106.IsMinimalIdealGeneratingList (IsLocalRing.maximalIdeal A) xs`.
+  (The helper itself is private and cannot be cited.)  Then
+  `Unit106.regular_ring_CM xs hxs` gives
+  `Unit103.IsCohenMacaulay A A`.  Unfold that predicate and rewrite
+  `Module.supportDim_self_eq_ringKrullDim`; it says exactly that the coerced
+  `localDepth A A` equals `ringKrullDim A`.  Finish the `HasPropertySk` goal
+  with `min_le_right` at the common type `WithBot ℕ∞`.
+
+  Dead end to avoid: do not attempt to infer Cohen--Macaulayness directly
+  from the Mathlib `IsRegularLocalRing` class; the bridge in this dependency
+  graph is `Unit106.regular_ring_CM`, and it needs the explicit list above.
+  -/
   sorry
 
 /-! ## Height-one localizations of a normal domain -/

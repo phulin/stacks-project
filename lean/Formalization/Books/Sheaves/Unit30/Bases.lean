@@ -1014,10 +1014,7 @@ noncomputable def basisAlgebraicExtension {C : Type u} [Category.{v} C]
     {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
     [AlgebraicStructureType C (CategoryTheory.forget C)]
-    [HasColimits C] [HasLimits C]
-    [PreservesLimits (CategoryTheory.forget C)]
-    [PreservesFilteredColimits (CategoryTheory.forget C)]
-    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    [HasColimits C]
     {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     (hB : Opens.IsBasis (Set.range B))
     (P : BasisAlgebraicPresheaf B (C := C))
@@ -1035,10 +1032,7 @@ noncomputable def basisAlgebraicExtensionRestrictionIso {C : Type u}
     [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
     [AlgebraicStructureType C (CategoryTheory.forget C)]
-    [HasLimits C] [HasColimits C]
-    [PreservesLimits (CategoryTheory.forget C)]
-    [PreservesFilteredColimits (CategoryTheory.forget C)]
-    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    [HasColimits C]
     {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     (hB : Opens.IsBasis (Set.range B))
     (P : BasisAlgebraicPresheaf B (C := C))
@@ -1098,10 +1092,7 @@ theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
     {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
     [AlgebraicStructureType C (CategoryTheory.forget C)]
-    [HasColimits C] [HasLimits C]
-    [PreservesLimits (CategoryTheory.forget C)]
-    [PreservesFilteredColimits (CategoryTheory.forget C)]
-    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    [HasColimits C]
     {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     (hB : Opens.IsBasis (Set.range B))
     (P : BasisAlgebraicPresheaf B (C := C))

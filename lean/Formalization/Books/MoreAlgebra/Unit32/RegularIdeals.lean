@@ -1,9 +1,11 @@
 import Formalization.Books.MoreAlgebra.Unit30.KoszulRegularSequences
 import Mathlib.RingTheory.Finiteness.Ideal
 import Mathlib.RingTheory.Ideal.Cotangent
+import Mathlib.RingTheory.Localization.Finiteness
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.Spectrum.Prime.Basic
+import Mathlib.RingTheory.Spectrum.Prime.Topology
 
 /-!
 # More on Algebra, Chapter 32: Regular ideals
@@ -75,19 +77,91 @@ def IsQuasiRegularIdeal (R : Type u) [CommRing R] (I : Ideal R) : Prop :=
 theorem isKoszulRegularIdeal_of_isRegularIdeal
     (R : Type u) [CommRing R] (I : Ideal R) :
     IsRegularIdeal R I → IsKoszulRegularIdeal R I := by
-  sorry
+  intro h p hp
+  rcases h p hp with ⟨g, hgp, f, hf, hmap⟩
+  exact ⟨g, hgp, f, isKoszulRegular_of_isRegular _ _ hf, hmap⟩
 
 /-- Koszul-regular ideals are `H₁`-regular. -/
 theorem isHOneRegularIdeal_of_isKoszulRegularIdeal
     (R : Type u) [CommRing R] (I : Ideal R) :
     IsKoszulRegularIdeal R I → IsHOneRegularIdeal R I := by
-  sorry
+  intro h p hp
+  rcases h p hp with ⟨g, hgp, f, hf, hmap⟩
+  exact ⟨g, hgp, f, isHOneRegular_of_isKoszulRegular _ _ hf, hmap⟩
 
 /-- `H₁`-regular ideals are quasi-regular. -/
 theorem isQuasiRegularIdeal_of_isHOneRegularIdeal
     (R : Type u) [CommRing R] (I : Ideal R) :
     IsHOneRegularIdeal R I → IsQuasiRegularIdeal R I := by
-  sorry
+  intro h p hp
+  rcases h p hp with ⟨g, hgp, f, hf, hmap⟩
+  exact ⟨g, hgp, f, isMQuasiRegular_of_isMHOneRegular _ _ f hf, hmap⟩
+
+private theorem ideal_fg_of_isQuasiRegularIdeal
+    (R : Type u) [CommRing R] (I : Ideal R)
+    (hI : IsQuasiRegularIdeal R I) :
+    I.FG := by
+  classical
+  let P : Set (PrimeSpectrum R) := PrimeSpectrum.zeroLocus (I : Set R)
+  let g : P → R := fun p => Classical.choose (hI p p.property)
+  have hg (p : P) : g p ∉ p.1.asIdeal :=
+    (Classical.choose_spec (hI p p.property)).1
+  let f : (p : P) → List (Localization.Away (g p)) := fun p =>
+    Classical.choose (Classical.choose_spec (hI p p.property)).2
+  have hfmap (p : P) :
+      I.map (algebraMap R (Localization.Away (g p))) = Ideal.ofList (f p) :=
+    (Classical.choose_spec (Classical.choose_spec (hI p p.property)).2).2
+  have hfg (p : P) :
+      (I.map (algebraMap R (Localization.Away (g p)))).FG := by
+    rw [hfmap p]
+    refine ⟨(f p).toFinset, ?_⟩
+    simp [Ideal.ofList]
+  have hcover : P ⊆ ⋃ p : P, (PrimeSpectrum.basicOpen (g p) : Set (PrimeSpectrum R)) := by
+    intro p hp
+    exact Set.mem_iUnion.mpr ⟨⟨p, hp⟩,
+      (PrimeSpectrum.mem_basicOpen _ _).mpr (hg ⟨p, hp⟩)⟩
+  obtain ⟨s, hs⟩ :=
+    (IsClosed.isCompact (PrimeSpectrum.isClosed_zeroLocus (I : Set R))).elim_finite_subcover
+      (fun p : P => (PrimeSpectrum.basicOpen (g p) : Set (PrimeSpectrum R)))
+      (fun p => PrimeSpectrum.isOpen_basicOpen)
+      hcover
+  let S : Set R := g '' (s : Set P)
+  have hzero :
+      PrimeSpectrum.zeroLocus ((I ⊔ Ideal.span S : Ideal R) : Set R) = ∅ := by
+    rw [PrimeSpectrum.zeroLocus_sup]
+    apply Set.eq_empty_iff_forall_notMem.mpr
+    intro p hp
+    rcases Set.mem_iUnion.mp (hs hp.1) with ⟨q, hq⟩
+    rcases Set.mem_iUnion.mp hq with ⟨hqs, hqopen⟩
+    exact (PrimeSpectrum.mem_basicOpen _ _).mp hqopen
+      (hp.2 (Ideal.subset_span ⟨q, hqs, rfl⟩))
+  have hsup : I ⊔ Ideal.span S = ⊤ :=
+    PrimeSpectrum.zeroLocus_empty_iff_eq_top.mp hzero
+  have hone : (1 : R) ∈ I ⊔ Ideal.span S := by
+    rw [hsup]
+    exact SetLike.mem_coe.mpr (by simp)
+  obtain ⟨i, hi, j, hj, hij⟩ := Submodule.mem_sup.mp hone
+  let T : Set R := insert i S
+  have hT : Ideal.span T = ⊤ := by
+    rw [Ideal.eq_top_iff_one]
+    rw [← hij]
+    exact add_mem (Ideal.subset_span (Set.mem_insert _ _))
+      (Ideal.span_mono (Set.subset_insert _ _) hj)
+  apply Ideal.fg_of_localizationSpan T hT
+  intro x
+  by_cases hxi : x.1 = i
+  · rw [hxi]
+    have htop : I.map (algebraMap R (Localization.Away i)) = ⊤ :=
+      (I.map (algebraMap R (Localization.Away i))).eq_top_of_isUnit_mem
+        (Ideal.mem_map_of_mem (algebraMap R (Localization.Away i)) hi)
+        (IsLocalization.Away.algebraMap_isUnit i)
+    rw [htop]
+    exact Ideal.fg_top _
+  · have hxS : x.1 ∈ S :=
+      (Set.mem_insert_iff.mp x.property).resolve_left hxi
+    rcases hxS with ⟨p, hps, hpx⟩
+    rw [← hpx]
+    exact hfg p
 
 /- The source's sentence that every ideal in the comparison chain is finitely
 generated is covered for the stronger predicates by this implication chain. -/
@@ -96,7 +170,7 @@ theorem quasiRegularIdeal_fg
     (R : Type u) [CommRing R] (I : Ideal R)
     (hI : IsQuasiRegularIdeal R I) :
     I.FG := by
-  sorry
+  exact ideal_fg_of_isQuasiRegularIdeal R I hI
 
 /-- For a quasi-regular ideal, the conormal module `I/I²` is finite
 projective over `R/I`. -/

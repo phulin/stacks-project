@@ -6569,9 +6569,6 @@ private theorem long_window_ratio_cases
     ((p01 * q01 = 1 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1) ∨
           (p01 * q01 = 1 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 2) ∨
           (p01 * q01 = 2 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1))) := by
-  /- Prior failed proof attempt retained for review.  The determinant steps below
-     exposed that the missing relation between B and D.a was part of the
-     intended hypothesis, so this attempt is no longer compiled here.
   classical
   let e5 : Fin 5 → Fin t := fun i => ⟨s.val + i.val, by omega⟩
   have he5 : Function.Injective e5 := by
@@ -6628,7 +6625,7 @@ private theorem long_window_ratio_cases
     rw [hpow, neg_one_mul] at hneg
     have hrel : B5 = -A5 := by
       ext i j
-      simp [B5, A5, Matrix.submatrix, E, hB]
+      simp [B5, A5, Matrix.submatrix, Matrix.map, E, hB]
     rw [hrel, hneg] at hdetB
     linarith
   have hrat (i j : Fin 5) (hij : 0 < E.a i j) :
@@ -6636,23 +6633,21 @@ private theorem long_window_ratio_cases
         E.a i j = q * E.w j ∧ p * q < 4 := by
     exact long_edge_ratio D B hdiag hsymm hpos hBpos (by intro i j; exact hB i j)
       (e5 i) (e5 j) (by simpa [E] using hij) (by simpa [E] using hdiv _ _)
-        (by simpa [E] using hdiv _ _)
+        (by
+          rw [hsymm (e5 i) (e5 j)]
+          exact hdiv (e5 j) (e5 i))
   have ha01 : 0 < E.a 0 1 := by
     apply hedge
     dsimp [E, e5]
-    omega
   have ha12 : 0 < E.a 1 2 := by
     apply hedge
     dsimp [E, e5]
-    omega
   have ha23 : 0 < E.a 2 3 := by
     apply hedge
     dsimp [E, e5]
-    omega
   have ha34 : 0 < E.a 3 4 := by
     apply hedge
     dsimp [E, e5]
-    omega
   obtain ⟨p01, q01, hp01, hq01, hpa01, hqa01, hpq01⟩ := hrat 0 1 ha01
   obtain ⟨p12, q12, hp12, hq12, hpa12, hqa12, hpq12⟩ := hrat 1 2 ha12
   obtain ⟨p23, q23, hp23, hq23, hpa23, hqa23, hpq23⟩ := hrat 2 3 ha23
@@ -6687,15 +6682,23 @@ private theorem long_window_ratio_cases
   refine ⟨p01, q01, p12, q12, p23, q23, p34, q34,
     hp01, hq01, hp12, hq12, hp23, hq23, hp34, hq34,
     ?_⟩
+  constructor
   · simpa [E, e5] using hpa01
+  constructor
   · simpa [E, e5] using hqa01
+  constructor
   · simpa [E, e5] using hpa12
+  constructor
   · simpa [E, e5] using hqa12
+  constructor
   · simpa [E, e5] using hpa23
+  constructor
   · simpa [E, e5] using hqa23
+  constructor
   · simpa [E, e5] using hpa34
+  constructor
   · simpa [E, e5] using hqa34
-  · exact hcases
+  exact hcases
 /-
   classical
   let e5 : Fin 5 → Fin t := fun i => ⟨s.val + i.val, by omega⟩
@@ -6823,8 +6826,6 @@ private theorem long_window_ratio_cases
   · exact hcases
 
  -/
-  -/
-  sorry
 
 private theorem long_path_matrix_eq {t : ℕ} (D : LocalNumericalData t)
     (r : ℤ) (hdiag : ∀ i, D.a i i = -2 * r)
@@ -6884,8 +6885,6 @@ private theorem long_last_vector_eq {t : ℕ} (D : LocalNumericalData t)
 theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
     (ht : 5 < t) (hn : t < T.n) (hedges : hasPathEdges (localData S)) :
     UpToReversal (localData S) (fun D => isAn D ∨ isCn D ∨ isBn D) := by
-  /- Prior failed proof attempt retained for review.  Its remaining proof
-     obligations are outside this statement/interface review.
   classical
   let D := localData S
   have hDdiag : ∀ i, D.a i i = -2 * D.w i := by
@@ -7015,35 +7014,56 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
       i.val + 2 < t →
       D.w i = D.w j ∧ D.a i j = D.w j := by
     intro i j hij hi hiti
-    let s : Fin t := ⟨i.val - 1, by
-      have hle : i.val - 1 ≤ i.val := Nat.sub_le _ _
+    let s : Fin t := ⟨i.val - 2, by
+      have hle : i.val - 2 ≤ i.val := Nat.sub_le _ _
       have hiLt : i.val < t := i.isLt
       exact Nat.lt_of_le_of_lt hle hiLt⟩
-    have hs : s.val + 4 < t := by dsimp [s]; omega
+    have hs : s.val + 4 < t := by
+      dsimp [s]
+      by_cases hi1 : i.val = 1 <;> omega
     have hw := long_window_ratio_cases D B hBpos hBentry s hs hDdiag hDsym hDpos hzero hedges hdiv
     dsimp at hw
     rcases hw with ⟨p01, q01, p12, q12, p23, q23, p34, q34,
       hp01, hq01, hp12, hq12, hp23, hq23, hp34, hq34,
       hpa01, hqa01, hpa12, hqa12, hpa23, hqa23, hpa34, hqa34, hcases⟩
-    have hprod : p12 * q12 = 1 := by
+    have hprod12 : p12 * q12 = 1 := by
       rcases hcases with hA | hC | hB
       · exact hA.2.1
       · exact hC.2.1
       · exact hB.2.1
-    have hcon := ratio_one_consequences hp12 hq12 hprod hpa12 hqa12
-    have hu1 : (⟨s.val + 1, by omega⟩ : Fin t) = i := by
-      apply Fin.ext
-      dsimp [s]
-      omega
-    have hu2 : (⟨s.val + 2, by omega⟩ : Fin t) = j := by
-      apply Fin.ext
-      dsimp [s]
-      omega
-    have hconw := hcon.1
-    have hcona := hcon.2
-    rw [hu1, hu2] at hconw hcona
-    exact ⟨hconw, hcona⟩
-  have hwMiddle : ∀ n : ℕ, 1 ≤ n → n ≤ t - 2 →
+    have hprod23 : p23 * q23 = 1 := by
+      rcases hcases with hA | hC | hB
+      · exact hA.2.2.1
+      · exact hC.2.2.1
+      · exact hB.2.2.1
+    have hcon12 := ratio_one_consequences hp12 hq12 hprod12 hpa12 hqa12
+    have hcon23 := ratio_one_consequences hp23 hq23 hprod23 hpa23 hqa23
+    by_cases hi1 : i.val = 1
+    · have hu1 : (⟨s.val + 1, by omega⟩ : Fin t) = i := by
+        apply Fin.ext
+        dsimp [s]
+        omega
+      have hu2 : (⟨s.val + 2, by omega⟩ : Fin t) = j := by
+        apply Fin.ext
+        dsimp [s]
+        omega
+      have hconw := hcon12.1
+      have hcona := hcon12.2
+      rw [hu1, hu2] at hconw hcona
+      exact ⟨hconw, hcona⟩
+    · have hu1 : (⟨s.val + 2, by omega⟩ : Fin t) = i := by
+        apply Fin.ext
+        dsimp [s]
+        omega
+      have hu2 : (⟨s.val + 3, by omega⟩ : Fin t) = j := by
+        apply Fin.ext
+        dsimp [s]
+        omega
+      have hconw := hcon23.1
+      have hcona := hcon23.2
+      rw [hu1, hu2] at hconw hcona
+      exact ⟨hconw, hcona⟩
+  have hwMiddle : ∀ n : ℕ, ∀ hnN : 1 ≤ n, ∀ hnt : n ≤ t - 2,
       D.w ⟨n, by omega⟩ = D.w ⟨1, by omega⟩ := by
     intro n hnN
     induction n, hnN using Nat.le_induction with
@@ -7053,8 +7073,8 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
     | succ n hnN ih =>
         intro hnt
         have hnlt : n + 2 < t := by omega
-        have hstep := hunit ⟨n, by omega⟩ ⟨n + 1, by omega⟩ (by omega) (by omega)
-          hnlt
+        have hstep := hunit (⟨n, by omega⟩ : Fin t) (⟨n + 1, by omega⟩ : Fin t)
+          (by rfl) hnN hnlt
         calc
           D.w ⟨n + 1, by omega⟩ = D.w ⟨n, by omega⟩ := hstep.1.symm
           _ = D.w ⟨1, by omega⟩ := ih (by omega)
@@ -7469,13 +7489,117 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
             · simp [hnext, hprev] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hright1]
           · by_cases hprev : i.val = 1
-            · simp [hnext, hprev] at hfn hbp
+            · have ht3 : ¬ (3 : ℕ) = t := by omega
+              simp [hnext, hprev, ht3] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hleft1]
             · simp [hnext, hprev] at hfn hbp
               linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp]
     change Matrix.mulVec B x = 0
     funext i
     exact hrow i
+  have hBdiag : ∀ i, B i i = 2 * (D.w i : ℝ) := by
+    intro i
+    rw [hBentry i i, hDdiag i]
+    push_cast
+    ring
+  have hmidEdgeAll : ∀ i j, i.val + 1 = j.val → 1 ≤ i.val →
+      ¬ j.val + 1 = t → D.a i j = r := by
+    intro i j hij hi hj
+    by_cases hj2 : j.val + 2 < t
+    · exact hmidEdge i j hij hi hj2
+    · exact (hunit i j hij hi (by omega)).2.trans (hmiddleWeight j (by omega) hj)
+  have hBzero : ∀ i j, i ≠ j → ¬ i.val + 1 = j.val →
+      ¬ j.val + 1 = i.val → B i j = 0 := by
+    intro i j hij hif hib
+    rw [hBentry i j, hzero' i j hij hif hib]
+    norm_num
+  have hdiag_of (a0 al : ℤ) (hleft : 2 * D.w z0 = a0)
+      (hright : 2 * D.w zl1 = al) : ∀ i, B i i =
+        if i.val = 0 then (a0 : ℝ) else
+          if i.val + 1 = t then (al : ℝ) else 2 * (r : ℝ) := by
+    intro i
+    by_cases hi0 : i.val = 0
+    · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi0
+      rw [hz]
+      have hz0 : z0.val = 0 := by rfl
+      rw [if_pos hz0]
+      calc
+        B z0 z0 = 2 * (D.w z0 : ℝ) := hBdiag z0
+        _ = (a0 : ℝ) := by exact_mod_cast hleft
+    · by_cases hilast : i.val + 1 = t
+      · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+        rw [hz]
+        have hlast : zl1.val + 1 = t := by dsimp [zl1]; omega
+        have hz0 : ¬ zl1.val = 0 := by dsimp [zl1]; omega
+        simp only [if_neg hz0, if_pos hlast]
+        calc
+          B zl1 zl1 = 2 * (D.w zl1 : ℝ) := hBdiag zl1
+          _ = (al : ℝ) := by exact_mod_cast hright
+      · have hw := hmiddleWeight i (by omega) hilast
+        calc
+          B i i = 2 * (D.w i : ℝ) := hBdiag i
+          _ = 2 * (r : ℝ) := by rw [hw]
+          _ = if i.val = 0 then (a0 : ℝ) else
+              if i.val + 1 = t then (al : ℝ) else 2 * (r : ℝ) := by
+                simp [hi0, hilast]
+  have hforward_of (f0 fl : ℤ) (hleft : D.a z0 z1 = f0)
+      (hright : D.a zl2 zl1 = fl) : ∀ i j, i.val + 1 = j.val → B i j =
+        if i.val = 0 then -(f0 : ℝ) else
+          if j.val + 1 = t then -(fl : ℝ) else -(r : ℝ) := by
+    intro i j hij
+    by_cases hi0 : i.val = 0
+    · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi0
+      have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
+      rw [hzi, hzj, hBentry z0 z1, hleft]
+      have hz0 : z0.val = 0 := by rfl
+      simp [hz0]
+    · by_cases hjlast : j.val + 1 = t
+      · have hzi : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
+        have hzj : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+        rw [hzi, hzj, hBentry zl2 zl1, hright]
+        have hz2 : ¬ zl2.val = 0 := by dsimp [zl2]; omega
+        have hzlast : zl1.val + 1 = t := by dsimp [zl1]; omega
+        simp [hz2, hzlast]
+      · have hh := hmidEdgeAll i j hij (by omega) hjlast
+        rw [hBentry i j, hh]
+        simp [hi0, hjlast]
+  have hbackward_of (f0 fl : ℤ)
+      (hf : ∀ i j, i.val + 1 = j.val → B i j =
+        if i.val = 0 then -(f0 : ℝ) else
+          if j.val + 1 = t then -(fl : ℝ) else -(r : ℝ)) :
+      ∀ i j, j.val + 1 = i.val → B i j =
+        if j.val = 0 then -(f0 : ℝ) else
+          if i.val + 1 = t then -(fl : ℝ) else -(r : ℝ) := by
+    intro i j hij
+    calc
+      B i j = B j i := by rw [hBentry i j, hBentry j i, hDsym i j]
+      _ = _ := hf j i hij
+  have hcontra (a0 f0 al fl : ℤ) (x0 xm xl : ℝ) (hx0 : x0 ≠ 0)
+      (hdiagK : ∀ i, B i i = if i.val = 0 then (a0 : ℝ) else
+        if i.val + 1 = t then (al : ℝ) else 2 * (r : ℝ))
+      (hfK : ∀ i j, i.val + 1 = j.val → B i j =
+        if i.val = 0 then -(f0 : ℝ) else
+          if j.val + 1 = t then -(fl : ℝ) else -(r : ℝ))
+      (hbK : ∀ i j, j.val + 1 = i.val → B i j =
+        if j.val = 0 then -(f0 : ℝ) else
+          if i.val + 1 = t then -(fl : ℝ) else -(r : ℝ))
+      (hleft0 : (a0 : ℝ) * x0 = (f0 : ℝ) * xm)
+      (hleft1 : (f0 : ℝ) * x0 = (r : ℝ) * xm)
+      (hright0 : (al : ℝ) * xl = (fl : ℝ) * xm)
+      (hright1 : (fl : ℝ) * xl = (r : ℝ) * xm) : False := by
+    let x : Fin t → ℝ := fun i =>
+      if i.val = 0 then x0 else if i.val + 1 = t then xl else xm
+    have hx : x ≠ 0 := by
+      intro h
+      apply hx0
+      simpa [x] using congrFun h ⟨0, by omega⟩
+    have hz : B.mulVec x = 0 := by
+      dsimp [x]
+      exact hkernel a0 f0 al fl x0 xm xl hdiagK hfK hbK hBzero
+        hleft0 hleft1 hright0 hright1
+    have hp := Matrix.PosDef.dotProduct_mulVec_pos hBpos hx
+    rw [hz] at hp
+    simpa using hp
   have hfirstOne : pf01 * qf01 = 1 →
       D.w z0 = r ∧ D.a z0 z1 = r := by
     intro h
@@ -7490,7 +7614,10 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
     refine ⟨hm, ?_, ?_⟩
     · rw [← hh.1]
       exact hm
-    · rw [hh.2, hm]
+    · calc
+        D.a zl2 zl1 = D.w zl1 := hh.2
+        _ = D.w zl2 := hh.1.symm
+        _ = r := hm
   rcases hfirstprod with hf1 | hf2
   · rcases hlastprod with hl1 | hl2
     · have hfo := hfirstOne hf1
@@ -7509,7 +7636,6 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
       have hdA : ∀ i, D.a i i = -2 * r := by
         intro i
         rw [hDdiag i, hwA i]
-        ring
       have hfA : ∀ i j, i.val + 1 = j.val → D.a i j = r := by
         intro i j hij
         by_cases hi : i.val = 0
@@ -7522,13 +7648,16 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
             have hzlast : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
             rw [hzl2, hzlast]
             exact hlo.2.2
-          · exact hmidEdge i j hij (by omega) (by omega)
+          · by_cases hj2 : j.val + 2 < t
+            · exact hmidEdge i j hij (by omega) hj2
+            · exact (hunit i j hij (by omega) (by omega)).2.trans
+                (hmiddleWeight j (by omega) hj)
       have hbA : ∀ i j, j.val + 1 = i.val → D.a i j = r := by
         intro i j hij
         rw [hDsym i j]
         exact hfA j i hij
       refine Or.inl ?_
-      simpa [D, isAn] using hmakeA r hr hwA hdA hfA hbA
+      exact Or.inl (by simpa [D, isAn] using hmakeA r hr hwA hdA hfA hbA)
     · have hlastTwo : pl34 * ql34 = 2 := hl2
       obtain ⟨hpone, hqtwo⟩ | ⟨hptwo, hqone⟩ :=
         positive_product_two pl34 ql34 hpl34 hql34 hlastTwo
@@ -7536,17 +7665,21 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
         have hs0 : 0 < s0 := by dsimp [s0]; exact hDpos zl1
         have hrel : r = 2 * s0 := by
           have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
-          nlinarith [hpla34', hqla34', hpone, hqtwo, hm]
+          have ha : D.a zl2 zl1 = r := by
+            rw [hpla34', hpone, hm]
+            norm_num
+          have ha' : D.a zl2 zl1 = 2 * s0 := by
+            rw [hqla34', hqtwo]
+          exact ha.symm.trans ha'
         have hlastA : D.a zl2 zl1 = 2 * s0 := by
-          rw [hpla34', hqla34', hpone, hqtwo]
-          dsimp [s0]
-          nlinarith [hrel]
+          rw [hqla34', hqtwo]
         have hwB : ∀ i, D.w i = s0 * (if i.val + 1 = t then 1 else 2) := by
           intro i
           by_cases hi : i.val + 1 = t
           · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+            have hzlast : zl1.val + 1 = t := by dsimp [zl1]; omega
             rw [hz]
-            simp [s0]
+            simp [s0, hzlast]
           · have hwri : D.w i = r := by
               by_cases hi0 : i.val = 0
               · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi0
@@ -7554,7 +7687,7 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
                 exact (hfirstOne hf1).1
               · exact hmiddleWeight i (by omega) hi
             rw [hwri, hrel]
-            simp
+            simp [hi] <;> ring
         have hdB : ∀ i, D.a i i = s0 * (if i.val + 1 = t then -2 else -4) := by
           intro i
           rw [hDdiag i, hwB i]
@@ -7564,45 +7697,67 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           intro i j hij
           have hval : D.a i j = r := by
             by_cases hi : i.val = 0
-            · exact (hfirstOne hf1).2
+            · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+              have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
+              rw [hzi, hzj]
+              exact (hfirstOne hf1).2
             · by_cases hj : j.val + 1 = t
-              · exact hlastA
-              · exact hmidEdge i j hij (by omega) (by omega)
+              · have hzi : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
+                have hzj : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+                rw [hzi, hzj]
+                exact hlastA.trans hrel.symm
+              · by_cases hj2 : j.val + 2 < t
+                · exact hmidEdge i j hij (by omega) hj2
+                · have hlast := (hunit i j hij (by omega) (by omega)).2
+                  rw [hmiddleWeight j (by omega) hj] at hlast
+                  exact hlast
           rw [hval, hrel]
-          simp
+          by_cases hj : j.val + 1 = t <;> simp [hj] <;> ring
         have hbB : ∀ i j, j.val + 1 = i.val →
             D.a i j = s0 * (if i.val + 1 = t then 2 else 2) := by
           intro i j hij
           rw [hDsym i j]
-          exact hfB j i hij
-        refine Or.inr ?_
-        exact Or.inr (by
-          simpa [D, isBn] using hmakeLast (-4) (-2) 2 2 2 1 s0 hs0 hwB hdB hfB hbB)
+          simpa using (hfB j i hij)
+        change UpToReversal D (fun E => isAn E ∨ isCn E ∨ isBn E)
+        refine Or.inl ?_
+        exact Or.inr (Or.inr (by
+          change realizesAW D (pathLastMatrix t (-4) (-2) 2 2)
+            (lastVector t 2 1)
+          exact hmakeLast (-4) (-2) 2 2 2 1 s0 hs0 hwB hdB hfB hbB))
       · let hlastR : D.w zl1 = 2 * r := by
           have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
-          nlinarith [hpla34', hqla34', hptwo, hqone, hm]
+          have ha : D.a zl2 zl1 = 2 * r := by
+            rw [hpla34', hptwo, hm]
+          have ha' : D.a zl2 zl1 = D.w zl1 := by
+            rw [hqla34', hqone]
+            norm_num
+          exact ha'.symm.trans ha
         have hlastEdge : D.a zl2 zl1 = 2 * r := by
-          rw [hpla34', hqla34', hptwo, hqone]
-          nlinarith [hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)]
+          rw [hpla34', hptwo]
+          have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          rw [hm]
         have hwC : ∀ i, D.w i = r * (if i.val + 1 = t then 2 else 1) := by
           intro i
           by_cases hi : i.val + 1 = t
           · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
-            rw [hz, hlastR]
-            simp
+            calc
+              D.w i = D.w zl1 := by rw [hz]
+              _ = 2 * r := hlastR
+              _ = r * (if i.val + 1 = t then 2 else 1) := by simp [hi]; ring
           · by_cases hi0 : i.val = 0
             · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi0
               rw [hz]
-              exact (hfirstOne hf1).1
+              have hzlast : ¬ z0.val + 1 = t := by dsimp [z0]; omega
+              simpa [hzlast] using (hfirstOne hf1).1
             · have hh := hmiddleWeight i (by omega) hi
               rw [hh]
-              simp
+              simp [hi] <;> ring
         have hdC : ∀ i, D.a i i = r * (if i.val + 1 = t then -4 else -2) := by
           intro i
           rw [hDdiag i, hwC i]
           by_cases hi : i.val + 1 = t <;> simp [hi] <;> ring
         have hfC : ∀ i j, i.val + 1 = j.val →
-            D.a i j = r * (if i.val = 0 then 2 else if j.val + 1 = t then 2 else 1) := by
+            D.a i j = r * (if j.val + 1 = t then 2 else 1) := by
           intro i j hij
           by_cases hi : i.val = 0
           · exact (by
@@ -7610,36 +7765,63 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
               have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
               rw [hzi, hzj]
               have := (hfirstOne hf1).2
-              simpa using this)
+              have hz0 : z0.val = 0 := by rfl
+              have hz1 : ¬ z1.val + 1 = t := by dsimp [z1]; omega
+              simpa [hz0, hz1] using this)
           · by_cases hj : j.val + 1 = t
             · have hz2 : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
               have hz1 : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
-              rw [hz2, hz1, hlastEdge]
-              simp
-            · rw [hmidEdge i j hij (by omega) (by omega)]
-              simp [hi, hj]
+              calc
+                D.a i j = D.a zl2 zl1 := by rw [hz2, hz1]
+                _ = 2 * r := hlastEdge
+                _ = r * (if j.val + 1 = t then 2 else 1) := by
+                  rw [if_pos hj]
+                  ring
+            · by_cases hj2 : j.val + 2 < t
+              · rw [hmidEdge i j hij (by omega) hj2]
+                simp [hi, hj]
+              · have hh := (hunit i j hij (by omega) (by omega)).2
+                have hwj := hmiddleWeight j (by omega) hj
+                rw [hwj] at hh
+                rw [hh]
+                simp [hi, hj]
         have hbC : ∀ i j, j.val + 1 = i.val →
-            D.a i j = r * (if j.val = 0 then 2 else if i.val + 1 = t then 2 else 1) := by
+            D.a i j = r * (if i.val + 1 = t then 2 else 1) := by
           intro i j hij
           rw [hDsym i j]
           exact hfC j i hij
-        refine Or.inr (by
-          simpa [D, isCn] using hmakeLast (-2) (-4) 1 2 1 2 r hr hwC hdC hfC hbC)
+        change UpToReversal D (fun E => isAn E ∨ isCn E ∨ isBn E)
+        refine Or.inl ?_
+        exact Or.inr (Or.inl (by
+          change realizesAW D (pathLastMatrix t (-2) (-4) 1 2)
+            (lastVector t 1 2)
+          exact hmakeLast (-2) (-4) 1 2 1 2 r hr hwC hdC hfC hbC))
   · rcases hlastprod with hl1 | hl2
     · obtain ⟨hpone, hqtwo⟩ | ⟨hptwo, hqone⟩ :=
         positive_product_two pf01 qf01 hpf01 hqf01 hf2
       · have hfirstW : D.w z0 = 2 * r := by
-          nlinarith [hfpa01, hqfa01', hpone, hqtwo]
+          calc
+            D.w z0 = D.a z0 z1 := by rw [hfpa01, hpone]; ring
+            _ = 2 * D.w z1 := by rw [hqfa01', hqtwo]
+            _ = 2 * r := by rfl
         have hfirstEdge : D.a z0 z1 = 2 * r := by
-          rw [hfpa01, hqfa01', hpone, hqtwo]
-          nlinarith
+          calc
+            D.a z0 z1 = qf01 * D.w z1 := hqfa01'
+            _ = 2 * r := by rw [hqtwo]
         have hwF : ∀ i, D.w i = r * (if i.val = 0 then 2 else 1) := by
           intro i
           by_cases hi : i.val = 0
           · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
-            rw [hz, hfirstW]
-            simp
-          · exact hmiddleWeight i (by omega) (by omega)
+            calc
+              D.w i = D.w z0 := by rw [hz]
+              _ = 2 * r := hfirstW
+              _ = r * (if i.val = 0 then 2 else 1) := by simp [hi]; ring
+          · by_cases hlast : i.val + 1 = t
+            · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+              rw [hz]
+              have hz0 : ¬ zl1.val = 0 := by dsimp [zl1]; omega
+              simpa [hz0] using (hlastOne hl1).2.1
+            · simpa [hi] using (hmiddleWeight i (by omega) hlast)
         have hdF : ∀ i, D.a i i = r * (if i.val = 0 then -4 else -2) := by
           intro i
           rw [hDdiag i, hwF i]
@@ -7650,9 +7832,23 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           by_cases hi : i.val = 0
           · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
             have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
-            rw [hzi, hzj, hfirstEdge]
-            simp
-          · exact hmidEdge i j hij (by omega) (by omega)
+            calc
+              D.a i j = D.a z0 z1 := by rw [hzi, hzj]
+              _ = 2 * r := hfirstEdge
+              _ = r * (if i.val = 0 then 2 else 1) := by simp [hi]; ring
+          · by_cases hj2 : j.val + 2 < t
+            · simpa [hi] using (hmidEdge i j hij (by omega) hj2)
+            · by_cases hjlast : j.val + 1 = t
+              · have hzi : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
+                have hzj : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+                rw [hzi, hzj]
+                have hlast := (hlastOne hl1).2.2
+                have hz0 : ¬ zl2.val = 0 := by dsimp [zl2]; omega
+                have hzlast : zl1.val + 1 = t := by dsimp [zl1]; omega
+                simpa [hi, hz0, hzlast] using hlast
+              · have hlast := (hunit i j hij (by omega) (by omega)).2
+                rw [hmiddleWeight j (by omega) hjlast] at hlast
+                simpa [hi] using hlast
         have hbF : ∀ i j, j.val + 1 = i.val →
             D.a i j = r * (if j.val = 0 then 2 else 1) := by
           intro i j hij
@@ -7665,19 +7861,38 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
       · let s0 : ℤ := D.w z0
         have hs0 : 0 < s0 := by dsimp [s0]; exact hDpos z0
         have hrel : r = 2 * s0 := by
-          nlinarith [hfpa01, hqfa01', hptwo, hqone]
+          calc
+            r = D.a z0 z1 := by
+              simpa [r, hqone] using hqfa01'.symm
+            _ = 2 * D.w z0 := by rw [hfpa01, hptwo]
+            _ = 2 * s0 := by rfl
         have hfirstEdge : D.a z0 z1 = 2 * s0 := by
-          rw [hfpa01, hqfa01', hptwo, hqone]
-          nlinarith
+          calc
+            D.a z0 z1 = pf01 * D.w z0 := hfpa01
+            _ = 2 * s0 := by rw [hptwo]
         have hwF : ∀ i, D.w i = s0 * (if i.val = 0 then 1 else 2) := by
           intro i
           by_cases hi : i.val = 0
           · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
-            rw [hz]
-            simp [s0]
-          · have hh := hmiddleWeight i (by omega) (by omega)
-            rw [hh, hrel]
-            simp
+            calc
+              D.w i = D.w z0 := by rw [hz]
+              _ = s0 := by rfl
+              _ = s0 * (if i.val = 0 then 1 else 2) := by simp [hi]
+          · by_cases hlast : i.val + 1 = t
+            · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+              rw [hz]
+              have hwlast := (hlastOne hl1).2.1
+              have hz0 : ¬ zl1.val = 0 := by dsimp [zl1]; omega
+              calc
+                D.w zl1 = r := hwlast
+                _ = 2 * s0 := hrel
+                _ = s0 * (if zl1.val = 0 then 1 else 2) := by simp [hz0]; ring
+            · have hh := hmiddleWeight i (by omega) hlast
+              calc
+                D.w i = r := hh
+                _ = 2 * s0 := hrel
+                _ = s0 * 2 := by ring
+                _ = s0 * (if i.val = 0 then 1 else 2) := by rw [if_neg hi]
         have hdF : ∀ i, D.a i i = s0 * (if i.val = 0 then -2 else -4) := by
           intro i
           rw [hDdiag i, hwF i]
@@ -7688,11 +7903,34 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
           by_cases hi : i.val = 0
           · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
             have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
-            rw [hzi, hzj, hfirstEdge]
-            simp
-          · have hh := hmidEdge i j hij (by omega) (by omega)
-            rw [hh, hrel]
-            simp
+            calc
+              D.a i j = D.a z0 z1 := by rw [hzi, hzj]
+              _ = 2 * s0 := hfirstEdge
+              _ = s0 * (if i.val = 0 then 2 else 2) := by simp [hi]; ring
+          · by_cases hj2 : j.val + 2 < t
+            · have hh := hmidEdge i j hij (by omega) hj2
+              calc
+                D.a i j = r := hh
+                _ = 2 * s0 := hrel
+                _ = s0 * (if i.val = 0 then 2 else 2) := by simp [hi]; ring
+            · by_cases hjlast : j.val + 1 = t
+              · have hzi : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
+                have hzj : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+                rw [hzi, hzj]
+                have hlast := (hlastOne hl1).2.2
+                have hz2 : ¬ zl2.val = 0 := by dsimp [zl2]; omega
+                have hzlast : zl1.val + 1 = t := by dsimp [zl1]; omega
+                calc
+                  D.a zl2 zl1 = r := hlast
+                  _ = 2 * s0 := hrel
+                  _ = s0 * (if zl2.val = 0 then 2 else 2) := by simp [hz2]; ring
+              · have hh := (hunit i j hij (by omega) (by omega)).2
+                have hwj := hmiddleWeight j (by omega) hjlast
+                rw [hwj] at hh
+                calc
+                  D.a i j = r := hh
+                  _ = 2 * s0 := hrel
+                  _ = s0 * (if i.val = 0 then 2 else 2) := by simp [hi]; ring
         have hbF : ∀ i j, j.val + 1 = i.val →
             D.a i j = s0 * (if j.val = 0 then 2 else 2) := by
           intro i j hij
@@ -7702,10 +7940,121 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
         change UpToReversal D (fun E => isAn E ∨ isCn E ∨ isBn E)
         refine Or.inr ⟨rev, hrev_order, ?_⟩
         exact Or.inr (Or.inr (by simpa [isBn] using hE))
-    · sorry
-  omega
-  -/
-  sorry
+    · obtain ⟨hponeF, hqtwoF⟩ | ⟨hptwoF, hqoneF⟩ :=
+        positive_product_two pf01 qf01 hpf01 hqf01 hf2
+      · obtain ⟨hponeL, hqtwoL⟩ | ⟨hptwoL, hqoneL⟩ :=
+          positive_product_two pl34 ql34 hpl34 hql34 hl2
+        · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          have hleftW : D.w z0 = 2 * r := by
+            calc
+              D.w z0 = D.a z0 z1 := by rw [hfpa01, hponeF]; ring
+              _ = 2 * D.w z1 := by rw [hqfa01', hqtwoF]
+              _ = 2 * r := by rfl
+          have hleftEdge : D.a z0 z1 = 2 * r := by
+            calc
+              D.a z0 z1 = qf01 * D.w z1 := hqfa01'
+              _ = 2 * r := by rw [hqtwoF]
+          have hrightEdge : D.a zl2 zl1 = r := by
+            calc
+              D.a zl2 zl1 = pl34 * D.w zl2 := hpla34'
+              _ = D.w zl2 := by rw [hponeL]; ring
+              _ = r := hm
+          have hleftDiag : 2 * D.w z0 = 4 * r := by rw [hleftW]; ring
+          have hrightDiag : 2 * D.w zl1 = r := by
+            calc
+              2 * D.w zl1 = D.a zl2 zl1 := by simpa [hqtwoL] using hqla34'.symm
+              _ = r := hrightEdge
+          have hfK := hforward_of (2 * r) r hleftEdge hrightEdge
+          have hbK := hbackward_of (2 * r) r hfK
+          exfalso
+          exact hcontra (4 * r) (2 * r) r r 1 2 2 (by norm_num)
+            (hdiag_of (4 * r) r hleftDiag hrightDiag) hfK hbK
+            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num <;> ring) (by norm_num <;> ring)
+        · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          have hleftW : D.w z0 = 2 * r := by
+            calc
+              D.w z0 = D.a z0 z1 := by rw [hfpa01, hponeF]; ring
+              _ = 2 * D.w z1 := by rw [hqfa01', hqtwoF]
+              _ = 2 * r := by rfl
+          have hleftEdge : D.a z0 z1 = 2 * r := by
+            calc
+              D.a z0 z1 = qf01 * D.w z1 := hqfa01'
+              _ = 2 * r := by rw [hqtwoF]
+          have hrightEdge : D.a zl2 zl1 = 2 * r := by
+            calc
+              D.a zl2 zl1 = pl34 * D.w zl2 := hpla34'
+              _ = 2 * D.w zl2 := by rw [hptwoL]
+              _ = 2 * r := by rw [hm]
+          have hrightW : D.w zl1 = 2 * r := by
+            calc
+              D.w zl1 = D.a zl2 zl1 := by simpa [hqoneL] using hqla34'.symm
+              _ = 2 * r := hrightEdge
+          have hleftDiag : 2 * D.w z0 = 4 * r := by rw [hleftW]; ring
+          have hrightDiag : 2 * D.w zl1 = 4 * r := by rw [hrightW]; ring
+          have hfK := hforward_of (2 * r) (2 * r) hleftEdge hrightEdge
+          have hbK := hbackward_of (2 * r) (2 * r) hfK
+          exfalso
+          exact hcontra (4 * r) (2 * r) (4 * r) (2 * r) 1 2 1 (by norm_num)
+            (hdiag_of (4 * r) (4 * r) hleftDiag hrightDiag) hfK hbK
+            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num <;> ring) (by norm_num <;> ring)
+      · obtain ⟨hponeL, hqtwoL⟩ | ⟨hptwoL, hqoneL⟩ :=
+          positive_product_two pl34 ql34 hpl34 hql34 hl2
+        · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          have hleftEdge : D.a z0 z1 = r := by
+            calc
+              D.a z0 z1 = qf01 * D.w z1 := hqfa01'
+              _ = D.w z1 := by rw [hqoneF]; ring
+              _ = r := by rfl
+          have hleftDiag : 2 * D.w z0 = r := by
+            calc
+              2 * D.w z0 = D.a z0 z1 := by simpa [hptwoF] using hfpa01.symm
+              _ = r := hleftEdge
+          have hrightEdge : D.a zl2 zl1 = r := by
+            calc
+              D.a zl2 zl1 = pl34 * D.w zl2 := hpla34'
+              _ = D.w zl2 := by rw [hponeL]; ring
+              _ = r := hm
+          have hrightDiag : 2 * D.w zl1 = r := by
+            calc
+              2 * D.w zl1 = D.a zl2 zl1 := by simpa [hqtwoL] using hqla34'.symm
+              _ = r := hrightEdge
+          have hfK := hforward_of r r hleftEdge hrightEdge
+          have hbK := hbackward_of r r hfK
+          exfalso
+          exact hcontra r r r r 2 2 2 (by norm_num)
+            (hdiag_of r r hleftDiag hrightDiag) hfK hbK
+            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num <;> ring) (by norm_num <;> ring)
+        · have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          have hleftEdge : D.a z0 z1 = r := by
+            calc
+              D.a z0 z1 = qf01 * D.w z1 := hqfa01'
+              _ = D.w z1 := by rw [hqoneF]; ring
+              _ = r := by rfl
+          have hleftDiag : 2 * D.w z0 = r := by
+            calc
+              2 * D.w z0 = D.a z0 z1 := by simpa [hptwoF] using hfpa01.symm
+              _ = r := hleftEdge
+          have hrightEdge : D.a zl2 zl1 = 2 * r := by
+            calc
+              D.a zl2 zl1 = pl34 * D.w zl2 := hpla34'
+              _ = 2 * D.w zl2 := by rw [hptwoL]
+              _ = 2 * r := by rw [hm]
+          have hrightW : D.w zl1 = 2 * r := by
+            calc
+              D.w zl1 = D.a zl2 zl1 := by simpa [hqoneL] using hqla34'.symm
+              _ = 2 * r := hrightEdge
+          have hleftDiag' : 2 * D.w z0 = r := hleftDiag
+          have hrightDiag : 2 * D.w zl1 = 4 * r := by rw [hrightW]; ring
+          have hfK := hforward_of r (2 * r) hleftEdge hrightEdge
+          have hbK := hbackward_of r (2 * r) hfK
+          exfalso
+          exact hcontra r r (4 * r) (2 * r) 2 2 1 (by norm_num)
+            (hdiag_of r (4 * r) hleftDiag' hrightDiag) hfK hbK
+            (by norm_num <;> ring) (by norm_num <;> ring)
+            (by norm_num <;> ring) (by norm_num <;> ring)
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →
@@ -7722,7 +8071,43 @@ theorem lemma_E6 (T : NumericalType) (S : MinusTwoSubgraph T 6)
 theorem lemma_E6_not_full (T : NumericalType) (S : MinusTwoSubgraph T 6)
     (hn : T.n = 6) (hedges : hasE6Edges (localData S))
     (hpattern : isE6 (localData S)) : False := by
-  sorry
+  classical
+  let D := localData S
+  let f : Fin 6 → Fin 6 := fun i => Fin.cast hn (S.index i)
+  have hf : Function.Injective f := by
+    intro i j hij
+    apply S.index_injective
+    exact Fin.cast_injective hn hij
+  have hfs : Function.Surjective f := Finite.surjective_of_injective hf
+  have hs : Function.Surjective S.index := by
+    intro j
+    obtain ⟨i, hi⟩ := hfs (Fin.cast hn j)
+    exact ⟨i, Fin.cast_injective hn (by simpa [f] using hi)⟩
+  let e : Fin 6 ≃ Fin T.n := Equiv.ofBijective S.index
+    ⟨S.index_injective, hs⟩
+  have heval : ∀ j : Fin 6, e j = S.index j := by
+    intro j
+    rfl
+  have hkernel : Matrix.mulVec D.a D.m = 0 := by
+    funext i
+    rw [Matrix.mulVec_apply_eq_sum]
+    change (∑ j : Fin 6, T.a (S.index i) (S.index j) * T.m (S.index j)) = 0
+    calc
+      (∑ j : Fin 6, T.a (S.index i) (S.index j) * T.m (S.index j)) =
+          ∑ j : Fin T.n, T.a (S.index i) j * T.m j := by
+            simpa only [heval] using
+              (Equiv.sum_comp e (fun j : Fin T.n => T.a (S.index i) j * T.m j))
+      _ = 0 := T.row_sum (S.index i)
+  have hdet0 : Matrix.det D.a = 0 := by
+    apply Matrix.det_eq_zero_of_mulVec_eq_zero_of_mem_nonZeroDivisors
+      (i := (0 : Fin 6)) hkernel
+    simpa [D] using (ne_of_gt (local_m_pos S (0 : Fin 6)))
+  rcases hpattern with ⟨r, hr, hmat, _, _, _⟩
+  have hdetpos : 0 < Matrix.det D.a := by
+    rw [hmat, e6_matrix_determinant]
+    positivity
+  rw [hdet0] at hdetpos
+  omega
 
 /-! The double-triple pattern is not proper. -/
 theorem lemma_double_triple {t : ℕ} (T : NumericalType)

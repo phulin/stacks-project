@@ -93,8 +93,8 @@ private theorem rightDerived_square_map_compat
     (a : q₁.source ⟶ q₂.source) :
     F.map a.right ≫ F.map q₂.dotted ≫ cY.ι.app q₂.target =
       F.map q₁.dotted ≫ cY.ι.app q₁.target := by
-  letI : LeftMultiplicativeSystem S := hS.1.1
-  letI : IsFiltered (LeftDenominatorCategory S Y) :=
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : IsFiltered (LeftDenominatorCategory S Y) :=
     left_denominator_category_is_filtered Y
   let k : LeftDenominatorCategory S Y :=
     IsFiltered.max q₁.target q₂.target
@@ -168,10 +168,10 @@ private theorem leftDerived_square_map_compat
     (a : q₁.target ⟶ q₂.target) :
     cX.π.app q₁.source ≫ F.map q₁.dotted ≫ F.map a.left =
       cX.π.app q₂.source ≫ F.map q₂.dotted := by
-  letI : RightMultiplicativeSystem S := hS.1.2
-  letI : IsCofiltered (RightDenominatorCategory S X) :=
+  let : RightMultiplicativeSystem S := hS.1.2
+  let : IsCofiltered (RightDenominatorCategory S X) :=
     right_denominator_category_is_cofiltered X
-  letI : IsCofiltered (RightDenominatorCategory S Y) :=
+  let : IsCofiltered (RightDenominatorCategory S Y) :=
     right_denominator_category_is_cofiltered Y
   let k : RightDenominatorCategory S X :=
     IsCofiltered.min q₁.source q₂.source
@@ -187,7 +187,7 @@ private theorem leftDerived_square_map_compat
       _ = u.left ≫ q₁.dotted ≫ q₁.target.hom := by
             rw [MorphismProperty.Over.w a]
       _ = u.left ≫ (q₁.dotted ≫ q₁.target.hom) := by
-            simp only [Category.assoc]
+            rfl
       _ = u.left ≫ (q₁.source.hom ≫ f) := by rw [q₁.comm]
       _ = (u.left ≫ q₁.source.hom) ≫ f := by
             simp only [Category.assoc]
@@ -248,10 +248,10 @@ theorem rightDerivedMap_exists_unique
     ∃! φ : rightDerivedValue S hS F X hX ⟶
         rightDerivedValue S hS F Y hY,
       rightDerivedMapCondition S hS F f hX hY φ := by
-  letI : LeftMultiplicativeSystem S := hS.1.1
-  letI : IsFiltered (LeftDenominatorCategory S X) :=
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : IsFiltered (LeftDenominatorCategory S X) :=
     left_denominator_category_is_filtered X
-  letI : IsFiltered (LeftDenominatorCategory S Y) :=
+  let : IsFiltered (LeftDenominatorCategory S Y) :=
     left_denominator_category_is_filtered Y
   change IsEssentiallyConstantIndDiagram (rightDerivedDiagram S F X) at hX
   change IsEssentiallyConstantIndDiagram (rightDerivedDiagram S F Y) at hY
@@ -342,10 +342,10 @@ theorem leftDerivedMap_exists_unique
     ∃! φ : leftDerivedValue S hS F X hX ⟶
         leftDerivedValue S hS F Y hY,
       leftDerivedMapCondition S hS F f hX hY φ := by
-  letI : RightMultiplicativeSystem S := hS.1.2
-  letI : IsCofiltered (RightDenominatorCategory S X) :=
+  let : RightMultiplicativeSystem S := hS.1.2
+  let : IsCofiltered (RightDenominatorCategory S X) :=
     right_denominator_category_is_cofiltered X
-  letI : IsCofiltered (RightDenominatorCategory S Y) :=
+  let : IsCofiltered (RightDenominatorCategory S Y) :=
     right_denominator_category_is_cofiltered Y
   change IsEssentiallyConstantProDiagram (leftDerivedDiagram S F X) at hX
   change IsEssentiallyConstantProDiagram (leftDerivedDiagram S F Y) at hY

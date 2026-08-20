@@ -74,6 +74,136 @@ def TotalizationSpec : Type _ :=
       (f : homogeneous S X Y i) (g : homogeneous S Y Z j),
       D.homogeneous_comp f g = homogeneousComp S i j f g)}
 
+/-- Bilinear composition on the direct-sum totalization.  Keeping this
+construction opaque prevents its implementation from being copied into every
+use in `totalizationSpec_nonempty`. -/
+noncomputable def totalComp {X Y Z : C} :
+    DirectSum ℤ (fun n => homogeneous S X Y n) →
+      DirectSum ℤ (fun n => homogeneous S Y Z n) →
+        DirectSum ℤ (fun n => homogeneous S X Z n) :=
+  fun f g =>
+    DirectSum.toModule R ℤ
+      ((DirectSum ℤ (fun n => homogeneous S Y Z n)) →ₗ[R]
+        DirectSum ℤ (fun n => homogeneous S X Z n))
+      (fun i =>
+        { toFun := fun fi =>
+            DirectSum.toModule R ℤ
+              (DirectSum ℤ (fun n => homogeneous S X Z n))
+              (fun j =>
+                { toFun := fun gj =>
+                    DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Z n) (i + j)
+                      (homogeneousComp S i j fi gj)
+                  map_add' := by
+                    intro gj gj'
+                    let _ : Functor.Additive (S.shift i) := S.additive i
+                    have hcomp := congrArg
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Z n) (i + j))
+                      (show homogeneousComp S i j fi (gj + gj') =
+                          homogeneousComp S i j fi gj +
+                            homogeneousComp S i j fi gj' by
+                        simp [homogeneousComp])
+                    rw [hcomp]
+                    exact (DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Z n) (i + j)).map_add _ _
+                  map_smul' := by
+                    intro r gj
+                    let _ : Functor.Additive (S.shift i) := S.additive i
+                    let _ : Functor.Linear R (S.shift i) := S.linear i
+                    have hcomp := congrArg
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Z n) (i + j))
+                      (show homogeneousComp S i j fi (r • gj) =
+                          r • homogeneousComp S i j fi gj by
+                        simp [homogeneousComp])
+                    rw [hcomp]
+                    exact (DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ })
+          map_add' := by
+            intro fi fi'
+            let _ : Functor.Additive (S.shift i) := S.additive i
+            apply DirectSum.linearMap_ext
+            intro j
+            apply LinearMap.ext
+            intro gj'
+            simp only [LinearMap.comp_apply, LinearMap.add_apply]
+            simp only [DirectSum.toModule_lof]
+            dsimp
+            have hcomp := congrArg
+              (DirectSum.lof R ℤ
+                (fun n => homogeneous S X Z n) (i + j))
+              (show homogeneousComp S i j (fi + fi') gj' =
+                  homogeneousComp S i j fi gj' +
+                    homogeneousComp S i j fi' gj' by
+                simp [homogeneousComp])
+            rw [hcomp]
+            exact (DirectSum.lof R ℤ
+              (fun n => homogeneous S X Z n) (i + j)).map_add _ _
+          map_smul' := by
+            intro r fi
+            let _ : Functor.Additive (S.shift i) := S.additive i
+            let _ : Functor.Linear R (S.shift i) := S.linear i
+            apply DirectSum.linearMap_ext
+            intro j
+            apply LinearMap.ext
+            intro gj'
+            simp only [LinearMap.comp_apply, LinearMap.smul_apply]
+            simp only [DirectSum.toModule_lof]
+            dsimp
+            have hcomp := congrArg
+              (DirectSum.lof R ℤ
+                (fun n => homogeneous S X Z n) (i + j))
+              (show homogeneousComp S i j (r • fi) gj' =
+                  r • homogeneousComp S i j fi gj' by
+                simp [homogeneousComp])
+            rw [hcomp]
+            exact (DirectSum.lof R ℤ
+              (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ }) f g
+
+@[simp] theorem totalComp_add_left {X Y Z : C}
+    (f f' : DirectSum ℤ (fun n => homogeneous S X Y n))
+    (g : DirectSum ℤ (fun n => homogeneous S Y Z n)) :
+    totalComp S (f + f') g = totalComp S f g + totalComp S f' g := by
+  simp [totalComp]
+
+@[simp] theorem totalComp_add_right {X Y Z : C}
+    (f : DirectSum ℤ (fun n => homogeneous S X Y n))
+    (g g' : DirectSum ℤ (fun n => homogeneous S Y Z n)) :
+    totalComp S f (g + g') = totalComp S f g + totalComp S f g' := by
+  simp [totalComp]
+
+@[simp] theorem totalComp_smul_left {X Y Z : C} (r : R)
+    (f : DirectSum ℤ (fun n => homogeneous S X Y n))
+    (g : DirectSum ℤ (fun n => homogeneous S Y Z n)) :
+    totalComp S (r • f) g = r • totalComp S f g := by
+  simp [totalComp]
+
+@[simp] theorem totalComp_smul_right {X Y Z : C} (r : R)
+    (f : DirectSum ℤ (fun n => homogeneous S X Y n))
+    (g : DirectSum ℤ (fun n => homogeneous S Y Z n)) :
+    totalComp S f (r • g) = r • totalComp S f g := by
+  simp [totalComp]
+
+@[simp] theorem totalComp_zero_left {X Y Z : C}
+    (g : DirectSum ℤ (fun n => homogeneous S Y Z n)) :
+    totalComp S (0 : DirectSum ℤ (fun n => homogeneous S X Y n)) g = 0 := by
+  simp [totalComp]
+
+@[simp] theorem totalComp_zero_right {X Y Z : C}
+    (f : DirectSum ℤ (fun n => homogeneous S X Y n)) :
+    totalComp S f (0 : DirectSum ℤ (fun n => homogeneous S Y Z n)) = 0 := by
+  simp [totalComp]
+
+@[simp] theorem totalComp_lof {X Y Z : C} {i j : ℤ}
+    (f : homogeneous S X Y i) (g : homogeneous S Y Z j) :
+    totalComp S
+        (DirectSum.lof R ℤ (fun n => homogeneous S X Y n) i f)
+        (DirectSum.lof R ℤ (fun n => homogeneous S Y Z n) j g) =
+      DirectSum.lof R ℤ (fun n => homogeneous S X Z n) (i + j)
+        (homogeneousComp S i j f g) := by
+  simp [totalComp]
+
 theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
   have hid_comp :
       ∀ {X Y : C} {j : ℤ} (f : homogeneous S X Y j),
@@ -95,90 +225,7 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
     apply eq_of_heq
     simp only [eqToHom_map, eqToHom_trans, cast_heq_iff_heq]
     exact comp_eqToHom_heq f _
-  let total_comp :
-      ∀ {X Y Z : C},
-        DirectSum ℤ (fun n => homogeneous S X Y n) →
-          DirectSum ℤ (fun n => homogeneous S Y Z n) →
-            DirectSum ℤ (fun n => homogeneous S X Z n) :=
-    fun {X Y Z} f g =>
-      DirectSum.toModule R ℤ
-        ((DirectSum ℤ (fun n => homogeneous S Y Z n)) →ₗ[R]
-          DirectSum ℤ (fun n => homogeneous S X Z n))
-        (fun i =>
-          { toFun := fun fi =>
-              DirectSum.toModule R ℤ
-                (DirectSum ℤ (fun n => homogeneous S X Z n))
-                (fun j =>
-                  { toFun := fun gj =>
-                      DirectSum.lof R ℤ
-                        (fun n => homogeneous S X Z n) (i + j)
-                        (homogeneousComp S i j fi gj)
-                    map_add' := by
-                      intro gj gj'
-                      let _ : Functor.Additive (S.shift i) := S.additive i
-                      have hcomp := congrArg
-                        (DirectSum.lof R ℤ
-                          (fun n => homogeneous S X Z n) (i + j))
-                        (show homogeneousComp S i j fi (gj + gj') =
-                            homogeneousComp S i j fi gj +
-                              homogeneousComp S i j fi gj' by
-                          simp [homogeneousComp])
-                      rw [hcomp]
-                      exact (DirectSum.lof R ℤ
-                        (fun n => homogeneous S X Z n) (i + j)).map_add _ _
-                    map_smul' := by
-                      intro r gj
-                      let _ : Functor.Additive (S.shift i) := S.additive i
-                      let _ : Functor.Linear R (S.shift i) := S.linear i
-                      have hcomp := congrArg
-                        (DirectSum.lof R ℤ
-                          (fun n => homogeneous S X Z n) (i + j))
-                        (show homogeneousComp S i j fi (r • gj) =
-                            r • homogeneousComp S i j fi gj by
-                          simp [homogeneousComp])
-                      rw [hcomp]
-                      exact (DirectSum.lof R ℤ
-                        (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ })
-            map_add' := by
-              intro fi fi'
-              let _ : Functor.Additive (S.shift i) := S.additive i
-              apply DirectSum.linearMap_ext
-              intro j
-              apply LinearMap.ext
-              intro gj'
-              simp only [LinearMap.comp_apply, LinearMap.add_apply]
-              simp only [DirectSum.toModule_lof]
-              dsimp
-              have hcomp := congrArg
-                (DirectSum.lof R ℤ
-                  (fun n => homogeneous S X Z n) (i + j))
-                (show homogeneousComp S i j (fi + fi') gj' =
-                    homogeneousComp S i j fi gj' +
-                      homogeneousComp S i j fi' gj' by
-                  simp [homogeneousComp])
-              rw [hcomp]
-              exact (DirectSum.lof R ℤ
-                (fun n => homogeneous S X Z n) (i + j)).map_add _ _
-            map_smul' := by
-              intro r fi
-              let _ : Functor.Additive (S.shift i) := S.additive i
-              let _ : Functor.Linear R (S.shift i) := S.linear i
-              apply DirectSum.linearMap_ext
-              intro j
-              apply LinearMap.ext
-              intro gj'
-              simp only [LinearMap.comp_apply, LinearMap.smul_apply]
-              simp only [DirectSum.toModule_lof]
-              dsimp
-              have hcomp := congrArg
-                (DirectSum.lof R ℤ
-                  (fun n => homogeneous S X Z n) (i + j))
-                (show homogeneousComp S i j (r • fi) gj' =
-                    r • homogeneousComp S i j fi gj' by
-                  simp [homogeneousComp])
-              rw [hcomp]
-              exact (DirectSum.lof R ℤ
-                (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ }) f g
+  let total_comp := @totalComp R C _ _ _ _ S
   have hcomp_add_left :
       ∀ {X Y Z : C}
         (f f' : DirectSum ℤ (fun n => homogeneous S X Y n))

@@ -206,7 +206,36 @@ theorem ringKrullDim_le_of_quasiFinite_polynomial
     (φ : MvPolynomial (Fin n) k →ₐ[k] S)
     (hquasi : Formalization.Books.Algebra.Unit122.IsQuasiFinite φ.toRingHom) :
     ringKrullDim S ≤ n := by
-  sorry
+  rcases hquasi with ⟨hfinite, hqf⟩
+  apply (Formalization.Books.Algebra.Unit60.ringKrullDim_le_iff_maximal_height_le
+    (n : WithBot ℕ∞)).mpr
+  intro m hm
+  let q : PrimeSpectrum S := ⟨m, hm.isPrime⟩
+  have hloc := ringKrullDim_localization_le_of_quasiFiniteAt
+    φ.toRingHom (PrimeSpectrum.comap φ.toRingHom q) q rfl
+    ⟨hfinite, hqf q⟩
+  have hpoly : ringKrullDim (MvPolynomial (Fin n) k) =
+      (n : WithBot ℕ∞) := by
+    rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+      ringKrullDim_eq_zero_of_field]
+    simp
+  have hbase : ringKrullDim
+      (Localization.AtPrime (PrimeSpectrum.comap φ.toRingHom q).asIdeal) ≤
+        (n : WithBot ℕ∞) := by
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height
+      (PrimeSpectrum.comap φ.toRingHom q).asIdeal
+      (Localization.AtPrime (PrimeSpectrum.comap φ.toRingHom q).asIdeal)]
+    have hp := (Formalization.Books.Algebra.Unit60.ringKrullDim_le_iff_prime_height_le
+      (R := MvPolynomial (Fin n) k) (ringKrullDim (MvPolynomial (Fin n) k))).mp le_rfl
+        (PrimeSpectrum.comap φ.toRingHom q).isPrime
+    rw [hpoly] at hp
+    exact hp
+  rw [IsLocalization.AtPrime.ringKrullDim_eq_height m
+    (Localization.AtPrime m)] at hloc
+  calc
+    (m.height : WithBot ℕ∞) ≤
+        ringKrullDim (Localization.AtPrime (PrimeSpectrum.comap φ.toRingHom q).asIdeal) := hloc
+    _ ≤ (n : WithBot ℕ∞) := hbase
 
 /-! ### Openness and base change of bounded fibre dimension -/
 

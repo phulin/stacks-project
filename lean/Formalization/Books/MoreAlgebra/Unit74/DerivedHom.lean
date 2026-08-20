@@ -1,6 +1,6 @@
-import Mathlib.Algebra.Homology.DerivedCategory.KInjective
-import Formalization.Books.Derived.Unit11.DerivedCategories
-import Formalization.Books.MoreAlgebra.Unit73.SignRules
+import Formalization.Books.MoreAlgebra.Unit59.DerivedTensorProduct
+import Formalization.Books.MoreAlgebra.Unit72.HomComplexes
+import Formalization.Books.Derived.Unit19.ProjectiveResolutions
 
 /-!
 # More on Algebra, Chapter 74: derived hom
@@ -20,7 +20,8 @@ open CategoryTheory.Limits
 open Formalization.Books.Derived.Unit08
 open Formalization.Books.Derived.Unit11
 open Formalization.Books.MoreAlgebra.Unit58
-open Formalization.Books.MoreAlgebra.Unit73
+open Formalization.Books.MoreAlgebra.Unit59
+open Formalization.Books.MoreAlgebra.Unit72
 
 universe u w
 
@@ -29,66 +30,47 @@ namespace Formalization.Books.MoreAlgebra.Unit74
 /-! ## The derived category and derived tensor product -/
 
 abbrev Comp (R : Type u) [CommRing R] :=
-  Formalization.Books.MoreAlgebra.Unit73.Comp R
+  Formalization.Books.MoreAlgebra.Unit59.Comp R
 
 abbrev D (R : Type u) [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] :=
-  DerivedCategory (ModuleCat.{u} R)
+  Formalization.Books.MoreAlgebra.Unit59.D R
 
 noncomputable abbrev derivedQuotient (R : Type u) [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] :
     Comp R ⥤ D R :=
-  DerivedCategory.Q
+  Formalization.Books.MoreAlgebra.Unit59.derivedComplexQuotient R
 
-/- A complex is K-flat when tensoring by it preserves quasi-isomorphisms.
-   This is the property used by the source's derived-tensor computations. -/
-def IsKFlat {R : Type u} [CommRing R]
-    (K : Comp R) : Prop :=
-  ∀ {L M : Comp R} (f : L ⟶ M), QuasiIso f →
-    QuasiIso ((tensorLeftComplexFunctor R K).map f)
+/- Chapter 59 provides the derived tensor product used throughout this
+   section.  These re-exports preserve the Chapter 74 interface without
+   introducing a second choice of derived tensor bifunctor. -/
+noncomputable abbrev derivedTensorFunctor {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    : D R × D R ⥤ D R :=
+  Formalization.Books.MoreAlgebra.Unit59.derivedTensorProductFunctor
 
-/- A bifunctor with the source's K-flat representative computation.  The
-   existence theorem is the only unresolved part of this foundational choice;
-   the operation itself is a genuine Lean body. -/
-structure DerivedTensorFunctorData (R : Type u) [CommRing R]
-    [HasDerivedCategory.{w} (ModuleCat.{u} R)] where
-  functor : D R × D R ⥤ D R
-  represented :
-    ∀ (K L : D R), ∃ (K' L' : Comp R)
-      (_eK : (derivedQuotient R).obj K' ≅ K)
-      (_eL : (derivedQuotient R).obj L' ≅ L),
-      IsKFlat K' ∧ IsKFlat L' ∧
-        Nonempty (functor.obj (K, L) ≅
-          (derivedQuotient R).obj (tensorProductComplex R K' L'))
-
-theorem derivedTensorFunctorData_exists {R : Type u} [CommRing R]
-    [HasDerivedCategory.{w} (ModuleCat.{u} R)] :
-    Nonempty (DerivedTensorFunctorData R) := by
-  sorry
-
-noncomputable def derivedTensorFunctor {R : Type u} [CommRing R]
-    [HasDerivedCategory.{w} (ModuleCat.{u} R)] : D R × D R ⥤ D R :=
-  (Classical.choice (derivedTensorFunctorData_exists (R := R))).functor
-
-noncomputable def derivedTensor {R : Type u} [CommRing R]
+noncomputable abbrev derivedTensor {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : D R) : D R :=
-  (derivedTensorFunctor (R := R)).obj (K, L)
+  Formalization.Books.MoreAlgebra.Unit59.derivedTensor K L
 
-noncomputable def derivedTensorMap {R : Type u} [CommRing R]
+noncomputable abbrev derivedTensorMap {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     {K K' L L' : D R} (f : K ⟶ K') (g : L ⟶ L') :
     derivedTensor (R := R) K L ⟶ derivedTensor (R := R) K' L' :=
-  (derivedTensorFunctor (R := R)).map (f, g)
+  Formalization.Books.MoreAlgebra.Unit59.derivedTensorMap f g
 
 theorem derivedTensor_represented {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : D R) :
     ∃ (K' L' : Comp R)
       (_eK : (derivedQuotient R).obj K' ≅ K)
       (_eL : (derivedQuotient R).obj L' ≅ L),
-      IsKFlat K' ∧ IsKFlat L' ∧
+      Formalization.Books.MoreAlgebra.Unit59.IsKFlat K' ∧
+        Formalization.Books.MoreAlgebra.Unit59.IsKFlat L' ∧
         Nonempty (derivedTensor (R := R) K L ≅
           (derivedQuotient R).obj (tensorProductComplex R K' L')) := by
-  sorry
+  obtain ⟨K', L', ⟨eK⟩, ⟨eL⟩, hK, hL, h⟩ :=
+    Formalization.Books.MoreAlgebra.Unit59.derivedTensor_represented K L
+  exact ⟨K', L', eK, eL, hK, hL, h⟩
 
 /-! ## Derived Hom -/
 

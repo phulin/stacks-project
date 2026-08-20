@@ -207,9 +207,9 @@ theorem schemeSize_pullback_le {X Y S : Scheme.{u}} (f : X ⟶ S) (g : Y ⟶ S) 
     schemeSize (pullback f g) ≤ max (schemeSize X) (schemeSize Y) := by
   sorry
 
-/-- A quasi-compact, locally finite-type morphism does not increase scheme size. -/
+/-- A quasi-compact source with a locally finite-type map does not increase scheme size. -/
 theorem schemeSize_le_of_quasiCompact_locallyOfFiniteType
-    {X S : Scheme.{u}} (f : X ⟶ S) [QuasiCompact f] [LocallyOfFiniteType f] :
+    {X S : Scheme.{u}} (f : X ⟶ S) [CompactSpace X] [LocallyOfFiniteType f] :
     schemeSize X ≤ schemeSize S := by
   sorry
 
@@ -303,6 +303,17 @@ theorem locallyOfFiniteType_represented_of_continuum_affineCover
     IsRepresentedAt c α T := by
   sorry
 
+/- The source identifies the cardinality of the reals with both the continuum
+and the countable power of `aleph0`; these equalities explain the displayed
+covering bound in the preceding example. -/
+theorem real_cardinal_eq_two_power_aleph0 :
+    Cardinal.mk ℝ = (2 : Cardinal) ^ Cardinal.aleph0 := by
+  sorry
+
+theorem real_cardinal_eq_aleph0_power_aleph0 :
+    Cardinal.mk ℝ = Cardinal.aleph0 ^ Cardinal.aleph0 := by
+  sorry
+
 /-- Monomorphisms of the two bounded kinds have representatives in `Sch α`. -/
 theorem monomorphism_represented {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     {S T : Scheme.{u}} (hS : SchemeInLevel c α S) (f : T ⟶ S) [Mono f]
@@ -350,6 +361,12 @@ theorem affine_construction_algebraic_closure_residue_field
     (p : PrimeSpectrum (schemeRing T))
     : IsRepresentedAt c α
       (Spec (CommRingCat.of (residueFieldAlgebraicClosure (schemeRing T) p))) := by
+  sorry
+
+/- The proof of the affine-construction list uses the standard cardinal bound
+for an algebraic closure. -/
+theorem algebraicClosure_cardinal_eq_max (K : Type u) [Field K] :
+    Cardinal.mk (AlgebraicClosure K) = max Cardinal.aleph0 (Cardinal.mk K) := by
   sorry
 
 theorem affine_construction_subring

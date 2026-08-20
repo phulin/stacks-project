@@ -479,8 +479,28 @@ def representableCofiberedCategory {C D : Type u}
     (fun {A B} q =>
       (Discrete.functor
         (fun f : R ⟶ ι.obj A => Discrete.mk (f ≫ ι.map q))).toCatHom)
-    (fun A => eqToIso (by sorry))
-    (fun f g => eqToIso (by sorry))
+    (fun A => eqToIso (by
+      apply Cat.Hom.ext
+      apply Discrete.functor_ext
+      intro X
+      dsimp [Functor.toCatHom, CategoryTheory.Functor.id]
+      simp))
+    (fun f g => eqToIso (by
+      apply Cat.Hom.ext
+      apply Discrete.functor_ext
+      intro X
+      dsimp [Functor.toCatHom, CategoryTheory.Functor.comp]
+      congr 1
+      simp [Category.assoc]))
+    (by
+      intros
+      simp [Bicategory.Strict.associator_eqToIso])
+    (by
+      intros
+      simp [Bicategory.Strict.leftUnitor_eqToIso])
+    (by
+      intros
+      simp [Bicategory.Strict.rightUnitor_eqToIso])
 
 structure CofiberedRestrictionEquivalence {C D : Type u}
     [Category.{u, u} C] [Category.{u, u} D]

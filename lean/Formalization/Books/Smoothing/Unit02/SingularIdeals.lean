@@ -158,7 +158,10 @@ theorem elementaryStandard_isStrictlyStandard
     {R A : Type*} [CommRing R] [CommRing A] [Algebra R A] {a : A}
     (ha : IsElementaryStandard R A a) :
     IsStrictlyStandard R A a := by
-  sorry
+  rcases ha with ⟨n, m, c, P, hcn, hcm, u, v, a', hdet, hcond⟩
+  refine ⟨n, m, c, P, hcn, hcm, v, hcond, ?_⟩
+  rw [hdet]
+  exact Ideal.mul_mem_left _ _ (Ideal.subset_span ⟨u, rfl⟩)
 
 /-! ## Parsing the Jacobian identity -/
 
@@ -181,7 +184,76 @@ theorem strictlyStandard_jacobian_gives_split
     ∃ ψ : P.toExtension.CotangentSpace →ₗ[A] (Fin c → A),
       (ψ ∘ₗ P.toExtension.cotangentComplex ∘ₗ presentationRelationMap P v) =
         a • LinearMap.id := by
-  sorry
+  have hminor : ∀ u : Fin c ↪ ι, ∃ ψ : P.toExtension.CotangentSpace →ₗ[A] (Fin c → A),
+      (ψ ∘ₗ P.toExtension.cotangentComplex ∘ₗ presentationRelationMap P v) =
+        presentationJacobianMinor P u v • LinearMap.id := by
+    intro u
+    let M : Matrix (Fin c) (Fin c) A :=
+      fun j i => algebraMap P.Ring A (MvPolynomial.pderiv (u i) (P.relation (v j)))
+    let ρ : P.toExtension.CotangentSpace →ₗ[A] (Fin c → A) :=
+      (Finsupp.linearEquivFunOnFinite A A (Fin c)).toLinearMap ∘ₗ
+        Finsupp.lcomapDomain u u.injective ∘ₗ
+        P.toGenerators.cotangentSpaceBasis.repr.toLinearMap
+    let ψ : P.toExtension.CotangentSpace →ₗ[A] (Fin c → A) :=
+      Matrix.toLin' (M.transpose.adjugate) ∘ₗ ρ
+    have hρ : ρ ∘ₗ P.toExtension.cotangentComplex ∘ₗ presentationRelationMap P v =
+        Matrix.toLin' M.transpose := by
+      apply (Pi.basisFun A (Fin c)).ext
+      intro j
+      apply funext
+      intro i
+      simp [ρ, M, presentationRelationMap, presentationRelationCotangent,
+        Algebra.Generators.cotangentRestrict,
+        Algebra.Generators.cotangentSpaceBasis_repr_one_tmul]
+      change _ = (MvPolynomial.aeval P.val)
+        (MvPolynomial.pderiv (u i) (P.relation (v j)))
+      simpa [M] using
+        (P.toGenerators.cotangentSpaceBasis_repr_one_tmul
+          (P.relation (v j)) (u i))
+    refine ⟨ψ, ?_⟩
+    rw [show ψ ∘ₗ P.toExtension.cotangentComplex ∘ₗ presentationRelationMap P v =
+        Matrix.toLin' (M.transpose.adjugate) ∘ₗ Matrix.toLin' M.transpose by
+      dsimp [ψ]
+      rw [LinearMap.comp_assoc, hρ]]
+    rw [← Matrix.toLin'_mul, Matrix.adjugate_mul, map_smul, Matrix.toLin'_one]
+    rw [Matrix.det_transpose]
+    simp only [M, presentationJacobianMinor]
+    have hdet :
+        Matrix.det (fun j i : Fin c =>
+          algebraMap P.Ring A (MvPolynomial.pderiv (u i) (P.relation (v j)))) =
+          algebraMap P.Ring A
+            (Matrix.det (fun j i : Fin c =>
+              MvPolynomial.pderiv (u i) (P.relation (v j)))) := by
+      calc
+        Matrix.det (fun j i : Fin c =>
+            algebraMap P.Ring A (MvPolynomial.pderiv (u i) (P.relation (v j)))) =
+            ((algebraMap P.Ring A).mapMatrix
+              (fun j i : Fin c => MvPolynomial.pderiv (u i) (P.relation (v j)))).det := by
+          congr 1
+        _ = algebraMap P.Ring A
+            (Matrix.det (fun j i : Fin c =>
+              MvPolynomial.pderiv (u i) (P.relation (v j)))) :=
+          (RingHom.map_det (algebraMap P.Ring A)
+            (fun j i : Fin c => MvPolynomial.pderiv (u i) (P.relation (v j)))).symm
+    rw [hdet]
+  unfold presentationJacobianIdeal at ha
+  induction ha using Submodule.span_induction with
+  | mem x hx =>
+      obtain ⟨u, rfl⟩ := hx
+      exact hminor u
+  | zero =>
+      refine ⟨0, ?_⟩
+      simp
+  | add f g hf hg hf' hg' =>
+      obtain ⟨ψf, hψf⟩ := hf'
+      obtain ⟨ψg, hψg⟩ := hg'
+      refine ⟨ψf + ψg, ?_⟩
+      rw [LinearMap.add_comp, hψf, hψg, add_smul]
+  | smul r f hf hf' =>
+      obtain ⟨ψf, hψf⟩ := hf'
+      refine ⟨r • ψf, ?_⟩
+      rw [LinearMap.smul_comp, hψf, smul_smul]
+      simp [mul_comm]
 
 /-- Conversely, a split composite forces the c-th power of a to satisfy
 the strictly-standard Jacobian identity. -/
@@ -192,7 +264,116 @@ theorem split_gives_strictlyStandard_jacobian_power
       (ψ ∘ₗ P.toExtension.cotangentComplex ∘ₗ presentationRelationMap P v) =
         a • LinearMap.id) :
     a ^ c ∈ presentationJacobianIdeal P v := by
-  sorry
+  classical
+  obtain ⟨ψ, hψ⟩ := hψ
+  let F : Fin c → ι →₀ A := fun j =>
+    P.toGenerators.cotangentSpaceBasis.repr
+      (P.toExtension.cotangentComplex (presentationRelationCotangent P (v j)))
+  let s : Finset ι := Finset.univ.biUnion (fun j => (F j).support)
+  let e : Fin s.card ↪ ι :=
+    ⟨fun i => (s.equivFin.symm i : ι), fun i j hij =>
+      (s.equivFin.symm).injective (Subtype.ext hij)⟩
+  let B : Matrix (Fin c) (Fin s.card) A := fun j i =>
+    ψ (P.toGenerators.cotangentSpaceBasis (e i)) j
+  let D : Matrix (Fin s.card) (Fin c) A := fun i j => F j (e i)
+  have hFs : ∀ j : Fin c, (F j).support ⊆ s := by
+    intro j x hx
+    exact Finset.mem_biUnion.mpr ⟨j, Finset.mem_univ _, hx⟩
+  have hBD : B * D = a • (1 : Matrix (Fin c) (Fin c) A) := by
+    have hcoord : ∀ l : Fin c, ∀ j : Fin c,
+        ψ (P.toExtension.cotangentComplex (presentationRelationCotangent P (v l))) j =
+          ∑ i : Fin s.card, B j i * D i l := by
+      intro l j
+      let g : Fin s.card →₀ A :=
+        Finsupp.comapDomain e (F l) e.injective.injOn
+      have hsupport : ((F l).support : Set ι) ⊆ Set.range e := by
+        intro x hx
+        have hxs : x ∈ s := hFs l hx
+        refine ⟨s.equivFin ⟨x, hxs⟩, ?_⟩
+        change ((s.equivFin.symm (s.equivFin ⟨x, hxs⟩) : ι) = x)
+        simp
+      have hrep : F l = Finsupp.embDomain e g :=
+        (Finsupp.embDomain_comapDomain hsupport).symm
+      have hx : P.toExtension.cotangentComplex
+          (presentationRelationCotangent P (v l)) =
+          ∑ i : Fin s.card, g i • P.toGenerators.cotangentSpaceBasis (e i) := by
+        rw [← P.toGenerators.cotangentSpaceBasis.linearCombination_repr
+          (P.toExtension.cotangentComplex (presentationRelationCotangent P (v l)))]
+        rw [show P.toGenerators.cotangentSpaceBasis.repr
+            (P.toExtension.cotangentComplex (presentationRelationCotangent P (v l))) = F l by
+              rfl, hrep, Finsupp.linearCombination_embDomain]
+        simp [Finsupp.linearCombination_apply, Finsupp.sum_fintype]
+      rw [hx, map_sum]
+      simp [B, D, g, mul_comm]
+    ext j l
+    have hcomp := congrArg
+      (fun f : (Fin c → A) →ₗ[A] (Fin c → A) => (f (Pi.single l 1)) j) hψ
+    rw [Matrix.mul_apply]
+    have hcomp' :
+        ψ (P.toExtension.cotangentComplex (presentationRelationCotangent P (v l))) j =
+          if j = l then a else 0 := by
+      simpa [LinearMap.comp_apply, presentationRelationMap, Pi.single_apply] using hcomp
+    rw [← hcoord l j, hcomp']
+    by_cases h : j = l <;> simp [h, Matrix.smul_apply]
+  have hdet : a ^ c =
+      ∑ T : {t : Finset (Fin s.card) // t.card = c},
+        Formalization.Books.Algebra.Unit03.columnMinor B T *
+          Formalization.Books.Algebra.Unit03.rowMinor D T := by
+    calc
+      a ^ c = (a • (1 : Matrix (Fin c) (Fin c) A)).det := by simp
+      _ = (B * D).det := by rw [hBD]
+      _ = _ := Formalization.Books.Algebra.Unit03.cauchyBinet B D
+  rw [presentationJacobianIdeal, hdet]
+  apply Ideal.sum_mem
+  intro T hT
+  let uT : Fin c ↪ ι :=
+    ⟨fun i => e (T.1.orderIsoOfFin T.2 i), fun i j hij =>
+      (T.1.orderIsoOfFin T.2).injective (Subtype.ext (e.injective hij))⟩
+  have hentry : ∀ i j : Fin c,
+      F j (e (T.1.orderIsoOfFin T.2 i)) =
+        algebraMap P.Ring A
+          (MvPolynomial.pderiv (e (T.1.orderIsoOfFin T.2 i)) (P.relation (v j))) := by
+    intro i j
+    rw [P.toGenerators.algebraMap_apply]
+    simpa [F, presentationRelationCotangent] using
+      (P.toGenerators.cotangentSpaceBasis_repr_one_tmul
+        (P.relation (v j)) (e (T.1.orderIsoOfFin T.2 i)))
+  have hrow :
+      Formalization.Books.Algebra.Unit03.rowMinor D T =
+        presentationJacobianMinor P uT v := by
+    calc
+      Formalization.Books.Algebra.Unit03.rowMinor D T =
+          Matrix.det (fun j i : Fin c => D (T.1.orderIsoOfFin T.2 i) j) := by
+            rw [Formalization.Books.Algebra.Unit03.rowMinor]
+            rw [← Matrix.det_transpose]
+            apply congrArg Matrix.det
+            apply Matrix.ext
+            intro i j
+            rfl
+      _ = Matrix.det (fun j i : Fin c => F j (e (T.1.orderIsoOfFin T.2 i))) := by
+            rfl
+      _ = Matrix.det (fun j i : Fin c =>
+          algebraMap P.Ring A
+            (MvPolynomial.pderiv (e (T.1.orderIsoOfFin T.2 i)) (P.relation (v j)))) := by
+            apply congrArg Matrix.det
+            apply Matrix.ext
+            intro j i
+            exact hentry i j
+      _ = algebraMap P.Ring A
+          (Matrix.det (fun j i : Fin c =>
+            MvPolynomial.pderiv (e (T.1.orderIsoOfFin T.2 i)) (P.relation (v j)))) := by
+            calc
+              _ = ((algebraMap P.Ring A).mapMatrix
+                (fun j i : Fin c =>
+                  MvPolynomial.pderiv (e (T.1.orderIsoOfFin T.2 i))
+                    (P.relation (v j)))).det := by congr 1
+              _ = _ := (RingHom.map_det (algebraMap P.Ring A)
+                (fun j i : Fin c =>
+                  MvPolynomial.pderiv (e (T.1.orderIsoOfFin T.2 i))
+                    (P.relation (v j)))).symm
+      _ = presentationJacobianMinor P uT v := by
+            simp [presentationJacobianMinor, uT]
+  exact Ideal.mul_mem_left _ _ (Ideal.subset_span ⟨uT, hrow.symm⟩)
 
 /-! ## Elkik's description -/
 

@@ -6,6 +6,7 @@ import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
 import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
 import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Mathlib.RingTheory.RingHom.Finite
+import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 
@@ -15,8 +16,9 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 The fibre of a ring map at a prime is represented by Mathlib's canonical
 `Ideal.Fiber` construction.  The point of that fibre corresponding to a prime
 of the target is the earlier `tensorFibrePrime` interface, and its local ring
-is `tensorLocalRingOfFibre`.  The quasi-finite predicates below use those
-canonical constructions and Mathlib's `RingHom.FiniteType` and `Module.Finite`.
+is `tensorLocalRingOfFibre`.  The quasi-finite statements below use those
+canonical constructions and Mathlib's `RingHom.QuasiFinite`,
+`RingHom.QuasiFiniteAt`, `RingHom.FiniteType`, and `Module.Finite` interfaces.
 -/
 
 namespace Formalization.Books.Algebra.Unit122
@@ -115,16 +117,14 @@ theorem isolated_point_fibre_criteria
 
 /-! ## Quasi-finite maps -/
 
-/- The source defines quasi-finiteness at a prime only after assuming finite
-   type.  The standalone predicate retains that hypothesis and records the
-   isolated point of the canonical fibre. -/
+/- Mathlib's `RingHom.QuasiFinite` deliberately omits the finite-type
+   hypothesis, whereas the source builds finite type into its definition.
+   These source-facing wrappers retain that distinction while delegating the
+   fibre condition to Mathlib's canonical interfaces. -/
 def IsQuasiFiniteAt
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (q : PrimeSpectrum S) : Prop :=
-  RingHom.FiniteType f ∧
-    ∃ p : PrimeSpectrum R, ∃ hq : PrimeSpectrum.comap f q = p,
-      IsolatedPoint
-        (Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hq)
+  RingHom.FiniteType f ∧ RingHom.QuasiFiniteAt f q.asIdeal
 
 def IsQuasiFinite
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
@@ -158,7 +158,8 @@ theorem quasiFiniteAt_localization_iff
     (a : R) (ha : a ∉ p.asIdeal) (b : S) (hb : b ∉ q.asIdeal)
     (hfinite : RingHom.FiniteType f) :
     IsQuasiFiniteAt f q ↔
-      IsQuasiFiniteAt (Formalization.Books.Algebra.Unit30.localizationAwayMulMap f a b)
+      IsQuasiFiniteAt
+        (Formalization.Books.Algebra.Unit30.localizationAwayMulMap f a b)
         (localizedPrimeAwayMul f p q hq a b ha hb) := by
   sorry
 

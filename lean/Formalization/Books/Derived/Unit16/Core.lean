@@ -5,6 +5,7 @@ import Formalization.Books.Categories.Unit23.ExactFunctors
 import Formalization.Books.Derived.Unit10.DistinguishedTriangles
 import Formalization.Books.Derived.Unit11.DerivedCategories
 import Formalization.Books.Derived.Unit14.DerivedFunctors
+import Formalization.Books.Homology.Unit07.AdditiveFunctors
 import Formalization.Books.Homology.Unit12.CohomologicalDeltaFunctors
 
 /-!
@@ -44,6 +45,17 @@ noncomputable def rightDerivedInputFunctor
     (F : A ⥤ B) [F.Additive] :
     KPlus A ⥤ DPlus B :=
   additiveHomotopyPlusFunctor F ⋙ plusDerivedLocalizationFunctor B
+
+/-! The pointwise definedness predicate used before an everywhere-defined
+right derived functor has been chosen. -/
+
+def RightDerivedPlusDefined
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] (K : KPlus A) : Prop :=
+  rightDerivedDefined (quasiIsoPlusProperty A)
+    (boundedQuasiIsoProperty_properties A).1 (rightDerivedInputFunctor F) K
 
 /-- The functor on `K⁻` obtained from an additive functor before deriving it. -/
 noncomputable def leftDerivedInputFunctor
@@ -124,6 +136,13 @@ noncomputable def derivedPlusTruncLE
     [HasDerivedCategory.{w} A] (K : DPlus A) (a : ℤ) : DPlus A :=
   (DerivedCategory.Plus.TStructure.t.truncLE a).obj K
 
+/-- The canonical map from the `≤ a` truncation to the original object. -/
+noncomputable def derivedPlusTruncLEMap
+    {A : Type u} [Category.{v} A] [Abelian A]
+    [HasDerivedCategory.{w} A] (K : DPlus A) (a : ℤ) :
+    derivedPlusTruncLE K a ⟶ K :=
+  (DerivedCategory.Plus.TStructure.t.truncLEι a).app K
+
 /-! ## Acyclic objects and complexes -/
 
 /-- An object is right `F`-acyclic when its canonical concentrated complex
@@ -134,6 +153,17 @@ def RightAcyclic
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F) (X : A) : Prop :=
   IsIso (R.unit.app ((HomotopyCategory.Plus.singleFunctor A 0).obj X))
+
+/-- A right acyclic object for `F`, using the pointwise derived-value API
+  before an everywhere-defined functor is selected. -/
+noncomputable def RightAcyclicForF
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] (X : A) : Prop :=
+  ComputesRightDerived (quasiIsoPlusProperty A)
+    (boundedQuasiIsoProperty_properties A).1 (rightDerivedInputFunctor F)
+    ((HomotopyCategory.Plus.singleFunctor A 0).obj X)
 
 /-- The bounded-above homotopy object represented by a bounded-above complex. -/
 theorem minusHomotopyQuotient_mem
@@ -195,6 +225,16 @@ def LeftAcyclic
     {F : A ⥤ B} [F.Additive] (L : LeftDerivedFunctorData F) (X : A) : Prop :=
   IsIso (L.counit.app ((singleMinusFunctor (A := A) 0).obj X))
 
+/-- A left acyclic object for `F`, using the pointwise derived-value API. -/
+noncomputable def LeftAcyclicForF
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] (X : A) : Prop :=
+  ComputesLeftDerived (quasiIsoMinusProperty A)
+    (boundedQuasiIsoProperty_properties A).2.1 (leftDerivedInputFunctor F)
+    ((singleMinusFunctor (A := A) 0).obj X)
+
 /-- A bounded-below complex computes the right derived functor when the
   canonical comparison from its localization is an isomorphism. -/
 def ComputesRightDerivedComplex
@@ -223,6 +263,13 @@ def AllTermsRightAcyclic
     (K : CompPlus A) : Prop :=
   ∀ n : ℤ, RightAcyclic R (K.1.X n)
 
+def AllTermsRightAcyclicForF
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] (K : CompPlus A) : Prop :=
+  ∀ n : ℤ, RightAcyclicForF F (K.1.X n)
+
 def AllTermsLeftAcyclic
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
@@ -238,12 +285,26 @@ def InjectsIntoRightAcyclic
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F) : Prop :=
   ∀ X : A, ∃ (I : A) (u : X ⟶ I), Mono u ∧ RightAcyclic R I
 
+def InjectsIntoRightAcyclicForF
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] : Prop :=
+  ∀ X : A, ∃ (I : A) (u : X ⟶ I), Mono u ∧ RightAcyclicForF F I
+
 def QuotientOfLeftAcyclic
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (L : LeftDerivedFunctorData F) : Prop :=
   ∀ X : A, ∃ (P : A) (p : P ⟶ X), Epi p ∧ LeftAcyclic L P
+
+def QuotientOfLeftAcyclicForF
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] : Prop :=
+  ∀ X : A, ∃ (P : A) (p : P ⟶ X), Epi p ∧ LeftAcyclicForF F P
 
 /-! ## The delta-functor and the unbounded interface -/
 
@@ -298,6 +359,21 @@ structure UnboundedRightDerivedFunctorData
       DerivedCategory.Qh (C := A) ⋙ functor
   isRightDerived : functor.IsRightDerivedFunctor unit (quasiIsoHomotopyProperty A)
   exact : Nonempty (ExactTriangulatedFunctorData functor)
+
+/-- The unbounded derived functor restricts to the bounded-below one.  The
+  source treats these as the same derived functor; this interface records the
+  comparison when the two universal constructions are represented by chosen
+  functors. -/
+def UnboundedRightDerivedRestricts
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    {F : A ⥤ B} [F.Additive]
+    (R : RightDerivedFunctorData F)
+    (U : UnboundedRightDerivedFunctorData F) : Prop :=
+  Nonempty
+    (DerivedCategory.Plus.ι (C := A) ⋙ U.functor ≅
+      R.functor ⋙ DerivedCategory.Plus.ι (C := B))
 
 noncomputable def unboundedHigherRightDerivedFunctor
     {A : Type u} [Category.{v} A] [Abelian A]

@@ -17,7 +17,9 @@ open CategoryTheory.Pretriangulated
 open Formalization.Books.Categories.Unit23
 open Formalization.Books.Derived.Unit08
 open Formalization.Books.Derived.Unit11
+open Formalization.Books.Derived.Unit14
 open Formalization.Books.Derived.Unit16
+open Formalization.Books.Homology.Unit07
 open Formalization.Books.Homology.Unit12
 open scoped CategoryTheory.Pretriangulated.Opposite ZeroObject
 
@@ -29,9 +31,9 @@ namespace Formalization.Books.Derived.Unit16
 
 /-- Negative cohomology remains zero after applying a right derived functor.
 
-The hypothesis that `RF` is defined at `K` in the source is represented by
-the everywhere-defined `RightDerivedFunctorData` package.
--/
+The source allows a partially defined derived functor here; the selected
+`RightDerivedFunctorData` is the chapter's interface for its value on all of
+`D⁺`. -/
 theorem rightDerived_negative_vanishing
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
@@ -53,9 +55,8 @@ theorem rightDerived_truncation_cohomology_iso
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F)
     (K : DPlus A) (a : ℤ) :
     ∀ i : ℤ, i ≤ a →
-      Nonempty
-        (rightDerivedCohomology R.functor (derivedPlusTruncLE K a) i ≅
-          rightDerivedCohomology R.functor K i) := by
+      IsIso ((DerivedCategory.Plus.homologyFunctor B i).map
+        (R.functor.map (derivedPlusTruncLEMap K a))) := by
   sorry
 
 /-! ## 16.2. Higher derived functors -/
@@ -174,15 +175,19 @@ theorem rightDerived_deltaFunctor_universal
 
 /-! ## 16.7. The Leray acyclicity lemma -/
 
-/-- A bounded-below complex of right acyclic objects computes the right
-  derived functor. -/
+/-- A bounded-below complex of pointwise right acyclic objects computes the
+  pointwise right derived functor. -/
 theorem rightDerived_leray_acyclicity
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
-    {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F)
-    (K : CompPlus A) (hK : AllTermsRightAcyclic R K) :
-    ComputesRightDerivedComplex R K := by
+    (F : A ⥤ B) [F.Additive] (K : CompPlus A)
+    (hK : AllTermsRightAcyclicForF F K)
+    (hDefined :
+      RightDerivedPlusDefined F ((HomotopyCategory.Plus.quotient A).obj K)) :
+    ComputesRightDerived (quasiIsoPlusProperty A)
+      (boundedQuasiIsoProperty_properties A).1 (rightDerivedInputFunctor F)
+      ((HomotopyCategory.Plus.quotient A).obj K) := by
   sorry
 
 /-! ## 16.8. Enough acyclic objects -/
@@ -195,7 +200,7 @@ theorem enough_right_acyclics
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] :
-    (∃ R : RightDerivedFunctorData F, InjectsIntoRightAcyclic R) →
+    InjectsIntoRightAcyclicForF F →
       ∃ R : RightDerivedFunctorData F,
         InjectsIntoRightAcyclic R ∧
           ∀ K : CompPlus A,
@@ -208,7 +213,7 @@ theorem enough_left_acyclics
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] :
-    (∃ L : LeftDerivedFunctorData F, QuotientOfLeftAcyclic L) →
+    QuotientOfLeftAcyclicForF F →
       ∃ L : LeftDerivedFunctorData F,
         QuotientOfLeftAcyclic L ∧
           ∀ K : CompMinus A,
@@ -219,20 +224,21 @@ theorem enough_left_acyclics
 
 /-- An exact functor has no higher derived terms: its bounded and unbounded
   right derived functors are everywhere defined, every object is acyclic, all
-  complexes compute them, and only degree zero survives. -/
+  complexes compute them, and only degree zero survives in the bounded
+  theory. -/
 theorem exactFunctor_rightDerived_consequences
     {A : Type u} [Category.{v} A] [Abelian A]
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
-    (F : A ⥤ B) [F.Additive] (hF : IsExact F) :
+    (F : A ⥤ B) (hF : IsExact F) :
+    letI : F.Additive := left_or_right_exact_additive F (Or.inl hF.1)
     ∃ R : RightDerivedFunctorData F,
       (∀ X : A, RightAcyclic R X) ∧
         (∀ i : ℤ, i ≠ 0 → ∀ X : A,
           IsZero ((higherRightDerivedFunctor F R.functor i).obj X)) ∧
         ∃ U : UnboundedRightDerivedFunctorData F,
-          (∀ K : BookComplex A, ComputesUnboundedRightDerivedComplex U K) ∧
-            (∀ i : ℤ, i ≠ 0 → ∀ X : A,
-              IsZero ((unboundedHigherRightDerivedFunctor F U.functor i).obj X)) := by
+          UnboundedRightDerivedRestricts R U ∧
+            ∀ K : BookComplex A, ComputesUnboundedRightDerivedComplex U K := by
   sorry
 
 end Formalization.Books.Derived.Unit16

@@ -366,7 +366,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
     Nonempty (ftCPrimeFibre k n ≃+* ftCPrimePresentation k n) := by
   sorry
 
-theorem ftFirstPresentation_equiv_second_presentation (k : Type u) [Field k]
+theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     (n : ℕ) :
     Nonempty (ftCPrimePresentation k n ≃+* ftSecondPresentation k n) := by
   sorry
@@ -386,7 +386,7 @@ theorem ftSecondProduct_equiv_final_product (k : Type u) [Field k] (n : ℕ) :
     Nonempty (ftSecondProduct k n ≃+* ftFinalProduct k) := by
   sorry
 
-/-! ## The two maximal ideals over `𝔭ₙ` -/
+/-! ## The two ideals over `𝔭ₙ` -/
 
 def ftCRPrimeIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (ftC k) :=
   ftCPrimeIdeal k n ⊔ Ideal.span {ftCZ k - (ftCX k) ^ n}
@@ -467,6 +467,10 @@ noncomputable instance ftBCommRing (k : Type u) [Field k] : CommRing (ftB k) := 
 def ftCToB (k : Type u) [Field k] : ftC k →+* ftB k :=
   (ftCToCAtQ k).rangeRestrict
 
+theorem ftCToB_Xi (k : Type u) [Field k] (n : ℕ) :
+    ftCToB k (ftXi k n) = 0 := by
+  sorry
+
 def ftAToB (k : Type u) [Field k] : ftA k →+* ftB k :=
   (ftCToB k).comp (ftAToC k)
 
@@ -530,9 +534,10 @@ theorem ftB_local_annihilator_under_flat (k : Type u) [Field k] (g : ftB k)
       Set (Localization.Away g))).annihilator = ftBLocalPrime k g n := by
   sorry
 
-theorem ftB_local_difference_not_mem_prime (k : Type u) [Field k] (g : ftB k)
-    (hg : g ∉ ftBQPrime k) (n : ℕ) :
-    ftBLocalDifference k g n ∉ ftBLocalPrime k g n := by
+theorem ftB_local_difference_not_mem_prime (k : Type u) [Field k] (g : ftC k)
+    (hg : g ∉ ftCQ k) (n : ℕ) (hgn : g ∉ ftCQPrimeIdeal k n) :
+    ftBLocalDifference k (ftCToB k g) n ∉
+      ftBLocalPrime k (ftCToB k g) n := by
   sorry
 
 /-! ## The kernel calculation behind non-finite-presentation -/
@@ -621,7 +626,8 @@ theorem ft_raynaud_gruson_example :
       IsLocalRing (ftA k) ∧
         RingHom.FiniteType (ftAToB k) ∧
         ∃ q : Ideal (ftB k),
-          q = ftBQPrime k ∧
+          q.IsPrime ∧
+            q = ftBQPrime k ∧
             Ideal.comap (ftAToB k) q = IsLocalRing.maximalIdeal (ftA k) ∧
             RingHom.Flat (ftAToBQ k) ∧
             ∀ g : ftB k, g ∉ q →

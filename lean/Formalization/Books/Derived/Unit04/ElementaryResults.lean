@@ -2629,9 +2629,9 @@ structure ThreeByThreeDiagram
   comm₁₁ : g' ≫ c' = b' ≫ g''
   comm₁₂ : h' ≫ a'⟦(1 : ℤ)⟧' = c' ≫ h''
   comm₂₀ : f'' ≫ b'' = a'' ≫
-      ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₁
+      (-((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₁)
   comm₂₁ : g'' ≫ c'' = b'' ≫
-      ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₂
+      (-((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₂)
   anti₂₂ : h'' ≫
       ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk a a' a'')).mor₃ =
       -(c'' ≫ ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₃)

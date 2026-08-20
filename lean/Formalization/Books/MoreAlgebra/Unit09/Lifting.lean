@@ -132,6 +132,45 @@ theorem compose_etale_quotient_lifts
 
 /-! ## Lifting individual elements -/
 
+private theorem quotient_localization_algEquiv
+    {A : Type u} [CommRing A] (I : Ideal A) (u : A)
+    (hu : IsUnit (Ideal.Quotient.mk I u)) :
+    Nonempty
+      ((Localization.Away u ⧸
+          Ideal.map (algebraMap A (Localization.Away u)) I) ≃ₐ[A ⧸ I]
+        (A ⧸ I)) := by
+  let S : Submonoid A := Submonoid.powers u
+  let QS : Submonoid (A ⧸ I) :=
+    Formalization.Books.Algebra.Unit09.quotientLocalizationSubmonoid I S
+  let hQS : QS = Submonoid.powers (Ideal.Quotient.mk I u) := by
+    ext x
+    simp [QS, S,
+      Formalization.Books.Algebra.Unit09.quotientLocalizationSubmonoid]
+  letI : IsLocalization.Away (Ideal.Quotient.mk I u)
+      (Localization QS) := by
+    change IsLocalization (Submonoid.powers (Ideal.Quotient.mk I u))
+      (Localization QS)
+    rw [← hQS]
+    infer_instance
+  let e₀ : (A ⧸ I) ≃ₐ[A ⧸ I] Localization QS :=
+    IsLocalization.atUnit (A ⧸ I) (Localization QS)
+      (Ideal.Quotient.mk I u) hu
+  obtain ⟨e, he, _⟩ :=
+    Formalization.Books.Algebra.Unit09.localized_quotient_ring_equiv_formula I S
+  let e₁ : Localization QS ≃ₐ[A ⧸ I]
+      (Localization S ⧸
+        Ideal.map (algebraMap A (Localization S)) I) :=
+    AlgEquiv.ofRingEquiv (f := e) (by
+      intro x
+      obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+      change e (Formalization.Books.Algebra.Unit09.localizationFraction QS
+          (Ideal.Quotient.mk I a)
+          (Formalization.Books.Algebra.Unit09.quotientLocalizationElement I S 1)) =
+        Ideal.Quotient.mk _
+          (Formalization.Books.Algebra.Unit09.localizationFraction S a 1)
+      exact he a 1)
+  exact ⟨(e₀.trans e₁).symm⟩
+
 /-- A unit in `A ⧸ I` lifts to a unit in an étale extension of `A`. -/
 theorem lift_invertible_element
     {A : Type u} [CommRing A] (I : Ideal A)
@@ -141,7 +180,16 @@ theorem lift_invertible_element
       letI : Algebra A D.S := D.algebraRS
       ∃ u' : D.S, IsUnit u' ∧
         quotientLiftEquiv I D uBar = Ideal.Quotient.mk _ u' := by
-  sorry
+  obtain ⟨u, rfl⟩ := Ideal.Quotient.mk_surjective uBar
+  let D : EtaleQuotientLiftData A I :=
+    { S := Localization.Away u
+      etale := Formalization.Books.Algebra.Unit143.etale_localization_away u
+      quotientEquiv := quotient_localization_algEquiv I u hu }
+  refine ⟨D, ?_⟩
+  letI : CommRing D.S := D.commRingS
+  letI : Algebra A D.S := D.algebraRS
+  refine ⟨algebraMap A D.S u, IsLocalization.Away.algebraMap_isUnit u, ?_⟩
+  exact (quotientLiftEquiv I D).commutes (Ideal.Quotient.mk I u)
 
 /-- An idempotent in `A ⧸ I` lifts to an idempotent in an étale extension of
 `A`. -/

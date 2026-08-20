@@ -22,7 +22,7 @@ noncomputable section
 /- The preceding chapter defines order on fraction-field units.  This is the
    source-facing specialization to a nonzero element of the ring. -/
 noncomputable def orderOfVanishingOfElement
-    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    {R : Type u} {K : Type v} [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
     (x : R) (hx : x ∈ nonZeroDivisors R) : ℤ :=

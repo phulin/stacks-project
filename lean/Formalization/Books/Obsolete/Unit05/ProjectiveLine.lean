@@ -71,6 +71,7 @@ def projectiveLineMultiplication
 
 theorem rel_prime_pols
     {k : Type u} [Field k] (F G : BinaryPolynomial k)
+    (d e : ℕ) (hF : F.IsHomogeneous d) (hG : G.IsHomogeneous e)
     (hcop : IsRelPrime F G) :
     Function.Injective (projectiveLineMultiplication F G) := by
   sorry
@@ -153,6 +154,7 @@ def projectiveLinePowerMultiplication
 theorem projectiveLine_power_multiplication_bijective
     {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
     (d e : ℕ) (hG : G.IsHomogeneous e)
+    (hstart : d ≤ e * d)
     (hmul : ∀ n : ℕ, d ≤ n →
       Function.Bijective (projectiveLineComponentMultiplication F G e n hG)) :
     Function.Bijective (projectiveLinePowerMultiplication F G e d hG) := by
@@ -170,10 +172,23 @@ structure ProjectiveLineFiniteAlgebraConstruction
   algebra : letI := ring
     Algebra R (projectiveLineQuotientComponent F (e * d) : Type u)
   finite_locally_free :
-    letI := ring
-    letI := algebra
     Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank R
       (projectiveLineQuotientComponent F (e * d) : Type u) d
+  ring_add_eq_component_add :
+    letI := ring
+    ∀ H₁ H₂,
+      (H₁ + H₂ : projectiveLineQuotientComponent F (e * d)).1 = H₁.1 + H₂.1
+  ring_zero_eq_component_zero :
+    letI := ring
+    (0 : projectiveLineQuotientComponent F (e * d)).1 = 0
+  ring_neg_eq_component_neg :
+    letI := ring
+    ∀ H, (-H : projectiveLineQuotientComponent F (e * d)).1 = -H.1
+  algebra_smul_eq_component_smul :
+    letI := ring
+    letI := algebra
+    ∀ (r : R) (H : projectiveLineQuotientComponent F (e * d)),
+      (r • H : projectiveLineQuotientComponent F (e * d)).1 = r • H.1
   multiplication :
     projectiveLineQuotientComponent F (e * d) →
       projectiveLineQuotientComponent F (e * d) →
@@ -182,6 +197,9 @@ structure ProjectiveLineFiniteAlgebraConstruction
   multiplication_eq_ring_mul :
     letI := ring
     ∀ H₁ H₂, multiplication H₁ H₂ = H₁ * H₂
+  one_eq_ring_one :
+    letI := ring
+    one = 1
   multiplication_rule :
     ∀ H₁ H₂ H₃,
       multiplication H₁ H₂ = H₃ ↔
@@ -191,6 +209,7 @@ structure ProjectiveLineFiniteAlgebraConstruction
 theorem projectiveLine_finite_algebra_construction
     {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
     (d e : ℕ) (hF : F.IsHomogeneous d) (hG : G.IsHomogeneous e)
+    (hstart : d ≤ e * d)
     (hfinite : ∀ n : ℕ, d ≤ n →
       Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank R
         (projectiveLineQuotientComponent F n : Type u) d)

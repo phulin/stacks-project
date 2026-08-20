@@ -109,6 +109,58 @@ source's homotopy relation.  Their proofs are proposition proofs and are
 intentionally left for the prove stage; the declarations expose the
 interfaces needed by the quotient category. -/
 
+private theorem differentialGradedModuleHom_underlying_add
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {M N : DifferentialGradedModule A}
+    (f g : DifferentialGradedModuleHom M N) :
+    (f + g).underlying = f.underlying + g.underlying := by
+  rfl
+
+private theorem differentialGradedModuleHom_actionOnHomogeneous
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K L : DifferentialGradedModule A}
+    (a : DifferentialGradedModuleHom K L) (n m : ℤ)
+    (x : K.complex.X n) (b : A.complex.X m) :
+    a.underlying.f (n + m) (K.actionOnHomogeneous n m x b) =
+      L.actionOnHomogeneous n m (a.underlying.f n x) b := by
+  have ha := congrArg (fun q => q.f (n + m)) a.underlying_mem
+  have ha' := congrArg (fun q => q.hom
+    ((HomologicalComplex.ιTensorObj K.complex A.complex n m (n + m) rfl).hom
+      (x ⊗ₜ[R] b))) ha
+  have hi := HomologicalComplex.ι_mapBifunctorMap
+    (K₁ := K.complex) (K₂ := A.complex) (L₁ := L.complex) (L₂ := A.complex)
+    (f₁ := a.underlying) (f₂ := 𝟙 A.complex)
+    (F := MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+    (c₁ := ComplexShape.up ℤ) (c₂ := ComplexShape.up ℤ) (c := ComplexShape.up ℤ)
+    (i₁ := n) (i₂ := m) (j := n + m) (h := rfl)
+  have hi' := congrArg (fun q => q.hom (x ⊗ₜ[R] b)) hi
+  have hi'' :
+      ((tensorHomComplex a.underlying (𝟙 A.complex)).f (n + m)).hom
+          ((HomologicalComplex.ιTensorObj K.complex A.complex n m (n + m) rfl).hom
+            (x ⊗ₜ[R] b)) =
+        (HomologicalComplex.ιTensorObj L.complex A.complex n m (n + m) rfl).hom
+          ((a.underlying.f n).hom x ⊗ₜ[R] b) := by
+    rw [ModuleCat.hom_comp, ModuleCat.hom_comp] at hi'
+    have hi''' := hi'
+    simp only [ModuleCat.hom_comp, LinearMap.comp_apply,
+      HomologicalComplex.id_f] at hi'''
+    exact hi'''
+  change
+    (a.underlying.f (n + m)).hom
+        ((K.action.f (n + m)).hom
+          ((HomologicalComplex.ιTensorObj K.complex A.complex n m (n + m) rfl).hom
+            (x ⊗ₜ[R] b))) =
+      (L.action.f (n + m)).hom
+        (((tensorHomComplex a.underlying (𝟙 A.complex)).f (n + m)).hom
+          ((HomologicalComplex.ιTensorObj K.complex A.complex n m (n + m) rfl).hom
+            (x ⊗ₜ[R] b))) at ha'
+  rw [hi''] at ha'
+  simpa [DifferentialGradedModule.actionOnHomogeneous,
+    DifferentialGradedModule.homogeneousAction,
+    ModuleCat.MonoidalCategory.tensorHom_tmul] using ha'
+
 /-- Symmetry of a compatible homotopy. -/
 theorem differentialGradedModuleHomotopy_symm
     {R : Type u} [CommRing R]
@@ -142,9 +194,12 @@ theorem differentialGradedModuleHomotopy_trans
   simp [Homotopy.trans, DifferentialGradedModule.actionOnHomogeneous]
   rw [show (n + m) - 1 = (n - 1) + m by omega]
   apply heq_of_eq
-  rw [map_add]
   rw [TensorProduct.add_tmul]
-  exact (H₁.map_action n m x a).trans (H₂.map_action n m x a)
+  rw [map_add]
+  have h₁ := H₁.map_action n m x a
+  have h₂ := H₂.map_action n m x a
+  rw [show (n + m) - 1 = (n - 1) + m by omega] at h₁ h₂
+  exact congrArg₂ (· + ·) (eq_of_heq h₁) (eq_of_heq h₂)
 
 /-- Addition of compatible homotopies. -/
 theorem differentialGradedModuleHomotopy_add
@@ -155,16 +210,33 @@ theorem differentialGradedModuleHomotopy_add
     (H₁ : DifferentialGradedModuleHomotopy f₁ g₁)
     (H₂ : DifferentialGradedModuleHomotopy f₂ g₂) :
     Nonempty (DifferentialGradedModuleHomotopy (f₁ + f₂) (g₁ + g₂)) := by
-  refine ⟨{ homotopy := H₁.homotopy.add H₂.homotopy, map_action := ?_ }⟩
-  intro n m x a
-  simp [Homotopy.add, DifferentialGradedModule.actionOnHomogeneous]
-  rw [show (n + m) - 1 = (n - 1) + m by omega]
-  apply heq_of_eq
-  rw [map_add]
-  rw [TensorProduct.add_tmul]
-  rw [add_assoc]
-  exact congrArg₂ (· + ·) (eq_of_heq (H₁.map_action n m x a))
-    (eq_of_heq (H₂.map_action n m x a))
+  refine ⟨{ homotopy := ?_, map_action := ?_ }⟩
+  · refine
+      { hom := H₁.homotopy.hom + H₂.homotopy.hom
+        zero := fun i j hij => by
+          simp [H₁.homotopy.zero i j hij,
+            H₂.homotopy.zero i j hij]
+        comm := fun i => by
+          have h₁ := H₁.homotopy.comm i
+          have h₂ := H₂.homotopy.comm i
+          simp only [differentialGradedModuleHom_underlying_add,
+            AddMonoidHom.map_add]
+          change f₁.underlying.f i + f₂.underlying.f i =
+            (dNext i) H₁.homotopy.hom + (dNext i) H₂.homotopy.hom +
+              ((prevD i) H₁.homotopy.hom + (prevD i) H₂.homotopy.hom) +
+                (g₁.underlying.f i + g₂.underlying.f i)
+          rw [h₁, h₂]
+          abel }
+  · intro n m x a
+    simp [DifferentialGradedModule.actionOnHomogeneous]
+    rw [show (n + m) - 1 = (n - 1) + m by omega]
+    apply heq_of_eq
+    rw [TensorProduct.add_tmul]
+    rw [map_add]
+    have h₁ := H₁.map_action n m x a
+    have h₂ := H₂.map_action n m x a
+    rw [show (n + m) - 1 = (n - 1) + m by omega] at h₁ h₂
+    exact congrArg₂ (· + ·) (eq_of_heq h₁) (eq_of_heq h₂)
 
 /-- Precomposition preserves compatible homotopies. -/
 theorem differentialGradedModuleHomotopy_comp_left
@@ -177,25 +249,25 @@ theorem differentialGradedModuleHomotopy_comp_left
     Nonempty (DifferentialGradedModuleHomotopy
       (differentialGradedModuleHomComp a f)
       (differentialGradedModuleHomComp a g)) := by
-  refine ⟨{ homotopy :=
+  refine ⟨?_, ?_⟩
+  · refine
       { hom := fun i j => a.underlying.f i ≫ H.homotopy.hom i j
         zero := fun i j hij => by
           rw [H.homotopy.zero i j hij, comp_zero]
         comm := fun i => by
           change a.underlying.f i ≫ f.underlying.f i = _
           rw [H.homotopy.comm i]
-          simp [dNext_comp_left, prevD, Category.assoc] },
-    map_action := ?_ }⟩
+          simp only [Preadditive.comp_add, dNext_comp_left,
+            prevD_comp_left, differentialGradedModuleHomComp]
+          rfl }
   intro n m x b
-  have ha := congrArg (fun q => q.f (n + m)) a.underlying_mem
-  have ha' := congrArg (fun q => q.hom (x ⊗ₜ[R] b)) ha
+  have ha := differentialGradedModuleHom_actionOnHomogeneous a n m x b
   have hh := H.map_action n m (a.underlying.f n x) b
   have ha'' := congrArg
-    (fun z => (H.homotopy.hom (n + m) ((n + m) - 1)).hom z) ha'
-  rw [show (n + m) - 1 = (n - 1) + m by omega] at hh ⊢
+    (fun z => (H.homotopy.hom (n + m) ((n + m) - 1)).hom z) ha
+  rw [show (n + m) - 1 = (n - 1) + m by omega] at hh ha'' ⊢
   apply heq_of_eq
-  simpa [DifferentialGradedModule.actionOnHomogeneous, tensorHomComplex,
-    Category.assoc, ModuleCat.MonoidalCategory.tensorHom_tmul] using
+  simpa [DifferentialGradedModule.actionOnHomogeneous] using
     ha''.trans (eq_of_heq hh)
 
 /-- Postcomposition preserves compatible homotopies. -/
@@ -209,27 +281,25 @@ theorem differentialGradedModuleHomotopy_comp_right
     Nonempty (DifferentialGradedModuleHomotopy
       (differentialGradedModuleHomComp f c)
       (differentialGradedModuleHomComp g c)) := by
-  refine ⟨{ homotopy :=
+  refine ⟨?_, ?_⟩
+  · refine
       { hom := fun i j => H.homotopy.hom i j ≫ c.underlying.f j
         zero := fun i j hij => by
           rw [H.homotopy.zero i j hij, zero_comp]
         comm := fun i => by
           change f.underlying.f i ≫ c.underlying.f i = _
           rw [H.homotopy.comm i]
-          simp [dNext_comp_right, prevD, Category.assoc,
-            ← c.underlying.comm] },
-    map_action := ?_ }⟩
-  intro n m x b
-  have hh := H.map_action n m x b
-  have hc := congrArg (fun q => q.f ((n - 1) + m)) c.underlying_mem
-  have hc' := congrArg (fun q => q.hom
-    ((H.homotopy.hom n (n - 1)).hom x ⊗ₜ[R] b)) hc
-  rw [show (n + m) - 1 = (n - 1) + m by omega] at hh ⊢
-  apply heq_of_eq
-  have hh' := congrArg (fun z => c.underlying.f ((n - 1) + m) z) (eq_of_heq hh)
-  simpa [DifferentialGradedModule.actionOnHomogeneous, tensorHomComplex,
-    Category.assoc, ModuleCat.MonoidalCategory.tensorHom_tmul] using
-    hh'.trans hc'
+          simp only [Preadditive.add_comp, dNext_comp_right,
+            prevD_comp_right, differentialGradedModuleHomComp]
+          rfl }
+  · intro n m x b
+    have hh := H.map_action n m x b
+    have hc := differentialGradedModuleHom_actionOnHomogeneous c (n - 1) m
+      ((H.homotopy.hom n (n - 1)).hom x) b
+    rw [show (n + m) - 1 = (n - 1) + m by omega] at hh ⊢
+    apply heq_of_eq
+    have hh' := congrArg (fun z => c.underlying.f ((n - 1) + m) z) (eq_of_heq hh)
+    simpa [DifferentialGradedModule.actionOnHomogeneous] using hh'.trans hc
 
 /-- The source's composition lemma: a homotopy remains a homotopy after
 pre- and postcomposition. -/

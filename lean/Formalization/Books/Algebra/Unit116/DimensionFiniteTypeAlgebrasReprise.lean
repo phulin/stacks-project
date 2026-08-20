@@ -38,7 +38,72 @@ theorem dimension_prime_polynomial_ring
       ringKrullDim S = r ∧
         ∀ m : MaximalSpectrum S,
           ringKrullDim (Localization.AtPrime m.asIdeal) = r := by
-  sorry
+  classical
+  obtain ⟨n, φ, hφ⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
+    (inferInstance : Algebra.FiniteType k S)
+  have hI : RingHom.ker φ ≠ ⊤ := by
+    intro hI
+    have hzero : φ (1 : MvPolynomial (Fin n) k) = 0 := by
+      have hmem : (1 : MvPolynomial (Fin n) k) ∈ RingHom.ker φ := by
+        rw [hI]
+        trivial
+      exact hmem
+    simpa using hzero
+  obtain ⟨r, _, g, hg, hgf, hdim, _⟩ :=
+    Formalization.Books.Algebra.Unit115.noether_normalization
+      (RingHom.ker φ) hI
+  let e : (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) ≃ₐ[k] S :=
+    AlgEquiv.ofBijective (Ideal.kerLiftAlg φ) ⟨
+      Ideal.kerLiftAlg_injective φ, by
+        intro s
+        obtain ⟨p, hp⟩ := hφ s
+        refine ⟨Ideal.Quotient.mk (RingHom.ker φ) p, ?_⟩
+        exact (Ideal.kerLiftAlg_mk φ p).trans hp
+        ⟩
+  have hdimS : ringKrullDim S = r := by
+    calc
+      ringKrullDim S = ringKrullDim
+        (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
+        (ringKrullDim_eq_of_ringEquiv e.toRingEquiv).symm
+      _ = r := hdim
+  have htrdegS : Algebra.trdeg k S = r := by
+    have htrdegQ : Algebra.trdeg k
+        (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) = r := by
+      letI : IsDomain (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
+        e.toRingEquiv.isDomain_iff.mpr inferInstance
+      letI : Algebra (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) := g.toAlgebra
+      letI : IsScalarTower k (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
+        IsScalarTower.of_algebraMap_eq fun x => (g.commutes x).symm
+      have hfaith : FaithfulSMul (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
+        (faithfulSMul_iff_algebraMap_injective _ _).mpr hg
+      letI : FaithfulSMul (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) := hfaith
+      letI : Module.Finite (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) := hgf
+      letI : Algebra.IsAlgebraic (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) :=
+        Algebra.IsAlgebraic.of_finite _ _
+      rw [← trdeg_add_eq k (MvPolynomial (Fin r) k)]
+      have hz : Algebra.trdeg (MvPolynomial (Fin r) k)
+          (MvPolynomial (Fin n) k ⧸ RingHom.ker φ) = 0 := trdeg_eq_zero
+      rw [hz, add_zero]
+      simp [MvPolynomial.trdeg_of_isDomain]
+    simpa using e.trdeg_eq.symm.trans htrdegQ
+  have htrdegK : Algebra.trdeg k K = r := by
+    letI : Algebra.IsAlgebraic S K := IsLocalization.isAlgebraic K (nonZeroDivisors S)
+    have hfaith : FaithfulSMul S K :=
+      (faithfulSMul_iff_algebraMap_injective _ _).mpr (IsFractionRing.injective S K)
+    letI : FaithfulSMul S K := hfaith
+    have h := lift_trdeg_add_eq k S K
+    rw [htrdegS, trdeg_eq_zero] at h
+    simpa using h.symm
+  refine ⟨r, htrdegK, hdimS, ?_⟩
+  intro m
+  exact (Formalization.Books.Algebra.Unit114.dimension_spell_it_out
+    (k := k) (S := S) m).symm.trans hdimS
 
 /- The residue-field transcendence degree strictly decreases along a proper
    specialization. -/

@@ -1205,7 +1205,7 @@ abbrev ShiftedDifferentialLongExactSequence {C : Type u} [Category.{v} C]
 
 def shiftedEquivalenceIntPower {C : Type u} [Category.{v} C]
     (S : C ≌ C) (n : ℤ) : C ≌ C :=
-  if h : 0 ≤ n then Formalization.Books.Homology.Unit21.shiftedEquivalenceIterate S n.toNat
+  if 0 ≤ n then Formalization.Books.Homology.Unit21.shiftedEquivalenceIterate S n.toNat
   else Formalization.Books.Homology.Unit21.shiftedEquivalenceIterate S.symm (-n).toNat
 
 def shiftedDifferentialObjectHomologyLongTerm

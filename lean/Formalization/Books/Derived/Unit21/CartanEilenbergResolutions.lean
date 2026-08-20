@@ -413,9 +413,13 @@ noncomputable def cartanEilenbergFirstFilteredTotalMap
       simpa only [ComplexShape.up_Rel] using hnm
     subst m
     apply FilteredHom.ext
-    simp only [doubleComplexFirstFilteredTotal, dif_pos]
-    exact totalMapComponent_comm f n (n + 1) (by
-      simp only [ComplexShape.up_Rel])
+    simpa [FilteredHom.hom, filteredHom_comp_hom,
+      doubleComplexFirstFilteredTotal,
+      Formalization.Books.Homology.Unit20.doubleComplexFirstFilteredTotal,
+      Formalization.Books.Homology.Unit20.doubleComplexFirstFilteredTerm,
+      Formalization.Books.Homology.Unit20.doubleComplexFirstFilteredDifferential] using
+      (totalMapComponent_comm f n (n + 1) (by
+        simp only [ComplexShape.up_Rel]))
 
 /-- The filtered total-complex map induced by a map of double complexes for
 the second filtration. -/
@@ -441,9 +445,13 @@ noncomputable def cartanEilenbergSecondFilteredTotalMap
       simpa only [ComplexShape.up_Rel] using hnm
     subst m
     apply FilteredHom.ext
-    simp only [doubleComplexSecondFilteredTotal, dif_pos]
-    exact totalMapComponent_comm f n (n + 1) (by
-      simp only [ComplexShape.up_Rel])
+    simpa [FilteredHom.hom, filteredHom_comp_hom,
+      doubleComplexSecondFilteredTotal,
+      Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredTotal,
+      Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredTerm,
+      Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredDifferential] using
+      (totalMapComponent_comm f n (n + 1) (by
+        simp only [ComplexShape.up_Rel]))
 
 /-- A morphism of Cartan–Eilenberg resolutions over a map of complexes. -/
 structure CartanEilenbergResolutionMap

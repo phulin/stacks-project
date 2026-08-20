@@ -1255,6 +1255,506 @@ theorem injective_resolution_short_exact
   refine ⟨I₁, I₂, I₃, a, b₀ ≫ bT, c, ?_⟩
   exact ⟨hR₁, hR₂, hR₃, ⟨u, v, huv, hS₂Comp, hleft, hright⟩⟩
 
+private theorem injective_resolution_short_exact_with_left_aux
+    {A : Type u} [Category.{v} A] [Abelian A] [EnoughInjectives A]
+    (S : ShortComplex (CompPlus A)) (hS : S.ShortExact)
+    (I₁ : CompPlus A) (a : S.X₁ ⟶ I₁)
+    (ha : IsComplexInjectiveResolution S.X₁.obj I₁.obj a.hom)
+    (n₁ n₃ : ℤ)
+    (hI₁₀ : I₁.obj.IsStrictlyGE n₁)
+    (hS₃₀ : S.X₃.obj.IsStrictlyGE n₃) :
+    ∃ (I₂ I₃ : CompPlus A)
+      (b : S.X₂ ⟶ I₂) (c : S.X₃ ⟶ I₃),
+      InjectiveResolutionShortExactData S I₁ I₂ I₃ a b c ∧
+        I₂.obj.IsStrictlyGE (min (n₃ - 1) (n₁ - 1) + 1) ∧
+          I₃.obj.IsStrictlyGE n₃ := by
+  let _ : I₁.obj.IsStrictlyGE n₁ := hI₁₀
+  let _ : S.X₃.obj.IsStrictlyGE n₃ := hS₃₀
+  let E₀ := Formalization.Books.Homology.Unit06.extensionOfShortExact hS
+  let E : Formalization.Books.Homology.Unit06.Extension
+      (CompPlus A) I₁ S.X₃ :=
+    Formalization.Books.Homology.Unit06.pushoutExtension E₀ a
+  let T : ShortComplex (CompPlus A) := E.toShortComplex
+  have hT : T.ShortExact := E.shortExact
+  let b₀ : S.X₂ ⟶ T.X₂ := pushout.inr a E₀.inclusion
+  have hb₀ : a ≫ T.f = S.f ≫ b₀ := by
+    dsimp [T, E, b₀]
+    exact pushout.condition
+  have hb₀g : b₀ ≫ T.g = S.g := by
+    change pushout.inr a E₀.inclusion ≫
+      pushout.desc 0 E₀.projection _ = S.g
+    rw [pushout.inr_desc]
+    rfl
+  let ι : CompPlus A ⥤ BookComplex A := CochainComplex.Plus.ι A
+  let T' : ShortComplex (BookComplex A) := T.map ι
+  let _ : (CochainComplex.plus A).ContainsZero :=
+    Formalization.Books.Derived.Unit12.cochainPlus_containsZero A
+  let _ : ObjectProperty.IsClosedUnderKernels (CochainComplex.plus A) :=
+    Formalization.Books.Derived.Unit12.cochainPlus_isClosedUnderKernels A
+  let _ : ObjectProperty.IsClosedUnderCokernels (CochainComplex.plus A) :=
+    Formalization.Books.Derived.Unit12.cochainPlus_isClosedUnderCokernels A
+  let _ : PreservesFiniteLimits ι := by
+    apply (Functor.preservesFiniteLimits_tfae ι).out 2 3 |>.mp
+    intro X Y f
+    exact (CochainComplex.plus A).preservesKernels_ι f
+  let _ : PreservesFiniteColimits ι := by
+    apply (Functor.preservesFiniteColimits_tfae ι).out 2 3 |>.mp
+    intro X Y f
+    exact (CochainComplex.plus A).preservesCokernels_ι f
+  have hT' : T'.ShortExact := by
+    exact hT.map_of_exact ι
+  have hsplit (n : ℤ) : (T'.map (HomologicalComplex.eval A
+      (ComplexShape.up ℤ) n)).Splitting := by
+    let _ : Injective (T'.map (HomologicalComplex.eval A
+        (ComplexShape.up ℤ) n)).X₁ := by
+      change Injective (I₁.obj.X n)
+      exact ha.2.1 n
+    exact (hT'.map_of_exact (HomologicalComplex.eval A
+      (ComplexShape.up ℤ) n)).splittingOfInjective
+  let Ssplit :
+      Formalization.Books.Derived.Unit09.TermwiseSplitExactSequence
+        I₁.obj T.X₂.obj S.X₃.obj := {
+    f := T.f.hom
+    g := T.g.hom
+    zero := by
+      change T.f.hom ≫ T.g.hom = 0
+      exact congrArg (fun h => h.hom) T.zero
+    splitting := hsplit }
+  let δ : S.X₃.obj ⟶
+      (CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj :=
+    Formalization.Books.Derived.Unit09.termwiseSplitConnectingMap Ssplit
+  obtain ⟨R₃, hR₃below, hR₃mono⟩ :=
+    complex_injective_resolution_exists_with_mono S.X₃.obj n₃ hS₃₀
+  let I₃ : CompPlus A := ⟨R₃.target, R₃.boundedBelow⟩
+  let c : S.X₃ ⟶ I₃ := ObjectProperty.homMk R₃.map
+  have hshift : IsBoundedBelow
+      ((CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj) := by
+    exact ⟨n₁ - 1, I₁.obj.isStrictlyGE_shift n₁ 1 (n₁ - 1) (by omega)⟩
+  have hshiftinj : ∀ n : ℤ, Injective
+      (((CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj).X n) := by
+    intro n
+    exact Injective.of_iso (I₁.obj.shiftFunctorObjXIso 1 n (n + 1) rfl)
+      (ha.2.1 (n + 1))
+  obtain ⟨δ', hδ'⟩ := injective_resolution_lift_of_degreewise_mono
+    c.hom δ R₃.quasiIso hshift hshiftinj hR₃mono
+  let B : BookComplex A := CochainComplex.mappingCocone δ'
+  let _ : I₃.obj.IsStrictlyGE n₃ := hR₃below
+  let _ : CochainComplex.IsStrictlyGE
+      ((CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj)
+      (n₁ - 1) := by
+    exact I₁.obj.isStrictlyGE_shift n₁ 1 (n₁ - 1) (by omega)
+  have hBbelow : B.IsStrictlyGE (min (n₃ - 1) (n₁ - 1) + 1) := by
+    dsimp [B, CochainComplex.mappingCocone]
+    let _ : (CochainComplex.mappingCone δ').IsStrictlyGE
+        (min (n₃ - 1) (n₁ - 1)) :=
+      CochainComplex.isStrictlyGE_mappingCone δ' n₃ (n₁ - 1) _ (by omega) (by omega)
+    exact (CochainComplex.mappingCone δ').isStrictlyGE_shift
+      (min (n₃ - 1) (n₁ - 1)) (-1)
+      (min (n₃ - 1) (n₁ - 1) + 1) (by omega)
+  have hBinj : ∀ n : ℤ, Injective (B.X n) := by
+    intro n
+    let _ : Injective (I₃.obj.X n) := R₃.termwiseInjective n
+    let _ : Injective
+        (((CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj).X (n - 1)) :=
+      hshiftinj (n - 1)
+    have hsum : Injective
+        (I₃.obj.X n ⊞
+          ((CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj).X (n - 1)) := by
+      infer_instance
+    have hcone : Injective ((CochainComplex.mappingCone δ').X (n - 1)) := by
+      apply Injective.of_iso
+        (HomologicalComplex.homotopyCofiber.XIsoBiprod δ' (n - 1) n (by simp)).symm
+      exact hsum
+    apply Injective.of_iso
+      (CochainComplex.shiftFunctorObjXIso (CochainComplex.mappingCone δ')
+        (-1) n (n - 1) (by omega)).symm
+    exact hcone
+  let I₂ : CompPlus A :=
+    ⟨B, ⟨min (n₃ - 1) (n₁ - 1) + 1, hBbelow⟩⟩
+  let u₀ : I₁.obj ⟶ B :=
+    CochainComplex.HomComplex.Cocycle.homOf
+      ((CochainComplex.mappingCocone.inr δ').leftUnshift 0 (by omega))
+  let v₀ : B ⟶ I₃.obj := CochainComplex.mappingCocone.fst δ'
+  let u : I₁ ⟶ I₂ := ObjectProperty.homMk u₀
+  let v : I₂ ⟶ I₃ := ObjectProperty.homMk v₀
+  have huv₀ : u₀ ≫ v₀ = 0 := by
+    ext n
+    dsimp [u₀, v₀, B]
+    change ((CochainComplex.mappingCocone.inr δ').1.leftUnshift 0 (by omega)).v n n
+        (by omega) ≫
+      (CochainComplex.mappingCocone.fst δ').f n = 0
+    rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+      (CochainComplex.mappingCocone.inr δ').1 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    simp
+  have huv : u ≫ v = 0 := by
+    apply ObjectProperty.hom_ext
+    exact huv₀
+  let r : ∀ n : ℤ, B.X n ⟶ I₁.obj.X n := fun n =>
+    -((CochainComplex.mappingCocone.snd δ').rightUnshift 0 (by omega)).v n n (by omega)
+  let s : ∀ n : ℤ, I₃.obj.X n ⟶ B.X n := fun n =>
+    (CochainComplex.mappingCocone.inl δ').v n n (by omega)
+  have hfr : ∀ n : ℤ, u₀.f n ≫ r n = 𝟙 _ := by
+    intro n
+    dsimp [u₀, r]
+    change ((CochainComplex.mappingCocone.inr δ').1.leftUnshift 0 (by omega)).v n n
+      (by omega) ≫
+      (-((CochainComplex.mappingCocone.snd δ').rightUnshift 0 (by omega)).v n n
+        (by omega)) = 𝟙 _
+    rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+      (CochainComplex.mappingCocone.inr δ').1 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
+      (CochainComplex.mappingCocone.snd δ') 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    have hzero :
+        (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) ≫
+            (CochainComplex.mappingCocone.snd δ').v n (n - 1) (by omega) = 𝟙 _ := by
+      exact CochainComplex.mappingCocone.inr_v_snd_v δ' (n - 1) n (by omega)
+    rw [← Category.assoc
+      ((CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega))
+      ((CochainComplex.mappingCocone.snd δ').v n (n - 1) (by omega))
+      (I₁.obj.shiftFunctorObjXIso 1 (n - 1) n (by omega)).hom]
+    rw [hzero]
+    dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
+    simp
+  have hsg : ∀ n : ℤ, s n ≫ v₀.f n = 𝟙 _ := by
+    intro n
+    exact CochainComplex.mappingCocone.inl_v_fst_f δ' n
+  have hid : ∀ n : ℤ, r n ≫ u₀.f n + v₀.f n ≫ s n = 𝟙 _ := by
+    intro n
+    dsimp [r, u₀, v₀, s, B]
+    change
+      (-((CochainComplex.mappingCocone.snd δ').rightUnshift 0 (by omega)).v n n
+          (by omega)) ≫
+          ((CochainComplex.mappingCocone.inr δ').1.leftUnshift 0 (by omega)).v n n
+            (by omega) +
+        (CochainComplex.mappingCocone.fst δ').f n ≫
+          (CochainComplex.mappingCocone.inl δ').v n n (by omega) = 𝟙 _
+    rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
+      (CochainComplex.mappingCocone.snd δ') 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+      (CochainComplex.mappingCocone.inr δ').1 0 (by omega) n n (by omega)
+      (n - 1) (by omega)]
+    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    have hsign : (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
+      norm_num [Int.negOnePow_def]
+    rw [hsign]
+    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
+      Iso.hom_inv_id_assoc]
+    simp
+    rw [add_comm]
+    exact CochainComplex.mappingCocone.id_X δ' n (n - 1) (by omega)
+  let S₂ :
+      Formalization.Books.Derived.Unit09.TermwiseSplitExactSequence
+        I₁.obj B I₃.obj := {
+    f := u₀
+    g := v₀
+    zero := huv₀
+    splitting := fun n => {
+      r := r n
+      s := s n
+      f_r := hfr n
+      s_g := hsg n
+      id := hid n } }
+  have hS₂ : (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex S₂).ShortExact :=
+    termwiseSplitShortComplex_shortExact A S₂
+  let rT : ∀ n : ℤ, T.X₂.obj.X n ⟶ I₁.obj.X n := fun n =>
+    (Ssplit.splitting n).r
+  let β : CochainComplex.HomComplex.Cochain T.X₂.obj
+      ((CategoryTheory.shiftFunctor (BookComplex A) (1 : ℤ)).obj I₁.obj) (-1) :=
+    (-(CochainComplex.HomComplex.Cochain.ofHoms rT)).rightShift 1 (-1) (by omega)
+  let αT : T.X₂.obj ⟶ I₃.obj := Ssplit.g ≫ c.hom
+  have hαδ : αT ≫ δ' = Ssplit.g ≫ δ := by
+    dsimp [αT]
+    rw [Category.assoc, hδ']
+  have hconnect (p : ℤ) :
+      (Ssplit.g ≫ δ).f p =
+        T.X₂.obj.d p (p + 1) ≫ rT (p + 1) -
+          rT p ≫ I₁.obj.d p (p + 1) := by
+    rw [HomologicalComplex.comp_f]
+    rw [Formalization.Books.Derived.Unit09.termwiseSplitConnectingMap_f
+      Ssplit p]
+    dsimp [Formalization.Books.Derived.Unit09.termwiseSplitConnectingFamily,
+      Formalization.Books.Derived.Unit09.termwiseSplitSection,
+      Formalization.Books.Derived.Unit09.termwiseSplitProjection]
+    let fS : ∀ i : ℤ, (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.X i ⟶
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.X i := fun i =>
+      Ssplit.f.f i
+    let gS : ∀ i : ℤ, (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.X i ⟶
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₃.X i := fun i =>
+      Ssplit.g.f i
+    let rS : ∀ i : ℤ, (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.X i ⟶
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.X i := fun i => by
+      exact (Ssplit.splitting i).r
+    let sS : ∀ i : ℤ, (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₃.X i ⟶
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.X i := fun i => by
+      exact (Ssplit.splitting i).s
+    let dB : ∀ i : ℤ, (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.X i ⟶
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.X (i + 1) := fun i =>
+      (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₂.d i (i + 1)
+    have hgs : gS p ≫ sS p =
+        𝟙 _ - rS p ≫ fS p := by
+      dsimp [fS, gS, rT, rS, sS]
+      exact (Ssplit.splitting p).g_s
+    have hfr : fS (p + 1) ≫ rS (p + 1) = 𝟙 _ := by
+      dsimp [fS, rS]
+      exact (Ssplit.splitting (p + 1)).f_r
+    have hfS : fS p ≫ dB p =
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d p (p + 1) ≫
+          fS (p + 1) := by
+      dsimp [fS]
+      exact Ssplit.f.comm p (p + 1)
+    change gS p ≫ sS p ≫ dB p ≫ rS (p + 1) =
+      dB p ≫ rS (p + 1) - rS p ≫
+        (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d p (p + 1)
+    rw [← Category.assoc, hgs]
+    simp only [Preadditive.sub_comp, Preadditive.comp_sub,
+      Category.assoc, Category.id_comp]
+    have hcomp : rS p ≫ fS p ≫ dB p ≫ rS (p + 1) =
+        rS p ≫
+            (Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit).X₁.d
+              p (p + 1) ≫ fS (p + 1) ≫ rS (p + 1) := by
+      simpa only [Category.assoc] using congrArg
+        (fun z => rS p ≫ z ≫ rS (p + 1)) hfS
+    rw [hcomp, hfr]
+    simp
+  have hαβ : CochainComplex.HomComplex.δ (-1) 0 β +
+      CochainComplex.HomComplex.Cochain.ofHom (αT ≫ δ') = 0 := by
+    rw [hαδ]
+    ext p q hpq
+    dsimp [β]
+    rw [CochainComplex.HomComplex.Cochain.δ_rightShift
+      (-(CochainComplex.HomComplex.Cochain.ofHoms rT))
+      1 (-1) 0 (by norm_num) 1 (by norm_num)]
+    rw [CochainComplex.HomComplex.Cochain.units_smul_v]
+    rw [CochainComplex.HomComplex.Cochain.rightShift_v
+      (CochainComplex.HomComplex.δ 0 1
+        (-CochainComplex.HomComplex.Cochain.ofHoms rT))
+      1 0 (by norm_num) p p (by omega) (p + 1) (by omega)]
+    simp only [CochainComplex.HomComplex.δ_zero_cochain_v,
+      CochainComplex.HomComplex.Cochain.neg_v,
+      CochainComplex.HomComplex.Cochain.ofHoms_v,
+      CochainComplex.HomComplex.Cochain.ofHom_v]
+    simp only [CochainComplex.shiftFunctor_obj_X,
+      CochainComplex.shiftFunctorObjXIso, HomologicalComplex.XIsoOfEq]
+    simp only [eqToIso_refl, Iso.refl_hom, Iso.refl_inv,
+      Category.comp_id, Category.id_comp]
+    rw [show (1 : ℤ).negOnePow = -1 by
+      rw [Int.negOnePow_one]]
+    simp only [Units.neg_smul, one_smul, Preadditive.neg_comp,
+      Preadditive.comp_neg, Preadditive.sub_comp, Category.assoc]
+    rw [hconnect p]
+    change
+      -((-rT p ≫ I₁.obj.d p (p + 1)) -
+        (-(T.X₂.obj.d p (p + 1) ≫ rT (p + 1)))) ≫ 𝟙 _ +
+        (T.X₂.obj.d p (p + 1) ≫ rT (p + 1) -
+          rT p ≫ I₁.obj.d p (p + 1)) = 0
+    simp only [Category.comp_id, Category.id_comp, Units.neg_smul,
+      one_smul, Preadditive.neg_comp, Preadditive.comp_neg,
+      Preadditive.sub_comp, Preadditive.comp_sub]
+    abel
+  let bT₀ : T.X₂.obj ⟶ B := CochainComplex.mappingCocone.lift δ' αT β hαβ
+  let bT : T.X₂ ⟶ I₂ := ObjectProperty.homMk bT₀
+  have hTfb : Ssplit.f ≫ bT₀ = u₀ := by
+    ext n
+    rw [HomologicalComplex.comp_f]
+    rw [← Category.comp_id (bT₀.f n)]
+    rw [← CochainComplex.mappingCocone.id_X δ' n (n - 1) (by omega)]
+    simp only [Category.assoc, Preadditive.comp_add]
+    dsimp [bT₀]
+    simp only [CochainComplex.mappingCocone.lift_f_fst_f_assoc]
+    have hlift := CochainComplex.mappingCocone.lift_f_snd_v δ' αT β hαβ
+      n (n - 1) (by omega)
+    have hsecond :
+        Ssplit.f.f n ≫
+            (CochainComplex.mappingCocone.lift δ' αT β hαβ).f n ≫
+            (CochainComplex.mappingCocone.snd δ').v n (n - 1) (by omega) ≫
+            (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) =
+          Ssplit.f.f n ≫ β.v n (n - 1) (by omega) ≫
+            (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) := by
+      simpa only [Category.assoc] using
+        congrArg (fun z => Ssplit.f.f n ≫ z ≫
+          (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega)) hlift
+    calc
+      Ssplit.f.f n ≫ αT.f n ≫
+            (CochainComplex.mappingCocone.inl δ').v n n (by omega) +
+          Ssplit.f.f n ≫
+            (CochainComplex.mappingCocone.lift δ' αT β hαβ).f n ≫
+              (CochainComplex.mappingCocone.snd δ').v n (n - 1) (by omega) ≫
+                (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) =
+        Ssplit.f.f n ≫ αT.f n ≫
+            (CochainComplex.mappingCocone.inl δ').v n n (by omega) +
+          Ssplit.f.f n ≫ β.v n (n - 1) (by omega) ≫
+            (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) := by
+          congr 1
+      _ = u₀.f n := by
+        dsimp [αT, β]
+        have hzero : Ssplit.f.f n ≫ Ssplit.g.f n = 0 := by
+          exact congrArg (fun z => z.f n) Ssplit.zero
+        have hbeta :
+            ((-(CochainComplex.HomComplex.Cochain.ofHoms rT)).rightShift
+                1 (-1) (by omega)).v n (n - 1) (by omega) ≫
+              (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) =
+            rT n ≫ u₀.f n := by
+          rw [CochainComplex.HomComplex.Cochain.rightShift_v
+            (-(CochainComplex.HomComplex.Cochain.ofHoms rT))
+            1 (-1) (by omega) n (n - 1) (by omega) n (by omega)]
+          simp only [CochainComplex.HomComplex.Cochain.neg_v,
+            CochainComplex.HomComplex.Cochain.ofHoms_v]
+          dsimp [u₀]
+          change
+            ((-rT n) ≫
+                (I₁.obj.shiftFunctorObjXIso 1 (n - 1) n (by omega)).inv) ≫
+              (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) =
+            rT n ≫
+              ((CochainComplex.mappingCocone.inr δ').1.leftUnshift 0
+                (by omega)).v n n (by omega)
+          rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
+            (CochainComplex.mappingCocone.inr δ').1 0 (by omega)
+            n n (by omega) (n - 1) (by omega)]
+          simp only [Linear.units_smul_comp, Linear.comp_units_smul,
+            Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+          have hsign : (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
+            norm_num [Int.negOnePow_def]
+          rw [hsign]
+          simp
+        have hfirst :
+            Ssplit.f.f n ≫ Ssplit.g.f n ≫ c.hom.f n ≫
+                (CochainComplex.mappingCocone.inl δ').v n n (by omega) = 0 := by
+          simpa only [Category.assoc, zero_comp] using
+            congrArg (fun z => z ≫ c.hom.f n ≫
+              (CochainComplex.mappingCocone.inl δ').v n n (by omega)) hzero
+        have hsecond0 :
+            Ssplit.f.f n ≫
+                ((-(CochainComplex.HomComplex.Cochain.ofHoms rT)).rightShift
+                  1 (-1) (by omega)).v n (n - 1) (by omega) ≫
+              (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) =
+            Ssplit.f.f n ≫ rT n ≫ u₀.f n := by
+          simpa only [Category.assoc] using
+            congrArg (fun z => Ssplit.f.f n ≫ z) hbeta
+        have hfinal :
+            Ssplit.f.f n ≫ Ssplit.g.f n ≫ c.hom.f n ≫
+                (CochainComplex.mappingCocone.inl δ').v n n (by omega) +
+              Ssplit.f.f n ≫
+                ((-(CochainComplex.HomComplex.Cochain.ofHoms rT)).rightShift
+                  1 (-1) (by omega)).v n (n - 1) (by omega) ≫
+                (CochainComplex.mappingCocone.inr δ').1.v (n - 1) n (by omega) =
+            u₀.f n := by
+          rw [hfirst, hsecond0]
+          simp only [zero_add]
+          have hfrT : Ssplit.f.f n ≫ rT n = 𝟙 _ := by
+            dsimp [rT]
+            exact (Ssplit.splitting n).f_r
+          rw [← Category.assoc (Ssplit.f.f n) (rT n) (u₀.f n), hfrT]
+          simp
+        convert hfinal using 1 <;> simp only [Category.assoc] <;> rfl
+  have hTbg : bT₀ ≫ v₀ = Ssplit.g ≫ c.hom := by
+    simpa only [bT₀, v₀, αT] using
+      (CochainComplex.mappingCocone.lift_fst δ' αT β hαβ)
+  let φ :
+      Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit ⟶
+        Formalization.Books.Derived.Unit09.termwiseSplitShortComplex S₂ := {
+    τ₁ := 𝟙 I₁.obj
+    τ₂ := bT₀
+    τ₃ := c.hom
+    comm₁₂ := by
+      change (𝟙 I₁.obj) ≫ u₀ = Ssplit.f ≫ bT₀
+      simpa only [Category.id_comp] using hTfb.symm
+    comm₂₃ := by
+      dsimp [S₂]
+      exact hTbg }
+  have hφ₂ : QuasiIso φ.τ₂ := by
+    apply quasiIso_middle_of_shortExact_map φ
+      (termwiseSplitShortComplex_shortExact A Ssplit) hS₂
+    · change QuasiIso (𝟙 I₁.obj)
+      infer_instance
+    · exact R₃.quasiIso
+  have hR₂T : IsComplexInjectiveResolution T.X₂.obj I₂.obj bT₀ := by
+    refine ⟨I₂.2, hBinj, ?_⟩
+    exact hφ₂
+  let S' : ShortComplex (BookComplex A) := S.map ι
+  let φ₀ : S' ⟶
+      Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit := {
+    τ₁ := a.hom
+    τ₂ := b₀.hom
+    τ₃ := 𝟙 S.X₃.obj
+    comm₁₂ := by
+      change a.hom ≫ T.f.hom = S.f.hom ≫ b₀.hom
+      exact congrArg (fun h => h.hom) hb₀
+    comm₂₃ := by
+      change (b₀ ≫ T.g).hom = S.g.hom ≫ 𝟙 S.X₃.obj
+      simpa only [Category.comp_id] using congrArg (fun h => h.hom) hb₀g }
+  have hb₀q : QuasiIso φ₀.τ₂ := by
+    apply quasiIso_middle_of_shortExact_map φ₀ (hS.map_of_exact ι)
+      (termwiseSplitShortComplex_shortExact A Ssplit)
+    · exact ha.2.2
+    · change QuasiIso (𝟙 S.X₃.obj)
+      infer_instance
+  have hR₂ : IsComplexInjectiveResolution S.X₂.obj I₂.obj (b₀ ≫ bT).hom := by
+    refine ⟨I₂.2, hBinj, ?_⟩
+    let _ : QuasiIso b₀.hom := hb₀q
+    let _ : QuasiIso bT₀ := hR₂T.2.2
+    dsimp [bT]
+    exact quasiIso_comp _ _
+  have hR₁ : IsComplexInjectiveResolution S.X₁.obj I₁.obj a.hom := ha
+  have hR₃ : IsComplexInjectiveResolution S.X₃.obj I₃.obj c.hom := by
+    refine ⟨I₃.2, ?_, ?_⟩
+    · exact R₃.termwiseInjective
+    exact R₃.quasiIso
+  let hzero :
+      (preadditiveHasZeroMorphisms : HasZeroMorphisms (BookComplex A)) =
+        HomologicalComplex.instHasZeroMorphisms := Subsingleton.elim _ _
+  letI : HasZeroMorphisms (BookComplex A) := preadditiveHasZeroMorphisms
+  have huv₀pre : u₀ ≫ v₀ = 0 := by
+    simpa only [hzero] using huv₀
+  let S₂pre : ShortComplex (BookComplex A) := ShortComplex.mk u₀ v₀ huv₀pre
+  have hS₂pre : S₂pre.ShortExact := by
+    change @ShortComplex.ShortExact (BookComplex A) _
+      preadditiveHasZeroMorphisms (ShortComplex.mk u₀ v₀ huv₀pre)
+    simpa only [S₂pre, hzero,
+      Formalization.Books.Derived.Unit09.termwiseSplitShortComplex] using hS₂
+  have hS₂Comp : (ShortComplex.mk u v huv).ShortExact := by
+    apply ShortExact.reflects_shortExact_of_faithful ι
+    convert hS₂pre using 1 <;>
+      simp [u, v, S₂pre, ObjectProperty.ι_map,
+        ObjectProperty.FullSubcategory.comp_hom] <;> rfl
+  have hleft : a ≫ u = S.f ≫ (b₀ ≫ bT) := by
+    apply ObjectProperty.hom_ext
+    change a.hom ≫ u₀ = S.f.hom ≫ b₀.hom ≫ bT₀
+    rw [← hTfb]
+    have hb₀' : a.hom ≫ T.f.hom = S.f.hom ≫ b₀.hom := by
+      change (a ≫ T.f).hom = (S.f ≫ b₀).hom
+      exact congrArg (fun h => h.hom) hb₀
+    have hb₀'' : a.hom ≫ Ssplit.f = S.f.hom ≫ b₀.hom := by
+      change a.hom ≫ T.f.hom = S.f.hom ≫ b₀.hom
+      exact hb₀'
+    simpa only [Category.assoc] using congrArg (fun h => h ≫ bT₀) hb₀''
+  have hright : (b₀ ≫ bT) ≫ v = S.g ≫ c := by
+    apply ObjectProperty.hom_ext
+    dsimp [bT, v]
+    rw [Category.assoc]
+    change b₀.hom ≫ bT₀ ≫ v₀ = S.g.hom ≫ c.hom
+    rw [hTbg]
+    have hb₀g' : b₀.hom ≫ T.g.hom = S.g.hom := by
+      change (b₀ ≫ T.g).hom = S.g.hom
+      exact congrArg (fun h => h.hom) hb₀g
+    have hb₀g'' : b₀.hom ≫ Ssplit.g = S.g.hom := by
+      change b₀.hom ≫ T.g.hom = S.g.hom
+      exact hb₀g'
+    simpa only [Category.assoc] using congrArg (fun h => h ≫ c.hom) hb₀g''
+  refine ⟨I₂, I₃, b₀ ≫ bT, c, ?_⟩
+  refine ⟨⟨hR₁, hR₂, hR₃, ⟨u, v, huv, hS₂Comp, hleft, hright⟩⟩, ?_, ?_⟩
+  · dsimp [I₂]
+    exact hBbelow
+  · dsimp [I₃]
+    exact hR₃below
+
 theorem injective_resolution_short_exact_with_left
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughInjectives A]
     (S : ShortComplex (CompPlus A)) (hS : S.ShortExact)
@@ -1263,7 +1763,12 @@ theorem injective_resolution_short_exact_with_left
     ∃ (I₂ I₃ : CompPlus A)
       (b : S.X₂ ⟶ I₂) (c : S.X₃ ⟶ I₃),
       InjectiveResolutionShortExactData S I₁ I₂ I₃ a b c := by
-  sorry
+  obtain ⟨n₁, hn₁⟩ := ha.1
+  obtain ⟨n₃, hn₃⟩ := S.X₃.2
+  obtain ⟨I₂, I₃, b, c, hdata, _, _⟩ :=
+    injective_resolution_short_exact_with_left_aux
+      S hS I₁ a ha n₁ n₃ hn₁ hn₃
+  exact ⟨I₂, I₃, b, c, hdata⟩
 
 theorem injective_resolution_short_exact_nonnegative
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughInjectives A]
@@ -1274,7 +1779,17 @@ theorem injective_resolution_short_exact_nonnegative
       (a : S.X₁ ⟶ I₁) (b : S.X₂ ⟶ I₂) (c : S.X₃ ⟶ I₃),
       InjectiveResolutionShortExactData S I₁ I₂ I₃ a b c ∧
         I₁.obj.IsStrictlyGE 0 ∧ I₂.obj.IsStrictlyGE 0 ∧ I₃.obj.IsStrictlyGE 0 := by
-  sorry
+  obtain ⟨R₁, hR₁below, _⟩ :=
+    complex_injective_resolution_exists_with_mono S.X₁.obj 0 hS₀.1
+  let I₁ : CompPlus A := ⟨R₁.target, R₁.boundedBelow⟩
+  let a : S.X₁ ⟶ I₁ := ObjectProperty.homMk R₁.map
+  have ha : IsComplexInjectiveResolution S.X₁.obj I₁.obj a.hom :=
+    ⟨I₁.2, R₁.termwiseInjective, R₁.quasiIso⟩
+  obtain ⟨I₂, I₃, b, c, hdata, hI₂, hI₃⟩ :=
+    injective_resolution_short_exact_with_left_aux
+      S hS I₁ a ha 0 0 hR₁below hS₀.2.2
+  exact ⟨I₁, I₂, I₃, a, b, c, hdata,
+    hR₁below, by simpa using hI₂, hI₃⟩
 
 theorem injective_resolution_short_exact_with_left_nonnegative
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughInjectives A]
@@ -1288,7 +1803,10 @@ theorem injective_resolution_short_exact_with_left_nonnegative
       (b : S.X₂ ⟶ I₂) (c : S.X₃ ⟶ I₃),
       InjectiveResolutionShortExactData S I₁ I₂ I₃ a b c ∧
         I₂.obj.IsStrictlyGE 0 ∧ I₃.obj.IsStrictlyGE 0 := by
-  sorry
+  obtain ⟨I₂, I₃, b, c, hdata, hI₂, hI₃⟩ :=
+    injective_resolution_short_exact_with_left_aux
+      S hS I₁ a ha 0 0 hI₁₀ hS₀.2.2
+  exact ⟨I₂, I₃, b, c, hdata, by simpa using hI₂, hI₃⟩
 
 /- The source's item (4) is literally the placeholder `add more here`; it
   does not specify a mathematical assertion and therefore has no Lean field. -/

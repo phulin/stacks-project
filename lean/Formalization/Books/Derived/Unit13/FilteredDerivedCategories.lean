@@ -1696,7 +1696,115 @@ noncomputable def filteredGradedHomologyZeroLocalizationFunctor_fac
 theorem filteredDerivedLocalization_kernel
     (C : Type u) [Category.{v} C] [Abelian C] :
     functorKernel (filteredLocalizationFunctor C) = filteredAcyclic C := by
-  sorry
+  let H := filteredGradedHomologyZeroFunctor C
+  have hEqP : filteredAcyclic C = H.homologicalKernel := by
+    ext K
+    rw [Functor.mem_homologicalKernel_iff]
+    rfl
+  have hP : IsStrictlyFullSaturatedPretriangulated (H.homologicalKernel) := by
+    rw [← hEqP]
+    exact filteredAcyclic_properties C
+  have hEq : filteredQuasiIso C =
+      homologicalFunctorMorphismProperty H := by
+    ext X Y f
+    dsimp [filteredQuasiIso, MorphismProperty.inverseImage, HomotopyCategory.quasiIso,
+      homologicalFunctorMorphismProperty,
+      Formalization.Books.Derived.Unit03.homologicalDegree]
+    change (∀ n : ℤ, IsIso ((filteredGradedHomologyFunctor C n).map f)) ↔ _
+    constructor
+    · intro h i
+      exact (NatIso.isIso_map_iff (H.isoShift i) f).2 (h i)
+    · intro h i
+      exact (NatIso.isIso_map_iff (H.isoShift i) f).1 (h i)
+  have hW : subcategoryOperation (H.homologicalKernel) = filteredQuasiIso C := by
+    rw [hEq]
+    exact acyclic_kernel_morphismProperty_eq H
+  have hsat : SaturatedMultiplicativeSystem (filteredQuasiIso C) :=
+    (filteredQuasiIso_properties C).1
+  have hOps := operations_restrict_to_saturated_inverse
+    (S := filteredQuasiIso C) (P := H.homologicalKernel) hsat hP
+  change localizationKernel (filteredQuasiIso C) = filteredAcyclic C
+  calc
+    localizationKernel (filteredQuasiIso C) =
+        localizationKernel (subcategoryOperation (H.homologicalKernel)) := by rw [hW]
+    _ = quotientKernel (H.homologicalKernel) :=
+      operations_subcategory_saturation (H.homologicalKernel)
+    _ = H.homologicalKernel := hOps.2
+    _ = filteredAcyclic C := hEqP.symm
+
+private theorem filteredAcyclic_forgetful_homology
+    (C : Type u) [Category.{v} C] [Abelian C]
+    {K : FilteredHomotopyCategory C} (hK : filteredAcyclic C K) :
+    ∀ n : ℤ, IsZero ((filteredForgetfulHomologyFunctor C n).obj K) := by
+  rcases K with ⟨K⟩
+  intro n
+  dsimp [filteredForgetfulHomologyFunctor, filteredForgetfulHomotopyFunctor]
+  change IsZero ((HomotopyCategory.homologyFunctor C (ComplexShape.up ℤ) n).obj
+    ((HomotopyCategory.quotient C (ComplexShape.up ℤ)).obj
+      (((finiteForgetful C).mapHomologicalComplex (ComplexShape.up ℤ)).obj K)))
+  have hK' : ∀ p n : ℤ,
+      IsZero ((filteredGradedPieceHomologyFunctor C p n).obj ⟨K⟩) :=
+    (filteredAcyclic_iff_gr_piece_acyclic C ⟨K⟩).1 hK
+  have hExact : ∀ p : ℤ,
+      (((finiteGradedPieceFunctor C p).mapHomologicalComplex
+        (ComplexShape.up ℤ)).obj K).ExactAt n := by
+    intro p
+    rw [HomologicalComplex.exactAt_iff_isZero_homology]
+    let Gp := ((finiteGradedPieceFunctor C p).mapHomologicalComplex
+      (ComplexShape.up ℤ)).obj K
+    have hGp' :
+        IsZero ((HomotopyCategory.homologyFunctor C (ComplexShape.up ℤ) n).obj
+          ((HomotopyCategory.quotient C (ComplexShape.up ℤ)).obj Gp)) := by
+      change IsZero ((filteredGradedPieceHomologyFunctor C p n).obj ⟨K⟩)
+      exact hK' p n
+    exact hGp'.of_iso
+      ((HomotopyCategory.homologyFunctorFactors C (ComplexShape.up ℤ) n).app Gp).symm
+  let f : (K.X (n - 1)).obj ⟶ (K.X n).obj := (K.d (n - 1) n).hom
+  let g : (K.X n).obj ⟶ (K.X (n + 1)).obj := (K.d n (n + 1)).hom
+  have hfg : f ≫ g = 0 := by
+    change (K.d (n - 1) n ≫ K.d n (n + 1)).hom =
+      (0 : K.X (n - 1) ⟶ K.X (n + 1)).hom
+    rw [K.d_comp_d]
+  have hgr : ∀ p : ℤ,
+      (gradedPieceComplex (A := (K.X (n - 1)).obj) (B := (K.X n).obj)
+        (D := (K.X (n + 1)).obj)
+        f g hfg p).Exact := by
+    intro p
+    have hp := (HomologicalComplex.exactAt_iff'
+      (K := ((finiteGradedPieceFunctor C p).mapHomologicalComplex
+        (ComplexShape.up ℤ)).obj K)
+      (i := n - 1) (j := n) (k := n + 1)
+      (by
+        change (ComplexShape.symm (ComplexShape.up ℤ)).next n = n - 1
+        apply ComplexShape.next_eq'
+        exact ComplexShape.up_mk (n - 1) n (by omega))
+      (by
+        apply ComplexShape.next_eq'
+        exact ComplexShape.up_mk n (n + 1) (by omega))).mp (hExact p)
+    simpa [gradedPieceComplex, finiteGradedPieceFunctor, gradedPieceFunctor, f, g,
+      HomologicalComplex.sc', HomologicalComplex.shortComplexFunctor',
+      CategoryTheory.Functor.mapHomologicalComplex] using hp
+  have hfiltered := filtered_acyclic f g hfg
+    (K.X (n - 1)).property (K.X n).property (K.X (n + 1)).property hgr
+  let G := ((finiteForgetful C).mapHomologicalComplex (ComplexShape.up ℤ)).obj K
+  have hU : G.ExactAt n := by
+    rw [HomologicalComplex.exactAt_iff'
+      (K := G) (i := n - 1) (j := n) (k := n + 1)
+      (by
+        change (ComplexShape.symm (ComplexShape.up ℤ)).next n = n - 1
+        apply ComplexShape.next_eq'
+        exact ComplexShape.up_mk (n - 1) n (by omega))
+      (by
+        apply ComplexShape.next_eq'
+        exact ComplexShape.up_mk n (n + 1) (by omega))]
+    simpa [G, finiteForgetful, filteredForgetful, f, g,
+      HomologicalComplex.sc', HomologicalComplex.shortComplexFunctor',
+      CategoryTheory.Functor.mapHomologicalComplex] using hfiltered.2.2.2.2.2
+  have hHC : IsZero ((HomologicalComplex.homologyFunctor C
+      (ComplexShape.up ℤ) n).obj G) :=
+    (HomologicalComplex.exactAt_iff_isZero_homology G n).mp hU
+  exact hHC.of_iso
+    ((HomotopyCategory.homologyFunctorFactors C (ComplexShape.up ℤ) n).app G)
 
 theorem filteredQuasiIso_forgetful
     (C : Type u) [Category.{v} C] [Abelian C]
@@ -1704,7 +1812,72 @@ theorem filteredQuasiIso_forgetful
     (hf : filteredQuasiIso C f) :
     HomotopyCategory.quasiIso C (ComplexShape.up ℤ)
       ((filteredForgetfulHomotopyFunctor C).map f) := by
-  sorry
+  let Hg := filteredGradedHomologyZeroFunctor C
+  let Hf := filteredForgetfulHomologyZeroFunctor C
+  have hEqP : filteredAcyclic C = Hg.homologicalKernel := by
+    ext K
+    rw [Functor.mem_homologicalKernel_iff]
+    rfl
+  have hEq : filteredQuasiIso C =
+      homologicalFunctorMorphismProperty Hg := by
+    ext X Y f
+    dsimp [filteredQuasiIso, MorphismProperty.inverseImage, HomotopyCategory.quasiIso,
+      homologicalFunctorMorphismProperty,
+      Formalization.Books.Derived.Unit03.homologicalDegree]
+    change (∀ n : ℤ, IsIso ((filteredGradedHomologyFunctor C n).map f)) ↔ _
+    constructor
+    · intro h i
+      exact (NatIso.isIso_map_iff (Hg.isoShift i) f).2 (h i)
+    · intro h i
+      exact (NatIso.isIso_map_iff (Hg.isoShift i) f).1 (h i)
+  have hW : subcategoryOperation (Hg.homologicalKernel) = filteredQuasiIso C := by
+    rw [hEq]
+    exact acyclic_kernel_morphismProperty_eq Hg
+  have hForgetKernel : ∀ K, filteredAcyclic C K → Hf.homologicalKernel K := by
+    intro K hK
+    rw [Functor.mem_homologicalKernel_iff]
+    exact filteredAcyclic_forgetful_homology C hK
+  have hKernelIncl : Hg.homologicalKernel ≤ Hf.homologicalKernel := by
+    rw [← hEqP]
+    intro K hK
+    exact hForgetKernel K hK
+  have htr : Hg.homologicalKernel.trW f := by
+    have hsub : subcategoryOperation (Hg.homologicalKernel) f := by
+      rw [hW]
+      exact hf
+    change Hg.homologicalKernel.isoClosure.trW f at hsub
+    rw [ObjectProperty.trW_isoClosure] at hsub
+    exact hsub
+  have htrForget : Hf.homologicalKernel.trW f :=
+    ObjectProperty.trW_monotone hKernelIncl _ htr
+  have hForgetW : subcategoryOperation (Hf.homologicalKernel) =
+      homologicalFunctorMorphismProperty Hf :=
+    acyclic_kernel_morphismProperty_eq Hf
+  have hm : homologicalFunctorMorphismProperty Hf f := by
+    rw [← hForgetW]
+    change Hf.homologicalKernel.isoClosure.trW f
+    rw [ObjectProperty.trW_isoClosure]
+    exact htrForget
+  have hEqForget :
+      MorphismProperty.inverseImage
+          (HomotopyCategory.quasiIso C (ComplexShape.up ℤ))
+          (filteredForgetfulHomotopyFunctor C) =
+        homologicalFunctorMorphismProperty Hf := by
+    ext X Y f
+    dsimp [MorphismProperty.inverseImage, HomotopyCategory.quasiIso,
+      homologicalFunctorMorphismProperty,
+      Formalization.Books.Derived.Unit03.homologicalDegree]
+    change (∀ n : ℤ, IsIso ((filteredForgetfulHomologyFunctor C n).map f)) ↔ _
+    constructor
+    · intro h i
+      exact (NatIso.isIso_map_iff (Hf.isoShift i) f).2 (h i)
+    · intro h i
+      exact (NatIso.isIso_map_iff (Hf.isoShift i) f).1 (h i)
+  change MorphismProperty.inverseImage
+    (HomotopyCategory.quasiIso C (ComplexShape.up ℤ))
+    (filteredForgetfulHomotopyFunctor C) f
+  rw [hEqForget]
+  exact hm
 
 theorem filteredQuasiIso_gr_piece
     (C : Type u) [Category.{v} C] [Abelian C]
@@ -1772,7 +1945,9 @@ noncomputable def filteredDerivedGradedFunctor_fac
     filteredLocalizationFunctor C ⋙ filteredDerivedGradedFunctor C ≅
       filteredAssociatedGradedHomotopyFunctor C ⋙
         DerivedCategory.Qh (C := GradedObject ℤ C) := by
-  sorry
+  exact Localization.fac
+    (filteredAssociatedGradedHomotopyFunctor C ⋙
+      DerivedCategory.Qh (C := GradedObject ℤ C)) _ (filteredLocalizationFunctor C)
 
 noncomputable def filteredDerivedGradedPieceFunctor_fac
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ)
@@ -1780,20 +1955,31 @@ noncomputable def filteredDerivedGradedPieceFunctor_fac
     filteredLocalizationFunctor C ⋙ filteredDerivedGradedPieceFunctor C p ≅
       filteredGradedPieceHomotopyFunctor C p ⋙
         DerivedCategory.Qh (C := C) := by
-  sorry
+  exact Localization.fac
+    (filteredGradedPieceHomotopyFunctor C p ⋙ DerivedCategory.Qh (C := C)) _
+      (filteredLocalizationFunctor C)
 
 noncomputable def filteredDerivedForgetfulFunctor_fac
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} C] :
     filteredLocalizationFunctor C ⋙ filteredDerivedForgetfulFunctor C ≅
       filteredForgetfulHomotopyFunctor C ⋙ DerivedCategory.Qh (C := C) := by
-  sorry
+  exact Localization.fac
+    (filteredForgetfulHomotopyFunctor C ⋙ DerivedCategory.Qh (C := C)) _
+      (filteredLocalizationFunctor C)
 
 noncomputable instance filteredDerivedGradedFunctor_commShift
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} (GradedObject ℤ C)] :
     (filteredDerivedGradedFunctor C).CommShift ℤ := by
-  sorry
+  letI : Localization.Lifting (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredAssociatedGradedHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := GradedObject ℤ C)) (filteredDerivedGradedFunctor C) :=
+    ⟨filteredDerivedGradedFunctor_fac C⟩
+  exact Functor.commShiftOfLocalization (filteredLocalizationFunctor C)
+    (filteredQuasiIso C) ℤ
+    (filteredAssociatedGradedHomotopyFunctor C ⋙
+      DerivedCategory.Qh (C := GradedObject ℤ C)) (filteredDerivedGradedFunctor C)
 
 noncomputable instance filteredDerivedGradedPieceFunctor_commShift
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ)

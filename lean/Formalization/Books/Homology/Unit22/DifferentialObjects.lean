@@ -1230,6 +1230,22 @@ abbrev ShiftedInjectiveSelfMapData (C : Type u) [Category.{v} C]
     [Abelian C] (S T : C ≌ C) :=
   Formalization.Books.Homology.Unit20.ShiftedSelfMapData C S T
 
+/-!
+The source's target is `T⁻¹(A, d)`, so its differential is the transport of
+`A.d` through the inverse shift and the comparison
+`T⁻¹S ≅ ST⁻¹`.  The preceding generic data structure records an arbitrary
+square-zero differential on `T⁻¹A`; that weaker interface does not suffice for
+the `Bᵣ ⊆ Zᵣ` formulas below.  We keep the generic exact-couple interface and
+record the missing source-facing compatibility here, at the first declarations
+that use it.
+-/
+structure ShiftedSelfMapTargetDifferentialCompatibility
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {S T : C ≌ C} (D : ShiftedInjectiveSelfMapData C S T) where
+  comparison : (S.functor ⋙ T.inverse) ≅ (T.inverse ⋙ S.functor)
+  target_differential_eq :
+    T.inverse.map D.A.d ≫ comparison.hom.app D.A.carrier = D.targetDifferential
+
 abbrev shiftedSelfMapQuotient {C : Type u} [Category.{v} C]
     [Abelian C] {S T : C ≌ C} (D : ShiftedInjectiveSelfMapData C S T) :
     ShiftedDifferentialObject C S :=
@@ -1505,13 +1521,15 @@ def shiftedSelfMapZ
 
 theorem shiftedSelfMap_B_le_Z
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}
-    (D : ShiftedInjectiveSelfMapData C S T) (r : ℕ) :
+    (D : ShiftedInjectiveSelfMapData C S T)
+    (hD : ShiftedSelfMapTargetDifferentialCompatibility D) (r : ℕ) :
     shiftedSelfMapB D r ≤ shiftedSelfMapZ D r := by
   sorry
 
 theorem shiftedSelfMap_filtration
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}
-    (D : ShiftedInjectiveSelfMapData C S T) :
+    (D : ShiftedInjectiveSelfMapData C S T)
+    (hD : ShiftedSelfMapTargetDifferentialCompatibility D) :
     shiftedSelfMapB D 0 = ⊥ ∧ shiftedSelfMapZ D 0 = ⊤ ∧
       (∀ r, shiftedSelfMapB D r ≤ shiftedSelfMapB D (r + 1)) ∧
       (∀ r, shiftedSelfMapZ D (r + 1) ≤ shiftedSelfMapZ D r) ∧
@@ -1520,10 +1538,11 @@ theorem shiftedSelfMap_filtration
 
 noncomputable def shiftedSelfMapPageComponent
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}
-    (D : ShiftedInjectiveSelfMapData C S T) (n : ℕ) : C :=
+    (D : ShiftedInjectiveSelfMapData C S T)
+    (hD : ShiftedSelfMapTargetDifferentialCompatibility D) (n : ℕ) : C :=
   Formalization.Books.Homology.Unit20.subquotientObject
     (shiftedSelfMapB D (n + 1)) (shiftedSelfMapZ D (n + 1))
-    (shiftedSelfMap_B_le_Z D (n + 1))
+    (shiftedSelfMap_B_le_Z D hD (n + 1))
 
 def shiftedSelfMapPageTranslation
     {C : Type u} [Category.{v} C] {S T : C ≌ C} (n : ℕ) : C ≌ C :=
@@ -1552,17 +1571,19 @@ an arbitrary category has element terms.
 -/
 structure ShiftedSelfMapPageDifferentialRule
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}
-    (D : ShiftedInjectiveSelfMapData C S T) (n : ℕ) where
-  differential : shiftedSelfMapPageComponent D n ⟶
+    (D : ShiftedInjectiveSelfMapData C S T)
+    (hD : ShiftedSelfMapTargetDifferentialCompatibility D) (n : ℕ) where
+  differential : shiftedSelfMapPageComponent D hD n ⟶
     (shiftedSelfMapPageTranslation (S := S) (T := T) n).functor.obj
-      (shiftedSelfMapPageComponent D n)
+      (shiftedSelfMapPageComponent D hD n)
   differential_squared : differential ≫
       (shiftedSelfMapPageTranslation (S := S) (T := T) n).functor.map differential = 0
 
 theorem shiftedSelfMap_page_differential_rule
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}
-    (D : ShiftedInjectiveSelfMapData C S T) (n : ℕ) :
-    Nonempty (ShiftedSelfMapPageDifferentialRule D n) := by
+    (D : ShiftedInjectiveSelfMapData C S T)
+    (hD : ShiftedSelfMapTargetDifferentialCompatibility D) (n : ℕ) :
+    Nonempty (ShiftedSelfMapPageDifferentialRule D hD n) := by
   sorry
 
 /-! ### Source-facing accounting for the shifted page convention -/

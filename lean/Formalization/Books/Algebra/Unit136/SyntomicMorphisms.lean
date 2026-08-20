@@ -97,6 +97,7 @@ def IsRelativeGlobalCompleteIntersection
     IsPolynomialQuotientPresentation P fs ∧
       ∀ p : PrimeSpectrum R,
         Nonempty (PrimeSpectrum (Fiber R S p)) →
+          c ≤ n ∧
           ringKrullDim (Fiber R S p) =
             (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞)
 
@@ -147,7 +148,7 @@ theorem relative_global_complete_intersection_localization
     letI : Algebra R S := f.toAlgebra
       ∀ (g₀ : S) (n : ℕ)
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
-      (c : ℕ) (fs : Fin c → P.Ring),
+      (c : ℕ) (fs : Fin c → P.Ring) (hc : c ≤ n),
       IsPolynomialQuotientPresentation P fs →
       HasFiberDimension f
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) →
@@ -270,8 +271,8 @@ theorem factorPolynomialMap_is_relative_global_complete_intersection
 
 abbrev RootsPolynomialBase (n : ℕ) := MvPolynomial (Fin n) ℤ
 
-/- The empty summand keeps the target's root variables visibly separate from
-   the coefficient variables while still giving exactly `n` root variables. -/
+/- The empty summand keeps the target's root variables distinct from the
+   coefficient variables while still giving exactly `n` root variables. -/
 abbrev RootsPolynomialTarget (n : ℕ) :=
   MvPolynomial (Sum (Fin n) Empty) ℤ
 
@@ -318,8 +319,7 @@ theorem rootsPolynomialMap_finite_free
       Module.Free (RootsPolynomialBase n) (RootsPolynomialTarget n) ∧
       (∃ b : Basis (RootMonomialIndex n) (RootsPolynomialBase n)
           (RootsPolynomialTarget n),
-        (∀ e, b e = rootMonomial n e) ∧
-          Nonempty (RootMonomialIndex n)) := by
+        ∀ e, b e = rootMonomial n e) := by
   sorry
 
 theorem rootsPolynomialMap_is_finite_faithfully_flat
@@ -350,7 +350,7 @@ theorem localize_relative_complete_intersection
     : letI : Algebra R S := f.toAlgebra
       ∀ {n c : ℕ}
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
-      (fs : Fin c → P.Ring),
+      (fs : Fin c → P.Ring) (hc : c ≤ n),
       IsPolynomialQuotientPresentation P fs →
       ∀ (I : Ideal R),
       HasFiberDimension
@@ -368,7 +368,7 @@ theorem localize_relative_complete_intersection_at_fibre
     : letI : Algebra R S := f.toAlgebra
       ∀ {n c : ℕ}
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
-      (fs : Fin c → P.Ring),
+      (fs : Fin c → P.Ring) (hc : c ≤ n),
       IsPolynomialQuotientPresentation P fs →
       (p : PrimeSpectrum R) →
       (hdim : ringKrullDim (Fiber R S p) =
@@ -385,7 +385,7 @@ theorem localize_relative_complete_intersection_at_prime
     : letI : Algebra R S := f.toAlgebra
       ∀ {n c : ℕ}
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
-      (fs : Fin c → P.Ring),
+      (fs : Fin c → P.Ring) (hc : c ≤ n),
       IsPolynomialQuotientPresentation P fs →
       (p : PrimeSpectrum R) → (q' : PrimeSpectrum P.Ring) →
       (q : PrimeSpectrum S) →
@@ -458,9 +458,9 @@ theorem relative_global_complete_intersection_conormal
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     :
     letI : Algebra R S := f.toAlgebra
-    ∀ {n c : ℕ}
+      ∀ {n c : ℕ}
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
-      (fs : Fin c → P.Ring),
+      (fs : Fin c → P.Ring) (hc : c ≤ n),
       IsPolynomialQuotientPresentation P fs →
       HasFiberDimension f
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) →
@@ -569,15 +569,13 @@ def SyntomicLiftPiece
     {R Sbar : Type u} [CommRing R] [CommRing Sbar]
     (J : Ideal R) (fbar : (R ⧸ J) →+* Sbar) (g : Sbar) : Prop :=
   letI : Algebra (R ⧸ J) Sbar := fbar.toAlgebra
-  ∃ (T : Type u) (hT : CommRing T) (f : R →+* T),
+    ∃ (T : Type u) (hT : CommRing T) (f : R →+* T),
     letI : CommRing T := hT
     IsRelativeGlobalCompleteIntersection f ∧
       ∃ e : (T ⧸ Ideal.map f J) ≃+* Localization.Away g,
-        ∃ h : (R ⧸ J) →+* (T ⧸ Ideal.map f J),
-          h.comp (Ideal.Quotient.mk J) =
-              (Ideal.Quotient.mk (Ideal.map f J)).comp f ∧
-            e.toRingHom.comp h =
-              algebraMap (R ⧸ J) (Localization.Away g)
+        e.toRingHom.comp
+              (Ideal.quotientMap (Ideal.map f J) f Ideal.le_comap_map) =
+            algebraMap (R ⧸ J) (Localization.Away g)
 
 theorem lift_syntomic
     {R S : Type u} [CommRing R] [CommRing S] (J : Ideal R)

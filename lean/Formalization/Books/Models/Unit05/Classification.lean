@@ -8517,6 +8517,13 @@ private theorem normalize_reversed_pathLast
           simp [hu, heu]
   exact ⟨hmat', hvec'⟩
 
+private def mappedSubgraph {T : NumericalType} {k l : ℕ}
+    (S : MinusTwoSubgraph T k) (f : Fin l → Fin k)
+    (hf : Function.Injective f) : MinusTwoSubgraph T l :=
+  { index := fun i => S.index (f i)
+    index_injective := fun i j hij => hf (S.index_injective hij)
+    minus_two := fun i => S.minus_two (f i) }
+
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →
@@ -8528,7 +8535,256 @@ theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
 theorem lemma_E6 (T : NumericalType) (S : MinusTwoSubgraph T 6)
     (hn : 6 < T.n) (hedges : hasE6Edges (localData S)) :
     UpToReordering (localData S) (fun D => isE6 D) := by
-  sorry
+  classical
+  let D := localData S
+  rcases hedges with ⟨h01, h12, h23, h34, h25⟩
+  have ha01 : 0 < D.a 0 1 := by
+    rcases h01 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 0 := Fin.ext hi
+    have hj' : j = 1 := Fin.ext hj
+    simpa [D, hi', hj'] using hp
+  have ha12 : 0 < D.a 1 2 := by
+    rcases h12 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 1 := Fin.ext hi
+    have hj' : j = 2 := Fin.ext hj
+    simpa [D, hi', hj'] using hp
+  have ha23 : 0 < D.a 2 3 := by
+    rcases h23 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 2 := Fin.ext hi
+    have hj' : j = 3 := Fin.ext hj
+    simpa [D, hi', hj'] using hp
+  have ha34 : 0 < D.a 3 4 := by
+    rcases h34 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 3 := Fin.ext hi
+    have hj' : j = 4 := Fin.ext hj
+    simpa [D, hi', hj'] using hp
+  have ha25 : 0 < D.a 2 5 := by
+    rcases h25 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 2 := Fin.ext hi
+    have hj' : j = 5 := Fin.ext hj
+    simpa [D, hi', hj'] using hp
+  have hsym₀ : ∀ i j, D.a i j = D.a j i := by
+    intro i j
+    simpa [D] using local_a_symmetric S i j
+  let f₁ : Fin 5 → Fin 6 := fun i =>
+    ⟨if i.val = 4 then 5 else i.val, by split_ifs <;> omega⟩
+  have hf₁ : Function.Injective f₁ := by
+    intro i j hij
+    apply Fin.ext
+    have hv := congrArg Fin.val hij
+    dsimp [f₁] at hv
+    split_ifs at hv <;> omega
+  let S₁ := mappedSubgraph S f₁ hf₁
+  have hS₁ : hasD5Edges (localData S₁) := by
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · refine ⟨0, 1, rfl, rfl, ?_⟩
+      change 0 < D.a (f₁ 0) (f₁ 1)
+      simpa [f₁] using ha01
+    · refine ⟨1, 2, rfl, rfl, ?_⟩
+      change 0 < D.a (f₁ 1) (f₁ 2)
+      simpa [f₁] using ha12
+    · refine ⟨2, 3, rfl, rfl, ?_⟩
+      change 0 < D.a (f₁ 2) (f₁ 3)
+      simpa [f₁] using ha23
+    · refine ⟨2, 4, rfl, rfl, ?_⟩
+      change 0 < D.a (f₁ 2) (f₁ 4)
+      simpa [f₁] using ha25
+  have hD5₁ := lemma_D5 T S₁ (by omega) hS₁
+  have hsym₁ : ∀ i j, (localData S₁).a i j = (localData S₁).a j i :=
+    local_a_symmetric S₁
+  obtain ⟨r, hr, hw₁, hmat₁⟩ :=
+    d5_reordered_data (localData S₁) hsym₁ hS₁ hD5₁
+  have hentry₁ (i j : Fin 5) :
+      D.a (f₁ i) (f₁ j) = r * branchPrefixMatrix 5 2 3 4 (-2) 1 i j := by
+    have hh := congrArg (fun M : Matrix (Fin 5) (Fin 5) ℤ => M i j) hmat₁
+    simpa [D, S₁, mappedSubgraph, localData, scalarMatrix] using hh
+  have hw01 : ∀ i : Fin 5, D.w (f₁ i) = r := by
+    intro i
+    simpa [D, S₁, mappedSubgraph, localData] using hw₁ i
+  let f₂ : Fin 5 → Fin 6 := fun i =>
+    ⟨if i.val = 0 then 4 else if i.val = 1 then 3 else
+      if i.val = 2 then 2 else if i.val = 3 then 1 else 5,
+      by split_ifs <;> omega⟩
+  have hf₂ : Function.Injective f₂ := by
+    intro i j hij
+    apply Fin.ext
+    have hv := congrArg Fin.val hij
+    dsimp [f₂] at hv
+    split_ifs at hv <;> omega
+  let S₂ := mappedSubgraph S f₂ hf₂
+  have hS₂ : hasD5Edges (localData S₂) := by
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · refine ⟨0, 1, rfl, rfl, ?_⟩
+      change 0 < D.a (f₂ 0) (f₂ 1)
+      simpa [f₂] using (show 0 < D.a 4 3 by
+        rw [hsym₀ 4 3]
+        exact ha34)
+    · refine ⟨1, 2, rfl, rfl, ?_⟩
+      change 0 < D.a (f₂ 1) (f₂ 2)
+      simpa [f₂] using (show 0 < D.a 3 2 by
+        rw [hsym₀ 3 2]
+        exact ha23)
+    · refine ⟨2, 3, rfl, rfl, ?_⟩
+      change 0 < D.a (f₂ 2) (f₂ 3)
+      simpa [f₂] using (show 0 < D.a 2 1 by
+        rw [hsym₀ 2 1]
+        exact ha12)
+    · refine ⟨2, 4, rfl, rfl, ?_⟩
+      change 0 < D.a (f₂ 2) (f₂ 4)
+      simpa [f₂] using ha25
+  have hD5₂ := lemma_D5 T S₂ (by omega) hS₂
+  have hsym₂ : ∀ i j, (localData S₂).a i j = (localData S₂).a j i :=
+    local_a_symmetric S₂
+  obtain ⟨s, hs, hw₂, hmat₂⟩ :=
+    d5_reordered_data (localData S₂) hsym₂ hS₂ hD5₂
+  have hentry₂ (i j : Fin 5) :
+      D.a (f₂ i) (f₂ j) = s * branchPrefixMatrix 5 2 3 4 (-2) 1 i j := by
+    have hh := congrArg (fun M : Matrix (Fin 5) (Fin 5) ℤ => M i j) hmat₂
+    simpa [D, S₂, mappedSubgraph, localData, scalarMatrix] using hh
+  have hw₂' : ∀ i : Fin 5, D.w (f₂ i) = s := by
+    intro i
+    simpa [D, S₂, mappedSubgraph, localData] using hw₂ i
+  have hrs : s = r := by
+    calc
+      s = D.w (f₂ 2) := (hw₂' 2).symm
+      _ = r := by simpa [f₂, f₁] using hw01 2
+  have hweights : ∀ i : Fin 6, D.w i = r := by
+    intro i
+    fin_cases i
+    · simpa [f₁] using hw01 0
+    · simpa [f₂, hrs] using hw₂' 3
+    · simpa [f₂, hrs] using hw₂' 2
+    · simpa [f₂, hrs] using hw₂' 1
+    · simpa [f₂, hrs] using hw₂' 0
+    · simpa [f₁] using hw01 4
+  have hdiag : ∀ i : Fin 6, D.a i i = -2 * r := by
+    intro i
+    have hi : D.a i i = -2 * D.w i := by
+      simpa [D, localData] using (S.minus_two i).2
+    calc
+      D.a i i = -2 * D.w i := hi
+      _ = -2 * r := by rw [hweights i]
+  have h01 : D.a 0 1 = r := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 0 1
+  have h12 : D.a 1 2 = r := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 1 2
+  have h23 : D.a 2 3 = r := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 2 3
+  have h25 : D.a 2 5 = r := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 2 4
+  have h34 : D.a 3 4 = r := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 1 0
+  have hsym : ∀ i j, D.a i j = D.a j i := by
+    intro i j
+    simpa [D] using local_a_symmetric S i j
+  have hz02 : D.a 0 2 = 0 := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 0 2
+  have hz03 : D.a 0 3 = 0 := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 0 3
+  have hz05 : D.a 0 5 = 0 := by
+    simpa [f₁, branchPrefixMatrix] using hentry₁ 0 4
+  have hz13 : D.a 1 3 = 0 := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 3 1
+  have hz14 : D.a 1 4 = 0 := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 3 0
+  have hz15 : D.a 1 5 = 0 := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 3 4
+  have hz24 : D.a 2 4 = 0 := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 2 0
+  have hz45 : D.a 4 5 = 0 := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 0 4
+  have hz35 : D.a 3 5 = 0 := by
+    simpa [f₂, branchPrefixMatrix, hrs] using hentry₂ 1 4
+  have h10 : D.a 1 0 = r := (hsym 1 0).trans h01
+  have h21 : D.a 2 1 = r := (hsym 2 1).trans h12
+  have h32 : D.a 3 2 = r := (hsym 3 2).trans h23
+  have h43 : D.a 4 3 = r := (hsym 4 3).trans h34
+  have h52 : D.a 5 2 = r := (hsym 5 2).trans h25
+  have hz20 : D.a 2 0 = 0 := (hsym 2 0).trans hz02
+  have hz30 : D.a 3 0 = 0 := (hsym 3 0).trans hz03
+  have hz50 : D.a 5 0 = 0 := (hsym 5 0).trans hz05
+  have hz31 : D.a 3 1 = 0 := (hsym 3 1).trans hz13
+  have hz41 : D.a 4 1 = 0 := (hsym 4 1).trans hz14
+  have hz51 : D.a 5 1 = 0 := (hsym 5 1).trans hz15
+  have hz42 : D.a 4 2 = 0 := (hsym 4 2).trans hz24
+  have hz53 : D.a 5 3 = 0 := (hsym 5 3).trans hz35
+  have hz54 : D.a 5 4 = 0 := (hsym 5 4).trans hz45
+  have hB : Matrix.PosDef (fun i j => -((D.a i j : ℤ) : ℝ)) := by
+    simpa [D, localData] using local_principal_neg_posDef T S (by omega) hn
+  have hcycle (ha04 : 0 < D.a 0 4) : False := by
+    let e : Fin 5 → Fin 6 := fun i => ⟨i.val, by omega⟩
+    have he : Function.Injective e := by
+      intro i j hij
+      apply Fin.ext
+      simpa [e] using congrArg Fin.val hij
+    have hdiag' : ∀ i, D.a i i = -2 * D.w i := by
+      intro i
+      rw [hdiag i, hweights i]
+    have hnon : ∀ i j : Fin 6, i ≠ j → 0 ≤ D.a i j := by
+      intro i j hij
+      change 0 ≤ T.a (S.index i) (S.index j)
+      apply T.a_offdiag_nonneg
+      intro h
+      exact hij (S.index_injective h)
+    have hdiv : ∀ i j : Fin 6, D.w i ∣ D.a i j := by
+      intro i j
+      simpa [D, localData] using T.w_dvd (S.index i) (S.index j)
+    have hpos : ∀ i : Fin 6, 0 < D.w i := by
+      intro i
+      simpa [D] using local_w_pos S i
+    have hlow : ∀ i j : Fin 6, 0 < D.a i j →
+        (D.w i : ℝ) ≤ D.a i j := by
+      intro i j hij
+      obtain ⟨p, q, hp, hq, hpa, hqa, hpq⟩ := long_edge_ratio D
+        (fun i j => -((D.a i j : ℤ) : ℝ)) hdiag' hsym hpos hB
+        (by intro i j; rfl)
+        i j hij (hdiv i j) (by rw [hsym]; exact hdiv j i)
+      have hp1 : (1 : ℤ) ≤ p := by omega
+      have hpaR : (D.a i j : ℝ) = (p : ℝ) * D.w i := by exact_mod_cast hpa
+      have hwiR : (0 : ℝ) < D.w i := by exact_mod_cast hpos i
+      have hp1R : (1 : ℝ) ≤ p := by exact_mod_cast hp1
+      nlinarith
+    have hp01 : 0 < D.a 0 1 := by rw [h01]; exact_mod_cast hr
+    have hp12 : 0 < D.a 1 2 := by rw [h12]; exact_mod_cast hr
+    have hp23 : 0 < D.a 2 3 := by rw [h23]; exact_mod_cast hr
+    have hp34 : 0 < D.a 3 4 := by rw [h34]; exact_mod_cast hr
+    have hcycle' : ∀ i : Fin 5, 0 < D.a (e i) (e (if h : i.val + 1 = 5 then
+        (0 : Fin 5) else ⟨i.val + 1, by omega⟩)) := by
+      intro i
+      fin_cases i
+      · simpa [e] using hp01
+      · simpa [e] using hp12
+      · simpa [e] using hp23
+      · simpa [e] using hp34
+      · have hh : 0 < D.a 4 0 := by rw [hsym]; exact ha04
+        simpa [e] using hh
+    exact no_positive_cycle D (fun i j => -((D.a i j : ℤ) : ℝ)) hB e he
+      hdiag' hsym hlow hnon (by intro i j; rfl) (by omega) hcycle'
+  have hz04 : D.a 0 4 = 0 := by
+    have hneq : (0 : Fin 6) ≠ 4 := by decide
+    have hnon := (show 0 ≤ D.a 0 4 from by
+      change 0 ≤ T.a (S.index 0) (S.index 4)
+      apply T.a_offdiag_nonneg
+      intro h
+      exact hneq (S.index_injective h))
+    by_contra h
+    exact hcycle (lt_of_le_of_ne hnon (Ne.symm h))
+  have hz40 : D.a 4 0 = 0 := (hsym 4 0).trans hz04
+  change UpToReordering D (fun D => isE6 D)
+  refine ⟨Equiv.refl _, ?_⟩
+  change isE6 D
+  unfold isE6 realizesPattern
+  refine ⟨r, hr, ?_, ?_, ?_, ?_⟩
+  · ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [D, scalarMatrix, pathUntilLeafMatrix, hdiag, h01, h10, h12, h21,
+        h23, h32, h34, h43, h25, h52, hz02, hz20, hz03, hz30, hz04, hz40,
+        hz05, hz50, hz13, hz31, hz14, hz41, hz15, hz51, hz24, hz42, hz35,
+        hz53, hz45, hz54] <;> ring
+  · funext i
+    simp [scalarVector, constantVector, hweights]
+  · exact local_m_pos S
+  · sorry
 
 theorem lemma_E6_not_full (T : NumericalType) (S : MinusTwoSubgraph T 6)
     (hn : T.n = 6) (_hedges : hasE6Edges (localData S))

@@ -206,6 +206,56 @@ private theorem split_rankOne_to_fin_of_hasPropertyP
       ring
     _ = r := by rw [hc', mul_one]
 
+private theorem split_rankOne_to_projective_of_hasPropertyP
+    {R : Type u} [CommRing R] (hP : HasPropertyP R)
+    {P : Type v} [AddCommGroup P] [Module R P] [Module.Projective R P]
+    (u : R →ₗ[R] P) (hu : Function.Injective u) :
+    ∃ g : P →ₗ[R] R, g.comp u = LinearMap.id := by
+  obtain ⟨F, hAddF, hModF, hFreeF, i, p, hpi⟩ :=
+    (Module.Projective.iff_split (R := R) (P := P)).mp inferInstance
+  let : AddCommMonoid F := hAddF
+  let : AddCommGroup F := Module.addCommMonoidToAddCommGroup R
+  let : Module R F := hModF
+  let : Module.Free R F := hFreeF
+  let b := Module.Free.chooseBasis R F
+  let z : Module.Free.ChooseBasisIndex R F →₀ R := b.repr (i (u 1))
+  let s := z.support
+  let c : P →ₗ[R] (s → R) := LinearMap.pi fun j =>
+    (Finsupp.lapply j.1).comp (b.repr.toLinearMap.comp i)
+  have hcu : Function.Injective (c.comp u) := by
+    intro x y hxy
+    apply hu
+    have hi : Function.Injective i := by
+      apply Function.LeftInverse.injective
+      intro a
+      have h := LinearMap.congr_fun hpi a
+      simpa using h
+    apply hi
+    apply b.repr.injective
+    have hrepr (r : R) : b.repr (i (u r)) = r • z := by
+      have hur : u r = r • u 1 := by
+        simpa using u.map_smul r (1 : R)
+      simp [hur, z]
+    rw [hrepr, hrepr]
+    ext j
+    by_cases hj : j ∈ s
+    · have hj' := congrFun hxy ⟨j, hj⟩
+      change (b.repr (i (u x))) j = (b.repr (i (u y))) j at hj'
+      rw [hrepr, hrepr] at hj'
+      simpa using hj'
+    · have hzj : z j = 0 := by simpa [s] using hj
+      simp [hzj]
+  let e : (Fin (Fintype.card s) → R) ≃ₗ[R] (s → R) :=
+    LinearEquiv.piCongrLeft R (fun _ : s => R) (Fintype.equivFin s).symm
+  let h : R →ₗ[R] (Fin (Fintype.card s) → R) :=
+    e.symm.toLinearMap.comp (c.comp u)
+  have hh : Function.Injective h := e.symm.injective.comp hcu
+  obtain ⟨g, hg⟩ :=
+    split_rankOne_to_fin_of_hasPropertyP hP (Fintype.card s) h hh
+  refine ⟨g.comp (e.symm.toLinearMap.comp c), ?_⟩
+  rw [LinearMap.comp_assoc, LinearMap.comp_assoc]
+  exact hg
+
 /-- The projective-module formulation of property (P). -/
 def ProjectiveInjectivityCondition (R : Type u) [CommRing R] : Prop :=
   ∀ {N : Type v} {M : Type w} [AddCommGroup N] [Module R N]

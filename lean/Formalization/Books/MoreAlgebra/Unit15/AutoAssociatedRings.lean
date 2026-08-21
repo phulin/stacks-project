@@ -152,6 +152,60 @@ theorem autoAssociated_hasPropertyP
   have hybot : y ∈ (⊥ : Ideal R) := by simpa [hzero] using hyann
   exact hyne (by simpa using hybot)
 
+private theorem split_rankOne_to_fin_of_hasPropertyP
+    {R : Type u} [CommRing R] (hP : HasPropertyP R)
+    (n : ℕ) (u : R →ₗ[R] (Fin n → R)) (hu : Function.Injective u) :
+    ∃ g : (Fin n → R) →ₗ[R] R, g.comp u = LinearMap.id := by
+  let f : Fin n → R := fun i => u 1 i
+  let I : Ideal R := Ideal.span (Set.range f)
+  have hIfg : I.FG := Submodule.fg_span (Set.finite_range f)
+  have hIann : Module.annihilator R I = ⊥ := by
+    apply le_bot_iff.mp
+    intro x hx
+    rw [Module.mem_annihilator] at hx
+    have hux : u (x : R) = 0 := by
+      funext i
+      have hfi : f i ∈ I := Ideal.subset_span ⟨i, rfl⟩
+      have hxi := congrArg Subtype.val (hx ⟨f i, hfi⟩)
+      have humul : u (x : R) = (x : R) • u 1 := by
+        simpa using u.map_smul (x : R) (1 : R)
+      rw [humul]
+      change (x : R) * f i = 0
+      simpa [mul_comm] using hxi
+    have hx0 : (x : R) = 0 := by
+      apply hu
+      simpa using hux
+    simpa [hx0]
+  have hItop : I = ⊤ := by
+    by_contra hIproper
+    exact (hP I hIproper hIfg) hIann
+  have hone : (1 : R) ∈ Submodule.span R (Set.range f) := by
+    change (1 : R) ∈ I
+    rw [hItop]
+    simp
+  obtain ⟨c, hc⟩ := (Submodule.mem_span_range_iff_exists_fun R).mp hone
+  have hc' : ∑ i, c i * f i = 1 := by
+    simpa [smul_eq_mul] using hc
+  let g : (Fin n → R) →ₗ[R] R := ∑ i : Fin n, c i • LinearMap.proj i
+  refine ⟨g, ?_⟩
+  apply LinearMap.ext
+  intro r
+  have hur : u r = r • u 1 := by
+    simpa using u.map_smul r (1 : R)
+  simp only [LinearMap.comp_apply, LinearMap.id_apply, g,
+    LinearMap.sum_apply, LinearMap.smul_apply, LinearMap.proj_apply]
+  rw [hur]
+  simp only [Pi.smul_apply, smul_eq_mul]
+  calc
+    ∑ i : Fin n, c i * (r * u 1 i) =
+        r * ∑ i : Fin n, c i * f i := by
+      simp only [f]
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro i _
+      ring
+    _ = r := by rw [hc', mul_one]
+
 /-- The projective-module formulation of property (P). -/
 def ProjectiveInjectivityCondition (R : Type u) [CommRing R] : Prop :=
   ∀ {N : Type v} {M : Type w} [AddCommGroup N] [Module R N]
@@ -283,58 +337,7 @@ private theorem freeRankOneSplitCondition_of_hasPropertyP
     {R : Type u} [CommRing R] (hP : HasPropertyP R) :
     FreeRankOneSplitCondition R := by
   intro n u hu
-  let f : Fin n → R := fun i => u 1 i
-  let I : Ideal R := Ideal.span (Set.range f)
-  have hIfg : I.FG := by
-    exact Submodule.fg_span (Set.finite_range f)
-  have hIann : Module.annihilator R I = ⊥ := by
-    apply le_bot_iff.mp
-    intro x hx
-    rw [Module.mem_annihilator] at hx
-    have hux : u (x : R) = 0 := by
-      funext i
-      have hfi : f i ∈ I := Ideal.subset_span ⟨i, rfl⟩
-      have hxi := congrArg Subtype.val (hx ⟨f i, hfi⟩)
-      have humul : u (x : R) = (x : R) • u 1 := by
-        simpa using u.map_smul (x : R) (1 : R)
-      rw [humul]
-      change (x : R) * f i = 0
-      simpa [mul_comm] using hxi
-    have hx0 : (x : R) = 0 := by
-      apply hu
-      simpa using hux
-    simpa [hx0]
-  have hItop : I = ⊤ := by
-    by_contra hIproper
-    exact (hP I hIproper hIfg) hIann
-  have hone : (1 : R) ∈ Submodule.span R (Set.range f) := by
-    change (1 : R) ∈ I
-    rw [hItop]
-    simp
-  obtain ⟨c, hc⟩ :=
-    (Submodule.mem_span_range_iff_exists_fun R).mp hone
-  have hc' : ∑ i, c i * f i = 1 := by
-    simpa [smul_eq_mul] using hc
-  let g : (Fin n → R) →ₗ[R] R :=
-    ∑ i : Fin n, c i • LinearMap.proj i
-  refine ⟨g, ?_⟩
-  apply LinearMap.ext
-  intro r
-  have hur : u r = r • u 1 := by
-    simpa using u.map_smul r (1 : R)
-  simp only [LinearMap.comp_apply, LinearMap.id_apply, g,
-    LinearMap.sum_apply, LinearMap.smul_apply, LinearMap.proj_apply]
-  rw [hur]
-  simp only [Pi.smul_apply, smul_eq_mul]
-  calc
-    ∑ i : Fin n, c i * (r * u 1 i) =
-        r * ∑ i : Fin n, c i * f i := by
-      simp only [f]
-      rw [Finset.mul_sum]
-      apply Finset.sum_congr rfl
-      intro i _
-      ring
-    _ = r := by rw [hc', mul_one]
+  exact split_rankOne_to_fin_of_hasPropertyP hP n u hu
 
 private theorem projectiveInjectivityCondition_of_hasPropertyP
     {R : Type u} [CommRing R] (hP : HasPropertyP R) :

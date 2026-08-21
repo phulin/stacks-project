@@ -179,6 +179,187 @@ provide a conversion from this theorem's canonical `GradedAlgebra 𝒜`; this
 was the previous dead end.
 -/
 
+/-! ## Powers of the irrelevant ideal -/
+
+/-- Multiplicativity of ideal-power membership. -/
+theorem mul_mem_pow_pow {R : Type*} [CommRing R] (I : Ideal R) {a b : R} {r s : ℕ}
+    (ha : a ∈ I ^ r) (hb : b ∈ I ^ s) : a * b ∈ I ^ (r + s) := by
+  rcases Nat.eq_zero_or_pos s with hs | hs
+  · subst hs
+    simpa using Ideal.mul_mem_right b (I := I ^ r) ha
+  · rw [Submodule.pow_add I hs.ne']
+    exact Ideal.mul_mem_mul ha hb
+
+section IrrelevantPowers
+
+variable {k : Type u} {S : Type v} [Field k] [CommRing S] [Nontrivial S]
+  [Algebra k S] (𝒜 : ℕ → Submodule k S) [GradedAlgebra 𝒜]
+
+theorem mem_irrelevant_iff_proj (z : S) :
+    z ∈ gradedIrrelevantIdeal 𝒜 ↔ GradedRing.proj 𝒜 0 z = 0 :=
+  HomogeneousIdeal.mem_irrelevant_iff 𝒜 z
+
+theorem pow_mem_degree {j : ℕ} {y : S} (hy : y ∈ 𝒜 j) :
+    ∀ r : ℕ, y ^ r ∈ 𝒜 (j * r) := by
+  intro r
+  induction r with
+  | zero => simpa using SetLike.GradedOne.one_mem
+  | succ r ih =>
+    rw [pow_succ, Nat.mul_succ]
+    exact SetLike.GradedMul.mul_mem ih hy
+
+/-- The image of a monomial in the degree-one generators is graded of the
+monomial degree and lies in the corresponding power of the irrelevant ideal. -/
+theorem monomialGenerator_prod_mem {n : ℕ} {x : Fin n → S}
+    (hx : ∀ i, x i ∈ 𝒜 1) (d : Fin n →₀ ℕ) :
+    d.prod (fun i t => x i ^ t) ∈ 𝒜 (d.sum fun _ t => t) ∧
+      d.prod (fun i t => x i ^ t) ∈ gradedIrrelevantIdeal 𝒜 ^ (d.sum fun _ t => t) := by
+  classical
+  induction d using Finsupp.induction_linear with
+  | zero =>
+    constructor
+    · simpa using SetLike.GradedOne.one_mem
+    · simp
+  | single a r =>
+    by_cases hr : r = 0
+    · subst hr
+      constructor
+      · simpa using SetLike.GradedOne.one_mem
+      · simp
+    · have hxm : x a ∈ gradedIrrelevantIdeal 𝒜 := by
+        have hp0 : GradedRing.proj 𝒜 0 (x a) = 0 := by
+          rw [GradedRing.proj_apply, DirectSum.decompose_of_mem _ (hx a),
+            DirectSum.of_apply]
+          simp
+        rw [mem_irrelevant_iff_proj]
+        exact hp0
+      have h1 : (Finsupp.single a r).sum (fun _ t => t) = r := by simp [hr]
+      have h2 : (Finsupp.single a r).prod (fun i t => x i ^ t) = x a ^ r := by
+        simp [hr]
+      rw [h1, h2]
+      have hpow := pow_mem_degree (𝒜 := 𝒜) (hx a) r
+      rw [one_mul] at hpow
+      exact ⟨hpow, Ideal.pow_mem_pow hxm r⟩
+  | add f g ihf ihg =>
+    have h1 : (f + g).prod (fun i t => x i ^ t)
+        = f.prod (fun i t => x i ^ t) * g.prod (fun i t => x i ^ t) :=
+      Finsupp.prod_add_index' (by intro i; simp)
+        (by intro i u v; exact pow_add (x i) u v)
+    have h2 : (f + g).sum (fun _ t => t)
+        = f.sum (fun _ t => t) + g.sum (fun _ t => t) := by
+      rw [Finsupp.sum_add_index' (fun _ => rfl) (fun _ _ _ => rfl)]
+    rw [h1, h2]
+    exact ⟨SetLike.GradedMul.mul_mem ihf.1 ihg.1,
+      mul_mem_pow_pow _ ihf.2 ihg.2⟩
+
+
+
+/-- The degree of a monomial index is the sum of its entries. -/
+theorem degree_eq_sumSupport {n : ℕ} (d : Fin n →₀ ℕ) :
+    Finsupp.degree d = ∑ i ∈ d.support, d i :=
+  Finsupp.degree_apply d
+
+/-- Projections commute with evaluation of polynomials in the degree-one
+generators, picking out the homogeneous component. -/
+theorem proj_aeval_monomialGenerator {n : ℕ} {x : Fin n → S}
+    (hx : ∀ i, x i ∈ 𝒜 1) (p : MvPolynomial (Fin n) k) (e : ℕ) :
+    GradedRing.proj 𝒜 e (MvPolynomial.aeval x p)
+      = MvPolynomial.aeval x (MvPolynomial.homogeneousComponent e p) := by
+  classical
+  induction p using MvPolynomial.induction_on' with
+  | monomial d c =>
+    by_cases hc0 : c = 0
+    · subst hc0
+      rw [show MvPolynomial.monomial d (0:k) = 0 from MvPolynomial.monomial_zero,
+        map_zero, map_zero, MvPolynomial.homogeneousComponent_apply,
+        MvPolynomial.support_zero, Finset.filter_empty, Finset.sum_empty,
+        map_zero]
+    · have hsupp : (MvPolynomial.monomial d c).support = {d} := by
+        rw [MvPolynomial.support_monomial, if_neg hc0]
+      have hcoef : MvPolynomial.coeff d (MvPolynomial.monomial d c) = c := by
+        simp
+      by_cases hdeg : Finsupp.degree d = e
+      · have hD : d.prod (fun i t => x i ^ t)
+            ∈ gradedIrrelevantIdeal 𝒜 ^ (∑ i ∈ d.support, d i) :=
+          (monomialGenerator_prod_mem 𝒜 hx d).2
+        have key : (∑ i ∈ d.support, d i) = e := by
+          rw [← degree_eq_sumSupport]
+          exact hdeg
+        rw [key] at hD
+        have heq : MvPolynomial.aeval x (MvPolynomial.monomial d c) ∈ 𝒜 e := by
+          have hD1 : d.prod (fun i t => x i ^ t) ∈ 𝒜 (∑ i ∈ d.support, d i) :=
+            (monomialGenerator_prod_mem 𝒜 hx d).1
+          rw [← degree_eq_sumSupport, hdeg] at hD1
+          rw [MvPolynomial.aeval_monomial, ← Algebra.smul_def]
+          exact Submodule.smul_mem _ _ hD1
+        have hu : GradedRing.proj 𝒜 e (MvPolynomial.aeval x (MvPolynomial.monomial d c))
+            = MvPolynomial.aeval x (MvPolynomial.monomial d c) := by
+          rw [GradedRing.proj_apply, DirectSum.decompose_of_mem _ heq]
+          simp [hdeg]
+        have hfilter : ((MvPolynomial.monomial d c).support.filter
+            fun d' => Finsupp.degree d' = e) = {d} := by
+          simp [hsupp, hdeg]
+        rw [MvPolynomial.homogeneousComponent_apply, hfilter,
+          Finset.sum_singleton, hcoef, hu]
+      · have hD : d.prod (fun i t => x i ^ t) ∈ 𝒜 (∑ i ∈ d.support, d i) :=
+          (monomialGenerator_prod_mem 𝒜 hx d).1
+        have heq : MvPolynomial.aeval x (MvPolynomial.monomial d c)
+            ∈ 𝒜 (Finsupp.degree d) := by
+          rw [MvPolynomial.aeval_monomial, degree_eq_sumSupport, ← Algebra.smul_def]
+          exact Submodule.smul_mem _ _ hD
+        have hu : GradedRing.proj 𝒜 e (MvPolynomial.aeval x (MvPolynomial.monomial d c))
+            = 0 := by
+          rw [GradedRing.proj_apply, DirectSum.decompose_of_mem _ heq,
+            DirectSum.of_apply, dif_neg hdeg]
+          rfl
+        have hfilter : ((MvPolynomial.monomial d c).support.filter
+            fun d' => Finsupp.degree d' = e) = ∅ := by
+          simp [hsupp, hdeg]
+        rw [MvPolynomial.homogeneousComponent_apply, hfilter,
+          Finset.sum_empty, map_zero]
+        exact hu
+  | add p q ihp ihq =>
+    rw [map_add, map_add, map_add, map_add, ihp, ihq]
+
+/-- Every homogeneous element of positive degree lies in the corresponding
+power of the irrelevant ideal. -/
+theorem homogeneous_mem_pow_irrelevant {n : ℕ} {x : Fin n → S}
+    (hx : ∀ i, x i ∈ 𝒜 1)
+    (hxgen : Algebra.adjoin k (Set.range x) = ⊤)
+    {e : ℕ} (he : 0 < e) :
+    ∀ y ∈ 𝒜 e, y ∈ gradedIrrelevantIdeal 𝒜 ^ e := by
+  intro y hy
+  have hyad : y ∈ Algebra.adjoin k (Set.range x) := by
+    rw [hxgen]
+    trivial
+  rw [Algebra.adjoin_range_eq_range_aeval] at hyad
+  obtain ⟨p, hp⟩ := hyad
+  have hp' : MvPolynomial.aeval x p = y := hp
+  have hpe : GradedRing.proj 𝒜 e (MvPolynomial.aeval x p)
+      = MvPolynomial.aeval x p := by
+    rw [hp', GradedRing.proj_apply, DirectSum.decompose_of_mem _ hy,
+      DirectSum.of_apply]
+    simp
+  rw [← hp', ← hpe, proj_aeval_monomialGenerator 𝒜 hx p e,
+    MvPolynomial.homogeneousComponent_apply, map_sum]
+  refine Ideal.sum_mem _ fun d hd => ?_
+  simp only [Finset.mem_filter, MvPolynomial.mem_support_iff] at hd
+  obtain ⟨-, hdeg⟩ := hd
+  have hdegS : (∑ i ∈ d.support, d i) = e := by
+    rw [← degree_eq_sumSupport]
+    exact hdeg
+  have hcc : MvPolynomial.coeff d (MvPolynomial.homogeneousComponent e p)
+      = MvPolynomial.coeff d p := by
+    rw [MvPolynomial.coeff_homogeneousComponent, if_pos hdeg]
+  have hD : d.prod (fun i t => x i ^ t)
+      ∈ gradedIrrelevantIdeal 𝒜 ^ (∑ i ∈ d.support, d i) :=
+    (monomialGenerator_prod_mem 𝒜 hx d).2
+  rw [hdegS] at hD
+  rw [MvPolynomial.aeval_monomial]
+  exact Ideal.mul_mem_left (gradedIrrelevantIdeal 𝒜 ^ e) _ hD
+
+end IrrelevantPowers
+
 /--
 For a finitely generated standard graded algebra over a field, the irrelevant
 ideal is maximal, minimal primes are homogeneous and lie in it, the global and
@@ -202,8 +383,97 @@ theorem dimension_graded
           ∀ d : ℕ,
             Formalization.Books.Algebra.Unit59.hilbertFunction
                 (Localization.AtPrime m) (Localization.AtPrime m) d =
-              gradedHilbertFunction 𝒜 d) := by
-  sorry
+               gradedHilbertFunction 𝒜 d) := by
+  classical
+  obtain ⟨n, x, hx, hxgen⟩ := hgen
+  haveI hft : Algebra.FiniteType k S :=
+    ⟨Subalgebra.fg_def.mpr ⟨Set.range x, Set.finite_range x, hxgen⟩⟩
+  haveI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  set m : Ideal S := gradedIrrelevantIdeal 𝒜 with hmdef
+  have hmem : ∀ z : S, z ∈ m ↔ GradedRing.proj 𝒜 0 z = 0 := fun z => by
+    rw [hmdef]
+    exact HomogeneousIdeal.mem_irrelevant_iff 𝒜 z
+  have hp0mem : ∀ (z : S) (i : ℕ), GradedRing.proj 𝒜 i z ∈ 𝒜 i := by
+    intro z i
+    rw [GradedRing.proj_apply]
+    exact SetLike.coe_mem _
+  have hproj0 : ∀ w : S, w ∈ 𝒜 0 → GradedRing.proj 𝒜 0 w = w := by
+    intro w hw
+    rw [GradedRing.proj_apply, DirectSum.decompose_of_mem _ hw, DirectSum.of_eq_same]
+  have hprojmul : ∀ a b : S, GradedRing.proj 𝒜 0 (a * b) =
+      GradedRing.proj 𝒜 0 a * GradedRing.proj 𝒜 0 b := fun a b =>
+    map_mul (GradedRing.projZeroRingHom 𝒜) a b
+  have hprojone : GradedRing.proj 𝒜 0 (1 : S) = 1 :=
+    map_one (GradedRing.projZeroRingHom 𝒜)
+  have hprojscaledge : ∀ c : k,
+      GradedRing.proj 𝒜 0 (algebraMap k S c) = algebraMap k S c := by
+    intro c
+    refine hproj0 _ ?_
+    rw [← hzero]
+    exact LinearMap.mem_range.mpr ⟨c, rfl⟩
+  -- Step 2: the irrelevant ideal is maximal.
+  have hmax : m.IsMaximal := by
+    rw [Ideal.isMaximal_iff]
+    refine ⟨?_, ?_⟩
+    · intro h1
+      rw [hmem, hprojone] at h1
+      exact one_ne_zero h1
+    · intro J x hJx hxm hxJ
+      have hpz : GradedRing.proj 𝒜 0 x ≠ 0 := fun h => hxm ((hmem x).mpr h)
+      obtain ⟨c, hc⟩ : ∃ c : k, algebraMap k S c = GradedRing.proj 𝒜 0 x := by
+        have hIn : GradedRing.proj 𝒜 0 x ∈ 𝒜 0 := hp0mem x 0
+        rw [← hzero] at hIn
+        exact LinearMap.mem_range.mp hIn
+      have hcne : c ≠ 0 := by
+        intro h; rw [h, map_zero] at hc; exact hpz hc.symm
+      have h1m : 1 - x * algebraMap k S c⁻¹ ∈ m := by
+        rw [hmem, map_sub, hprojmul, hprojscaledge c⁻¹, ← hc, hprojone,
+          ← map_mul, mul_inv_cancel₀ hcne, map_one, sub_self]
+      have h2 : x * algebraMap k S c⁻¹ ∈ J :=
+        Ideal.mul_mem_right (algebraMap k S c⁻¹) J hxJ
+      have h3 : 1 - x * algebraMap k S c⁻¹ ∈ J := hJx h1m
+      have h4 : (1:S) = (1 - x * algebraMap k S c⁻¹) + x * algebraMap k S c⁻¹ := by
+        ring
+      rw [h4]
+      exact add_mem h3 h2
+  refine ⟨hmax, ?_, ?_, ?_⟩
+  · -- Step 3: minimal primes are homogeneous and contained in m.
+    intro p hp
+    rw [minimalPrimes_eq_minimals, Set.mem_setOf_eq] at hp
+    obtain ⟨hpp, hminp⟩ := hp
+    have hcorele : (p.homogeneousCore 𝒜).toIdeal ≤ p :=
+      Ideal.toIdeal_homogeneousCore_le 𝒜 p
+    have hcore : (p.homogeneousCore 𝒜).toIdeal = p :=
+      le_antisymm hcorele (hminp (Ideal.IsPrime.homogeneousCore hpp) hcorele)
+    have hhomo : Ideal.IsHomogeneous 𝒜 p := by
+      rw [← hcore]; exact (p.homogeneousCore 𝒜).isHomogeneous
+    refine ⟨hhomo, fun z hzp => ?_⟩
+    have h0 : GradedRing.proj 𝒜 0 z ∈ p := by
+      rw [GradedRing.proj_apply]
+      have hzcore : z ∈ (p.homogeneousCore 𝒜).toIdeal := by rw [hcore]; exact hzp
+      have hcomp := ((Ideal.IsHomogeneous.mem_iff 𝒜
+        ((p.homogeneousCore 𝒜).isHomogeneous)).mp hzcore) 0
+      exact hcore ▸ hcomp
+    obtain ⟨c, hc⟩ : ∃ c : k, algebraMap k S c = GradedRing.proj 𝒜 0 z := by
+      have hIn : GradedRing.proj 𝒜 0 z ∈ 𝒜 0 := hp0mem z 0
+      rw [← hzero] at hIn
+      exact LinearMap.mem_range.mp hIn
+    have hc0 : c = 0 := by
+      by_contra hcne
+      exfalso
+      have hunit : algebraMap k S c * algebraMap k S c⁻¹ = 1 := by
+        rw [← map_mul, mul_inv_cancel₀ hcne, map_one]
+      have h1p : (1:S) ∈ p := by
+        have hcmem : algebraMap k S c ∈ p := by rw [hc]; exact h0
+        have h2 : algebraMap k S c * algebraMap k S c⁻¹ ∈ p :=
+          Ideal.mul_mem_right (algebraMap k S c⁻¹) p hcmem
+        rwa [hunit] at h2
+      exact hpp.ne_top (Ideal.eq_top_iff_one p |>.mpr h1p)
+    rw [(hmem z), ← hc, hc0, map_zero]
+  · -- Steps 5 and 6: dimension computations.
+    sorry
+  · intro d
+    sorry
 
 end
 

@@ -333,7 +333,7 @@ theorem godement_simplicial_data
         simp only [Category.comp_id, Category.id_comp] at hdj hdj'
         have hdjMap := congrArg
           (fun f => (iteratedEndofunctor Y (n + 1 - (j : ℕ))).map f) hdj
-        simp only [Category.assoc, Functor.map_comp] at hdjMap
+        simp only [Functor.map_comp] at hdjMap
         have hmidD := CategoryTheory.eqToHom_naturality_assoc
           (fun F : C ⥤ C => F.map
             (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))) hmid (𝟙 _)
@@ -346,7 +346,7 @@ theorem godement_simplicial_data
           (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))
         try rw [← hmidMap]
         try rw [← hbigMap]
-        try rw [hsmall] at *
+        try rw [hsmall]
         simpa only [Category.assoc, CategoryTheory.eqToHom_trans,
           CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
           CategoryTheory.eqToHom_app, NatTrans.comp_app,
@@ -362,7 +362,161 @@ theorem godement_simplicial_data
           hj, hjY, hmid, hbig, hsmall, hdj, hdj', hdjMap, hmidD, hbigD,
           hmidMap, hbigMap] using hdd'.symm
         -/
-        sorry
+        intro n i j hij
+        change op (godementSimplicialFace Y d (n + 1) j.succ ≫
+          godementSimplicialFace Y d n i) =
+          op (godementSimplicialFace Y d (n + 1) i.castSucc ≫
+            godementSimplicialFace Y d n j)
+        congr 1
+        have hij' : (i : ℕ) ≤ (j : ℕ) := hij
+        have hji : (j : ℕ) + 1 ≤ n + 2 := by omega
+        have hsum : (j : ℕ) = (i : ℕ) + ((j : ℕ) - (i : ℕ)) := by omega
+        have hsum' : n + 1 - (i : ℕ) =
+            (n + 1 - (j : ℕ)) + ((j : ℕ) - (i : ℕ)) := by omega
+        have hj1 : iteratedEndofunctor Y ((j : ℕ) + 1) =
+            iteratedEndofunctor Y (i : ℕ) ⋙ Y ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          have h : (j : ℕ) + 1 = (i : ℕ) + 1 + ((j : ℕ) - (i : ℕ)) := by
+            omega
+          rw [h, iteratedEndofunctor_add, iteratedEndofunctor_add]
+          simp [iteratedEndofunctor, Functor.assoc, Functor.id_comp,
+            Functor.comp_id]
+        have hj : iteratedEndofunctor Y (j : ℕ) =
+            iteratedEndofunctor Y (i : ℕ) ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          calc
+            iteratedEndofunctor Y (j : ℕ) =
+                iteratedEndofunctor Y ((i : ℕ) + ((j : ℕ) - (i : ℕ))) := by
+                  exact congrArg (iteratedEndofunctor Y) hsum
+            _ = iteratedEndofunctor Y (i : ℕ) ⋙
+                iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) :=
+              iteratedEndofunctor_add Y (i : ℕ) ((j : ℕ) - (i : ℕ))
+        have hjY : Y ⋙ iteratedEndofunctor Y (j : ℕ) =
+            iteratedEndofunctor Y (i : ℕ) ⋙ Y ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          change iteratedEndofunctor Y ((j : ℕ) + 1) = _
+          exact hj1
+        have hmid : iteratedEndofunctor Y (n + 1 - (i : ℕ)) =
+            iteratedEndofunctor Y (n + 1 - (j : ℕ)) ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          rw [hsum', iteratedEndofunctor_add]
+        have hbig : iteratedEndofunctor Y (n + 1 + 1 - (i : ℕ)) =
+            iteratedEndofunctor Y (n + 1 - (j : ℕ)) ⋙ Y ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          have h : n + 1 + 1 - (i : ℕ) =
+              (n + 1 - (j : ℕ)) + 1 + ((j : ℕ) - (i : ℕ)) := by
+            omega
+          rw [h, iteratedEndofunctor_add, iteratedEndofunctor_add]
+          simp [iteratedEndofunctor, Functor.assoc, Functor.id_comp,
+            Functor.comp_id]
+        have hsmall : n + 1 + 1 - ((j : ℕ) + 1) =
+            n + 1 - (j : ℕ) := by omega
+        have hp1 := godementFace_domain_decomposition Y (n + 2) j.succ
+        have hq1 := godementFace_codomain_decomposition Y (n + 2) j.succ
+        have hp2 := godementFace_domain_decomposition Y (n + 1) i
+        have hq2 := godementFace_codomain_decomposition Y (n + 1) i
+        have hp3 := godementFace_domain_decomposition Y (n + 2) i.castSucc
+        have hq3 := godementFace_codomain_decomposition Y (n + 2) i.castSucc
+        have hp4 := godementFace_domain_decomposition Y (n + 1) j
+        have hq4 := godementFace_codomain_decomposition Y (n + 1) j
+        dsimp [godementSimplicialFace, godementFace, godementDegree,
+          iteratedEndofunctor]
+        simp only [Category.assoc, CategoryTheory.eqToHom_trans,
+          CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
+          CategoryTheory.eqToHom_app,
+          CategoryTheory.eqToHom_naturality_assoc,
+          CategoryTheory.eqToHom_naturality, Functor.assoc,
+          CategoryTheory.eqToHom_map, Functor.comp_map,
+          Functor.comp_id, Functor.id_comp, Functor.map_id, Functor.map_comp,
+          Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
+          Functor.associator, Functor.leftUnitor, Functor.rightUnitor]
+        ext X
+        have hdd := d.naturality
+          ((iteratedEndofunctor Y ((j : ℕ) - (i : ℕ))).map
+            (d.app ((iteratedEndofunctor Y (↑i : ℕ)).obj X)))
+        have hdd' := congrArg
+          (fun f => (iteratedEndofunctor Y (n + 1 - (j : ℕ))).map f) hdd
+        have hFsource :
+            Y ⋙ Y ⋙ Y ⋙ iteratedEndofunctor Y n =
+              iteratedEndofunctor Y (i : ℕ) ⋙ Y ⋙
+                iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) ⋙ Y ⋙
+                iteratedEndofunctor Y (n + 1 - (j : ℕ)) := by
+          calc
+            Y ⋙ Y ⋙ Y ⋙ iteratedEndofunctor Y n =
+                iteratedEndofunctor Y 1 ⋙ iteratedEndofunctor Y 1 ⋙
+                  iteratedEndofunctor Y 1 ⋙ iteratedEndofunctor Y n := by
+                    simp [iteratedEndofunctor, Functor.comp_id, Functor.assoc]
+            _ = iteratedEndofunctor Y (1 + 1 + 1 + n) := by
+              rw [iteratedEndofunctor_add, iteratedEndofunctor_add,
+                iteratedEndofunctor_add]
+              rfl
+            _ = iteratedEndofunctor Y ((i : ℕ) + 1 +
+                  ((j : ℕ) - (i : ℕ)) + 1 + (n + 1 - (j : ℕ))) := by
+              congr 1 <;> omega
+            _ = iteratedEndofunctor Y (i : ℕ) ⋙ Y ⋙
+                  iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) ⋙ Y ⋙
+                  iteratedEndofunctor Y (n + 1 - (j : ℕ)) := by
+              rw [iteratedEndofunctor_add, iteratedEndofunctor_add,
+                iteratedEndofunctor_add, iteratedEndofunctor_add]
+              simp [iteratedEndofunctor, Functor.comp_id, Functor.assoc]
+        have hFtarget :
+            Y ⋙ iteratedEndofunctor Y n =
+              iteratedEndofunctor Y (i : ℕ) ⋙
+                iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) ⋙
+                iteratedEndofunctor Y (n + 1 - (j : ℕ)) := by
+          calc
+            Y ⋙ iteratedEndofunctor Y n =
+                iteratedEndofunctor Y 1 ⋙ iteratedEndofunctor Y n := by
+              change Y ⋙ iteratedEndofunctor Y n =
+                (Y ⋙ 𝟭 C) ⋙ iteratedEndofunctor Y n
+              rw [Functor.comp_id]
+            _ = iteratedEndofunctor Y (1 + n) :=
+              (iteratedEndofunctor_add Y 1 n).symm
+            _ = iteratedEndofunctor Y ((i : ℕ) + ((j : ℕ) - (i : ℕ)) +
+                  (n + 1 - (j : ℕ))) := by
+              congr 1 <;> omega
+            _ = iteratedEndofunctor Y (i : ℕ) ⋙
+                  iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) ⋙
+                  iteratedEndofunctor Y (n + 1 - (j : ℕ)) := by
+              rw [iteratedEndofunctor_add, iteratedEndofunctor_add]
+              rfl
+        apply eq_of_heq
+        have hdj := CategoryTheory.eqToHom_naturality_assoc
+          (fun F : C ⥤ C => d.app (F.obj X)) hjY (𝟙 _)
+        have hdj' := CategoryTheory.eqToHom_naturality_assoc
+          (fun F : C ⥤ C => d.app (F.obj X)) hj (𝟙 _)
+        simp only [Category.comp_id, Category.id_comp] at hdj hdj'
+        have hdjMap := congrArg
+          (fun f => (iteratedEndofunctor Y (n + 1 - (j : ℕ))).map f) hdj
+        simp only [Functor.map_comp] at hdjMap
+        have hmidD := CategoryTheory.eqToHom_naturality_assoc
+          (fun F : C ⥤ C => F.map
+            (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))) hmid (𝟙 _)
+        have hbigD := CategoryTheory.eqToHom_naturality_assoc
+          (fun F : C ⥤ C => F.map
+            (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))) hbig (𝟙 _)
+        have hmidMap := Functor.congr_hom hmid
+          (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))
+        have hbigMap := Functor.congr_hom hbig
+          (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))
+        try rw [← hmidMap]
+        try rw [← hbigMap]
+        try rw [hsmall]
+        simpa only [Category.assoc, CategoryTheory.eqToHom_trans,
+          CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
+          CategoryTheory.eqToHom_app, NatTrans.comp_app,
+          CategoryTheory.eqToHom_comp_heq, CategoryTheory.comp_eqToHom_heq,
+          Functor.whiskerLeft_app, Functor.whiskerRight_app,
+          Functor.comp_obj, Functor.id_obj, heq_eq_eq,
+          CategoryTheory.eqToHom_naturality_assoc,
+          CategoryTheory.eqToHom_naturality, Functor.assoc,
+          Functor.comp_id, Functor.id_comp, Functor.map_comp,
+          Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
+          Functor.associator, Functor.leftUnitor, Functor.rightUnitor,
+          hp1, hq1, hp2, hq2, hp3, hq3, hp4, hq4, hFsource, hFtarget,
+          hj, hjY, hmid, hbig, hsmall, hdj, hdj', hdjMap, hmidD, hbigD,
+          hmidMap, hbigMap] using (hdd'.symm)
+        
       δ_comp_σ_of_le := by
         /- Prior attempt:
         intro n i j hij
@@ -440,7 +594,7 @@ theorem godement_simplicial_data
           (fun f => (iteratedEndofunctor Y (n - (j : ℕ))).map f) hsjY
         have hsjMap := congrArg
           (fun f => (iteratedEndofunctor Y (n - (j : ℕ))).map f) hsj
-        simp only [Category.assoc, Functor.map_comp] at hsjYMap hsjMap
+        simp only [Functor.map_comp] at hsjYMap hsjMap
         have htailF : iteratedEndofunctor Y (n + 1 - ((j : ℕ) + 1)) =
             iteratedEndofunctor Y (n - (j : ℕ)) := by
           congr 1 <;> omega
@@ -453,6 +607,7 @@ theorem godement_simplicial_data
         apply eq_of_heq
         try rw [← hmidMap]
         try rw [← hbigMap]
+        try rw [htailF]
         simpa only [Category.assoc, CategoryTheory.eqToHom_trans,
           CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
           CategoryTheory.eqToHom_app, Category.comp_id, Category.id_comp,
@@ -468,7 +623,110 @@ theorem godement_simplicial_data
           hp4, hq4, hsjY, hsj, hsjYMap, hsjMap, htailF, htailS,
           hmidMap, hbigMap] using hss'.symm
         -/
-        sorry
+        intro n i j hij
+        change op (godementSimplicialDegeneracy Y s (n + 1) j.succ ≫
+          godementSimplicialFace Y d (n + 1) i.castSucc) =
+          op (godementSimplicialFace Y d n i ≫
+            godementSimplicialDegeneracy Y s n j)
+        congr 1
+        ext X
+        dsimp [godementSimplicialFace, godementSimplicialDegeneracy,
+          godementFace, godementDegeneracy, godementDegree]
+        have hji : (j : ℕ) + 1 ≤ n + 2 := by omega
+        have h1 : n + 1 - ((j : ℕ) + 1) = n - (j : ℕ) := by omega
+        have h2 : n + 1 + 1 - (i : ℕ) = 1 + (n + 1 - (i : ℕ)) := by omega
+        have hij' : (i : ℕ) ≤ (j : ℕ) := Fin.le_iff_val_le_val.mp hij
+        have hsum : (j : ℕ) = (i : ℕ) + ((j : ℕ) - (i : ℕ)) := by omega
+        have hsum' : n + 1 - (i : ℕ) =
+            (n + 1 - (j : ℕ)) + ((j : ℕ) - (i : ℕ)) := by omega
+        have hj : iteratedEndofunctor Y (j : ℕ) =
+            iteratedEndofunctor Y (i : ℕ) ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          calc
+            iteratedEndofunctor Y (j : ℕ) =
+                iteratedEndofunctor Y ((i : ℕ) + ((j : ℕ) - (i : ℕ))) := by
+                  congr 1 <;> omega
+            _ = iteratedEndofunctor Y (i : ℕ) ⋙
+                iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) :=
+              iteratedEndofunctor_add Y (i : ℕ) ((j : ℕ) - (i : ℕ))
+        have hjY : Y ⋙ iteratedEndofunctor Y (j : ℕ) =
+            iteratedEndofunctor Y (i : ℕ) ⋙ Y ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          change iteratedEndofunctor Y ((j : ℕ) + 1) = _
+          have h : (j : ℕ) + 1 = (i : ℕ) + 1 + ((j : ℕ) - (i : ℕ)) := by omega
+          rw [h, iteratedEndofunctor_add, iteratedEndofunctor_add]
+          simp [iteratedEndofunctor, Functor.assoc, Functor.id_comp,
+            Functor.comp_id]
+        have hj1 : iteratedEndofunctor Y ((j : ℕ) + 1) =
+            iteratedEndofunctor Y (i : ℕ) ⋙ Y ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          have h : (j : ℕ) + 1 = (i : ℕ) + 1 + ((j : ℕ) - (i : ℕ)) := by omega
+          rw [h, iteratedEndofunctor_add, iteratedEndofunctor_add]
+          simp [iteratedEndofunctor, Functor.assoc, Functor.id_comp,
+            Functor.comp_id]
+        have hmid : iteratedEndofunctor Y (n + 1 - (i : ℕ)) =
+            iteratedEndofunctor Y (n + 1 - (j : ℕ)) ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          rw [hsum', iteratedEndofunctor_add]
+        have hbig : iteratedEndofunctor Y (n + 1 + 1 - (i : ℕ)) =
+            iteratedEndofunctor Y (n + 1 - (j : ℕ)) ⋙ Y ⋙
+              iteratedEndofunctor Y ((j : ℕ) - (i : ℕ)) := by
+          have h : n + 1 + 1 - (i : ℕ) =
+              (n + 1 - (j : ℕ)) + 1 + ((j : ℕ) - (i : ℕ)) := by omega
+          rw [h, iteratedEndofunctor_add, iteratedEndofunctor_add]
+          simp [iteratedEndofunctor, Functor.assoc, Functor.id_comp,
+            Functor.comp_id]
+        have hp1 := godementDegeneracy_domain_decomposition Y (n + 1) j.succ
+        have hq1 := godementDegeneracy_codomain_decomposition Y (n + 1) j.succ
+        have hp2 := godementFace_domain_decomposition Y (n + 2) i.castSucc
+        have hq2 := godementFace_codomain_decomposition Y (n + 2) i.castSucc
+        have hp3 := godementFace_domain_decomposition Y (n + 1) i
+        have hq3 := godementFace_codomain_decomposition Y (n + 1) i
+        have hp4 := godementDegeneracy_domain_decomposition Y n j
+        have hq4 := godementDegeneracy_codomain_decomposition Y n j
+        have hss := s.naturality
+          ((iteratedEndofunctor Y ((j : ℕ) - (i : ℕ))).map
+            (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X)))
+        have hss' := congrArg
+          (fun f => (iteratedEndofunctor Y (n - (j : ℕ))).map f) hss
+        have hsjY := CategoryTheory.eqToHom_naturality_assoc
+          (fun F : C ⥤ C => s.app (F.obj X)) hj1 (𝟙 _)
+        have hsj := CategoryTheory.eqToHom_naturality_assoc
+          (fun F : C ⥤ C => s.app (F.obj X)) hj (𝟙 _)
+        simp only [Category.comp_id, Category.id_comp] at hsjY hsj
+        have hsjYMap := congrArg
+          (fun f => (iteratedEndofunctor Y (n - (j : ℕ))).map f) hsjY
+        have hsjMap := congrArg
+          (fun f => (iteratedEndofunctor Y (n - (j : ℕ))).map f) hsj
+        simp only [Functor.map_comp] at hsjYMap hsjMap
+        have htailF : iteratedEndofunctor Y (n + 1 - ((j : ℕ) + 1)) =
+            iteratedEndofunctor Y (n - (j : ℕ)) := by
+          congr 1 <;> omega
+        have htailS := Functor.congr_hom htailF
+          (s.app ((iteratedEndofunctor Y ((j : ℕ) + 1)).obj X))
+        have hmidMap := Functor.congr_hom hmid
+          (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))
+        have hbigMap := Functor.congr_hom hbig
+          (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))
+        apply eq_of_heq
+        try rw [← hmidMap]
+        try rw [← hbigMap]
+        try rw [htailF]
+        simpa only [Category.assoc, CategoryTheory.eqToHom_trans,
+          CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
+          CategoryTheory.eqToHom_app, Category.comp_id, Category.id_comp,
+          CategoryTheory.eqToHom_comp_heq, CategoryTheory.comp_eqToHom_heq,
+          Functor.comp_obj, Functor.id_obj, heq_eq_eq,
+          CategoryTheory.eqToHom_map,
+          Functor.assoc, Functor.comp_id, Functor.id_comp, Functor.map_comp,
+          CategoryTheory.eqToHom_naturality_assoc,
+          CategoryTheory.eqToHom_naturality, Functor.whiskerLeft_comp,
+          Functor.whiskerRight_comp, Functor.associator,
+          Functor.leftUnitor, Functor.rightUnitor, hji, h1, h2, hsum,
+          hsum', hj, hjY, hj1, hmid, hbig, hp1, hq1, hp2, hq2, hp3, hq3,
+          hp4, hq4, hsjY, hsj, hsjYMap, hsjMap, htailF, htailS,
+          hmidMap, hbigMap] using (hss'.symm)
+        
       δ_comp_σ_self := by
         intro n i
         change op (godementSimplicialDegeneracy Y s n i ≫
@@ -783,20 +1041,204 @@ theorem godement_simplicial_data
           CategoryTheory.eqToHom_refl, r]
           using hu
         -/
-        sorry
+        intro n i
+        change op (godementSimplicialDegeneracy Y s n i ≫
+          godementSimplicialFace Y d n i.succ) = op (𝟙 _)
+        congr 1
+        ext X
+        dsimp [godementSimplicialFace, godementSimplicialDegeneracy,
+          godementFace, godementDegeneracy, godementDegree]
+        simp [Category.assoc, CategoryTheory.eqToHom_trans_assoc,
+          CategoryTheory.eqToHom_app]
+        let p : godementDegree Y n =
+            iteratedEndofunctor Y (↑i) ⋙ Y ⋙ iteratedEndofunctor Y (n - ↑i) := by
+          change iteratedEndofunctor Y (n + 1) = _
+          exact godementDegeneracy_domain_decomposition Y n i
+        let q : godementDegree Y n =
+            iteratedEndofunctor Y (↑i.succ) ⋙ 𝟭 C ⋙
+              iteratedEndofunctor Y (n - ↑i) := by
+          change iteratedEndofunctor Y (n + 1) = _
+          have hi : (↑i.succ : ℕ) = (↑i : ℕ) + 1 := rfl
+          have hk : n + 1 - (↑i.succ : ℕ) = n - (↑i : ℕ) := by omega
+          simpa [hk] using
+            (godementFace_codomain_decomposition Y (n + 1) i.succ)
+        let r :
+            (iteratedEndofunctor Y (↑i) ⋙ (Y ⋙ 𝟭 C) ⋙
+                iteratedEndofunctor Y (n - ↑i)) =
+              (iteratedEndofunctor Y (↑i.succ) ⋙ 𝟭 C ⋙
+                iteratedEndofunctor Y (n - ↑i)) := by
+          have hcomm : iteratedEndofunctor Y (↑i) ⋙ Y =
+              Y ⋙ iteratedEndofunctor Y (↑i) := by
+            calc
+              iteratedEndofunctor Y (↑i) ⋙ Y =
+                  iteratedEndofunctor Y (↑i) ⋙ iteratedEndofunctor Y 1 := by
+                    simp [iteratedEndofunctor, Functor.comp_id]
+              _ = iteratedEndofunctor Y ((↑i) + 1) :=
+                (iteratedEndofunctor_add Y (↑i) 1).symm
+              _ = iteratedEndofunctor Y (1 + (↑i : ℕ)) := by
+                congr 1 <;> omega
+              _ = iteratedEndofunctor Y 1 ⋙ iteratedEndofunctor Y (↑i) :=
+                iteratedEndofunctor_add Y 1 (↑i)
+              _ = Y ⋙ iteratedEndofunctor Y (↑i) := by
+                simp [iteratedEndofunctor, Functor.comp_id]
+          have hs : iteratedEndofunctor Y (↑i.succ) =
+              iteratedEndofunctor Y (↑i) ⋙ Y := by
+            calc
+              iteratedEndofunctor Y (↑i.succ) =
+                  Y ⋙ iteratedEndofunctor Y (↑i) := by
+                    simp [iteratedEndofunctor]
+              _ = iteratedEndofunctor Y (↑i) ⋙ Y := hcomm.symm
+          rw [hs]
+          simp only [Functor.assoc]
+        let a : godementDegree Y (n + 1) =
+            iteratedEndofunctor Y (↑i) ⋙ (Y ⋙ Y) ⋙
+              iteratedEndofunctor Y (n - ↑i) := by
+          change iteratedEndofunctor Y (n + 2) = _
+          exact godementDegeneracy_codomain_decomposition Y n i
+        let b : godementDegree Y (n + 1) =
+            iteratedEndofunctor Y (↑i.succ) ⋙ Y ⋙
+              iteratedEndofunctor Y (n - ↑i) := by
+          change iteratedEndofunctor Y (n + 2) = _
+          have hi : (↑i.succ : ℕ) = (↑i : ℕ) + 1 := rfl
+          have hk : n + 1 - (↑i.succ : ℕ) = n - (↑i : ℕ) := by omega
+          simpa [hk] using
+            (godementFace_domain_decomposition Y (n + 1) i.succ)
+        let m :
+            (iteratedEndofunctor Y (↑i) ⋙ (Y ⋙ Y) ⋙
+                iteratedEndofunctor Y (n - ↑i)) =
+              (iteratedEndofunctor Y (↑i.succ) ⋙ Y ⋙
+                iteratedEndofunctor Y (n - ↑i)) := by
+          have hcomm : iteratedEndofunctor Y (↑i) ⋙ Y =
+              Y ⋙ iteratedEndofunctor Y (↑i) := by
+            calc
+              iteratedEndofunctor Y (↑i) ⋙ Y =
+                  iteratedEndofunctor Y (↑i) ⋙ iteratedEndofunctor Y 1 := by
+                    simp [iteratedEndofunctor, Functor.comp_id]
+              _ = iteratedEndofunctor Y ((↑i) + 1) :=
+                (iteratedEndofunctor_add Y (↑i) 1).symm
+              _ = iteratedEndofunctor Y (1 + (↑i : ℕ)) := by
+                congr 1 <;> omega
+              _ = iteratedEndofunctor Y 1 ⋙ iteratedEndofunctor Y (↑i) :=
+                iteratedEndofunctor_add Y 1 (↑i)
+              _ = Y ⋙ iteratedEndofunctor Y (↑i) := by
+                simp [iteratedEndofunctor, Functor.comp_id]
+          have hs : iteratedEndofunctor Y (↑i.succ) =
+              iteratedEndofunctor Y (↑i) ⋙ Y := by
+            calc
+              iteratedEndofunctor Y (↑i.succ) =
+                  Y ⋙ iteratedEndofunctor Y (↑i) := by
+                    simp [iteratedEndofunctor]
+              _ = iteratedEndofunctor Y (↑i) ⋙ Y := hcomm.symm
+          rw [hs]
+          simp only [Functor.assoc]
+        let S :=
+          Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
+            (Functor.whiskerRight s (iteratedEndofunctor Y (n - ↑i)))
+        let T :=
+          Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
+            (Functor.whiskerRight (Functor.whiskerLeft Y d)
+              (iteratedEndofunctor Y (n - ↑i)))
+        let D' :=
+          Functor.whiskerLeft (iteratedEndofunctor Y (↑i.succ))
+            (Functor.whiskerRight d (iteratedEndofunctor Y (n - ↑i)))
+        have hmid : S ≫ eqToHom m ≫ D' = S ≫ T ≫ eqToHom r := by
+          ext X
+          have inner : (eqToHom m).app X ≫ D'.app X =
+              T.app X ≫ (eqToHom r).app X := by
+            dsimp [S, T, D']
+            simp [Functor.assoc, Functor.id_comp, Functor.comp_id]
+            have hcomm : iteratedEndofunctor Y (↑i) ⋙ Y =
+                Y ⋙ iteratedEndofunctor Y (↑i) := by
+              calc
+                iteratedEndofunctor Y (↑i) ⋙ Y =
+                    iteratedEndofunctor Y (↑i) ⋙ iteratedEndofunctor Y 1 := by
+                      simp [iteratedEndofunctor, Functor.comp_id]
+                _ = iteratedEndofunctor Y ((↑i) + 1) :=
+                  (iteratedEndofunctor_add Y (↑i) 1).symm
+                _ = iteratedEndofunctor Y (1 + (↑i : ℕ)) := by
+                  congr 1 <;> omega
+                _ = iteratedEndofunctor Y 1 ⋙ iteratedEndofunctor Y (↑i) :=
+                  iteratedEndofunctor_add Y 1 (↑i)
+                _ = Y ⋙ iteratedEndofunctor Y (↑i) := by
+                  simp [iteratedEndofunctor, Functor.comp_id]
+            have hn := CategoryTheory.eqToHom_naturality_assoc
+              (fun F : C ⥤ C =>
+                (iteratedEndofunctor Y (n - (↑i : ℕ))).map
+                  (d.app (F.obj X))) hcomm (𝟙 _)
+            simpa [S, m, r, hcomm, htail, iteratedEndofunctor, Category.assoc,
+              Functor.assoc, Functor.id_comp, Functor.comp_id,
+              Functor.map_comp] using hn.symm
+          simpa [Category.assoc] using
+            congrArg (fun z => S.app X ≫ z) inner
+        have hm : eqToHom a.symm ≫ eqToHom b = eqToHom m := by
+          rw [CategoryTheory.eqToHom_trans]
+        have hcoh :
+            godementSimplicialDegeneracy Y s n i ≫
+                godementSimplicialFace Y d n i.succ =
+              eqToHom p ≫
+                Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
+                  (Functor.whiskerRight
+                    (s ≫ Functor.whiskerLeft Y d)
+                    (iteratedEndofunctor Y (n - ↑i))) ≫
+                eqToHom r ≫ eqToHom q.symm := by
+          have hraw :
+              godementSimplicialDegeneracy Y s n i ≫
+                  godementSimplicialFace Y d n i.succ =
+                eqToHom p ≫ S ≫ eqToHom a.symm ≫ eqToHom b ≫ D' ≫
+                  eqToHom q.symm := by
+            dsimp [p, q, S, D', godementSimplicialFace,
+              godementSimplicialDegeneracy, godementFace, godementDegeneracy]
+            simp
+          have hhm :
+              eqToHom p ≫ S ≫ eqToHom a.symm ≫ eqToHom b ≫ D' ≫
+                  eqToHom q.symm =
+                eqToHom p ≫ S ≫ eqToHom m ≫ D' ≫ eqToHom q.symm := by
+            simpa only [Category.assoc] using
+              congrArg (fun z => eqToHom p ≫ S ≫ z ≫ D' ≫ eqToHom q.symm) hm
+          have hmid' :
+              eqToHom p ≫ S ≫ eqToHom m ≫ D' ≫ eqToHom q.symm =
+                eqToHom p ≫ S ≫ T ≫ eqToHom r ≫ eqToHom q.symm := by
+            simpa only [Category.assoc] using
+              congrArg (fun z => eqToHom p ≫ z ≫ eqToHom q.symm) hmid
+          have hST : S ≫ T =
+              Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
+                (Functor.whiskerRight
+                  (s ≫ Functor.whiskerLeft Y d)
+                  (iteratedEndofunctor Y (n - ↑i))) := by
+            simp [S, T, Functor.whiskerLeft_comp,
+              Functor.whiskerRight_comp, Functor.assoc]
+          rw [hraw, hhm, hmid']
+          simpa only [Category.assoc] using
+            congrArg (fun z => eqToHom p ≫ z ≫ eqToHom r ≫ eqToHom q.symm) hST
+        rw [hcoh]
+        have hu := congrArg
+          (fun z => eqToHom p ≫
+            Functor.whiskerLeft (iteratedEndofunctor Y (↑i))
+              (Functor.whiskerRight z (iteratedEndofunctor Y (n - ↑i))) ≫
+            eqToHom r ≫ eqToHom q.symm) h.right_unit
+        simpa [Category.assoc, Functor.whiskerLeft_comp,
+          Functor.whiskerRight_comp, Functor.assoc,
+          CategoryTheory.eqToHom_trans,
+          CategoryTheory.eqToHom_trans_assoc,
+          CategoryTheory.eqToHom_refl, r]
+          using hu
+        
       δ_comp_σ_of_gt := by
         /- Prior attempt:
         intro n i j hji
         simp [godementSimplicialFace, godementSimplicialDegeneracy,
           godementFace, godementDegeneracy]
         -/
-        sorry
+        intro n i j hji
+        simp [godementSimplicialFace, godementSimplicialDegeneracy,
+          godementFace, godementDegeneracy]
       σ_comp_σ := by
         /- Prior attempt:
         intro n i j hij
         simp [godementSimplicialDegeneracy, godementDegeneracy] }
         -/
-        sorry }
+        intro n i j hij
+        simp [godementSimplicialDegeneracy, godementDegeneracy] }
   let U := Formalization.Books.Simplicial.Unit02.simplicialObjectOfGeneratorData D
   have hobj : ∀ n, U.obj (op (SimplexCategory.mk n)) = godementDegree Y n := by
     intro n
@@ -812,7 +1254,8 @@ theorem godement_simplicial_data
     cases hobj (n + 1)
     simp [D, godementSimplicialFace]
     -/
-    sorry
+    intro n j
+    simp [U, D, godementSimplicialFace]
   · /- Prior attempt:
     intro n j
     change eqToHom _ ≫ U.map (SimplexCategory.σ j).op ≫
@@ -823,7 +1266,8 @@ theorem godement_simplicial_data
     cases hobj (n + 1)
     simp [D, godementSimplicialDegeneracy]
     -/
-    sorry
+    intro n j
+    simp [U, D, godementSimplicialDegeneracy]
 
 /- The attempted direct proof is retained pending a coherence-oriented rewrite.
   let D : Formalization.Books.Simplicial.Unit02.SimplexCategoryGeneratorData

@@ -3334,6 +3334,220 @@ theorem blowupQuotientMapData_surjective
     Function.Surjective F.map :=
   F.surjective
 
+private lemma blowupQuotientProjMap_range_eq_vPlus
+    {A : Type u} [CommRing A] {I p : Ideal A}
+    {P : BlowupPresentation I}
+    {Q : BlowupPresentation (blowupQuotientIdeal I p)}
+    (F : BlowupQuotientMapData P Q) :
+    let : GradedRing P.gradedPieces := P.graded
+    let : GradedRing Q.gradedPieces := Q.graded
+    Set.range (blowupQuotientProjMap F).base =
+      vPlus P.gradedPieces (blowupStrictTransformIdeal F) := by
+  let : GradedRing P.gradedPieces := P.graded
+  let : GradedRing Q.gradedPieces := Q.graded
+  change Set.range (ProjectiveSpectrum.comap F.map F.irrelevant_le) =
+    ProjectiveSpectrum.zeroLocus P.gradedPieces
+      ((blowupStrictTransformIdeal F : Set (blowupAlgebra I)))
+  apply Set.Subset.antisymm
+  · rintro x ⟨y, rfl⟩
+    rw [ProjectiveSpectrum.mem_zeroLocus]
+    intro z hz
+    change F.map z ∈ y.asHomogeneousIdeal
+    exact hz ▸ y.asHomogeneousIdeal.zero_mem
+  · intro x hx
+    have hker : RingHom.ker F.map.toRingHom ≤ x.asHomogeneousIdeal.toIdeal := by
+      intro z hz
+      have hx' := (ProjectiveSpectrum.mem_zeroLocus P.gradedPieces x _).1 hx
+      apply hx'
+      change F.map z = 0
+      exact hz
+    let J : HomogeneousIdeal Q.gradedPieces :=
+      x.asHomogeneousIdeal.map F.map
+    have hJprime : J.toIdeal.IsPrime := by
+      change (x.asHomogeneousIdeal.toIdeal.map F.map.toRingHom).IsPrime
+      exact Ideal.map_isPrime_of_surjective F.surjective hker
+    have hmap_irr :
+        (HomogeneousIdeal.irrelevant P.gradedPieces).map F.map ≤
+          HomogeneousIdeal.irrelevant Q.gradedPieces := by
+      rw [HomogeneousIdeal.map_le_iff_le_comap]
+      apply (HomogeneousIdeal.irrelevant_le P.gradedPieces).2
+      intro n hn z hz
+      exact HomogeneousIdeal.mem_irrelevant_of_mem Q.gradedPieces hn
+        (F.map.map_mem hz)
+    have hcomap : J.comap F.map = x.asHomogeneousIdeal := by
+      apply HomogeneousIdeal.ext
+      change (x.asHomogeneousIdeal.toIdeal.map F.map.toRingHom).comap
+          F.map.toRingHom = x.asHomogeneousIdeal.toIdeal
+      calc
+        (x.asHomogeneousIdeal.toIdeal.map F.map.toRingHom).comap F.map.toRingHom =
+            x.asHomogeneousIdeal.toIdeal ⊔ RingHom.ker F.map.toRingHom :=
+          by
+            simpa only [RingHom.ker_eq_comap_bot] using
+              Ideal.comap_map_of_surjective F.map.toRingHom F.surjective _
+        _ = x.asHomogeneousIdeal.toIdeal := sup_eq_left.mpr hker
+    let y : blowupProjPoints Q :=
+      ⟨J, hJprime, by
+        intro h
+        apply x.not_irrelevant_le
+        have hbad : (HomogeneousIdeal.irrelevant P.gradedPieces).map F.map ≤ J :=
+          hmap_irr.trans h
+        have hbad' : HomogeneousIdeal.irrelevant P.gradedPieces ≤
+            J.comap F.map :=
+          (HomogeneousIdeal.map_le_iff_le_comap F.map).1 hbad
+        rw [hcomap] at hbad'
+        exact hbad'⟩
+    refine ⟨y, ?_⟩
+    apply ProjectiveSpectrum.ext
+    apply HomogeneousIdeal.ext
+    simpa [ProjectiveSpectrum.comap, ProjectiveSpectrum.comapFun] using
+      congrArg HomogeneousIdeal.toIdeal hcomap
+
+private lemma blowupQuotientProjMap_base_eq_comap
+    {A : Type u} [CommRing A] {I p : Ideal A}
+    {P : BlowupPresentation I}
+    {Q : BlowupPresentation (blowupQuotientIdeal I p)}
+    (F : BlowupQuotientMapData P Q)
+    (y : blowupProjPoints Q) :
+    let : GradedRing P.gradedPieces := P.graded
+    let : GradedRing Q.gradedPieces := Q.graded
+    (blowupMap P).base (ProjectiveSpectrum.comap F.map F.irrelevant_le y) =
+      PrimeSpectrum.comap (Ideal.Quotient.mk p) ((blowupMap Q).base y) := by
+  let : GradedRing P.gradedPieces := P.graded
+  let : GradedRing Q.gradedPieces := Q.graded
+  apply PrimeSpectrum.ext
+  apply Ideal.ext
+  intro a
+  change a ∈ ((blowupMap P).base
+      (ProjectiveSpectrum.comap F.map F.irrelevant_le y)).asIdeal ↔
+    Ideal.Quotient.mk p a ∈ ((blowupMap Q).base y).asIdeal
+  rw [blowup_base_mem_iff P (ProjectiveSpectrum.comap F.map F.irrelevant_le y) a]
+  rw [blowup_base_mem_iff Q y (Ideal.Quotient.mk p a)]
+  have hP : (P.degreeZeroEquiv.symm a : blowupAlgebra I) =
+      reesHomogeneousElement I 0 (a := a) (by simp) := by
+    rw [P.degreeZeroEquiv_spec]
+    apply Subtype.ext
+    simp [reesHomogeneousElement]
+  have hmap : F.map (P.degreeZeroEquiv.symm a) =
+      Q.degreeZeroEquiv.symm (Ideal.Quotient.mk p a) := by
+    apply Subtype.ext
+    rw [hP]
+    rw [F.map_on_rees]
+    rw [Q.degreeZeroEquiv_spec]
+    simp
+  change F.map.toRingHom (P.degreeZeroEquiv.symm a) ∈ y.asHomogeneousIdeal.toIdeal ↔
+    (Q.degreeZeroEquiv.symm (Ideal.Quotient.mk p a) :
+      blowupAlgebra (blowupQuotientIdeal I p)) ∈ y.asHomogeneousIdeal.toIdeal
+  have hmap' : F.map.toRingHom (P.degreeZeroEquiv.symm a) =
+      (Q.degreeZeroEquiv.symm (Ideal.Quotient.mk p a) :
+        blowupAlgebra (blowupQuotientIdeal I p)) := by
+    simpa only [GradedRingHom.coe_toRingHom] using hmap
+  rw [hmap']
+
+private lemma reesAlgebra_bot_isPrime_of_domain
+    {B : Type u} [CommRing B] [IsDomain B] (J : Ideal B) :
+    (⊥ : Ideal (blowupAlgebra J)).IsPrime := by
+  infer_instance
+
+private lemma blowupQuotientProjMap_lift_mem_range
+    {A : Type u} [CommRing A] {I p : Ideal A}
+    {P : BlowupPresentation I}
+    {Q : BlowupPresentation (blowupQuotientIdeal I p)}
+    {hp : p.IsPrime} (F : BlowupQuotientMapData P Q)
+    (D : PrimeStrictTransformData P p hp) :
+    letI : GradedRing P.gradedPieces := P.graded
+    letI : GradedRing Q.gradedPieces := Q.graded
+    ∃ y : blowupProjPoints Q,
+      y.asHomogeneousIdeal = (⊥ : HomogeneousIdeal Q.gradedPieces) ∧
+        (blowupQuotientProjMap F).base y = D.lift := by
+  let : p.IsPrime := hp
+  let : GradedRing P.gradedPieces := P.graded
+  let : GradedRing Q.gradedPieces := Q.graded
+  have hI_not_le : ¬ I ≤ p := by
+    intro hIp
+    apply D.prime_mem_baseOpen
+    exact (PrimeSpectrum.mem_zeroLocus _ _).2 hIp
+  obtain ⟨a, haI, hanotp⟩ : ∃ a : A, a ∈ I ∧ a ∉ p := by
+    by_contra h
+    apply hI_not_le
+    intro a ha
+    by_contra hanotp
+    exact h ⟨a, ha, hanotp⟩
+  let q : A →+* blowupQuotientRing p := Ideal.Quotient.mk p
+  have hqa : q a ∈ blowupQuotientIdeal I p :=
+    Ideal.mem_map_of_mem q haI
+  have hqa0 : q a ≠ 0 := by
+    intro hqa'
+    exact hanotp (Ideal.Quotient.eq_zero_iff_mem.mp hqa')
+  have hqbase :
+      (⟨(⊥ : Ideal (blowupQuotientRing p)), inferInstance⟩ :
+        PrimeSpectrum (blowupQuotientRing p)) ∈
+        blowupBaseOpen (blowupQuotientIdeal I p) := by
+    change (⟨(⊥ : Ideal (blowupQuotientRing p)), inferInstance⟩ :
+        PrimeSpectrum (blowupQuotientRing p)) ∉
+      PrimeSpectrum.zeroLocus
+        ((blowupQuotientIdeal I p : Ideal (blowupQuotientRing p)) : Set _)
+    rw [PrimeSpectrum.mem_zeroLocus]
+    intro hzero
+    apply hI_not_le
+    intro b hb
+    have hzero' : q b ∈ (⊥ : Ideal (blowupQuotientRing p)) :=
+      hzero (Ideal.mem_map_of_mem q hb)
+    exact Ideal.Quotient.eq_zero_iff_mem.mp hzero'
+  have hqa1 : q a ∈ (blowupQuotientIdeal I p) ^ 1 := by
+    simpa using hqa
+  let ybot : blowupProjPoints Q :=
+    ⟨⊥, reesAlgebra_bot_isPrime_of_domain (blowupQuotientIdeal I p), by
+      intro h
+      let r : blowupAlgebra (blowupQuotientIdeal I p) :=
+        reesHomogeneousElement (blowupQuotientIdeal I p) 1 hqa1
+      have hr : r ∈ Q.gradedPieces 1 :=
+        (Q.gradedPieces_spec 1 r).2 ⟨q a, hqa1, rfl⟩
+      have hirr : r ∈ HomogeneousIdeal.irrelevant Q.gradedPieces :=
+        HomogeneousIdeal.mem_irrelevant_of_mem Q.gradedPieces (by omega) hr
+      have hr0 : r ∈ (⊥ : HomogeneousIdeal Q.gradedPieces) := h hirr
+      have hr0' : r = 0 := by
+        change r = 0 at hr0
+        exact hr0
+      apply hqa0
+      apply (Polynomial.monomial_eq_zero_iff (q a) 1).mp
+      simpa [r, reesHomogeneousElement] using congrArg Subtype.val hr0'⟩
+  have hybot_base :
+      (blowupMap Q).base ybot =
+        (⟨(⊥ : Ideal (blowupQuotientRing p)), inferInstance⟩ :
+          PrimeSpectrum (blowupQuotientRing p)) := by
+    apply PrimeSpectrum.ext
+    apply Ideal.ext
+    intro b
+    rw [blowup_base_mem_iff Q ybot b]
+    change (Q.degreeZeroEquiv.symm b : blowupAlgebra (blowupQuotientIdeal I p)) ∈
+        (⊥ : HomogeneousIdeal Q.gradedPieces) ↔
+      b ∈ (⊥ : Ideal (blowupQuotientRing p))
+    change (Q.degreeZeroEquiv.symm b : blowupAlgebra (blowupQuotientIdeal I p)) = 0 ↔
+      b = 0
+    constructor
+    · intro h
+      have hs : Q.degreeZeroEquiv.symm b = 0 := by
+        apply Subtype.ext
+        exact h
+      have h' := congrArg (fun c : Q.gradedPieces 0 => Q.degreeZeroEquiv c) hs
+      simpa using h'
+    · intro h
+      subst h
+      simp
+  have hbase := blowupQuotientProjMap_base_eq_comap F ybot
+  have hpoint : ProjectiveSpectrum.comap F.map F.irrelevant_le ybot = D.lift := by
+    apply D.lift_unique
+    rw [hbase, hybot_base]
+    apply PrimeSpectrum.ext
+    apply Ideal.ext
+    intro b
+    change Ideal.Quotient.mk p b ∈
+        ((⊥ : Ideal (blowupQuotientRing p))) ↔ b ∈ p
+    simp [Ideal.Quotient.eq_zero_iff_mem]
+  refine ⟨ybot, rfl, ?_⟩
+  change ProjectiveSpectrum.comap F.map F.irrelevant_le ybot = D.lift
+  exact hpoint
+
 theorem blowupQuotientProjMap_image_strictTransform
     {A : Type u} [CommRing A] {I p : Ideal A}
     {P : BlowupPresentation I}
@@ -3341,7 +3555,50 @@ theorem blowupQuotientProjMap_image_strictTransform
     {hp : p.IsPrime} (F : BlowupQuotientMapData P Q)
     (D : PrimeStrictTransformData P p hp) :
     Function.Injective (blowupQuotientProjMap F).base ∧
-      Set.range (blowupQuotientProjMap F).base = primeStrictTransform D := by sorry
+      Set.range (blowupQuotientProjMap F).base = primeStrictTransform D := by
+  let : GradedRing P.gradedPieces := P.graded
+  let : GradedRing Q.gradedPieces := Q.graded
+  change Function.Injective (ProjectiveSpectrum.comap F.map F.irrelevant_le) ∧
+    Set.range (ProjectiveSpectrum.comap F.map F.irrelevant_le) = primeStrictTransform D
+  have hrange := blowupQuotientProjMap_range_eq_vPlus F
+  have hrange' : Set.range (ProjectiveSpectrum.comap F.map F.irrelevant_le) =
+      vPlus P.gradedPieces (blowupStrictTransformIdeal F) := by
+    exact hrange
+  obtain ⟨ybot, hybot, hbot⟩ := blowupQuotientProjMap_lift_mem_range F D
+  constructor
+  · intro x y hxy
+    apply ProjectiveSpectrum.ext
+    apply HomogeneousIdeal.ext
+    apply Ideal.comap_injective_of_surjective F.map.toRingHom F.surjective
+    apply Ideal.ext
+    intro z
+    change z ∈ (ProjectiveSpectrum.comap F.map F.irrelevant_le x).asHomogeneousIdeal.toIdeal ↔
+      z ∈ (ProjectiveSpectrum.comap F.map F.irrelevant_le y).asHomogeneousIdeal.toIdeal
+    rw [hxy]
+  · apply Set.Subset.antisymm
+    · intro x hx
+      obtain ⟨y, rfl⟩ := hx
+      apply (ProjectiveSpectrum.le_iff_mem_closure _ _ _).1
+      apply (ProjectiveSpectrum.as_ideal_le_as_ideal _ _ _).2
+      rw [← hbot]
+      change ybot.asHomogeneousIdeal.comap F.map ≤
+        y.asHomogeneousIdeal.comap F.map
+      rw [hybot]
+      exact HomogeneousIdeal.comap_mono F.map bot_le
+    · intro x hx
+      have hclosed : IsClosed
+          (vPlus P.gradedPieces (blowupStrictTransformIdeal F)) := by
+        exact ProjectiveSpectrum.isClosed_zeroLocus _ _
+      have hsubset : primeStrictTransform D ⊆
+          vPlus P.gradedPieces (blowupStrictTransformIdeal F) := by
+        rw [primeStrictTransform]
+        apply closure_minimal
+        · exact Set.singleton_subset_iff.mpr (by
+            rw [← hrange']
+            exact ⟨ybot, hbot⟩)
+        · exact hclosed
+      rw [hrange']
+      exact hsubset hx
 noncomputable def blowupStrictTransformComponentAsSet
     {A : Type u} [CommRing A] {I p : Ideal A}
     {P : BlowupPresentation I}
@@ -3363,8 +3620,8 @@ theorem blowupStrictTransformComponentAsSet_eq
     (F : BlowupQuotientMapData P Q) (d : ℕ) :
     blowupStrictTransformComponentAsSet F d =
       ((I ^ d : Ideal A) : Set A) ∩ (p : Set A) := by
-  let : GradedRing P.gradedPieces := P.graded
-  let : GradedRing Q.gradedPieces := Q.graded
+  letI : GradedRing P.gradedPieces := P.graded
+  letI : GradedRing Q.gradedPieces := Q.graded
   apply Set.ext
   intro a
   change (∃ ha : a ∈ I ^ d,
@@ -3400,12 +3657,177 @@ theorem primeStrictTransform_eq_vPlus_of_blowupQuotient
     letI : GradedRing P.gradedPieces := P.graded
     letI : GradedRing Q.gradedPieces := Q.graded
     primeStrictTransform D =
-      vPlus P.gradedPieces (blowupStrictTransformIdeal F) := by sorry
+      vPlus P.gradedPieces (blowupStrictTransformIdeal F) := by
+  let : GradedRing P.gradedPieces := P.graded
+  let : GradedRing Q.gradedPieces := Q.graded
+  have hfirst := blowupQuotientProjMap_image_strictTransform F D
+  have hrange := blowupQuotientProjMap_range_eq_vPlus F
+  rw [← hfirst.2]
+  exact hrange
+
+private lemma irrelevant_le_of_degree_one_mem
+    {A : Type u} [CommRing A] {I : Ideal A}
+    {𝒜 : ℕ → Submodule ℤ (blowupAlgebra I)} [GradedRing 𝒜]
+    (hspec : ∀ (d : ℕ) (z : blowupAlgebra I),
+      z ∈ 𝒜 d ↔ ∃ a : A, ∃ _ha : a ∈ I ^ d,
+        z.1 = Polynomial.monomial d a)
+    (x : ProjectiveSpectrum 𝒜)
+    (hdegree_one : ∀ {a : A} (ha : a ∈ I),
+      reesHomogeneousElement I 1 (a := a) (by simpa using ha) ∈
+        x.asHomogeneousIdeal) :
+    HomogeneousIdeal.irrelevant 𝒜 ≤ x.asHomogeneousIdeal := by
+  have hpositive : ∀ n : ℕ, 0 < n → ∀ c : A,
+      ∀ hc : c ∈ I ^ n,
+        reesHomogeneousElement I n (a := c) (by simpa using hc)
+          ∈ x.asHomogeneousIdeal := by
+    intro n
+    induction n with
+    | zero =>
+        intro hn
+        omega
+    | succ n ih =>
+        intro hn c hc
+        rw [Ideal.IsTwoSided.pow_succ] at hc
+        have hpow : ∀ d : A, d ∈ I * I ^ n → d ∈ I ^ (n + 1) := by
+          intro d hd
+          rw [Ideal.IsTwoSided.pow_succ]
+          exact hd
+        refine Submodule.mul_induction_on'
+          (M := (I : Submodule A A))
+          (N := (I ^ n : Submodule A A))
+          (C := fun d hd =>
+            reesHomogeneousElement I (n + 1) (a := d) (hpow d hd)
+              ∈ x.asHomogeneousIdeal) ?_ ?_ hc
+        · intro d hd e he
+          cases n with
+          | zero =>
+              have hd' := hdegree_one hd
+              have hde : d * e ∈ I ^ 1 := by
+                apply hpow (d * e)
+                exact Ideal.mul_mem_mul hd he
+              have heq : reesHomogeneousElement I 1 (a := d * e) hde =
+                  algebraMap A (blowupAlgebra I) e *
+                    reesHomogeneousElement I 1 (a := d) (by simpa using hd) := by
+                apply Subtype.ext
+                simp [reesHomogeneousElement, mul_comm]
+              rw [heq]
+              exact x.asHomogeneousIdeal.toIdeal.mul_mem_left _ hd'
+          | succ n =>
+              have hd' := hdegree_one hd
+              have he' := ih (Nat.zero_lt_succ n) e he
+              have hde : d * e ∈ I ^ (n + 2) := by
+                apply hpow (d * e)
+                exact Ideal.mul_mem_mul hd he
+              have heq : reesHomogeneousElement I (n + 2) (a := d * e) hde =
+                  reesHomogeneousElement I 1 (a := d) (by simpa using hd) *
+                    reesHomogeneousElement I (n + 1) (a := e) (by simpa using he) := by
+                apply Subtype.ext
+                simp [reesHomogeneousElement, Polynomial.monomial_mul_monomial]
+                rw [show n + 2 = 1 + (n + 1) by omega]
+              rw [heq]
+              exact Ideal.mul_le_left (Ideal.mul_mem_mul hd' he')
+        · intro c hc d hd hpc hpd
+          simpa [reesHomogeneousElement, polynomial_monomial_add] using
+            x.asHomogeneousIdeal.add_mem hpc hpd
+  rw [HomogeneousIdeal.irrelevant_le]
+  intro n hn z hz
+  cases n with
+  | zero => omega
+  | succ n =>
+      obtain ⟨c, hc, hzeq⟩ := (hspec (n + 1) z).1 hz
+      have hz_eq : z = reesHomogeneousElement I (n + 1) (a := c) hc := by
+        apply Subtype.ext
+        exact hzeq
+      rw [hz_eq]
+      exact hpositive (n + 1) (Nat.zero_lt_succ n) c hc
+
 theorem exists_separating_blowup_for_incomparable_primes
     {A : Type u} [CommRing A] {p q : Ideal A}
     (hp : p.IsPrime) (hq : q.IsPrime)
     (hpq : ¬ p ≤ q) (hqp : ¬ q ≤ p) :
     ∃ P : BlowupPresentation (p + q),
       ∃ Dp : PrimeStrictTransformData P p hp,
-        ∃ Dq : PrimeStrictTransformData P q hq,
-          Disjoint (primeStrictTransform Dp) (primeStrictTransform Dq) := by sorry
+          ∃ Dq : PrimeStrictTransformData P q hq,
+          Disjoint (primeStrictTransform Dp) (primeStrictTransform Dq) := by
+  obtain ⟨b, hbq, hbnotp⟩ : ∃ b : A, b ∈ q ∧ b ∉ p := by
+    by_contra h
+    apply hqp
+    intro b hb
+    by_contra hbnotp
+    exact h ⟨b, hb, hbnotp⟩
+  obtain ⟨a, hap, hanotq⟩ : ∃ a : A, a ∈ p ∧ a ∉ q := by
+    by_contra h
+    apply hpq
+    intro a ha
+    by_contra hanotq
+    exact h ⟨a, ha, hanotq⟩
+  have hbasep :
+      (⟨p, hp⟩ : PrimeSpectrum A) ∈ blowupBaseOpen (p + q) := by
+    change (⟨p, hp⟩ : PrimeSpectrum A) ∉
+      PrimeSpectrum.zeroLocus ((p + q : Ideal A) : Set A)
+    rw [PrimeSpectrum.mem_zeroLocus]
+    intro hzero
+    exact hbnotp (hzero ((le_sup_right : q ≤ p + q) hbq))
+  have hbaseq :
+      (⟨q, hq⟩ : PrimeSpectrum A) ∈ blowupBaseOpen (p + q) := by
+    change (⟨q, hq⟩ : PrimeSpectrum A) ∉
+      PrimeSpectrum.zeroLocus ((p + q : Ideal A) : Set A)
+    rw [PrimeSpectrum.mem_zeroLocus]
+    intro hzero
+    exact hanotq (hzero ((le_sup_left : p ≤ p + q) hap))
+  obtain ⟨P⟩ := blowupPresentation_exists (p + q)
+  obtain ⟨Dp⟩ := primeStrictTransformData_exists_of_baseOpen
+    (P := P) hp hbasep
+  obtain ⟨Dq⟩ := primeStrictTransformData_exists_of_baseOpen
+    (P := P) hq hbaseq
+  let : GradedRing P.gradedPieces := P.graded
+  have hp_mem {a : A} (ha : a ∈ p) :
+      reesHomogeneousElement (p + q) 1 (a := a) (by
+        simpa using (show a ∈ p + q from (le_sup_left : p ≤ p + q) ha)) ∈
+        Dp.lift.asHomogeneousIdeal := by
+    exact rees_element_mem_of_prime Dp ha
+      ((le_sup_left : p ≤ p + q) ha)
+      ((le_sup_right : q ≤ p + q) hbq)
+      hbnotp
+  have hq_mem {a : A} (ha : a ∈ q) :
+      reesHomogeneousElement (p + q) 1 (a := a) (by
+        simpa using (show a ∈ p + q from (le_sup_right : q ≤ p + q) ha)) ∈
+        Dq.lift.asHomogeneousIdeal := by
+    exact rees_element_mem_of_prime Dq ha
+      ((le_sup_right : q ≤ p + q) ha)
+      ((le_sup_left : p ≤ p + q) hap)
+      hanotq
+  refine ⟨P, Dp, Dq, ?_⟩
+  rw [Set.disjoint_left]
+  intro z hzp hzq
+  have hDp_le : Dp.lift ≤ z := by
+    rw [primeStrictTransform] at hzp
+    exact (ProjectiveSpectrum.le_iff_mem_closure _ _ _).2 hzp
+  have hDq_le : Dq.lift ≤ z := by
+    rw [primeStrictTransform] at hzq
+    exact (ProjectiveSpectrum.le_iff_mem_closure _ _ _).2 hzq
+  have hDp_le' : Dp.lift.asHomogeneousIdeal ≤ z.asHomogeneousIdeal :=
+    (ProjectiveSpectrum.as_ideal_le_as_ideal _ _ _).1 hDp_le
+  have hDq_le' : Dq.lift.asHomogeneousIdeal ≤ z.asHomogeneousIdeal :=
+    (ProjectiveSpectrum.as_ideal_le_as_ideal _ _ _).1 hDq_le
+  have hp_mem_z {a : A} (ha : a ∈ p) :
+      reesHomogeneousElement (p + q) 1 (a := a) (by
+        simpa using (show a ∈ p + q from (le_sup_left : p ≤ p + q) ha)) ∈
+        z.asHomogeneousIdeal := by
+    exact hDp_le' (hp_mem ha)
+  have hq_mem_z {a : A} (ha : a ∈ q) :
+      reesHomogeneousElement (p + q) 1 (a := a) (by
+        simpa using (show a ∈ p + q from (le_sup_right : q ≤ p + q) ha)) ∈
+        z.asHomogeneousIdeal := by
+    exact hDq_le' (hq_mem ha)
+  have hdegree_one {a : A} (ha : a ∈ p + q) :
+      reesHomogeneousElement (p + q) 1 (a := a) (by simpa using ha) ∈
+        z.asHomogeneousIdeal := by
+    have ha' : a ∈ p ⊔ q := by
+      simpa only [Ideal.add_eq_sup] using ha
+    rcases Submodule.mem_sup.mp ha' with ⟨b, hb, c, hc, hbc⟩
+    subst a
+    simpa [reesHomogeneousElement, polynomial_monomial_add] using
+      z.asHomogeneousIdeal.add_mem (hp_mem_z hb) (hq_mem_z hc)
+  exact z.not_irrelevant_le
+    (irrelevant_le_of_degree_one_mem P.gradedPieces_spec z hdegree_one)

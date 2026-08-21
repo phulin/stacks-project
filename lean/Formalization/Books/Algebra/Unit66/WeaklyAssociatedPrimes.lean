@@ -2713,6 +2713,34 @@ private theorem exists_finite_transcendenceBasis_of_fg
     exact htrdeg.trans_lt Cardinal.mk_lt_aleph0
   exact ⟨s, hsfinite, hs, hmodule⟩
 
+/-- Iterated scalar extension through a field tower agrees with direct scalar
+extension, with the tensor factors restored to the chapter's convention. -/
+private def tensorProduct_towerRingEquiv
+    {k F K R : Type*} [Field k] [Field F] [Field K]
+    [Algebra k F] [Algebra k K] [Algebra F K] [IsScalarTower k F K]
+    [CommRing R] [Algebra k R] :
+    let BF := R ⊗[k] F
+    letI : Algebra F BF :=
+      (Algebra.TensorProduct.includeRight : F →ₐ[k] BF).toRingHom.toAlgebra
+    ((BF ⊗[F] K) ≃+* (R ⊗[k] K)) := by
+  dsimp only
+  let BF := R ⊗[k] F
+  letI : Algebra F BF :=
+    (Algebra.TensorProduct.includeRight : F →ₐ[k] BF).toRingHom.toAlgebra
+  letI : IsScalarTower k F BF := IsScalarTower.of_algebraMap_eq' (by
+    ext x
+    exact Algebra.TensorProduct.tmul_one_eq_one_tmul x)
+  let eInner : BF ≃ₐ[F] (F ⊗[k] R) :=
+    { (Algebra.TensorProduct.comm k R F).toRingEquiv with
+      commutes' := by
+        intro f
+        change (Algebra.TensorProduct.comm k R F) (1 ⊗ₜ[k] f) = f ⊗ₜ[k] 1
+        simp }
+  exact (Algebra.TensorProduct.comm F BF K).toRingEquiv.trans <|
+    (Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[F] K) eInner).toRingEquiv.trans <|
+      (Algebra.TensorProduct.cancelBaseChange k F K K R).toRingEquiv.trans <|
+        (Algebra.TensorProduct.comm k K R).toRingEquiv
+
 /-- The change-of-fields descent theorem for a finite field extension. -/
 private theorem tensorProduct_map_finite_of_finite_intermediateField
     {k K R : Type*} [Field k] [Field K] [Algebra k K]

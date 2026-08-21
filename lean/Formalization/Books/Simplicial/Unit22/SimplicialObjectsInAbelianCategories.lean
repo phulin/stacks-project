@@ -2074,7 +2074,14 @@ theorem extension_short_exact
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : C) (k : ℕ) :
     (extensionShortComplex A k).ShortExact := by
-  sorry
+  classical
+  dsimp [extensionShortComplex, extensionInclusion, extensionProjection]
+  apply ShortComplex.ShortExact.mk'
+  · exact ShortComplex.exact_of_f_is_kernel _ (biprod.isKernelSndKernelFork _ _)
+  · exact (inferInstance : Mono
+      (biprod.inl : eilenbergMacLaneObject A k ⟶ extensionObject A k))
+  · exact (inferInstance : Epi
+      (biprod.snd : extensionObject A k ⟶ eilenbergMacLaneObject A (k + 1)))
 
 theorem extension_termwise_split_exact
     {C : Type u} [Category.{v} C] [Abelian C]

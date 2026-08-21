@@ -1156,6 +1156,91 @@ private theorem quotient_xSubOneIdeal_kernel
   · exact bot_le
 
 /-- The quotient by `(x - 1)` is the polynomial ring `k[z]`. -/
+private theorem quotient_localization_tail_exists (d : PowerSeriesData k)
+    (xP zP : Polynomial (Polynomial k))
+    (xK zK : FractionRing (R d)) (hxK : xK ≠ 0)
+    (hxK_eq : xK = algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d))
+    (hzK_eq : zK = algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d))
+    (hzP_eq : zP = Polynomial.X)
+    (eLoc : Localization.Away xP →+* FractionRing (R d))
+    (heLoc_alg : ∀ p : Polynomial (Polynomial k),
+      eLoc (algebraMap (Polynomial (Polynomial k)) (Localization.Away xP) p) =
+        xzPolynomialMap d p)
+    (heLoc_scalar : ∀ c : k,
+      eLoc (algebraMap k (Localization.Away xP) c) =
+        algebraMap k (FractionRing (R d)) c)
+    (hinvLoc : eLoc (IsLocalization.Away.invSelf xP) = xK⁻¹) :
+    ∀ n : ℕ, ∃ q : Localization.Away xP,
+      eLoc q = algebraMap (R d) (FractionRing (R d))
+        (zSuccInGeneratedRing d n) := by
+  let L := Localization.Away xP
+  intro n
+  induction n with
+  | zero =>
+      refine ⟨IsLocalization.Away.invSelf xP *
+        algebraMap (Polynomial (Polynomial k)) L zP, ?_⟩
+      have hzR : xInGeneratedRing d * zSuccInGeneratedRing d 0 =
+          zInGeneratedRing d := by
+        apply Subtype.ext
+        exact (z_eq_X_mul_zTail_one d).symm
+      have hzK := congrArg (algebraMap (R d) (FractionRing (R d))) hzR
+      rw [map_mul] at hzK
+      rw [map_mul, hinvLoc, heLoc_alg]
+      have hzmap : xzPolynomialMap d zP = zK := by
+        simp [xzPolynomialMap, hzP_eq, hzK_eq]
+      rw [hzmap]
+      calc
+        xK⁻¹ * zK = xK⁻¹ *
+            (xK * algebraMap (R d) (FractionRing (R d))
+              (zSuccInGeneratedRing d 0)) := by
+                simpa [hxK_eq, hzK_eq] using
+                  congrArg (fun t => xK⁻¹ * t) hzK.symm
+        _ = algebraMap (R d) (FractionRing (R d))
+              (zSuccInGeneratedRing d 0) := by
+          rw [← mul_assoc, inv_mul_cancel₀ hxK, one_mul]
+  | succ n ih =>
+      obtain ⟨q, hq⟩ := ih
+      refine ⟨IsLocalization.Away.invSelf xP *
+        (q - algebraMap k L (d.coefficients (n + 1))), ?_⟩
+      have hrecR : xInGeneratedRing d * zSuccInGeneratedRing d (n + 1) +
+          algebraMap k (R d) (d.coefficients (n + 1)) =
+            zSuccInGeneratedRing d n := by
+        apply Subtype.ext
+        change PowerSeries.X * zTail (k := k) d.coefficients (n + 2) +
+            PowerSeries.C (d.coefficients (n + 1)) =
+          zTail (k := k) d.coefficients (n + 1)
+        exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
+      have hrecK := congrArg (algebraMap (R d) (FractionRing (R d))) hrecR
+      rw [map_add, map_mul] at hrecK
+      have hscalar (c : k) :
+          algebraMap k (FractionRing (R d)) c =
+            algebraMap (R d) (FractionRing (R d)) (algebraMap k (R d) c) := by
+        rfl
+      have hrecK' : xK * algebraMap (R d) (FractionRing (R d))
+            (zSuccInGeneratedRing d (n + 1)) +
+            algebraMap k (FractionRing (R d)) (d.coefficients (n + 1)) =
+          algebraMap (R d) (FractionRing (R d))
+            (zSuccInGeneratedRing d n) := by
+        rw [hscalar]
+        simpa [hxK_eq] using hrecK
+      rw [map_mul, hinvLoc, map_sub, hq, heLoc_scalar]
+      calc
+        xK⁻¹ *
+            (algebraMap (R d) (FractionRing (R d))
+              (zSuccInGeneratedRing d n) -
+              algebraMap k (FractionRing (R d))
+                (d.coefficients (n + 1))) =
+            xK⁻¹ *
+            (xK * algebraMap (R d) (FractionRing (R d))
+                (zSuccInGeneratedRing d (n + 1)) +
+              algebraMap k (FractionRing (R d))
+                (d.coefficients (n + 1)) -
+              algebraMap k (FractionRing (R d))
+                (d.coefficients (n + 1))) := by rw [hrecK']
+        _ = algebraMap (R d) (FractionRing (R d))
+            (zSuccInGeneratedRing d (n + 1)) := by
+          rw [add_sub_cancel_right, ← mul_assoc, inv_mul_cancel₀ hxK, one_mul]
+
 private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
     ∃ e : R d ⧸ xSubOneIdeal d ≃+* Polynomial k,
       e (Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d)) =
@@ -1249,71 +1334,9 @@ private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
       _ = xK * xK⁻¹ := by rw [mul_inv_cancel₀ hxK]
   have htail : ∀ n : ℕ, ∃ q : L,
       eLoc q = algebraMap (R d) (FractionRing (R d))
-        (zSuccInGeneratedRing d n) := by
-    intro n
-    induction n with
-    | zero =>
-        refine ⟨IsLocalization.Away.invSelf xP *
-          algebraMap (Polynomial (Polynomial k)) L zP, ?_⟩
-        have hzR : xInGeneratedRing d * zSuccInGeneratedRing d 0 =
-            zInGeneratedRing d := by
-          apply Subtype.ext
-          exact (z_eq_X_mul_zTail_one d).symm
-        have hzK := congrArg (algebraMap (R d) (FractionRing (R d))) hzR
-        rw [map_mul] at hzK
-        rw [map_mul, hinvLoc, heLoc_alg]
-        have hzmap : xzPolynomialMap d zP = zK := by
-          simp [xzPolynomialMap, zP, zK]
-        rw [hzmap]
-        calc
-          xK⁻¹ * zK = xK⁻¹ *
-              (xK * algebraMap (R d) (FractionRing (R d))
-                (zSuccInGeneratedRing d 0)) := by rw [hzK]
-          _ = algebraMap (R d) (FractionRing (R d))
-                (zSuccInGeneratedRing d 0) := by
-            rw [← mul_assoc, inv_mul_cancel₀ hxK, one_mul]
-    | succ n ih =>
-        obtain ⟨q, hq⟩ := ih
-        refine ⟨IsLocalization.Away.invSelf xP *
-          (q - algebraMap k L (d.coefficients (n + 1))), ?_⟩
-        have hrecR : xInGeneratedRing d * zSuccInGeneratedRing d (n + 1) +
-            algebraMap k (R d) (d.coefficients (n + 1)) =
-              zSuccInGeneratedRing d n := by
-          apply Subtype.ext
-          change PowerSeries.X * zTail (k := k) d.coefficients (n + 2) +
-              PowerSeries.C (d.coefficients (n + 1)) =
-            zTail (k := k) d.coefficients (n + 1)
-          exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
-        have hrecK := congrArg (algebraMap (R d) (FractionRing (R d))) hrecR
-        rw [map_add, map_mul] at hrecK
-        have hscalar (c : k) :
-            algebraMap k (FractionRing (R d)) c =
-              algebraMap (R d) (FractionRing (R d)) (algebraMap k (R d) c) := by
-          rfl
-        have hrecK' : xK * algebraMap (R d) (FractionRing (R d))
-              (zSuccInGeneratedRing d (n + 1)) +
-              algebraMap k (FractionRing (R d)) (d.coefficients (n + 1)) =
-            algebraMap (R d) (FractionRing (R d))
-              (zSuccInGeneratedRing d n) := by
-          rw [hscalar]
-          simpa [xK] using hrecK
-        rw [map_mul, hinvLoc, map_sub, hq, heLoc_scalar]
-        calc
-          xK⁻¹ *
-              (algebraMap (R d) (FractionRing (R d))
-                (zSuccInGeneratedRing d n) -
-                algebraMap k (FractionRing (R d))
-                  (d.coefficients (n + 1))) =
-              xK⁻¹ *
-              (xK * algebraMap (R d) (FractionRing (R d))
-                  (zSuccInGeneratedRing d (n + 1)) +
-                algebraMap k (FractionRing (R d))
-                  (d.coefficients (n + 1)) -
-                algebraMap k (FractionRing (R d))
-                  (d.coefficients (n + 1))) := by rw [hrecK']
-          _ = algebraMap (R d) (FractionRing (R d))
-              (zSuccInGeneratedRing d (n + 1)) := by
-            rw [add_sub_cancel_right, ← mul_assoc, inv_mul_cancel₀ hxK, one_mul]
+        (zSuccInGeneratedRing d n) :=
+    quotient_localization_tail_exists d xP zP xK zK hxK rfl rfl rfl eLoc
+      heLoc_alg heLoc_scalar hinvLoc
   have hrange : ∀ (y : PowerSeries k) (hy : y ∈ generatedRing d),
       ∃ q : L, eLoc q = algebraMap (R d) (FractionRing (R d)) ⟨y, hy⟩ := by
     intro y hy

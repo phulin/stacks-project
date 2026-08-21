@@ -1,4 +1,4 @@
-import Formalization.Books.Algebra.Unit66.WeaklyAssociatedPrimes
+import Formalization.Books.Algebra.Unit66.ChangeFields
 
 /-!
 # Commutative Algebra, Chapter 66: Weakly associated primes

@@ -3,6 +3,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Free
 import Mathlib.FieldTheory.IntermediateField.Adjoin.Algebra
 import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.RingTheory.TensorProduct.Free
+import Mathlib.RingTheory.Flat.Stability
 
 namespace Formalization.Books.Algebra.Unit66
 
@@ -85,6 +86,24 @@ def tensorProduct_towerAlgEquiv
         Algebra.TensorProduct.comm_tmul]
       simp [Algebra.smul_def]
   exact { e with commutes' := fun b => DFunLike.congr_fun hmap b }
+
+/-- Tensoring an intermediate-field inclusion with a coefficient algebra gives
+a flat extension. -/
+theorem tensorProduct_flat_intermediateField
+    {k K R : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (L : IntermediateField k K) :
+    let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+    letI : Algebra L (R ⊗[k] L) :=
+      (Algebra.TensorProduct.includeRight : L →ₐ[k] R ⊗[k] L).toRingHom.toAlgebra
+    letI : Algebra (R ⊗[k] L) (R ⊗[k] K) := f.toRingHom.toAlgebra
+    Module.Flat (R ⊗[k] L) (R ⊗[k] K) := by
+  let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+  letI : Algebra L (R ⊗[k] L) :=
+    (Algebra.TensorProduct.includeRight : L →ₐ[k] R ⊗[k] L).toRingHom.toAlgebra
+  letI : Algebra (R ⊗[k] L) (R ⊗[k] K) := f.toRingHom.toAlgebra
+  let e := tensorProduct_towerAlgEquiv
+    (k := k) (F := L) (K := K) (R := R)
+  exact Module.Flat.of_linearEquiv e.symm.toLinearEquiv
 
 /-- Over the first base-changed ring, the directly base-changed module is a
 finite-support family of copies of the module at the intermediate field. -/

@@ -272,18 +272,28 @@ private noncomputable abbrev polynomialFractionRingAlgebraicInst (k : Type u) [F
    degree two over `k`. -/
 attribute [local instance] fractionFieldRAlgebraInst rationalFunctionAlgebraInst
   polynomialFractionRingSelfAlgebraicInst polynomialFractionRingAlgebraicInst in
-theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
-    @Algebra.trdeg k (FractionRing (R d)) _ _ (fractionFieldRAlgebra d) = 2 := by
-  /- prior attempt:
+private noncomputable def xzPolynomialMap (d : PowerSeriesData k) :
+    Polynomial (Polynomial k) →+* FractionRing (R d) :=
+  Polynomial.eval₂RingHom
+    (Polynomial.eval₂RingHom
+      (algebraMap k (FractionRing (R d)))
+      (algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)))
+    (algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d))
+
+private theorem xzPolynomialMap_injective (d : PowerSeriesData k) :
+    Function.Injective (xzPolynomialMap d) := by
+  letI := rationalFunctionAlgebraInst k
   let gL : R d →+* LaurentSeriesField k :=
-    (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp (generatedRingInclusion d)
+    (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp
+      (generatedRingInclusion d)
   have hgL : Function.Injective gL := by
     intro a b h
     apply Subtype.ext
     apply (IsFractionRing.injective (PowerSeries k) (LaurentSeriesField k))
     exact h
   let γ : FractionRing (R d) →+* LaurentSeriesField k :=
-    IsFractionRing.lift (A := R d) (K := FractionRing (R d)) (L := LaurentSeriesField k) hgL
+    IsFractionRing.lift (A := R d) (K := FractionRing (R d))
+      (L := LaurentSeriesField k) hgL
   have hscalar (a : k) :
       algebraMap k (FractionRing (R d)) a =
         algebraMap (R d) (FractionRing (R d)) (algebraMap k (R d) a) := by
@@ -293,47 +303,42 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     ext c
     change γ (algebraMap k (FractionRing (R d)) c) =
       algebraMap k (LaurentSeriesField k) c
-    rw [hscalar c]
+    rw [hscalar c, IsFractionRing.lift_algebraMap]
+    rfl
+  let xL : LaurentSeriesField k :=
+    algebraMap (PowerSeries k) (LaurentSeriesField k) PowerSeries.X
+  let zL : LaurentSeriesField k :=
+    algebraMap (PowerSeries k) (LaurentSeriesField k)
+      (zPowerSeries (k := k) d.coefficients)
+  have hγx : γ (algebraMap (R d) (FractionRing (R d))
+      (xInGeneratedRing d)) = xL := by
+    rw [IsFractionRing.lift_algebraMap]
+    rfl
+  have hγz : γ (algebraMap (R d) (FractionRing (R d))
+      (zInGeneratedRing d)) = zL := by
     rw [IsFractionRing.lift_algebraMap]
     rfl
   let xK : FractionRing (R d) :=
     algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)
   let zK : FractionRing (R d) :=
     algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)
-  let xL : LaurentSeriesField k :=
-    algebraMap (PowerSeries k) (LaurentSeriesField k) PowerSeries.X
-  let zL : LaurentSeriesField k :=
-    algebraMap (PowerSeries k) (LaurentSeriesField k)
-      (zPowerSeries (k := k) d.coefficients)
-  have hγx : γ xK = xL := by
-    change γ (algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)) = xL
-    rw [IsFractionRing.lift_algebraMap]
-    rfl
-  have hγz : γ zK = zL := by
-    change γ (algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)) = zL
-    rw [IsFractionRing.lift_algebraMap]
-    rfl
-  let cK : Polynomial k →+* FractionRing (R d) :=
-    Polynomial.eval₂RingHom (algebraMap k (FractionRing (R d))) xK
   let cL : Polynomial k →+* LaurentSeriesField k :=
     Polynomial.eval₂RingHom (algebraMap k (LaurentSeriesField k)) xL
+  let cK : Polynomial k →+* FractionRing (R d) :=
+    Polynomial.eval₂RingHom (algebraMap k (FractionRing (R d))) xK
+  let eL : Polynomial (Polynomial k) →+* LaurentSeriesField k :=
+    Polynomial.eval₂RingHom cL zL
   have hγc : γ.comp cK = cL := by
     apply RingHom.ext
     intro p
     change γ (Polynomial.eval₂ (algebraMap k (FractionRing (R d))) xK p) =
       Polynomial.eval₂ (algebraMap k (LaurentSeriesField k)) xL p
-    rw [Polynomial.hom_eval₂]
-    rw [hγk, hγx]
-  let eK : Polynomial (Polynomial k) →+* FractionRing (R d) :=
-    Polynomial.eval₂RingHom cK zK
-  let eL : Polynomial (Polynomial k) →+* LaurentSeriesField k :=
-    Polynomial.eval₂RingHom cL zL
-  have hγe : γ.comp eK = eL := by
+    rw [Polynomial.hom_eval₂, hγk, hγx]
+  have hγe : γ.comp (xzPolynomialMap d) = eL := by
     apply RingHom.ext
     intro p
     change γ (Polynomial.eval₂ cK zK p) = Polynomial.eval₂ cL zL p
-    rw [Polynomial.hom_eval₂]
-    rw [hγc, hγz]
+    rw [Polynomial.hom_eval₂, hγc, hγz]
   have hztrans :
       Transcendental (FractionRing (Polynomial k)) zL := by
     simpa [zL] using d.transcendental
@@ -351,7 +356,7 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     intro p
     induction p using Polynomial.induction_on' with
     | add p q hp hq =>
-        simp [cL, xL] at hp hq ⊢
+        simp [cL] at hp hq ⊢
         rw [hp, hq]
     | monomial n a =>
         have hm : PowerSeries.monomial n a =
@@ -399,8 +404,7 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
           ((algebraMap (Polynomial k) (FractionRing (Polynomial k))) p) =
           ((algebraMap (PowerSeries k) (LaurentSeriesField k)).comp j) p :=
         RingHom.congr_fun hmapcomp p
-      _ = cL p := by
-        exact RingHom.congr_fun hcL p
+      _ = cL p := RingHom.congr_fun hcL p
   have heL : Function.Injective eL := by
     intro p q hpq
     have hroot :
@@ -418,18 +422,63 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
         (IsFractionRing.injective (Polynomial k) (FractionRing (Polynomial k)))
       simpa using hmapzero
     exact sub_eq_zero.mp hdiff
+  intro p q hpq
+  apply heL
+  have h' : eL p = eL q := by
+    rw [← RingHom.congr_fun hγe p, ← RingHom.congr_fun hγe q]
+    exact congrArg γ hpq
+  exact h'
+
+attribute [local instance] fractionFieldRAlgebraInst rationalFunctionAlgebraInst
+  polynomialFractionRingSelfAlgebraicInst polynomialFractionRingAlgebraicInst in
+theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
+    @Algebra.trdeg k (FractionRing (R d)) _ _ (fractionFieldRAlgebra d) = 2 := by
+  let gL : R d →+* LaurentSeriesField k :=
+    (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp (generatedRingInclusion d)
+  have hgL : Function.Injective gL := by
+    intro a b h
+    apply Subtype.ext
+    apply (IsFractionRing.injective (PowerSeries k) (LaurentSeriesField k))
+    exact h
+  let γ : FractionRing (R d) →+* LaurentSeriesField k :=
+    IsFractionRing.lift (A := R d) (K := FractionRing (R d)) (L := LaurentSeriesField k) hgL
+  have hscalar (a : k) :
+      algebraMap k (FractionRing (R d)) a =
+        algebraMap (R d) (FractionRing (R d)) (algebraMap k (R d) a) := by
+    rfl
+  have hγk : γ.comp (algebraMap k (FractionRing (R d))) =
+      algebraMap k (LaurentSeriesField k) := by
+    ext c
+    change γ (algebraMap k (FractionRing (R d)) c) =
+      algebraMap k (LaurentSeriesField k) c
+    rw [hscalar c]
+    rw [IsFractionRing.lift_algebraMap]
+    rfl
+  let xK : FractionRing (R d) :=
+    algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)
+  let zK : FractionRing (R d) :=
+    algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)
+  let xL : LaurentSeriesField k :=
+    algebraMap (PowerSeries k) (LaurentSeriesField k) PowerSeries.X
+  let zL : LaurentSeriesField k :=
+    algebraMap (PowerSeries k) (LaurentSeriesField k)
+      (zPowerSeries (k := k) d.coefficients)
+  have hγx : γ xK = xL := by
+    change γ (algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)) = xL
+    rw [IsFractionRing.lift_algebraMap]
+    rfl
+  have hγz : γ zK = zL := by
+    change γ (algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)) = zL
+    rw [IsFractionRing.lift_algebraMap]
+    rfl
+  let eK := xzPolynomialMap d
   have heK : Function.Injective eK := by
-    intro p q hpq
-    apply heL
-    have h' : eL p = eL q := by
-      rw [← RingHom.congr_fun hγe p, ← RingHom.congr_fun hγe q]
-      exact congrArg γ hpq
-    exact h'
+    simpa [eK] using xzPolynomialMap_injective d
   let eKAlg : Polynomial (Polynomial k) →ₐ[k] FractionRing (R d) :=
     { eK with
       commutes' := by
         intro c
-        simp [eK, cK] }
+        simp [eK, xzPolynomialMap] }
   have heKAlg : Function.Injective eKAlg := heK
   let φ : FractionRing (Polynomial (Polynomial k)) →ₐ[k] FractionRing (R d) :=
     IsFractionRing.liftAlgHom heKAlg
@@ -455,12 +504,12 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     change IsFractionRing.lift heKAlg qXK = xK
     rw [IsFractionRing.lift_algebraMap]
     change eK (Polynomial.C Polynomial.X) = xK
-    simp [eK, cK, xK]
+    simp [eK, xzPolynomialMap, xK]
   have hφz : φ qZK = zK := by
     change IsFractionRing.lift heKAlg qZK = zK
     rw [IsFractionRing.lift_algebraMap]
     change eK Polynomial.X = zK
-    simp [eK, zK]
+    simp [eK, xzPolynomialMap, zK]
   have hxK : xK ≠ 0 := by
     intro h
     have h' : algebraMap (R d) (FractionRing (R d))
@@ -785,163 +834,6 @@ theorem mIdeal_isMaximal (d : PowerSeriesData k) :
   apply Ideal.Quotient.maximal_of_isField
   exact e.toMulEquiv.isField (Field.toIsField k)
 
-private noncomputable def xzPolynomialMap (d : PowerSeriesData k) :
-    Polynomial (Polynomial k) →+* FractionRing (R d) :=
-  Polynomial.eval₂RingHom
-    (Polynomial.eval₂RingHom
-      (algebraMap k (FractionRing (R d)))
-      (algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)))
-    (algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d))
-
-private theorem xzPolynomialMap_injective (d : PowerSeriesData k) :
-    Function.Injective (xzPolynomialMap d) := by
-  let _ := rationalFunctionAlgebraInst k
-  let gL : R d →+* LaurentSeriesField k :=
-    (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp
-      (generatedRingInclusion d)
-  have hgL : Function.Injective gL := by
-    intro a b h
-    apply Subtype.ext
-    apply (IsFractionRing.injective (PowerSeries k) (LaurentSeriesField k))
-    exact h
-  let γ : FractionRing (R d) →+* LaurentSeriesField k :=
-    IsFractionRing.lift (A := R d) (K := FractionRing (R d))
-      (L := LaurentSeriesField k) hgL
-  have hscalar (a : k) :
-      algebraMap k (FractionRing (R d)) a =
-        algebraMap (R d) (FractionRing (R d)) (algebraMap k (R d) a) := by
-    rfl
-  have hγk : γ.comp (algebraMap k (FractionRing (R d))) =
-      algebraMap k (LaurentSeriesField k) := by
-    ext c
-    change γ (algebraMap k (FractionRing (R d)) c) =
-      algebraMap k (LaurentSeriesField k) c
-    rw [hscalar c, IsFractionRing.lift_algebraMap]
-    rfl
-  let xL : LaurentSeriesField k :=
-    algebraMap (PowerSeries k) (LaurentSeriesField k) PowerSeries.X
-  let zL : LaurentSeriesField k :=
-    algebraMap (PowerSeries k) (LaurentSeriesField k)
-      (zPowerSeries (k := k) d.coefficients)
-  have hγx : γ (algebraMap (R d) (FractionRing (R d))
-      (xInGeneratedRing d)) = xL := by
-    rw [IsFractionRing.lift_algebraMap]
-    rfl
-  have hγz : γ (algebraMap (R d) (FractionRing (R d))
-      (zInGeneratedRing d)) = zL := by
-    rw [IsFractionRing.lift_algebraMap]
-    rfl
-  let xK : FractionRing (R d) :=
-    algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)
-  let zK : FractionRing (R d) :=
-    algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)
-  let cL : Polynomial k →+* LaurentSeriesField k :=
-    Polynomial.eval₂RingHom (algebraMap k (LaurentSeriesField k)) xL
-  let cK : Polynomial k →+* FractionRing (R d) :=
-    Polynomial.eval₂RingHom (algebraMap k (FractionRing (R d))) xK
-  let eL : Polynomial (Polynomial k) →+* LaurentSeriesField k :=
-    Polynomial.eval₂RingHom cL zL
-  have hγc : γ.comp cK = cL := by
-    apply RingHom.ext
-    intro p
-    change γ (Polynomial.eval₂ (algebraMap k (FractionRing (R d))) xK p) =
-      Polynomial.eval₂ (algebraMap k (LaurentSeriesField k)) xL p
-    rw [Polynomial.hom_eval₂, hγk, hγx]
-  have hγe : γ.comp (xzPolynomialMap d) = eL := by
-    apply RingHom.ext
-    intro p
-    change γ (Polynomial.eval₂ cK zK p) = Polynomial.eval₂ cL zL p
-    rw [Polynomial.hom_eval₂, hγc, hγz]
-  have hztrans :
-      Transcendental (FractionRing (Polynomial k)) zL := by
-    simpa [zL] using d.transcendental
-  let cF : Polynomial k →+* FractionRing (Polynomial k) :=
-    algebraMap (Polynomial k) (FractionRing (Polynomial k))
-  have hcL :
-      (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp
-          (Polynomial.coeToPowerSeries.ringHom : Polynomial k →+* PowerSeries k) = cL := by
-    have hC :
-        (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp
-            PowerSeries.C = algebraMap k (LaurentSeriesField k) := by
-      ext c
-      rfl
-    apply RingHom.ext
-    intro p
-    induction p using Polynomial.induction_on' with
-    | add p q hp hq =>
-        simp [cL] at hp hq ⊢
-        rw [hp, hq]
-    | monomial n a =>
-        have hm : PowerSeries.monomial n a =
-            PowerSeries.C a * PowerSeries.X ^ n := by
-          ext m
-          simp [PowerSeries.coeff_monomial]
-        change (algebraMap (PowerSeries k) (LaurentSeriesField k))
-            ((Polynomial.monomial n a : Polynomial k) : PowerSeries k) = cL _
-        rw [Polynomial.coe_monomial, hm]
-        calc
-          (algebraMap (PowerSeries k) (LaurentSeriesField k))
-                (PowerSeries.C a * PowerSeries.X ^ n) =
-              (algebraMap k (LaurentSeriesField k)) a * xL ^ n := by
-            rw [map_mul, map_pow]
-            have hCa :
-                (algebraMap (PowerSeries k) (LaurentSeriesField k))
-                    (PowerSeries.C a) = (algebraMap k (LaurentSeriesField k)) a := by
-              change ((algebraMap (PowerSeries k) (LaurentSeriesField k)).comp
-                PowerSeries.C) a = _
-              exact RingHom.congr_fun hC a
-            rw [hCa]
-          _ = cL (Polynomial.monomial n a) := by
-            simp [cL, xL]
-  have hcoeff :
-      (algebraMap (FractionRing (Polynomial k)) (LaurentSeriesField k)).comp cF = cL := by
-    let j : Polynomial k →+* PowerSeries k :=
-      Polynomial.coeToPowerSeries.ringHom
-    let hj : nonZeroDivisors (Polynomial k) ≤
-        (nonZeroDivisors (PowerSeries k)).comap j :=
-      nonZeroDivisors_le_comap_nonZeroDivisors_of_injective j
-        (Polynomial.coe_injective k)
-    have hmapcomp :
-        (IsLocalization.map (LaurentSeriesField k) j hj).comp
-            (algebraMap (Polynomial k) (FractionRing (Polynomial k))) =
-          (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp j := by
-      exact IsLocalization.map_comp hj
-    apply RingHom.ext
-    intro p
-    change rationalFunctionToLaurentSeries k (algebraMap (Polynomial k)
-      (FractionRing (Polynomial k)) p) = cL p
-    rw [show rationalFunctionToLaurentSeries k =
-      IsLocalization.map (LaurentSeriesField k) j hj from rfl]
-    calc
-      (IsLocalization.map (LaurentSeriesField k) j hj)
-          ((algebraMap (Polynomial k) (FractionRing (Polynomial k))) p) =
-          ((algebraMap (PowerSeries k) (LaurentSeriesField k)).comp j) p :=
-        RingHom.congr_fun hmapcomp p
-      _ = cL p := RingHom.congr_fun hcL p
-  have heL : Function.Injective eL := by
-    intro p q hpq
-    have hroot :
-        Polynomial.aeval zL ((p - q).map cF) = 0 := by
-      change Polynomial.eval₂
-          (algebraMap (FractionRing (Polynomial k)) (LaurentSeriesField k)) zL
-          ((p - q).map cF) = 0
-      rw [Polynomial.eval₂_map, hcoeff]
-      change eL (p - q) = 0
-      rw [map_sub, hpq, sub_self]
-    have hmapzero : (p - q).map cF = 0 :=
-      (transcendental_iff_injective.mp hztrans) (by simpa using hroot)
-    have hdiff : p - q = 0 := by
-      apply Polynomial.map_injective cF
-        (IsFractionRing.injective (Polynomial k) (FractionRing (Polynomial k)))
-      simpa using hmapzero
-    exact sub_eq_zero.mp hdiff
-  intro p q hpq
-  apply heL
-  have h' : eL p = eL q := by
-    rw [← RingHom.congr_fun hγe p, ← RingHom.congr_fun hγe q]
-    exact congrArg γ hpq
-  exact h'
-
 private theorem quotient_xSubOne_generated_surjective
     (d : PowerSeriesData k)
     (g : Polynomial k →+* (R d ⧸ xSubOneIdeal d))
@@ -1037,7 +929,7 @@ private theorem xzPolynomialMap_eval₂_X (d : PowerSeriesData k) (p : Polynomia
   | add p q hp hq =>
       rw [Polynomial.eval₂_add, map_add, Polynomial.eval₂_add, hp, hq]
   | monomial n a =>
-      simp [xzPolynomialMap]
+      simp [xzPolynomialMap] <;> exact Or.inl rfl
 
 private theorem algebraMap_eval₂_z (d : PowerSeriesData k) (p : Polynomial k) :
     algebraMap (R d) (FractionRing (R d))
@@ -1341,7 +1233,7 @@ private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
     change eLoc (algebraMap (Polynomial (Polynomial k)) L
       (algebraMap k (Polynomial (Polynomial k)) c)) = _
     rw [heLoc_alg]
-    simp [xzPolynomialMap]
+    simp [xzPolynomialMap] <;> rfl
   have hinvLoc :
       eLoc (IsLocalization.Away.invSelf xP) = xK⁻¹ := by
     have hxmap : xzPolynomialMap d xP = xK := by

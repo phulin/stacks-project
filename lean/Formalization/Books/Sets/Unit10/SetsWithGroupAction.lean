@@ -1,4 +1,4 @@
-import Formalization.Books.Sets.Unit09.ConstructingCategoriesOfSchemes
+import Formalization.Books.Sets.Unit05.Hierarchy
 import Mathlib.CategoryTheory.Action.Concrete
 import Mathlib.CategoryTheory.Action.Limits
 import Mathlib.CategoryTheory.Limits.Preserves.Finite
@@ -19,7 +19,6 @@ universe u
 namespace Formalization.Books.Sets.Unit10
 
 open CategoryTheory CategoryTheory.Limits
-open Formalization.Books.Sets.Unit09
 
 noncomputable section
 
@@ -84,14 +83,14 @@ structure GSetLevelData [Group G] (c : GSetCoding G) (S₀ : Set (GSet G))
   limits :
     ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α),
-      HasLimitCone (F ⋙ gSetInclusion c α) ↔ HasLimitCone F
+      Nonempty (LimitCone (F ⋙ gSetInclusion c α)) ↔ Nonempty (LimitCone F)
   limit_agreement :
     ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α), GSetLimitConeAgreesWithAmbient F
   colimits :
     ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α),
-      HasColimitCocone (F ⋙ gSetInclusion c α) ↔ HasColimitCocone F
+      Nonempty (ColimitCocone (F ⋙ gSetInclusion c α)) ↔ Nonempty (ColimitCocone F)
   colimit_agreement :
     ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α), GSetColimitCoconeAgreesWithAmbient F

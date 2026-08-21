@@ -2714,32 +2714,80 @@ private theorem exists_finite_transcendenceBasis_of_fg
   exact ⟨s, hsfinite, hs, hmodule⟩
 
 /-- Iterated scalar extension through a field tower agrees with direct scalar
-extension, with the tensor factors restored to the chapter's convention. -/
-private def tensorProduct_towerRingEquiv
+extension and is linear over the first base-changed ring. -/
+private def tensorProduct_towerAlgEquiv
     {k F K R : Type*} [Field k] [Field F] [Field K]
     [Algebra k F] [Algebra k K] [Algebra F K] [IsScalarTower k F K]
     [CommRing R] [Algebra k R] :
     let BF := R ⊗[k] F
+    let BK := R ⊗[k] K
+    let f := Algebra.TensorProduct.map (AlgHom.id k R)
+      (IsScalarTower.toAlgHom k F K)
     letI : Algebra F BF :=
       (Algebra.TensorProduct.includeRight : F →ₐ[k] BF).toRingHom.toAlgebra
-    ((BF ⊗[F] K) ≃+* (R ⊗[k] K)) := by
+    letI : Algebra BF BK := f.toRingHom.toAlgebra
+    ((BF ⊗[F] K) ≃ₐ[BF] BK) := by
   dsimp only
   let BF := R ⊗[k] F
+  let BK := R ⊗[k] K
+  let f := Algebra.TensorProduct.map (AlgHom.id k R)
+    (IsScalarTower.toAlgHom k F K)
   letI : Algebra F BF :=
     (Algebra.TensorProduct.includeRight : F →ₐ[k] BF).toRingHom.toAlgebra
+  letI : Algebra BF BK := f.toRingHom.toAlgebra
   letI : IsScalarTower k F BF := IsScalarTower.of_algebraMap_eq' (by
     ext x
     exact Algebra.TensorProduct.tmul_one_eq_one_tmul x)
   let eInner : BF ≃ₐ[F] (F ⊗[k] R) :=
     { (Algebra.TensorProduct.comm k R F).toRingEquiv with
       commutes' := by
-        intro f
-        change (Algebra.TensorProduct.comm k R F) (1 ⊗ₜ[k] f) = f ⊗ₜ[k] 1
+        intro x
+        change (Algebra.TensorProduct.comm k R F) (1 ⊗ₜ[k] x) = x ⊗ₜ[k] 1
         simp }
-  exact (Algebra.TensorProduct.comm F BF K).toRingEquiv.trans <|
-    (Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[F] K) eInner).toRingEquiv.trans <|
-      (Algebra.TensorProduct.cancelBaseChange k F K K R).toRingEquiv.trans <|
-        (Algebra.TensorProduct.comm k K R).toRingEquiv
+  let e : (BF ⊗[F] K) ≃+* BK :=
+    (Algebra.TensorProduct.comm F BF K).toRingEquiv.trans <|
+      (Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[F] K) eInner).toRingEquiv.trans <|
+        (Algebra.TensorProduct.cancelBaseChange k F K K R).toRingEquiv.trans <|
+          (Algebra.TensorProduct.comm k K R).toRingEquiv
+  have heInner (r : R) (x : F) : eInner (r ⊗ₜ[k] x) = x ⊗ₜ[k] r := rfl
+  have hcongr (b : BF) :
+      (Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[F] K) eInner)
+          (1 ⊗ₜ[F] b) = 1 ⊗ₜ[F] eInner b := by
+    change (TensorProduct.AlgebraTensorModule.congr
+      (LinearEquiv.refl K K) eInner.toLinearEquiv) (1 ⊗ₜ[F] b) = _
+    rw [TensorProduct.AlgebraTensorModule.congr_tmul]
+    simp
+  have hmap : e.toRingHom.comp (algebraMap BF (BF ⊗[F] K)) = f.toRingHom := by
+    ext r x
+    · change e (algebraMap BF (BF ⊗[F] K)
+          (Algebra.TensorProduct.includeLeftRingHom r)) =
+        f (Algebra.TensorProduct.includeLeftRingHom r)
+      rw [Algebra.TensorProduct.algebraMap_apply,
+        Algebra.algebraMap_self, RingHom.id_apply]
+      change (Algebra.TensorProduct.comm k K R)
+          (Algebra.TensorProduct.cancelBaseChange k F K K R
+            ((Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[F] K) eInner)
+              (1 ⊗ₜ[F] (r ⊗ₜ[k] 1)))) = f (r ⊗ₜ[k] 1)
+      rw [hcongr, heInner]
+      dsimp [f]
+      rw [Algebra.TensorProduct.cancelBaseChange_tmul,
+        Algebra.TensorProduct.comm_tmul]
+      simp
+    · change e (algebraMap BF (BF ⊗[F] K)
+          (Algebra.TensorProduct.includeRight r)) =
+        f (Algebra.TensorProduct.includeRight r)
+      rw [Algebra.TensorProduct.algebraMap_apply,
+        Algebra.algebraMap_self, RingHom.id_apply]
+      change (Algebra.TensorProduct.comm k K R)
+          (Algebra.TensorProduct.cancelBaseChange k F K K R
+            ((Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[F] K) eInner)
+              (1 ⊗ₜ[F] (1 ⊗ₜ[k] r)))) = f (1 ⊗ₜ[k] r)
+      rw [hcongr, heInner]
+      dsimp [f]
+      rw [Algebra.TensorProduct.cancelBaseChange_tmul,
+        Algebra.TensorProduct.comm_tmul]
+      simp [Algebra.smul_def]
+  exact { e with commutes' := fun b => DFunLike.congr_fun hmap b }
 
 /-- The change-of-fields descent theorem for a finite field extension. -/
 private theorem tensorProduct_map_finite_of_finite_intermediateField

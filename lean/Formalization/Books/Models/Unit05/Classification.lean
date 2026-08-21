@@ -1432,30 +1432,88 @@ theorem star_five_matrix_singular (r : ℤ) :
   rw [hdet]
   simp
 
-theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
-    Matrix.det (scalarMatrix (doubleTripleMatrix t) r) = 0 := by
+private def doubleTripleKernelVector (t : ℕ) : Fin (t + 2) → ℤ := fun i =>
+  if i.val ≤ 1 then 1 else if i.val < t then 2 else 1
+
+private theorem doubleTripleMatrix_mulVec_kernel (t : ℕ) (ht : 4 ≤ t) :
+    Matrix.mulVec (doubleTripleMatrix t) (doubleTripleKernelVector t) = 0 := by
   classical
-  let v : Fin (t + 2) → ℤ := fun i =>
-    if i.val ≤ 1 then 1 else if i.val < t then 2 else 1
-  have hkernel : Matrix.mulVec (doubleTripleMatrix t) v = 0 := by
-    funext i
-    rw [Matrix.mulVec_apply_eq_sum]
-    by_cases hi0 : i.val = 0
-    · have hi : i = 0 := by
+  let v : Fin (t + 2) → ℤ := doubleTripleKernelVector t
+  change Matrix.mulVec (doubleTripleMatrix t) v = 0
+  funext i
+  rw [Matrix.mulVec_apply_eq_sum]
+  by_cases hi0 : i.val = 0
+  · have hi : i = 0 := by
+      apply Fin.ext
+      simpa using hi0
+    subst i
+    have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 0 j * v j) =
+        -2 * v 0 + v 2 := by
+      calc
+        (∑ j : Fin (t + 2), doubleTripleMatrix t 0 j * v j) =
+            ∑ j, ((if j = 0 then -2 * v j else 0) +
+              (if j = 2 then v j else 0)) := by
+          apply Finset.sum_congr rfl
+          intro j hj
+          by_cases h0 : j = 0
+          · subst j
+            have h02 : ¬ (0 : Fin (t + 2)) = 2 := by
+              intro h
+              have hv := congrArg Fin.val h
+              have h2lt : 2 < t + 2 := by omega
+              have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+              norm_num at hv
+              rw [h2mod] at hv
+              omega
+            simp [doubleTripleMatrix, h02]
+          · by_cases h2 : j = 2
+            · subst j
+              simp [doubleTripleMatrix]
+              split <;> omega
+            · simp [doubleTripleMatrix, h0, h2]
+              have hj0 : j.val ≠ 0 := by
+                intro hj
+                apply h0
+                apply Fin.ext
+                simpa using hj
+              have hj2 : j.val ≠ 2 := by
+                intro hj
+                apply h2
+                apply Fin.ext
+                have h2lt : 2 < t + 2 := by omega
+                have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                simpa [h2mod] using hj
+              have h0' : (0 : Fin (t + 2)) ≠ j := by
+                intro h
+                exact h0 h.symm
+              have ht1 : t - 1 ≠ 0 := by omega
+              have ht1' : 0 ≠ t - 1 := Ne.symm ht1
+              simp [hj2, h0', ht1']
+        _ = -2 * v 0 + v 2 := by
+          simp [Finset.sum_add_distrib]
+    rw [hsum]
+    have h2lt : 2 < t + 2 := by omega
+    have h2val : (2 : Fin (t + 2)).val = 2 := by
+      simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt h2lt]
+    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+    have h2t : 2 < t := by omega
+    simp [v, doubleTripleKernelVector, h2mod, h2t]
+  · by_cases hi1 : i.val = 1
+    · have hi : i = 1 := by
         apply Fin.ext
-        simpa using hi0
+        simpa using hi1
       subst i
-      have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 0 j * v j) =
-          -2 * v 0 + v 2 := by
+      have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 1 j * v j) =
+          -2 * v 1 + v 2 := by
         calc
-          (∑ j : Fin (t + 2), doubleTripleMatrix t 0 j * v j) =
-              ∑ j, ((if j = 0 then -2 * v j else 0) +
+          (∑ j : Fin (t + 2), doubleTripleMatrix t 1 j * v j) =
+              ∑ j, ((if j = 1 then -2 * v j else 0) +
                 (if j = 2 then v j else 0)) := by
             apply Finset.sum_congr rfl
             intro j hj
-            by_cases h0 : j = 0
+            by_cases h1 : j = 1
             · subst j
-              have h02 : ¬ (0 : Fin (t + 2)) = 2 := by
+              have h12 : ¬ (1 : Fin (t + 2)) = 2 := by
                 intro h
                 have hv := congrArg Fin.val h
                 have h2lt : 2 < t + 2 := by omega
@@ -1463,55 +1521,108 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                 norm_num at hv
                 rw [h2mod] at hv
                 omega
-              simp [doubleTripleMatrix, h02]
+              simp [doubleTripleMatrix, h12]
             · by_cases h2 : j = 2
               · subst j
-                simp [doubleTripleMatrix]
-                split <;> omega
-              · simp [doubleTripleMatrix, h0, h2]
-                have hj0 : j.val ≠ 0 := by
-                  intro hj
-                  apply h0
+                have h2lt : 2 < t + 2 := by omega
+                have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                have h2le : 2 ≤ t := by omega
+                have h12 : (1 : Fin (t + 2)) ≠ 2 := by
+                  intro h
+                  have hv := congrArg Fin.val h
+                  norm_num at hv
+                  rw [h2mod] at hv
+                  omega
+                simp [doubleTripleMatrix, h2mod, h2le, h12, h12.symm]
+              · have hj1 : j.val ≠ 1 := by
+                  intro hj'
+                  apply h1
                   apply Fin.ext
-                  simpa using hj
+                  simpa using hj'
                 have hj2 : j.val ≠ 2 := by
-                  intro hj
+                  intro hj'
                   apply h2
                   apply Fin.ext
                   have h2lt : 2 < t + 2 := by omega
                   have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                  simpa [h2mod] using hj
-                have h0' : (0 : Fin (t + 2)) ≠ j := by
+                  simpa [h2mod] using hj'
+                have h2lt : 2 < t + 2 := by omega
+                have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                have h0val : (0 : Fin (t + 2)).val = 0 := by simp
+                have h1val : (1 : Fin (t + 2)).val = 1 := by
+                  simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (by omega : 1 < t + 2)]
+                have h2val : (2 : Fin (t + 2)).val = 2 := by
+                  simp [Fin.coe_ofNat_eq_mod, h2mod]
+                have h2le : 2 ≤ t := by omega
+                have h1rev : (1 : Fin (t + 2)) ≠ j := by
                   intro h
-                  exact h0 h.symm
-                have ht1 : t - 1 ≠ 0 := by omega
-                have ht1' : 0 ≠ t - 1 := Ne.symm ht1
-                simp [hj2, h0', ht1']
-          _ = -2 * v 0 + v 2 := by
+                  exact h1 h.symm
+                have h2rev : (2 : Fin (t + 2)).val ≠ j.val := by
+                  intro h
+                  apply hj2
+                  symm
+                  simpa [h2val, h2mod] using h
+                have h1j : (1 : Fin (t + 2)).val ≠ j.val := by
+                  intro h
+                  apply hj1
+                  symm
+                  exact h
+                have h2rev' : 2 ≠ j.val := by
+                  simpa [h2mod] using h2rev
+                have hbranch : ¬ (2 = j.val ∧ j.val ≤ t ∨
+                    j = 0 ∧ 1 ≤ j.val ∧ 1 ≤ t) := by
+                  intro h
+                  rcases h with h | h
+                  · exact h2rev' h.1
+                  · have := h.2.1
+                    have hj0 : j.val = 0 := by
+                      simpa using congrArg Fin.val h.1
+                    omega
+                have hend : ¬ (1 = t - 1 ∧ j.val = t + 1 ∨
+                    t = 0 ∧ j.val = t - 1) := by
+                  intro h
+                  rcases h with h | h <;> omega
+                simp [doubleTripleMatrix, h1, h2, hj2, h1rev,
+                  hbranch, hend]
+          _ = -2 * v 1 + v 2 := by
             simp [Finset.sum_add_distrib]
       rw [hsum]
+      have h1val : (1 : Fin (t + 2)).val = 1 := by
+        simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (by omega : 1 < t + 2)]
       have h2lt : 2 < t + 2 := by omega
-      have h2val : (2 : Fin (t + 2)).val = 2 := by
-        simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt h2lt]
       have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
       have h2t : 2 < t := by omega
-      simp [v, h2mod, h2t]
-    · by_cases hi1 : i.val = 1
-      · have hi : i = 1 := by
+      simp [v, doubleTripleKernelVector, h2mod, h2t]
+    · by_cases hi2 : i.val = 2
+      · have hi : i = 2 := by
           apply Fin.ext
-          simpa using hi1
+          have h2lt : 2 < t + 2 := by omega
+          have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+          simpa [h2mod] using hi2
         subst i
-        have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 1 j * v j) =
-            -2 * v 1 + v 2 := by
+        have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 2 j * v j) =
+            -2 * v 2 + v 0 + v 1 + v 3 := by
           calc
-            (∑ j : Fin (t + 2), doubleTripleMatrix t 1 j * v j) =
-                ∑ j, ((if j = 1 then -2 * v j else 0) +
-                  (if j = 2 then v j else 0)) := by
+            (∑ j : Fin (t + 2), doubleTripleMatrix t 2 j * v j) =
+                ∑ j, ((if j = 2 then -2 * v j else 0) +
+                  (if j = 0 then v j else 0) +
+                  (if j = 1 then v j else 0) +
+                  (if j = 3 then v j else 0)) := by
               apply Finset.sum_congr rfl
               intro j hj
-              by_cases h1 : j = 1
+              by_cases h2 : j = 2
               · subst j
-                have h12 : ¬ (1 : Fin (t + 2)) = 2 := by
+                have h23 : ¬ (2 : Fin (t + 2)) = 3 := by
+                  intro h
+                  have hv := congrArg Fin.val h
+                  have h2lt : 2 < t + 2 := by omega
+                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                  have h3lt : 3 < t + 2 := by omega
+                  have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                  norm_num at hv
+                  rw [h2mod, h3mod] at hv
+                  omega
+                have h20 : ¬ (2 : Fin (t + 2)) = 0 := by
                   intro h
                   have hv := congrArg Fin.val h
                   have h2lt : 2 < t + 2 := by omega
@@ -1519,585 +1630,483 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                   norm_num at hv
                   rw [h2mod] at hv
                   omega
-                simp [doubleTripleMatrix, h12]
-              · by_cases h2 : j = 2
+                have h21 : ¬ (2 : Fin (t + 2)) = 1 := by
+                  intro h
+                  have hv := congrArg Fin.val h
+                  have h2lt : 2 < t + 2 := by omega
+                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                  norm_num at hv
+                  rw [h2mod] at hv
+                  omega
+                simp [doubleTripleMatrix, h23, h20, h21]
+              · by_cases h0 : j = 0
                 · subst j
                   have h2lt : 2 < t + 2 := by omega
                   have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                  have h2le : 2 ≤ t := by omega
-                  have h12 : (1 : Fin (t + 2)) ≠ 2 := by
+                  have h3lt : 3 < t + 2 := by omega
+                  have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                  have htpos : 0 < t := by omega
+                  have h03 : ¬ (0 : Fin (t + 2)) = 3 := by
                     intro h
                     have hv := congrArg Fin.val h
                     norm_num at hv
-                    rw [h2mod] at hv
+                    rw [h3mod] at hv
                     omega
-                  simp [doubleTripleMatrix, h2mod, h2le, h12, h12.symm]
-                · have hj1 : j.val ≠ 1 := by
-                    intro hj'
-                    apply h1
-                    apply Fin.ext
-                    simpa using hj'
-                  have hj2 : j.val ≠ 2 := by
-                    intro hj'
-                    apply h2
-                    apply Fin.ext
-                    have h2lt : 2 < t + 2 := by omega
-                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                    simpa [h2mod] using hj'
-                  have h2lt : 2 < t + 2 := by omega
-                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                  have h0val : (0 : Fin (t + 2)).val = 0 := by simp
-                  have h1val : (1 : Fin (t + 2)).val = 1 := by
-                    simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (by omega : 1 < t + 2)]
-                  have h2val : (2 : Fin (t + 2)).val = 2 := by
-                    simp [Fin.coe_ofNat_eq_mod, h2mod]
-                  have h2le : 2 ≤ t := by omega
-                  have h1rev : (1 : Fin (t + 2)) ≠ j := by
-                    intro h
-                    exact h1 h.symm
-                  have h2rev : (2 : Fin (t + 2)).val ≠ j.val := by
-                    intro h
-                    apply hj2
-                    symm
-                    simpa [h2val, h2mod] using h
-                  have h1j : (1 : Fin (t + 2)).val ≠ j.val := by
-                    intro h
-                    apply hj1
-                    symm
-                    exact h
-                  have h2rev' : 2 ≠ j.val := by
-                    simpa [h2mod] using h2rev
-                  have hbranch : ¬ (2 = j.val ∧ j.val ≤ t ∨
-                      j = 0 ∧ 1 ≤ j.val ∧ 1 ≤ t) := by
-                    intro h
-                    rcases h with h | h
-                    · exact h2rev' h.1
-                    · have := h.2.1
-                      have hj0 : j.val = 0 := by
-                        simpa using congrArg Fin.val h.1
-                      omega
-                  have hend : ¬ (1 = t - 1 ∧ j.val = t + 1 ∨
-                      t = 0 ∧ j.val = t - 1) := by
-                    intro h
-                    rcases h with h | h <;> omega
-                  simp [doubleTripleMatrix, h1, h2, hj2, h1rev,
-                    hbranch, hend]
-            _ = -2 * v 1 + v 2 := by
-              simp [Finset.sum_add_distrib]
-        rw [hsum]
-        have h1val : (1 : Fin (t + 2)).val = 1 := by
-          simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (by omega : 1 < t + 2)]
-        have h2lt : 2 < t + 2 := by omega
-        have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-        have h2t : 2 < t := by omega
-        simp [v, h2mod, h2t]
-      · by_cases hi2 : i.val = 2
-        · have hi : i = 2 := by
-            apply Fin.ext
-            have h2lt : 2 < t + 2 := by omega
-            have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-            simpa [h2mod] using hi2
-          subst i
-          have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 2 j * v j) =
-              -2 * v 2 + v 0 + v 1 + v 3 := by
-            calc
-              (∑ j : Fin (t + 2), doubleTripleMatrix t 2 j * v j) =
-                  ∑ j, ((if j = 2 then -2 * v j else 0) +
-                    (if j = 0 then v j else 0) +
-                    (if j = 1 then v j else 0) +
-                    (if j = 3 then v j else 0)) := by
-                apply Finset.sum_congr rfl
-                intro j hj
-                by_cases h2 : j = 2
-                · subst j
-                  have h23 : ¬ (2 : Fin (t + 2)) = 3 := by
-                    intro h
-                    have hv := congrArg Fin.val h
-                    have h2lt : 2 < t + 2 := by omega
-                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                    have h3lt : 3 < t + 2 := by omega
-                    have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-                    norm_num at hv
-                    rw [h2mod, h3mod] at hv
-                    omega
-                  have h20 : ¬ (2 : Fin (t + 2)) = 0 := by
-                    intro h
-                    have hv := congrArg Fin.val h
-                    have h2lt : 2 < t + 2 := by omega
-                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                    norm_num at hv
-                    rw [h2mod] at hv
-                    omega
-                  have h21 : ¬ (2 : Fin (t + 2)) = 1 := by
-                    intro h
-                    have hv := congrArg Fin.val h
-                    have h2lt : 2 < t + 2 := by omega
-                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                    norm_num at hv
-                    rw [h2mod] at hv
-                    omega
-                  simp [doubleTripleMatrix, h23, h20, h21]
-                · by_cases h0 : j = 0
+                  simp [doubleTripleMatrix, h2mod, h03]
+                  split <;> omega
+                · by_cases h1 : j = 1
                   · subst j
                     have h2lt : 2 < t + 2 := by omega
                     have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
                     have h3lt : 3 < t + 2 := by omega
                     have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-                    have htpos : 0 < t := by omega
-                    have h03 : ¬ (0 : Fin (t + 2)) = 3 := by
+                    have h2le : 2 ≤ t := by omega
+                    have h13 : ¬ (1 : Fin (t + 2)) = 3 := by
                       intro h
                       have hv := congrArg Fin.val h
                       norm_num at hv
                       rw [h3mod] at hv
                       omega
-                    simp [doubleTripleMatrix, h2mod, h03]
+                    simp [doubleTripleMatrix, h2mod, h2le, h13]
                     split <;> omega
-                  · by_cases h1 : j = 1
+                  · by_cases h3 : j = 3
                     · subst j
-                      have h2lt : 2 < t + 2 := by omega
-                      have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
                       have h3lt : 3 < t + 2 := by omega
                       have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-                      have h2le : 2 ≤ t := by omega
-                      have h13 : ¬ (1 : Fin (t + 2)) = 3 := by
+                      have h3le : 3 ≤ t := by omega
+                      have h2lt : 2 < t + 2 := by omega
+                      have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                      have h23 : ¬ (2 : Fin (t + 2)) = 3 := by
+                        intro h
+                        have hv := congrArg Fin.val h
+                        norm_num at hv
+                        rw [h2mod, h3mod] at hv
+                        omega
+                      have h30 : ¬ (3 : Fin (t + 2)) = 0 := by
                         intro h
                         have hv := congrArg Fin.val h
                         norm_num at hv
                         rw [h3mod] at hv
                         omega
-                      simp [doubleTripleMatrix, h2mod, h2le, h13]
-                      split <;> omega
-                    · by_cases h3 : j = 3
-                      · subst j
-                        have h3lt : 3 < t + 2 := by omega
-                        have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-                        have h3le : 3 ≤ t := by omega
+                      have h31 : ¬ (3 : Fin (t + 2)) = 1 := by
+                        intro h
+                        have hv := congrArg Fin.val h
+                        norm_num at hv
+                        rw [h3mod] at hv
+                        omega
+                      have h32 : ¬ (3 : Fin (t + 2)) = 2 := by
+                        intro h
+                        have hv := congrArg Fin.val h
+                        norm_num at hv
+                        rw [h2mod, h3mod] at hv
+                        omega
+                      simp [doubleTripleMatrix, h2mod, h3mod, h3le,
+                        h23, h30, h31, h32]
+                    · have hj0 : j.val ≠ 0 := by
+                        intro hj'
+                        apply h0
+                        apply Fin.ext
+                        simpa using hj'
+                      have hj1 : j.val ≠ 1 := by
+                        intro hj'
+                        apply h1
+                        apply Fin.ext
+                        simpa using hj'
+                      have hj2 : j.val ≠ 2 := by
+                        intro hj'
+                        apply h2
+                        apply Fin.ext
                         have h2lt : 2 < t + 2 := by omega
                         have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                        have h23 : ¬ (2 : Fin (t + 2)) = 3 := by
-                          intro h
-                          have hv := congrArg Fin.val h
-                          norm_num at hv
-                          rw [h2mod, h3mod] at hv
-                          omega
-                        have h30 : ¬ (3 : Fin (t + 2)) = 0 := by
-                          intro h
-                          have hv := congrArg Fin.val h
-                          norm_num at hv
-                          rw [h3mod] at hv
-                          omega
-                        have h31 : ¬ (3 : Fin (t + 2)) = 1 := by
-                          intro h
-                          have hv := congrArg Fin.val h
-                          norm_num at hv
-                          rw [h3mod] at hv
-                          omega
-                        have h32 : ¬ (3 : Fin (t + 2)) = 2 := by
-                          intro h
-                          have hv := congrArg Fin.val h
-                          norm_num at hv
-                          rw [h2mod, h3mod] at hv
-                          omega
-                        simp [doubleTripleMatrix, h2mod, h3mod, h3le,
-                          h23, h30, h31, h32]
-                      · have hj0 : j.val ≠ 0 := by
-                          intro hj'
-                          apply h0
-                          apply Fin.ext
-                          simpa using hj'
-                        have hj1 : j.val ≠ 1 := by
-                          intro hj'
-                          apply h1
-                          apply Fin.ext
-                          simpa using hj'
-                        have hj2 : j.val ≠ 2 := by
-                          intro hj'
-                          apply h2
-                          apply Fin.ext
-                          have h2lt : 2 < t + 2 := by omega
-                          have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                          simpa [h2mod] using hj'
-                        have hj3 : j.val ≠ 3 := by
-                          intro hj'
-                          apply h3
-                          apply Fin.ext
-                          have h3lt : 3 < t + 2 := by omega
-                          have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-                          simpa [h3mod] using hj'
+                        simpa [h2mod] using hj'
+                      have hj3 : j.val ≠ 3 := by
+                        intro hj'
+                        apply h3
+                        apply Fin.ext
                         have h3lt : 3 < t + 2 := by omega
                         have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-                        have h3val : (3 : Fin (t + 2)).val = 3 := by
-                          simp [Fin.coe_ofNat_eq_mod, h3mod]
-                        have h2lt : 2 < t + 2 := by omega
-                        have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                        have h2rev : (2 : Fin (t + 2)) ≠ j := by
-                          intro h
-                          exact h2 h.symm
-                        have hpath : ¬ (2 % (t + 2) + 1 = j.val ∧
-                            1 ≤ 2 % (t + 2) ∧ j.val ≤ t ∨
-                            j.val + 1 = 2 % (t + 2) ∧ 1 ≤ j.val ∧
-                              2 % (t + 2) ≤ t) := by
-                          rw [h2mod]
-                          intro h
-                          rcases h with h | h <;> omega
-                        have hend : ¬ (2 % (t + 2) = t - 1 ∧ j.val = t + 1 ∨
-                            2 % (t + 2) = t + 1 ∧ j.val = t - 1) := by
-                          rw [h2mod]
-                          intro h
-                          rcases h with h | h <;> omega
-                        have hbranch : ¬ (j.val = 3 ∧ 1 ≤ 2 ∧ j.val ≤ t ∨
-                            j.val + 1 = 2 ∧ 1 ≤ j.val ∧ 2 ≤ t ∨
-                            j.val = 0 ∧ 2 = 2 ∨
-                            2 = t - 1 ∧ j.val = t + 1) := by
-                          intro h
-                          rcases h with h | h | h | h <;> omega
-                        simp [doubleTripleMatrix, h0, h1, h2, h3, hj0, hj1,
-                          hj2, h2mod, h2rev]
-                        split <;> simp_all
-              _ = -2 * v 2 + v 0 + v 1 + v 3 := by
+                        simpa [h3mod] using hj'
+                      have h3lt : 3 < t + 2 := by omega
+                      have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                      have h3val : (3 : Fin (t + 2)).val = 3 := by
+                        simp [Fin.coe_ofNat_eq_mod, h3mod]
+                      have h2lt : 2 < t + 2 := by omega
+                      have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                      have h2rev : (2 : Fin (t + 2)) ≠ j := by
+                        intro h
+                        exact h2 h.symm
+                      have hpath : ¬ (2 % (t + 2) + 1 = j.val ∧
+                          1 ≤ 2 % (t + 2) ∧ j.val ≤ t ∨
+                          j.val + 1 = 2 % (t + 2) ∧ 1 ≤ j.val ∧
+                            2 % (t + 2) ≤ t) := by
+                        rw [h2mod]
+                        intro h
+                        rcases h with h | h <;> omega
+                      have hend : ¬ (2 % (t + 2) = t - 1 ∧ j.val = t + 1 ∨
+                          2 % (t + 2) = t + 1 ∧ j.val = t - 1) := by
+                        rw [h2mod]
+                        intro h
+                        rcases h with h | h <;> omega
+                      have hbranch : ¬ (j.val = 3 ∧ 1 ≤ 2 ∧ j.val ≤ t ∨
+                          j.val + 1 = 2 ∧ 1 ≤ j.val ∧ 2 ≤ t ∨
+                          j.val = 0 ∧ 2 = 2 ∨
+                          2 = t - 1 ∧ j.val = t + 1) := by
+                        intro h
+                        rcases h with h | h | h | h <;> omega
+                      simp [doubleTripleMatrix, h0, h1, h2, h3, hj0, hj1,
+                        hj2, h2mod, h2rev]
+                      split <;> simp_all
+            _ = -2 * v 2 + v 0 + v 1 + v 3 := by
+              simp [Finset.sum_add_distrib]
+        rw [hsum]
+        have h2lt : 2 < t + 2 := by omega
+        have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+        have h2val : (2 : Fin (t + 2)).val = 2 := by
+          simp [Fin.coe_ofNat_eq_mod, h2mod]
+        have h3lt : 3 < t + 2 := by omega
+        have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+        have h3val : (3 : Fin (t + 2)).val = 3 := by
+          simp [Fin.coe_ofNat_eq_mod, h3mod]
+        have h2t : 2 < t := by omega
+        have h3t : 3 < t := by omega
+        simp [v, doubleTripleKernelVector, h2mod, h3mod, h2t, h3t]
+      · by_cases hit : i.val = t
+        · let it : Fin (t + 2) := ⟨t, by omega⟩
+          let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
+          have hi : i = it := by
+            apply Fin.ext
+            simpa [it] using hit
+          rw [hi]
+          have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t it j * v j) =
+              -2 * v it + v im1 := by
+            calc
+              (∑ j : Fin (t + 2), doubleTripleMatrix t it j * v j) =
+                  ∑ j, ((if j = it then -2 * v j else 0) +
+                    (if j = im1 then v j else 0)) := by
+                apply Finset.sum_congr rfl
+                intro j hj
+                by_cases hjt : j = it
+                · subst j
+                  simp [doubleTripleMatrix, it, im1]
+                  have hne : t ≠ t - 1 := by omega
+                  simp [hne]
+                · by_cases hjm : j = im1
+                  · subst j
+                    simp [doubleTripleMatrix, it, im1]
+                    split <;> omega
+                  · have hjt' : j.val ≠ t := by
+                      intro h
+                      apply hjt
+                      apply Fin.ext
+                      simpa [it] using h
+                    have hjm' : j.val ≠ t - 1 := by
+                      intro h
+                      apply hjm
+                      apply Fin.ext
+                      simpa [im1] using h
+                    have hpath : ¬ ((t + 1 = j.val ∧ 1 ≤ t ∧ j.val ≤ t) ∨
+                        (j.val + 1 = t ∧ 1 ≤ j.val ∧ t ≤ t)) := by
+                      intro h
+                      rcases h with h | h <;> omega
+                    have hend : ¬ ((t = t - 1 ∧ j.val = t + 1) ∨
+                        (t - 1 = t + 1 ∧ j.val = t)) := by
+                      omega
+                    have hdiag : it ≠ j := by
+                      intro h
+                      exact hjt h.symm
+                    have hpath' : ¬ ((t + 1 = j.val ∧ 1 ≤ t ∧ j.val ≤ t) ∨
+                        (j.val + 1 = t ∧ 1 ≤ j.val)) := by
+                      intro h
+                      rcases h with h | h <;> omega
+                    have hspecial : ¬ (t = 0 ∧ j.val = 2 ∨
+                        t = 2 ∧ j = 0) := by
+                      intro h
+                      rcases h with h | h <;> omega
+                    have hend' : ¬ (t = t - 1 ∧ j.val = t + 1) := by
+                      omega
+                    simp [doubleTripleMatrix, it, im1, hjt, hjm, hjm',
+                      hdiag, hpath', hspecial, hend']
+              _ = -2 * v it + v im1 := by
                 simp [Finset.sum_add_distrib]
           rw [hsum]
-          have h2lt : 2 < t + 2 := by omega
-          have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-          have h2val : (2 : Fin (t + 2)).val = 2 := by
-            simp [Fin.coe_ofNat_eq_mod, h2mod]
-          have h3lt : 3 < t + 2 := by omega
-          have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
-          have h3val : (3 : Fin (t + 2)).val = 3 := by
-            simp [Fin.coe_ofNat_eq_mod, h3mod]
-          have h2t : 2 < t := by omega
-          have h3t : 3 < t := by omega
-          simp [v, h2mod, h3mod, h2t, h3t]
-        · by_cases hit : i.val = t
-          · let it : Fin (t + 2) := ⟨t, by omega⟩
+          have htle : ¬ t ≤ 2 := by omega
+          have htpos : 0 < t := by omega
+          simp [v, doubleTripleKernelVector, it, im1, htle, htpos]
+        · by_cases hit1 : i.val = t + 1
+          · let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
             let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
-            have hi : i = it := by
+            have hi : i = it1 := by
               apply Fin.ext
-              simpa [it] using hit
+              simpa [it1] using hit1
             rw [hi]
-            have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t it j * v j) =
-                -2 * v it + v im1 := by
+            have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t it1 j * v j) =
+                -2 * v it1 + v im1 := by
               calc
-                (∑ j : Fin (t + 2), doubleTripleMatrix t it j * v j) =
-                    ∑ j, ((if j = it then -2 * v j else 0) +
+                (∑ j : Fin (t + 2), doubleTripleMatrix t it1 j * v j) =
+                    ∑ j, ((if j = it1 then -2 * v j else 0) +
                       (if j = im1 then v j else 0)) := by
                   apply Finset.sum_congr rfl
                   intro j hj
-                  by_cases hjt : j = it
+                  by_cases hjt : j = it1
                   · subst j
-                    simp [doubleTripleMatrix, it, im1]
-                    have hne : t ≠ t - 1 := by omega
+                    simp [doubleTripleMatrix, it1, im1]
+                    have hne : t + 1 ≠ t - 1 := by omega
                     simp [hne]
                   · by_cases hjm : j = im1
                     · subst j
-                      simp [doubleTripleMatrix, it, im1]
-                      split <;> omega
-                    · have hjt' : j.val ≠ t := by
+                      simp [doubleTripleMatrix, it1, im1]
+                      have hne : t + 1 ≠ t - 1 := by omega
+                      simp [hne]
+                    · have hjt' : j.val ≠ t + 1 := by
                         intro h
                         apply hjt
                         apply Fin.ext
-                        simpa [it] using h
+                        simpa [it1] using h
                       have hjm' : j.val ≠ t - 1 := by
                         intro h
                         apply hjm
                         apply Fin.ext
                         simpa [im1] using h
-                      have hpath : ¬ ((t + 1 = j.val ∧ 1 ≤ t ∧ j.val ≤ t) ∨
-                          (j.val + 1 = t ∧ 1 ≤ j.val ∧ t ≤ t)) := by
+                      have hpath : ¬ ((t + 2 = j.val ∧ 1 ≤ t + 1 ∧ j.val ≤ t) ∨
+                          (j.val + 1 = t + 1 ∧ 1 ≤ j.val ∧ t + 1 ≤ t)) := by
                         intro h
                         rcases h with h | h <;> omega
-                      have hend : ¬ ((t = t - 1 ∧ j.val = t + 1) ∨
-                          (t - 1 = t + 1 ∧ j.val = t)) := by
+                      have hend : ¬ ((t + 1 = t - 1 ∧ j.val = t + 1) ∨
+                          (t - 1 = t + 1 ∧ j.val = t + 1)) := by
                         omega
-                      have hdiag : it ≠ j := by
+                      have hdiag : it1 ≠ j := by
                         intro h
                         exact hjt h.symm
-                      have hpath' : ¬ ((t + 1 = j.val ∧ 1 ≤ t ∧ j.val ≤ t) ∨
-                          (j.val + 1 = t ∧ 1 ≤ j.val)) := by
+                      have hpath' : ¬ (t + 1 + 1 = j.val ∧ j.val ≤ t) := by
                         intro h
-                        rcases h with h | h <;> omega
-                      have hspecial : ¬ (t = 0 ∧ j.val = 2 ∨
-                          t = 2 ∧ j = 0) := by
-                        intro h
-                        rcases h with h | h <;> omega
-                      have hend' : ¬ (t = t - 1 ∧ j.val = t + 1) := by
                         omega
-                      simp [doubleTripleMatrix, it, im1, hjt, hjm, hjm',
-                        hdiag, hpath', hspecial, hend']
-                _ = -2 * v it + v im1 := by
+                      have hspecial : ¬ (t = 1 ∧ j = 0) := by
+                        intro h
+                        omega
+                      have hend' : ¬ (t + 1 = t - 1 ∧ j.val = t + 1) := by
+                        omega
+                      simp [doubleTripleMatrix, it1, im1, hjt, hjm, hjt', hjm',
+                        hdiag, hpath', hspecial]
+                _ = -2 * v it1 + v im1 := by
                   simp [Finset.sum_add_distrib]
             rw [hsum]
             have htle : ¬ t ≤ 2 := by omega
             have htpos : 0 < t := by omega
-            simp [v, it, im1, htle, htpos]
-          · by_cases hit1 : i.val = t + 1
-            · let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
-              let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
-              have hi : i = it1 := by
+            simp [v, doubleTripleKernelVector, it1, im1, htle, htpos]
+          · by_cases hitm : i.val = t - 1
+            · let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
+              let im2 : Fin (t + 2) := ⟨t - 2, by omega⟩
+              let it : Fin (t + 2) := ⟨t, by omega⟩
+              let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
+              have hi : i = im1 := by
                 apply Fin.ext
-                simpa [it1] using hit1
+                simpa [im1] using hitm
               rw [hi]
-              have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t it1 j * v j) =
-                  -2 * v it1 + v im1 := by
+              have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t im1 j * v j) =
+                  -2 * v im1 + v im2 + v it + v it1 := by
                 calc
-                  (∑ j : Fin (t + 2), doubleTripleMatrix t it1 j * v j) =
-                      ∑ j, ((if j = it1 then -2 * v j else 0) +
-                        (if j = im1 then v j else 0)) := by
+                  (∑ j : Fin (t + 2), doubleTripleMatrix t im1 j * v j) =
+                      ∑ j, ((if j = im1 then -2 * v j else 0) +
+                        (if j = im2 then v j else 0) +
+                        (if j = it then v j else 0) +
+                        (if j = it1 then v j else 0)) := by
                     apply Finset.sum_congr rfl
                     intro j hj
-                    by_cases hjt : j = it1
+                    by_cases hjm1 : j = im1
                     · subst j
-                      simp [doubleTripleMatrix, it1, im1]
-                      have hne : t + 1 ≠ t - 1 := by omega
-                      simp [hne]
-                    · by_cases hjm : j = im1
-                      · subst j
-                        simp [doubleTripleMatrix, it1, im1]
-                        have hne : t + 1 ≠ t - 1 := by omega
-                        simp [hne]
-                      · have hjt' : j.val ≠ t + 1 := by
-                          intro h
-                          apply hjt
-                          apply Fin.ext
-                          simpa [it1] using h
-                        have hjm' : j.val ≠ t - 1 := by
-                          intro h
-                          apply hjm
-                          apply Fin.ext
-                          simpa [im1] using h
-                        have hpath : ¬ ((t + 2 = j.val ∧ 1 ≤ t + 1 ∧ j.val ≤ t) ∨
-                            (j.val + 1 = t + 1 ∧ 1 ≤ j.val ∧ t + 1 ≤ t)) := by
-                          intro h
-                          rcases h with h | h <;> omega
-                        have hend : ¬ ((t + 1 = t - 1 ∧ j.val = t + 1) ∨
-                            (t - 1 = t + 1 ∧ j.val = t + 1)) := by
-                          omega
-                        have hdiag : it1 ≠ j := by
-                          intro h
-                          exact hjt h.symm
-                        have hpath' : ¬ (t + 1 + 1 = j.val ∧ j.val ≤ t) := by
-                          intro h
-                          omega
-                        have hspecial : ¬ (t = 1 ∧ j = 0) := by
-                          intro h
-                          omega
-                        have hend' : ¬ (t + 1 = t - 1 ∧ j.val = t + 1) := by
-                          omega
-                        simp [doubleTripleMatrix, it1, im1, hjt, hjm, hjt', hjm',
-                          hdiag, hpath', hspecial]
-                  _ = -2 * v it1 + v im1 := by
-                    simp [Finset.sum_add_distrib]
-              rw [hsum]
-              have htle : ¬ t ≤ 2 := by omega
-              have htpos : 0 < t := by omega
-              simp [v, it1, im1, htle, htpos]
-            · by_cases hitm : i.val = t - 1
-              · let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
-                let im2 : Fin (t + 2) := ⟨t - 2, by omega⟩
-                let it : Fin (t + 2) := ⟨t, by omega⟩
-                let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
-                have hi : i = im1 := by
-                  apply Fin.ext
-                  simpa [im1] using hitm
-                rw [hi]
-                have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t im1 j * v j) =
-                    -2 * v im1 + v im2 + v it + v it1 := by
-                  calc
-                    (∑ j : Fin (t + 2), doubleTripleMatrix t im1 j * v j) =
-                        ∑ j, ((if j = im1 then -2 * v j else 0) +
-                          (if j = im2 then v j else 0) +
-                          (if j = it then v j else 0) +
-                          (if j = it1 then v j else 0)) := by
-                      apply Finset.sum_congr rfl
-                      intro j hj
-                      by_cases hjm1 : j = im1
+                      simp [doubleTripleMatrix, im1, im2, it, it1]
+                      split <;> omega
+                    · by_cases hjm2 : j = im2
                       · subst j
                         simp [doubleTripleMatrix, im1, im2, it, it1]
                         split <;> omega
-                      · by_cases hjm2 : j = im2
+                      · by_cases hjt : j = it
                         · subst j
                           simp [doubleTripleMatrix, im1, im2, it, it1]
                           split <;> omega
-                        · by_cases hjt : j = it
+                        · by_cases hjt1 : j = it1
                           · subst j
                             simp [doubleTripleMatrix, im1, im2, it, it1]
                             split <;> omega
-                          · by_cases hjt1 : j = it1
-                            · subst j
-                              simp [doubleTripleMatrix, im1, im2, it, it1]
-                              split <;> omega
-                            · have hjm1' : j.val ≠ t - 1 := by
-                                intro h
-                                apply hjm1
-                                apply Fin.ext
-                                simpa [im1] using h
-                              have hjm2' : j.val ≠ t - 2 := by
-                                intro h
-                                apply hjm2
-                                apply Fin.ext
-                                simpa [im2] using h
-                              have hjt' : j.val ≠ t := by
-                                intro h
-                                apply hjt
-                                apply Fin.ext
-                                simpa [it] using h
-                              have hjt1' : j.val ≠ t + 1 := by
-                                intro h
-                                apply hjt1
-                                apply Fin.ext
-                                simpa [it1] using h
-                              have hpath : ¬ ((t - 1 + 1 = j.val ∧
-                                  1 ≤ t - 1 ∧ j.val ≤ t) ∨
-                                  (j.val + 1 = t - 1 ∧ 1 ≤ j.val ∧ t - 1 ≤ t)) := by
-                                intro h
-                                rcases h with h | h <;> omega
-                              have hend : ¬ ((t - 1 = t - 1 ∧ j.val = t + 1) ∨
-                                  (t + 1 = t - 1 ∧ j.val = t - 1)) := by
-                                intro h
-                                rcases h with h | h <;> omega
-                              have hdiag : im1 ≠ j := by
-                                intro h
-                                exact hjm1 h.symm
-                              have hpath' : ¬ ((t - 1 + 1 = j.val ∧ j.val ≤ t) ∨
-                                  (j.val + 1 = t - 1 ∧ 1 ≤ j.val)) := by
-                                intro h
-                                rcases h with h | h <;> omega
-                              have hpath2 : ¬ ((t - 1 + 1 = j.val ∧
-                                  1 ≤ t - 1 ∧ j.val ≤ t) ∨
-                                  (j.val + 1 = t - 1 ∧ 1 ≤ j.val)) := by
-                                intro h
-                                rcases h with h | h <;> omega
-                              have hspecial : ¬ (t - 1 = 0 ∧ j.val = 2 ∨
-                                  t = 3 ∧ j = 0) := by
-                                intro h
-                                rcases h with h | h <;> omega
-                              simp [doubleTripleMatrix, im1, im2, it, it1,
-                                hjm1, hjm2, hjt, hjt1, hjm1', hjt1',
-                                hpath2, hdiag, hspecial]
-                    _ = -2 * v im1 + v im2 + v it + v it1 := by
-                      simp [Finset.sum_add_distrib]
-                rw [hsum]
-                have htle : ¬ t ≤ 2 := by omega
-                have ht3 : ¬ t ≤ 3 := by omega
-                have htpos : 0 < t := by omega
-                simp [v, im1, im2, it, it1, htle, ht3, htpos]
-              · have hi3 : 3 ≤ i.val := by omega
-                have hitwo : i.val ≤ t - 2 := by omega
-                let im : Fin (t + 2) := ⟨i.val - 1, by omega⟩
-                let ip : Fin (t + 2) := ⟨i.val + 1, by omega⟩
-                have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t i j * v j) =
-                    -2 * v i + v im + v ip := by
-                  calc
-                    (∑ j : Fin (t + 2), doubleTripleMatrix t i j * v j) =
-                        ∑ j, ((if j = i then -2 * v j else 0) +
-                          (if j = im then v j else 0) +
-                          (if j = ip then v j else 0)) := by
-                      apply Finset.sum_congr rfl
-                      intro j hj
-                      by_cases hji : j = i
+                          · have hjm1' : j.val ≠ t - 1 := by
+                              intro h
+                              apply hjm1
+                              apply Fin.ext
+                              simpa [im1] using h
+                            have hjm2' : j.val ≠ t - 2 := by
+                              intro h
+                              apply hjm2
+                              apply Fin.ext
+                              simpa [im2] using h
+                            have hjt' : j.val ≠ t := by
+                              intro h
+                              apply hjt
+                              apply Fin.ext
+                              simpa [it] using h
+                            have hjt1' : j.val ≠ t + 1 := by
+                              intro h
+                              apply hjt1
+                              apply Fin.ext
+                              simpa [it1] using h
+                            have hpath : ¬ ((t - 1 + 1 = j.val ∧
+                                1 ≤ t - 1 ∧ j.val ≤ t) ∨
+                                (j.val + 1 = t - 1 ∧ 1 ≤ j.val ∧ t - 1 ≤ t)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hend : ¬ ((t - 1 = t - 1 ∧ j.val = t + 1) ∨
+                                (t + 1 = t - 1 ∧ j.val = t - 1)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hdiag : im1 ≠ j := by
+                              intro h
+                              exact hjm1 h.symm
+                            have hpath' : ¬ ((t - 1 + 1 = j.val ∧ j.val ≤ t) ∨
+                                (j.val + 1 = t - 1 ∧ 1 ≤ j.val)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hpath2 : ¬ ((t - 1 + 1 = j.val ∧
+                                1 ≤ t - 1 ∧ j.val ≤ t) ∨
+                                (j.val + 1 = t - 1 ∧ 1 ≤ j.val)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hspecial : ¬ (t - 1 = 0 ∧ j.val = 2 ∨
+                                t = 3 ∧ j = 0) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            simp [doubleTripleMatrix, im1, im2, it, it1,
+                              hjm1, hjm2, hjt, hjt1, hjm1', hjt1',
+                              hpath2, hdiag, hspecial]
+                  _ = -2 * v im1 + v im2 + v it + v it1 := by
+                    simp [Finset.sum_add_distrib]
+              rw [hsum]
+              have htle : ¬ t ≤ 2 := by omega
+              have ht3 : ¬ t ≤ 3 := by omega
+              have htpos : 0 < t := by omega
+              simp [v, doubleTripleKernelVector, im1, im2, it, it1, htle, ht3, htpos]
+            · have hi3 : 3 ≤ i.val := by omega
+              have hitwo : i.val ≤ t - 2 := by omega
+              let im : Fin (t + 2) := ⟨i.val - 1, by omega⟩
+              let ip : Fin (t + 2) := ⟨i.val + 1, by omega⟩
+              have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t i j * v j) =
+                  -2 * v i + v im + v ip := by
+                calc
+                  (∑ j : Fin (t + 2), doubleTripleMatrix t i j * v j) =
+                      ∑ j, ((if j = i then -2 * v j else 0) +
+                        (if j = im then v j else 0) +
+                        (if j = ip then v j else 0)) := by
+                    apply Finset.sum_congr rfl
+                    intro j hj
+                    by_cases hji : j = i
+                    · subst j
+                      have him : i ≠ im := by
+                        intro h
+                        have hv := congrArg Fin.val h
+                        simp [im] at hv
+                        omega
+                      have hip : i ≠ ip := by
+                        intro h
+                        have hv := congrArg Fin.val h
+                        simp [ip] at hv
+                      simp [doubleTripleMatrix, him, hip]
+                    · by_cases hjm : j = im
                       · subst j
-                        have him : i ≠ im := by
+                        have hmi : im ≠ i := by
                           intro h
                           have hv := congrArg Fin.val h
                           simp [im] at hv
                           omega
-                        have hip : i ≠ ip := by
+                        have hmip : im ≠ ip := by
                           intro h
                           have hv := congrArg Fin.val h
-                          simp [ip] at hv
-                        simp [doubleTripleMatrix, him, hip]
-                      · by_cases hjm : j = im
+                          simp [im, ip] at hv
+                        simp [doubleTripleMatrix, im, ip, hmi, hmip]
+                        split <;> omega
+                      · by_cases hjp : j = ip
                         · subst j
-                          have hmi : im ≠ i := by
+                          have hpi : ip ≠ i := by
                             intro h
                             have hv := congrArg Fin.val h
-                            simp [im] at hv
-                            omega
-                          have hmip : im ≠ ip := by
+                            simp [ip] at hv
+                          have hpim : ip ≠ im := by
                             intro h
                             have hv := congrArg Fin.val h
                             simp [im, ip] at hv
-                          simp [doubleTripleMatrix, im, ip, hmi, hmip]
+                            omega
+                          simp [doubleTripleMatrix, im, ip, hpi, hpim]
                           split <;> omega
-                        · by_cases hjp : j = ip
-                          · subst j
-                            have hpi : ip ≠ i := by
-                              intro h
-                              have hv := congrArg Fin.val h
-                              simp [ip] at hv
-                            have hpim : ip ≠ im := by
-                              intro h
-                              have hv := congrArg Fin.val h
-                              simp [im, ip] at hv
-                              omega
-                            simp [doubleTripleMatrix, im, ip, hpi, hpim]
-                            split <;> omega
-                          · have hji' : j.val ≠ i.val := by
-                              intro h
-                              apply hji
-                              apply Fin.ext
-                              exact h
-                            have hjm' : j.val ≠ i.val - 1 := by
-                              intro h
-                              apply hjm
-                              apply Fin.ext
-                              simpa [im] using h
-                            have hjp' : j.val ≠ i.val + 1 := by
-                              intro h
-                              apply hjp
-                              apply Fin.ext
-                              simpa [ip] using h
-                            have hpath : ¬ ((i.val + 1 = j.val ∧
-                                1 ≤ i.val ∧ j.val ≤ t) ∨
-                                (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := by
-                              intro h
-                              rcases h with h | h <;> omega
-                            have hspecial : ¬ ((i.val = 0 ∧ j.val = 2) ∨
-                                (i.val = 2 ∧ j.val = 0)) := by
-                              intro h
-                              rcases h with h | h <;> omega
-                            have hend : ¬ ((i.val = t - 1 ∧ j.val = t + 1) ∨
-                                (i.val = t + 1 ∧ j.val = t - 1)) := by
-                              intro h
-                              rcases h with h | h <;> omega
-                            have hdiag : i ≠ j := by
-                              intro h
-                              exact hji h.symm
-                            have hi0' : i ≠ 0 := by
-                              intro h
-                              have hv := congrArg Fin.val h
-                              norm_num at hv
-                              have hi0val : i.val = 0 := by simpa using hv
-                              omega
-                            have hi2' : i ≠ 2 := by
-                              intro h
-                              have hv := congrArg Fin.val h
-                              have h2lt : 2 < t + 2 := by omega
-                              have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
-                              have hi2val : i.val = 2 := by simpa [h2mod] using hv
-                              omega
-                            have hpath' : ¬ ((i.val + 1 = j.val ∧
-                                1 ≤ i.val ∧ j.val ≤ t) ∨
-                                (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := hpath
-                            simp [doubleTripleMatrix, im, ip, hji, hjm, hjp,
-                              hpath, hend, hi0', hi2, hdiag]
-                    _ = -2 * v i + v im + v ip := by
-                      simp [Finset.sum_add_distrib]
-                rw [hsum]
-                have hi_le_one : ¬ i.val ≤ 1 := by omega
-                have hi_le_two : ¬ i.val ≤ 2 := by omega
-                have hi_lt_t : i.val < t := by omega
-                have him_ge_two : 2 ≤ i.val - 1 := by omega
-                have him_lt_t : i.val - 1 < t := by omega
-                have hip_lt_t : i.val + 1 < t := by omega
-                have hi0fin : i ≠ 0 := by
-                  intro h
-                  have hv := congrArg Fin.val h
-                  have hi0val : i.val = 0 := by simpa using hv
-                  omega
-                change -2 * v i + v im + v ip = 0
-                simp [v, im, ip, hi_le_one, hi_le_two, hi_lt_t,
-                  him_lt_t, hip_lt_t, hi0fin]
+                        · have hji' : j.val ≠ i.val := by
+                            intro h
+                            apply hji
+                            apply Fin.ext
+                            exact h
+                          have hjm' : j.val ≠ i.val - 1 := by
+                            intro h
+                            apply hjm
+                            apply Fin.ext
+                            simpa [im] using h
+                          have hjp' : j.val ≠ i.val + 1 := by
+                            intro h
+                            apply hjp
+                            apply Fin.ext
+                            simpa [ip] using h
+                          have hpath : ¬ ((i.val + 1 = j.val ∧
+                              1 ≤ i.val ∧ j.val ≤ t) ∨
+                              (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := by
+                            intro h
+                            rcases h with h | h <;> omega
+                          have hspecial : ¬ ((i.val = 0 ∧ j.val = 2) ∨
+                              (i.val = 2 ∧ j.val = 0)) := by
+                            intro h
+                            rcases h with h | h <;> omega
+                          have hend : ¬ ((i.val = t - 1 ∧ j.val = t + 1) ∨
+                              (i.val = t + 1 ∧ j.val = t - 1)) := by
+                            intro h
+                            rcases h with h | h <;> omega
+                          have hdiag : i ≠ j := by
+                            intro h
+                            exact hji h.symm
+                          have hi0' : i ≠ 0 := by
+                            intro h
+                            have hv := congrArg Fin.val h
+                            norm_num at hv
+                            have hi0val : i.val = 0 := by simpa using hv
+                            omega
+                          have hi2' : i ≠ 2 := by
+                            intro h
+                            have hv := congrArg Fin.val h
+                            have h2lt : 2 < t + 2 := by omega
+                            have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                            have hi2val : i.val = 2 := by simpa [h2mod] using hv
+                            omega
+                          have hpath' : ¬ ((i.val + 1 = j.val ∧
+                              1 ≤ i.val ∧ j.val ≤ t) ∨
+                              (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := hpath
+                          simp [doubleTripleMatrix, im, ip, hji, hjm, hjp,
+                            hpath, hend, hi0', hi2, hdiag]
+                  _ = -2 * v i + v im + v ip := by
+                    simp [Finset.sum_add_distrib]
+              rw [hsum]
+              have hi_le_one : ¬ i.val ≤ 1 := by omega
+              have hi_le_two : ¬ i.val ≤ 2 := by omega
+              have hi_lt_t : i.val < t := by omega
+              have him_ge_two : 2 ≤ i.val - 1 := by omega
+              have him_lt_t : i.val - 1 < t := by omega
+              have hip_lt_t : i.val + 1 < t := by omega
+              have hi0fin : i ≠ 0 := by
+                intro h
+                have hv := congrArg Fin.val h
+                have hi0val : i.val = 0 := by simpa using hv
+                omega
+              change -2 * v i + v im + v ip = 0
+              simp [v, doubleTripleKernelVector, im, ip, hi_le_one, hi_le_two, hi_lt_t,
+                him_lt_t, hip_lt_t, hi0fin]
+
+theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
+    Matrix.det (scalarMatrix (doubleTripleMatrix t) r) = 0 := by
+  classical
+  let v : Fin (t + 2) → ℤ := doubleTripleKernelVector t
+  have hkernel : Matrix.mulVec (doubleTripleMatrix t) v = 0 :=
+    doubleTripleMatrix_mulVec_kernel t ht
   have hkernel' : Matrix.mulVec (scalarMatrix (doubleTripleMatrix t) r) v = 0 := by
     funext i
     rw [Matrix.mulVec_apply_eq_sum]
@@ -2114,7 +2123,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
     rw [hi]
     simp
   exact Matrix.det_eq_zero_of_mulVec_eq_zero_of_mem_nonZeroDivisors
-    (i := ⟨0, by omega⟩) hkernel' (by simp [v])
+    (i := ⟨0, by omega⟩) hkernel' (by simp [v, doubleTripleKernelVector])
 
 theorem e6_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 6 4 2 5 (-2) 1) r) = 3 * r ^ 6 := by

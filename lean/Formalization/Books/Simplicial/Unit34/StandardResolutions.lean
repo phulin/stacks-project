@@ -1657,12 +1657,326 @@ private theorem standardResolutionOuterCompositeHomotopicIdentity
       simp only [Category.assoc] }
   exact Relation.EqvGen.rel _ _ ⟨Unit26.degreewiseHomotopy_to_homotopy K⟩
 
+private theorem standardResolutionInnerIdentityHomotopicComposite
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    Unit26.Homotopic (𝟙 (standardResolutionInnerObject T))
+      (standardResolutionInnerAugmentation T ≫
+        standardResolutionInnerHomotopyInverse T) := by
+  rcases standardResolutionInnerExplicitHomotopy T with ⟨H⟩
+  let k := standardResolutionInnerAugmentation T ≫
+    standardResolutionInnerHomotopyInverse T
+  let objectDegree (n : ℕ) :
+      (standardResolutionObject T).obj (op (SimplexCategory.mk n)) =
+        godementDegree (standardResolutionBase T) n :=
+    standardResolution_object_degree T n
+  let fromDegreeRaw (n : ℕ) :
+      T.U ⋙ (standardResolutionObject T).obj (op (SimplexCategory.mk n)) ⟶
+        (T.U ⋙ godementDegree (standardResolutionBase T) n) ⋙ (𝟭 A) :=
+    Functor.whiskerLeft T.U (eqToHom (objectDegree n)) ≫
+      (Functor.rightUnitor
+        (T.U ⋙ godementDegree (standardResolutionBase T) n)).inv
+  let fromDegree (n : ℕ) :
+      (standardResolutionInnerObject T).obj (op (SimplexCategory.mk n)) ⟶
+        godementWhiskeredDegree T.U (standardResolutionBase T) (𝟭 A) n :=
+    fromDegreeRaw n
+  let toDegreeRaw (n : ℕ) :
+      (T.U ⋙ godementDegree (standardResolutionBase T) n) ⋙ (𝟭 A) ⟶
+        T.U ⋙ (standardResolutionObject T).obj (op (SimplexCategory.mk n)) :=
+    (Functor.rightUnitor
+        (T.U ⋙ godementDegree (standardResolutionBase T) n)).hom ≫
+      Functor.whiskerLeft T.U (eqToHom (objectDegree n).symm)
+  let toDegree (n : ℕ) :
+      godementWhiskeredDegree T.U (standardResolutionBase T) (𝟭 A) n ⟶
+        (standardResolutionInnerObject T).obj (op (SimplexCategory.mk n)) :=
+    toDegreeRaw n
+  have from_to (n : ℕ) : fromDegree n ≫ toDegree n = 𝟙 _ := by
+    change fromDegreeRaw n ≫ toDegreeRaw n = 𝟙 _
+    dsimp [fromDegreeRaw, toDegreeRaw]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc]
+    rw [← Functor.whiskerLeft_comp]
+    simp
+  have to_from (n : ℕ) : toDegree n ≫ fromDegree n = 𝟙 _ := by
+    change toDegreeRaw n ≫ fromDegreeRaw n = 𝟙 _
+    dsimp [fromDegreeRaw, toDegreeRaw]
+    have hcast_assoc (Z : S ⥤ A)
+        (f : T.U ⋙ godementDegree (standardResolutionBase T) n ⟶ Z) :
+        Functor.whiskerLeft T.U (eqToHom (objectDegree n).symm) ≫
+            (Functor.whiskerLeft T.U (eqToHom (objectDegree n)) ≫ f) = f := by
+      rw [← Category.assoc, ← Functor.whiskerLeft_comp]
+      simp
+    simp only [Category.assoc, hcast_assoc]
+    exact (Functor.rightUnitor
+      (T.U ⋙ godementDegree (standardResolutionBase T) n)).hom_inv_id
+  have from_face (n : ℕ) (j : Fin (n + 2)) :
+      (standardResolutionInnerObject T).δ j ≫ fromDegree n =
+        fromDegree (n + 1) ≫
+          godementWhiskeredSimplicialFace T.U
+            (standardResolutionBase T) (𝟭 A)
+            (standardResolutionCounit T) n j := by
+    dsimp only [fromDegree, fromDegreeRaw]
+    have hface0 := congrArg (fun z => Functor.whiskerLeft T.U z)
+      (standardResolution_face_formula T n j)
+    rw [Functor.whiskerLeft_comp, Functor.whiskerLeft_comp] at hface0
+    let innerFace :
+        T.U ⋙ (standardResolutionObject T).obj
+            (op (SimplexCategory.mk (n + 1))) ⟶
+          T.U ⋙ (standardResolutionObject T).obj
+            (op (SimplexCategory.mk n)) :=
+      Functor.whiskerLeft T.U ((standardResolutionObject T).δ j)
+    let e (m : ℕ) := Functor.whiskerLeft T.U
+      (eqToHom (objectDegree m))
+    let eInv (m : ℕ) := Functor.whiskerLeft T.U
+      (eqToHom (objectDegree m).symm)
+    have hface : eInv (n + 1) ≫ innerFace ≫ e n =
+        Functor.whiskerLeft T.U
+          (godementFace (standardResolutionBase T)
+            (standardResolutionCounit T) (n := n + 1) j) := by
+      apply eq_of_heq
+      exact heq_of_eq hface0
+    have hcast : innerFace ≫ e n =
+        e (n + 1) ≫ Functor.whiskerLeft T.U
+          (godementFace (standardResolutionBase T)
+            (standardResolutionCounit T) (n := n + 1) j) := by
+      have hc : e (n + 1) ≫ eInv (n + 1) = 𝟙 _ := by
+        dsimp [e, eInv]
+        rw [← Functor.whiskerLeft_comp]
+        simp
+      have hx := congrArg (fun z => e (n + 1) ≫ z) hface
+      rw [← Category.assoc, hc, Category.id_comp] at hx
+      exact hx
+    change innerFace ≫ e n ≫
+        (Functor.rightUnitor
+          (T.U ⋙ godementDegree (standardResolutionBase T) n)).inv =
+      (e (n + 1) ≫ (Functor.rightUnitor
+        (T.U ⋙ godementDegree
+          (standardResolutionBase T) (n + 1))).inv) ≫
+        godementWhiskeredSimplicialFace T.U
+          (standardResolutionBase T) (𝟭 A)
+          (standardResolutionCounit T) n j
+    ext X
+    have hcastX := congrArg (fun z => z.app X) hcast
+    simp only [NatTrans.comp_app] at hcastX
+    change innerFace.app X ≫ (e n).app X ≫ 𝟙 _ =
+      ((e (n + 1)).app X ≫ 𝟙 _) ≫
+        (godementWhiskeredSimplicialFace T.U
+          (standardResolutionBase T) (𝟭 A)
+          (standardResolutionCounit T) n j).app X
+    rw [← Category.assoc, hcastX]
+    simp [godementWhiskeredSimplicialFace, godementWhiskeredFace,
+      Functor.whiskerLeft, Functor.whiskerRight]
+    exact Category.comp_id _
+  have to_face (n : ℕ) (j : Fin (n + 2)) :
+      toDegree (n + 1) ≫ (standardResolutionInnerObject T).δ j =
+        godementWhiskeredSimplicialFace T.U
+            (standardResolutionBase T) (𝟭 A)
+            (standardResolutionCounit T) n j ≫ toDegree n := by
+    have hx := congrArg (fun z => toDegree (n + 1) ≫ z ≫ toDegree n)
+      (from_face n j)
+    simp only [Category.assoc, from_to, Category.comp_id] at hx
+    rw [← Category.assoc (toDegree (n + 1)) (fromDegree (n + 1)),
+      to_from, Category.id_comp] at hx
+    exact hx
+  have from_degeneracy (n : ℕ) (j : Fin (n + 1)) :
+      (standardResolutionInnerObject T).σ j ≫ fromDegree (n + 1) =
+        fromDegree n ≫
+          godementWhiskeredSimplicialDegeneracy T.U
+            (standardResolutionBase T) (𝟭 A)
+            (standardResolutionComultiplication T) n j := by
+    dsimp only [fromDegree, fromDegreeRaw]
+    have hdeg0 := congrArg (fun z => Functor.whiskerLeft T.U z)
+      (standardResolution_degeneracy_formula T n j)
+    rw [Functor.whiskerLeft_comp, Functor.whiskerLeft_comp] at hdeg0
+    let innerDeg :
+        T.U ⋙ (standardResolutionObject T).obj
+            (op (SimplexCategory.mk n)) ⟶
+          T.U ⋙ (standardResolutionObject T).obj
+            (op (SimplexCategory.mk (n + 1))) :=
+      Functor.whiskerLeft T.U ((standardResolutionObject T).σ j)
+    let e (m : ℕ) := Functor.whiskerLeft T.U
+      (eqToHom (objectDegree m))
+    let eInv (m : ℕ) := Functor.whiskerLeft T.U
+      (eqToHom (objectDegree m).symm)
+    have hdeg : eInv n ≫ innerDeg ≫ e (n + 1) =
+        Functor.whiskerLeft T.U
+          (godementDegeneracy (standardResolutionBase T)
+            (standardResolutionComultiplication T) (n := n) j) := by
+      apply eq_of_heq
+      exact heq_of_eq hdeg0
+    have hcast : innerDeg ≫ e (n + 1) =
+        e n ≫ Functor.whiskerLeft T.U
+          (godementDegeneracy (standardResolutionBase T)
+            (standardResolutionComultiplication T) (n := n) j) := by
+      have hc : e n ≫ eInv n = 𝟙 _ := by
+        dsimp [e, eInv]
+        rw [← Functor.whiskerLeft_comp]
+        simp
+      have hx := congrArg (fun z => e n ≫ z) hdeg
+      rw [← Category.assoc, hc, Category.id_comp] at hx
+      exact hx
+    change innerDeg ≫ e (n + 1) ≫
+        (Functor.rightUnitor
+          (T.U ⋙ godementDegree
+            (standardResolutionBase T) (n + 1))).inv =
+      (e n ≫ (Functor.rightUnitor
+        (T.U ⋙ godementDegree (standardResolutionBase T) n)).inv) ≫
+        godementWhiskeredSimplicialDegeneracy T.U
+          (standardResolutionBase T) (𝟭 A)
+          (standardResolutionComultiplication T) n j
+    ext X
+    have hcastX := congrArg (fun z => z.app X) hcast
+    simp only [NatTrans.comp_app] at hcastX
+    change innerDeg.app X ≫ (e (n + 1)).app X ≫ 𝟙 _ =
+      ((e n).app X ≫ 𝟙 _) ≫
+        (godementWhiskeredSimplicialDegeneracy T.U
+          (standardResolutionBase T) (𝟭 A)
+          (standardResolutionComultiplication T) n j).app X
+    rw [← Category.assoc, hcastX]
+    simp [godementWhiskeredSimplicialDegeneracy,
+      godementWhiskeredDegeneracy, Functor.whiskerLeft,
+      Functor.whiskerRight]
+    rfl
+  have to_degeneracy (n : ℕ) (j : Fin (n + 1)) :
+      toDegree n ≫ (standardResolutionInnerObject T).σ j =
+        godementWhiskeredSimplicialDegeneracy T.U
+            (standardResolutionBase T) (𝟭 A)
+            (standardResolutionComultiplication T) n j ≫ toDegree (n + 1) := by
+    have hx := congrArg (fun z => toDegree n ≫ z ≫ toDegree (n + 1))
+      (from_degeneracy n j)
+    simp only [Category.assoc, from_to, Category.comp_id] at hx
+    rw [← Category.assoc (toDegree n) (fromDegree n),
+      to_from, Category.id_comp] at hx
+    exact hx
+  let K : Unit26.DegreewiseHomotopy (𝟙 _) k := {
+    h := fun n i => fromDegree n ≫ H.h n i ≫ toDegree n
+    h_zero := by
+      intro n
+      rw [H.endpoint_zero]
+      have hleft : godementTwoMapLeft T.U T.U
+            (standardResolutionBase T) (𝟭 A) (𝟭 A) (𝟙 (𝟭 A))
+            (standardResolutionInnerCompositeDegree T) n =
+          Functor.whiskerRight
+            (standardResolutionInnerCompositeDegree T n) (𝟭 A) := by
+        dsimp [godementTwoMapLeft]
+        exact Category.comp_id _
+      rw [hleft]
+      change fromDegreeRaw n ≫
+          Functor.whiskerRight
+            (standardResolutionInnerCompositeDegree T n) (𝟭 A) ≫
+          toDegreeRaw n = k.app (op (SimplexCategory.mk n))
+      dsimp only [fromDegreeRaw, toDegreeRaw]
+      have hunit (f : T.U ⋙ godementDegree (standardResolutionBase T) n ⟶
+          T.U ⋙ godementDegree (standardResolutionBase T) n) :
+          (Functor.rightUnitor
+                (T.U ⋙ godementDegree
+                  (standardResolutionBase T) n)).inv ≫
+              Functor.whiskerRight f (𝟭 A) ≫
+              (Functor.rightUnitor
+                (T.U ⋙ godementDegree
+                  (standardResolutionBase T) n)).hom = f := by
+        ext X
+        simp [Functor.whiskerLeft, Functor.whiskerRight]
+      slice_lhs 2 4 => rw [hunit]
+      let e := Functor.whiskerLeft T.U
+        (eqToHom (standardResolution_object_degree T n))
+      let eInv := Functor.whiskerLeft T.U
+        (eqToHom (standardResolution_object_degree T n).symm)
+      let kApp :
+          T.U ⋙ (standardResolutionObject T).obj
+              (op (SimplexCategory.mk n)) ⟶
+            T.U ⋙ (standardResolutionObject T).obj
+              (op (SimplexCategory.mk n)) :=
+        k.app (op (SimplexCategory.mk n))
+      change e ≫ (eInv ≫ kApp ≫ e) ≫ eInv = kApp
+      have he : e ≫ eInv =
+          𝟙 (T.U ⋙ (standardResolutionObject T).obj
+            (op (SimplexCategory.mk n))) := by
+        dsimp [e, eInv]
+        rw [← Functor.whiskerLeft_comp]
+        simp
+      have heInv : eInv ≫ e =
+          𝟙 (T.U ⋙ standardResolutionDegree T (some n)) := by
+        dsimp [e, eInv]
+        rw [← Functor.whiskerLeft_comp]
+        simp
+      simp only [Category.assoc]
+      rw [← Category.assoc e eInv, he, Category.id_comp]
+      exact Category.comp_id kApp
+    h_last := by
+      intro n
+      rw [H.endpoint_last]
+      have hright : godementTwoMapRight T.U T.U
+            (standardResolutionBase T) (𝟭 A) (𝟭 A)
+            (fun m => 𝟙 (godementDegree
+              (standardResolutionBase T) m ⋙ (𝟭 A))) (𝟙 T.U) n =
+          𝟙 (godementWhiskeredDegree T.U
+            (standardResolutionBase T) (𝟭 A) n) := by
+        dsimp [godementTwoMapRight, godementWhiskeredDegree]
+        ext X
+        simp [Functor.whiskerRight]
+      rw [hright, Category.id_comp]
+      exact from_to n
+    face_of_gt := by
+      intro n i j hji
+      change (fromDegree (n + 1) ≫ H.h (n + 1) i ≫ toDegree (n + 1)) ≫
+          (standardResolutionInnerObject T).δ j =
+        (standardResolutionInnerObject T).δ j ≫
+          (fromDegree n ≫ H.h n (i.pred hji.ne_zero) ≫ toDegree n)
+      simp only [Category.assoc]
+      rw [to_face]
+      rw [← Category.assoc (H.h (n + 1) i), H.face_of_gt i j hji]
+      rw [Category.assoc, ← Category.assoc (fromDegree (n + 1)), ← from_face]
+      simp only [Category.assoc]
+    face_of_le := by
+      intro n i j hij
+      change (fromDegree (n + 1) ≫ H.h (n + 1) i ≫ toDegree (n + 1)) ≫
+          (standardResolutionInnerObject T).δ j =
+        (standardResolutionInnerObject T).δ j ≫
+          (fromDegree n ≫ H.h n
+            (i.castPred (Fin.ne_last_of_lt
+              (lt_of_le_of_lt hij j.castSucc_lt_succ))) ≫ toDegree n)
+      simp only [Category.assoc]
+      rw [to_face]
+      rw [← Category.assoc (H.h (n + 1) i), H.face_of_le i j hij]
+      rw [Category.assoc, ← Category.assoc (fromDegree (n + 1)), ← from_face]
+      simp only [Category.assoc]
+    degeneracy_of_gt := by
+      intro n i j hji
+      change (fromDegree n ≫ H.h n i ≫ toDegree n) ≫
+          (standardResolutionInnerObject T).σ j =
+        (standardResolutionInnerObject T).σ j ≫
+          (fromDegree (n + 1) ≫ H.h (n + 1) i.succ ≫ toDegree (n + 1))
+      simp only [Category.assoc]
+      rw [to_degeneracy]
+      rw [← Category.assoc (H.h n i), H.degeneracy_of_gt i j hji]
+      rw [Category.assoc, ← Category.assoc (fromDegree n), ← from_degeneracy]
+      simp only [Category.assoc]
+    degeneracy_of_le := by
+      intro n i j hij
+      change (fromDegree n ≫ H.h n i ≫ toDegree n) ≫
+          (standardResolutionInnerObject T).σ j =
+        (standardResolutionInnerObject T).σ j ≫
+          (fromDegree (n + 1) ≫ H.h (n + 1) i.castSucc ≫ toDegree (n + 1))
+      simp only [Category.assoc]
+      rw [to_degeneracy]
+      rw [← Category.assoc (H.h n i), H.degeneracy_of_le i j hij]
+      rw [Category.assoc, ← Category.assoc (fromDegree n), ← from_degeneracy]
+      simp only [Category.assoc] }
+  exact Relation.EqvGen.rel _ _ ⟨Unit26.degreewiseHomotopy_to_homotopy K⟩
+
 theorem standardResolution_homotopy_equivalences
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     Unit26.IsHomotopyEquivalence (standardResolutionOuterAugmentation T) ∧
       Unit26.IsHomotopyEquivalence (standardResolutionInnerAugmentation T) := by
-  sorry
+  constructor
+  · refine ⟨standardResolutionOuterHomotopyInverse T,
+      Unit26.homotopicOfEq (standardResolution_outer_inverse_section T),
+      standardResolutionOuterCompositeHomotopicIdentity T⟩
+  · refine ⟨standardResolutionInnerHomotopyInverse T,
+      Unit26.homotopicOfEq (standardResolution_inner_inverse_section T), ?_⟩
+    exact Unit26.homotopic_symm
+      (standardResolutionInnerIdentityHomotopicComposite T)
 /-! ## The module and polynomial-algebra examples -/
 
 /-- The free/forgetful adjunction used in Example 34.4. -/

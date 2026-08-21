@@ -342,6 +342,44 @@ private theorem projectiveInjectivityCondition_of_hasPropertyP
   intro N M _ _ _ _ _ _ u hu
   exact (universallyInjective_iff_injective_of_hasPropertyP hP u).2 hu
 
+private theorem directSummandCondition_of_cokernelCondition_sameUniverse
+    {R : Type u} [CommRing R]
+    (hcoker : FiniteProjectiveCokernelCondition.{u, v, v} R) :
+    FiniteProjectiveDirectSummandCondition.{u, v} R := by
+  intro M _ _ _ _ N hNfinite hNproj
+  letI : Module.Finite R N := hNfinite
+  letI : Module.Projective R N := hNproj
+  obtain ⟨_, hQproj⟩ :=
+    hcoker (N := N) (M := M) N.subtype N.injective_subtype
+  letI : Module.Projective R (M ⧸ LinearMap.range N.subtype) := hQproj
+  let q : M →ₗ[R] M ⧸ LinearMap.range N.subtype :=
+    (LinearMap.range N.subtype).mkQ
+  obtain ⟨s, hs⟩ :=
+    (Module.Projective.iff_split_of_projective q
+      (Submodule.mkQ_surjective _)).mp hQproj
+  let k : M →ₗ[R] M := LinearMap.id - s.comp q
+  have hk_mem (x : M) : k x ∈ LinearMap.range N.subtype := by
+    have hqk : q (k x) = 0 := by
+      dsimp [k]
+      have hsx := LinearMap.congr_fun hs (q x)
+      simpa [q, LinearMap.comp_apply] using sub_eq_zero.mpr hsx.symm
+    have hxker : k x ∈ LinearMap.ker q := LinearMap.mem_ker.mpr hqk
+    simpa [q] using hxker
+  let p : M →ₗ[R] LinearMap.range N.subtype :=
+    k.codRestrict (LinearMap.range N.subtype) hk_mem
+  have hp : ∀ x : LinearMap.range N.subtype, p x = x := by
+    intro x
+    apply Subtype.ext
+    dsimp [p, k]
+    have hqx : q (x : M) = 0 := by
+      change (LinearMap.range N.subtype).mkQ (x : M) = 0
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+      exact x.2
+    simp [LinearMap.comp_apply, hqx]
+  have hcomp : IsComplemented (LinearMap.range N.subtype) :=
+    ⟨LinearMap.ker p, LinearMap.isCompl_of_proj hp⟩
+  simpa using hcomp
+
 /-- Property (P) is equivalent to the four finite-projective and split-map
 formulations in the source lemma. -/
 theorem hasPropertyP_iff_finiteProjective_conditions

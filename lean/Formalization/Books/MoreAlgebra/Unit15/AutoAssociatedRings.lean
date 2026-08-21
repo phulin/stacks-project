@@ -895,6 +895,95 @@ theorem squareZeroMap_cokernel_properties
 
 /-! ### Maps of finite free modules -/
 
+private theorem rankIdeal_le_maximalMinorIdeal_of_rank_eq
+    {R : Type u} [CommRing R] {m n : ℕ}
+    (φ : (Fin m → R) →ₗ[R] (Fin n → R))
+    (hrank : Formalization.Books.Algebra.Unit102.rank φ = m) :
+    Formalization.Books.Algebra.Unit102.rankIdeal φ ≤
+      Formalization.Books.Algebra.Unit15.maximalMinorIdeal
+        (LinearMap.toMatrix' φ) := by
+  classical
+  rw [Formalization.Books.Algebra.Unit102.rankIdeal, hrank, Ideal.span_le]
+  rintro _ ⟨p, rfl⟩
+  let rows : Finset (Fin n) := Finset.univ.image p.1
+  have hrows : rows.card = m := by
+    dsimp [rows]
+    rw [Finset.card_image_of_injective _ p.1.injective]
+    simp
+  let S : {s : Finset (Fin n) // s.card = m} := ⟨rows, hrows⟩
+  let e : Fin m ≃ {x // x ∈ rows} := rows.orderIsoOfFin hrows
+  let pe : Fin m ≃ {x // x ∈ rows} := Equiv.ofBijective
+    (fun i => (⟨p.1 i, Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩⟩ :
+      {x // x ∈ rows}))
+    ⟨fun i j hij => p.1.injective (congrArg Subtype.val hij), fun z => by
+      obtain ⟨i, -, hi⟩ := Finset.mem_image.mp z.property
+      exact ⟨i, Subtype.ext hi⟩⟩
+  let σ : Equiv.Perm (Fin m) := pe.trans e.symm
+  let τ : Equiv.Perm (Fin m) :=
+    Equiv.ofBijective p.2 (Finite.injective_iff_bijective.mp p.2.injective)
+  let A : Matrix (Fin n) (Fin m) R := LinearMap.toMatrix' φ
+  let M : Matrix (Fin m) (Fin m) R := A.submatrix (fun i => (e i).1) id
+  have hrow (i : Fin m) : (e (σ i)).1 = p.1 i := by
+    exact congrArg Subtype.val (e.apply_symm_apply (pe i))
+  have hcol (j : Fin m) : τ j = p.2 j := rfl
+  have hmatrix : A.submatrix p.1 p.2 = M.submatrix σ τ := by
+    ext i j
+    simp only [Matrix.submatrix_apply, M]
+    rw [hrow, hcol]
+    rfl
+  change (A.submatrix p.1 p.2).det ∈
+    Formalization.Books.Algebra.Unit15.maximalMinorIdeal A
+  rw [hmatrix]
+  have hsub : M.submatrix σ τ = (M.submatrix σ id).submatrix id τ := by
+    ext i j
+    rfl
+  rw [hsub]
+  rw [Matrix.det_permute', Matrix.det_permute]
+  exact Ideal.mul_mem_left _ _ <| Ideal.mul_mem_left _ _ <|
+    Ideal.subset_span ⟨S, rfl⟩
+
+private theorem injective_of_rank_eq_and_annihilator_eq_bot
+    {R : Type u} [CommRing R] {m n : ℕ}
+    (φ : (Fin m → R) →ₗ[R] (Fin n → R)) (hmn : m ≤ n)
+    (hrank : Formalization.Books.Algebra.Unit102.rank φ = m)
+    (hann : Module.annihilator R
+      (Formalization.Books.Algebra.Unit102.rankIdeal φ) = ⊥) :
+    Function.Injective φ := by
+  let A : Matrix (Fin n) (Fin m) R := LinearMap.toMatrix' φ
+  let I : Ideal R := Formalization.Books.Algebra.Unit102.rankIdeal φ
+  have hle : I ≤ Formalization.Books.Algebra.Unit15.maximalMinorIdeal A := by
+    exact rankIdeal_le_maximalMinorIdeal_of_rank_eq φ hrank
+  intro x y hxy
+  let z : Fin m → R := x - y
+  have hzφ : φ z = 0 := by
+    dsimp [z]
+    rw [map_sub, hxy, sub_self]
+  have hzA : Matrix.mulVec A z = 0 := by
+    simpa [A] using hzφ
+  have hzcoord (j : Fin m) : z j = 0 := by
+    have hjann : z j ∈ Module.annihilator R I := by
+      rw [Module.mem_annihilator]
+      intro a
+      obtain ⟨B, hBA⟩ :=
+        Formalization.Books.Algebra.Unit15.matrix_left_inverse_of_mem_maximalMinorIdeal
+          hmn A (hle a.property)
+      have hzB := congrArg (fun v => Matrix.mulVec B v) hzA
+      have hzB' : Matrix.mulVec (B * A) z = 0 := by
+        calc
+          Matrix.mulVec (B * A) z = Matrix.mulVec B (Matrix.mulVec A z) :=
+            (Matrix.mulVec_mulVec z B A).symm
+          _ = 0 := by simpa using hzB
+      rw [hBA] at hzB'
+      apply Subtype.ext
+      have hj := congrFun hzB' j
+      simpa [Matrix.smul_mulVec, Matrix.one_mulVec, smul_eq_mul, mul_comm] using hj
+    rw [hann] at hjann
+    simpa using hjann
+  apply sub_eq_zero.mp
+  change z = 0
+  funext j
+  exact hzcoord j
+
 /-- For a map of finite free modules, injectivity is equivalent to full rank
 and zero annihilator of its determinantal ideal. -/
 theorem exactLengthOne_iff

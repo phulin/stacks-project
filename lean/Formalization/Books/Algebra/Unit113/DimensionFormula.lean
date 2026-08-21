@@ -48,7 +48,73 @@ noncomputable def fractionFieldMap
     FractionRing A →+* FractionRing B :=
   IsFractionRing.map (j := f) hinj
 
-/-! ## The dimension formula -/
+/-! ## Height of primes in quotients -/
+
+/-- If `n ≤ Q` are primes with `n ≠ ⊥` in a Noetherian domain, the image of `Q`
+in `T ⧸ n` has height at most one less than the height of `Q`. -/
+theorem height_map_quotient_mk_add_one_le
+    {T : Type*} [CommRing T] [IsNoetherianRing T] [IsDomain T]
+    (n Q : Ideal T) [n.IsPrime] [Q.IsPrime] (hnQ : n ≤ Q) (hn : n ≠ ⊥) :
+    (Q.map (Ideal.Quotient.mk n)).height + 1 ≤ Q.height := by
+  classical
+  have hker : RingHom.ker (Ideal.Quotient.mk n : T →+* T ⧸ n) = n := by
+    rw [RingHom.ker_eq_comap_bot]
+    ext x
+    simpa using Ideal.Quotient.eq_zero_iff_mem (a := x)
+  have hQ' : (Q.map (Ideal.Quotient.mk n)).IsPrime :=
+    Ideal.map_isPrime_of_surjective Ideal.Quotient.mk_surjective (hker.le.trans hnQ)
+  have hcomapmap : Ideal.comap (Ideal.Quotient.mk n)
+      (Q.map (Ideal.Quotient.mk n)) = Q := by
+    rw [Ideal.comap_map_of_surjective _ Ideal.Quotient.mk_surjective Q,
+      show Ideal.comap (Ideal.Quotient.mk n) (⊥ : Ideal (T ⧸ n)) = n from by
+        rw [← RingHom.ker_eq_comap_bot, Ideal.mk_ker], sup_eq_left.mpr hnQ]
+  have hkerle : ∀ (P : Ideal (T ⧸ n)),
+      n ≤ Ideal.comap (Ideal.Quotient.mk n) P := by
+    intro P x hx
+    show Ideal.Quotient.mk n x ∈ P
+    have h0 : Ideal.Quotient.mk n x = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr hx
+    rw [h0]
+    exact Submodule.zero_mem P
+  have := hQ'
+  obtain ⟨c, hc, hcen⟩ :=
+    Ideal.exists_ltSeries_length_eq_height (Q.map (Ideal.Quotient.mk n))
+  have hφm : StrictMono (fun x : PrimeSpectrum (T ⧸ n) =>
+      PrimeSpectrum.comap (Ideal.Quotient.mk n) x) :=
+    RingHom.strictMono_comap_of_surjective Ideal.Quotient.mk_surjective
+  let l : LTSeries (PrimeSpectrum T) :=
+    c.map (fun x => PrimeSpectrum.comap (Ideal.Quotient.mk n) x) hφm
+  have hlast : l.last.asIdeal = Q := by
+    show (PrimeSpectrum.comap (Ideal.Quotient.mk n) c.last).asIdeal = Q
+    rw [PrimeSpectrum.comap_asIdeal, hc]
+    simpa using hcomapmap
+  have hb : (⊥ : Ideal T).IsPrime := Ideal.isPrime_bot
+  have hnhead : n ≤ l.head.asIdeal := by
+    show (PrimeSpectrum.comap (Ideal.Quotient.mk n) c.head).asIdeal ≥ n
+    rw [PrimeSpectrum.comap_asIdeal]
+    exact hkerle _
+  have hbotlt : (⟨⊥, hb⟩ : PrimeSpectrum T) ≠ l.head := by
+    intro he
+    apply hn
+    have h1 : n ≤ l.head.asIdeal := hnhead
+    rw [← congrArg PrimeSpectrum.asIdeal he] at h1
+    exact le_antisymm h1 bot_le
+  have hstep : (⟨⊥, hb⟩ : PrimeSpectrum T) < l.head :=
+    lt_of_le_of_ne bot_le hbotlt
+  let s : LTSeries (PrimeSpectrum T) := l.cons ⟨⊥, hb⟩ hstep
+  have hslen : s.length = l.length + 1 := by simp [s]
+  have hslast : s.last = l.last := by simp [s]
+  have hfin : ((s.length : ℕ) : ℕ∞)
+      ≤ Order.height (⟨Q, ‹_›⟩ : PrimeSpectrum T) :=
+    Order.length_le_height (by rw [hslast]; show l.last.asIdeal ≤ Q; rw [hlast])
+  have hkey : (Q.map (Ideal.Quotient.mk n)).height + 1
+      ≤ Order.height (⟨Q, ‹_›⟩ : PrimeSpectrum T) := by
+    have h1 : ((s.length : ℕ) : ℕ∞)
+        ≤ Order.height (⟨Q, ‹_›⟩ : PrimeSpectrum T) := hfin
+    have hclen : (l.length : ℕ) = c.length := rfl
+    rw [hslen, Nat.cast_add_one, hclen, hcen] at h1
+    exact h1
+  exact hkey.trans (le_of_eq
+    (PrimeSpectrum.height_eq_orderHeight (⟨Q, ‹_›⟩)).symm)
 
 /-- The dimension formula for a finite-type inclusion of Noetherian domains.
 

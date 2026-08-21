@@ -1878,6 +1878,44 @@ private theorem liftingCorrectionRelation_map_eq_zero
   rw [hrel, hidentity k ℓ]
   ring
 
+private theorem liftingRing_localization_base_relation
+    {R : Type u} [CommRing R] {π : R} (d : LiftingConstructionData R π) :
+    let D := liftingRing d
+    let L := Localization.Away (algebraMap R D π)
+    ∀ ℓ : Fin d.m,
+      algebraMap D L
+          (Ideal.Quotient.mk (liftingDefiningIdeal d)
+            (liftLiftingPolynomial (d.relations ℓ))) =
+        algebraMap D L
+          ((algebraMap R D π) *
+            Ideal.Quotient.mk (liftingDefiningIdeal d)
+              (MvPolynomial.X (Sum.inr ℓ))) := by
+  dsimp only
+  intro ℓ
+  have hzero :
+      Ideal.Quotient.mk (liftingDefiningIdeal d)
+          (liftingBaseRelation π d.relations ℓ) = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.2
+    rw [liftingDefiningIdeal]
+    exact Ideal.subset_span (Or.inl ⟨ℓ, rfl⟩)
+  have hsub := congrArg
+    (algebraMap (liftingRing d)
+      (Localization.Away (algebraMap R (liftingRing d) π))) hzero
+  have hπ : (algebraMap R (liftingRing d)) π =
+      Ideal.Quotient.mk (liftingDefiningIdeal d) (MvPolynomial.C π) := by
+    rw [← Ideal.Quotient.mk_algebraMap R (liftingDefiningIdeal d) π]
+    rfl
+  have hmk :
+      (algebraMap R (liftingRing d) π) *
+          Ideal.Quotient.mk (liftingDefiningIdeal d)
+            (MvPolynomial.X (Sum.inr ℓ)) =
+        Ideal.Quotient.mk (liftingDefiningIdeal d)
+          (MvPolynomial.C π * MvPolynomial.X (Sum.inr ℓ)) := by
+    rw [hπ, ← map_mul]
+  rw [hmk]
+  apply sub_eq_zero.mp
+  simpa [liftingBaseRelation, map_sub] using hsub
+
 private theorem liftingRing_localization_algEquiv_aux
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) :
@@ -2038,29 +2076,8 @@ private theorem liftingRing_localization_algEquiv_aux
         algebraMap D L
           ((algebraMap R D π) *
             Ideal.Quotient.mk (liftingDefiningIdeal d)
-              (MvPolynomial.X (Sum.inr ℓ))) := by
-    intro ℓ
-    have hzero :
-        Ideal.Quotient.mk (liftingDefiningIdeal d)
-            (liftingBaseRelation π d.relations ℓ) = 0 := by
-      apply Ideal.Quotient.eq_zero_iff_mem.2
-      rw [liftingDefiningIdeal]
-      exact Ideal.subset_span (Or.inl ⟨ℓ, rfl⟩)
-    have hsub := congrArg (algebraMap D L) hzero
-    have hπ : (algebraMap R D) π =
-        Ideal.Quotient.mk (liftingDefiningIdeal d) (MvPolynomial.C π) := by
-      rw [← Ideal.Quotient.mk_algebraMap R (liftingDefiningIdeal d) π]
-      rfl
-    have hmk :
-        (algebraMap R D π) *
-            Ideal.Quotient.mk (liftingDefiningIdeal d)
-              (MvPolynomial.X (Sum.inr ℓ)) =
-          Ideal.Quotient.mk (liftingDefiningIdeal d)
-              (MvPolynomial.C π * MvPolynomial.X (Sum.inr ℓ)) := by
-      rw [hπ, ← map_mul]
-    rw [hmk]
-    apply sub_eq_zero.mp
-    simpa [liftingBaseRelation, map_sub] using hsub
+              (MvPolynomial.X (Sum.inr ℓ))) :=
+    liftingRing_localization_base_relation d
   have hgq : gmap.comp qmap = algebraMap D L := by
     apply Ideal.Quotient.ringHom_ext
     apply MvPolynomial.ringHom_ext'

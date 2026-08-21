@@ -2714,6 +2714,38 @@ private theorem exists_finite_transcendenceBasis_of_fg
   exact ⟨s, hsfinite, hs, hmodule⟩
 
 /-- The change-of-fields descent theorem for a finite field extension. -/
+private theorem tensorProduct_map_finite_of_finite_intermediateField
+    {k K R : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (L : IntermediateField k K)
+    [Module.Finite L K] :
+    (Algebra.TensorProduct.map (AlgHom.id k R) L.val).toRingHom.Finite := by
+  have hR : (AlgHom.id k R).toRingHom.Finite := (RingEquiv.refl R).finite
+  have hK : L.val.toRingHom.Finite := by
+    change (algebraMap L K).Finite
+    exact RingHom.finite_algebraMap.mpr inferInstance
+  exact RingHom.Finite.tensorProductMap hR hK
+
+/-- Weakly associated primes contract along the finite tensor-product map
+induced by a finite intermediate-field extension. -/
+private theorem weaklyAssociatedPrimes_contract_finite_intermediateField
+    {k K R N : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (L : IntermediateField k K)
+    [Module.Finite L K] [AddCommGroup N] [Module (R ⊗[k] K) N]
+    (q : PrimeSpectrum (R ⊗[k] K))
+    (hq : q ∈ weaklyAssociatedPrimes (R ⊗[k] K) N) :
+    let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+    letI : Module (R ⊗[k] L) N := Module.compHom N f.toRingHom
+    PrimeSpectrum.comap f.toRingHom q ∈
+      weaklyAssociatedPrimes (R ⊗[k] L) N := by
+  dsimp only
+  let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+  letI : Module (R ⊗[k] L) N := Module.compHom N f.toRingHom
+  have hf : f.toRingHom.Finite :=
+    tensorProduct_map_finite_of_finite_intermediateField L
+  rw [← weaklyAssociatedPrimes_finite_ring_map f.toRingHom hf]
+  exact ⟨q, hq, rfl⟩
+
+/-- The change-of-fields descent theorem for a finite field extension. -/
 private theorem weaklyAssociatedPrimes_change_fields_finite
     {k K R M : Type*} [Field k] [Field K] [Algebra k K]
     [CommRing R] [Algebra k R] [Module.Finite k K]

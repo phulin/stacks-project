@@ -278,6 +278,113 @@ private theorem projective_retractionKernel
     simp [p, k, LinearMap.comp_apply, hx]
   exact Module.Projective.of_split (LinearMap.ker g).subtype p hp
 
+private theorem split_fin_to_projective_of_hasPropertyP
+    {R : Type u} [CommRing R] (hP : HasPropertyP R) :
+    ∀ (n : ℕ) {P : Type v} [AddCommGroup P] [Module R P]
+      [Module.Projective R P] (u : (Fin n → R) →ₗ[R] P),
+      Function.Injective u →
+        ∃ g : P →ₗ[R] (Fin n → R), g.comp u = LinearMap.id := by
+  intro n
+  induction n with
+  | zero =>
+      intro P _ _ _ u _
+      refine ⟨0, ?_⟩
+      apply LinearMap.ext
+      intro x
+      exact Subsingleton.elim _ _
+  | succ n ih =>
+      intro P _ _ _ u hu
+      let e : (Fin (n + 1) → R) ≃ₗ[R] R × (Fin n → R) :=
+        (LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
+          (finSuccEquiv n)).trans (LinearEquiv.piOptionEquivProd R)
+      let u' : (R × (Fin n → R)) →ₗ[R] P := u.comp e.symm.toLinearMap
+      let u₀ : R →ₗ[R] P := u'.comp (LinearMap.inl R R (Fin n → R))
+      have hu₀ : Function.Injective u₀ := by
+        apply hu.comp
+        apply e.symm.injective.comp
+        intro x y hxy
+        exact congrArg Prod.fst hxy
+      obtain ⟨g₀, hg₀⟩ := split_rankOne_to_projective_of_hasPropertyP hP u₀ hu₀
+      letI : Module.Projective R (LinearMap.ker g₀) :=
+        projective_retractionKernel u₀ g₀ hg₀
+      let k : P →ₗ[R] P := LinearMap.id - u₀.comp g₀
+      have hk_mem (x : P) : k x ∈ LinearMap.ker g₀ := by
+        rw [LinearMap.mem_ker]
+        have hgu (r : R) : g₀ (u₀ r) = r := by
+          have h := LinearMap.congr_fun hg₀ r
+          simpa using h
+        simp [k, LinearMap.comp_apply, hgu]
+      let p : P →ₗ[R] LinearMap.ker g₀ :=
+        k.codRestrict (LinearMap.ker g₀) hk_mem
+      let t : (Fin n → R) →ₗ[R] P :=
+        u'.comp (LinearMap.inr R R (Fin n → R))
+      let v : (Fin n → R) →ₗ[R] LinearMap.ker g₀ := p.comp t
+      have hv : Function.Injective v := by
+        intro x y hxy
+        have hpval := congrArg Subtype.val hxy
+        have htail : t x - u₀ (g₀ (t x)) =
+            t y - u₀ (g₀ (t y)) := by
+          simpa [v, p, k, LinearMap.comp_apply] using hpval
+        have huEq : u' (0, x - y) =
+            u' (g₀ (t x) - g₀ (t y), 0) := by
+          change t (x - y) = u₀ (g₀ (t x) - g₀ (t y))
+          rw [map_sub, map_sub]
+          apply (sub_eq_sub_iff_add_eq_add).2
+          calc
+            t x + u₀ (g₀ (t y)) = t y + u₀ (g₀ (t x)) :=
+              (sub_eq_sub_iff_add_eq_add.mp htail)
+            _ = u₀ (g₀ (t x)) + t y := add_comm _ _
+        have hdom : (0, x - y) =
+            (g₀ (t x) - g₀ (t y), 0) := by
+          apply e.symm.injective
+          apply hu
+          simpa [u', LinearMap.comp_apply] using huEq
+        have hsnd := congrArg Prod.snd hdom
+        exact sub_eq_zero.mp (by simpa using hsnd)
+      obtain ⟨gₜ, hgₜ⟩ := ih v hv
+      let second : P →ₗ[R] (Fin n → R) := gₜ.comp p
+      let a : (Fin n → R) →ₗ[R] R := g₀.comp t
+      let first : P →ₗ[R] R := g₀ - a.comp second
+      let G : P →ₗ[R] R × (Fin n → R) := LinearMap.prod first second
+      refine ⟨e.symm.toLinearMap.comp G, ?_⟩
+      apply LinearMap.ext
+      intro x
+      apply e.injective
+      change G (u x) = e x
+      let q := e x
+      have hx : x = e.symm q := by simp [q]
+      rw [hx]
+      rcases q with ⟨r, y⟩
+      have hgu (z : R) : g₀ (u₀ z) = z := by
+        have h := LinearMap.congr_fun hg₀ z
+        simpa using h
+      have hudecomp : u (e.symm (r, y)) = u₀ r + t y := by
+        change u' (r, y) = u' (r, 0) + u' (0, y)
+        rw [← map_add]
+        congr <;> simp
+      have hpdecomp : p (u (e.symm (r, y))) = v y := by
+        apply Subtype.ext
+        simp [p, v, k, hudecomp, hgu, LinearMap.comp_apply]
+      have hsecond : second (u (e.symm (r, y))) = y := by
+        change gₜ (p (u (e.symm (r, y)))) = y
+        rw [hpdecomp]
+        have hgy := LinearMap.congr_fun hgₜ y
+        simpa [LinearMap.comp_apply] using hgy
+      have hpu₀ (z : R) : p (u₀ z) = 0 := by
+        apply Subtype.ext
+        simp [p, k, hgu, LinearMap.comp_apply]
+      have hsecond_u₀ : second (u₀ r) = 0 := by
+        change gₜ (p (u₀ r)) = 0
+        rw [hpu₀]
+        simp
+      have hsecond_t : second (t y) = y := by
+        have hgy := LinearMap.congr_fun hgₜ y
+        simpa [second, v, LinearMap.comp_apply] using hgy
+      apply Prod.ext
+      · simp [G, first, hsecond, a, hudecomp, hgu, hsecond_u₀,
+          hsecond_t, LinearMap.comp_apply]
+      · exact hsecond
+
 /-- The projective-module formulation of property (P). -/
 def ProjectiveInjectivityCondition (R : Type u) [CommRing R] : Prop :=
   ∀ {N : Type v} {M : Type w} [AddCommGroup N] [Module R N]
@@ -313,7 +420,21 @@ theorem universallyInjective_iff_injective_of_hasPropertyP
   constructor
   · exact injective_of_universallyInjective
   · intro hu
-    sorry
+    apply universallyInjective_of_projective_of_finite_stages (f := u) _ hu
+    intro F' P' _ _ _ _ _ _ _ g hg
+    let b := Module.Free.chooseBasis R F'
+    let e : F' ≃ₗ[R] (Fin (Fintype.card (Module.Free.ChooseBasisIndex R F')) → R) :=
+      (b.reindex (Fintype.equivFin _)).equivFun
+    have hge : Function.Injective (g.comp e.symm.toLinearMap) :=
+      hg.comp e.symm.injective
+    obtain ⟨r, hr⟩ := split_fin_to_projective_of_hasPropertyP hP _
+      (g.comp e.symm.toLinearMap) hge
+    let s : P' →ₗ[R] F' := e.symm.toLinearMap.comp r
+    apply universallyInjective_of_left_inverse g s
+    apply LinearMap.ext
+    intro x
+    have hx := LinearMap.congr_fun hr (e x)
+    simpa [s, LinearMap.comp_apply] using congrArg e.symm hx
 
 /-- The finite-projective cokernel formulation of property (P). -/
 def FiniteProjectiveCokernelCondition (R : Type u) [CommRing R] : Prop :=

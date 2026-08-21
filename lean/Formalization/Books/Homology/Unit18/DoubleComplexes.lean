@@ -2515,9 +2515,15 @@ private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
             exact Units.neg_smul (R := ℤ) p.negOnePow _
           rw [hneg]
           abel
-        exact hfirst.trans hadd.symm
+        refine hfirst.trans ?_
+        convert (Preadditive.comp_add (C := C)
+          (A.obj p (i - p)) ((totalComplex A).X i) ((totalComplex B).X i)
+          (Sigma.ι (fun r : ℤ => A.obj r (i - r)) p)
+          ((totalComplex A).d i (i + 1) ≫
+            verticalTotalHomotopyComponent h.h (i + 1) ≫ eqToHom hnextEq)
+          (verticalTotalHomotopyComponent h.h i ≫
+            (totalComplex B).d (i - 1) i)).symm using 1 <;> rfl
   · intro n
-    change H n (n - 1) = verticalTotalHomotopyComponent h.h n
     dsimp [H]
     rw [if_pos (by ring)]
     simp
@@ -2583,7 +2589,7 @@ private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
                 Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
                   (verticalTotalHomotopyComponent h.h i ≫
                     (totalComplex B).d (i - 1) i) := by
-          simp [totalMapComponent, totalDifferential,
+          simp [totalMapComponent, totalComplex, totalDifferential,
             verticalTotalHomotopyComponent, totalD1Component, totalD2Component]
           have hhom :
               f.f p (i - p) ≫
@@ -2711,14 +2717,20 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
               (∐ fun r : ℤ => B.obj r (i - r)) = (totalComplex B).X i := by
             rfl
           have hhom :
-              f.f p (i - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p -
-                  g.f p (i - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p =
+              f.f p (i - p) ≫
+                    (Sigma.ι (fun r : ℤ => B.obj r (i - r)) p :
+                      B.obj p (i - p) ⟶ (totalComplex B).X i) -
+                  g.f p (i - p) ≫
+                    (Sigma.ι (fun r : ℤ => B.obj r (i - r)) p :
+                      B.obj p (i - p) ⟶ (totalComplex B).X i) =
                 h.h p (i - p) ≫ B.d1 (p - 1) (i - p) ≫
                     eqToHom (by congr 1; lia) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) p +
+                    (Sigma.ι (fun r : ℤ => B.obj r (i - r)) p :
+                      B.obj p (i - p) ⟶ (totalComplex B).X i) +
                   A.d1 p (i - p) ≫ h.h (p + 1) (i - p) ≫
                     eqToHom (by congr 1; lia) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) p := by
+                    (Sigma.ι (fun r : ℤ => B.obj r (i - r)) p :
+                      B.obj p (i - p) ⟶ (totalComplex B).X i) := by
             simpa [Category.assoc, totalComplex] using
               congrArg (fun k =>
                 k ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p)
@@ -2972,7 +2984,6 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
                     ∐ fun r : ℤ => B.obj r (i - r)) := by
             congr 1
           rw [heq_prev] at htransport_desc'
-          change @Eq ((∐ fun r : ℤ => B.obj r (i - 1 - r)) ⟶ (totalComplex B).X i) _ _ at htransport_desc'
           have hcoprod_prev :
               (∐ fun r : ℤ => B.obj r (i - r)) =
                 ∐ fun r : ℤ => B.obj r (i - 1 + 1 - r) := by
@@ -2998,8 +3009,7 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
           have hι_next :
               Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) ≫
                   eqToHom hcoprod_next =
-                eqToHom (show B.obj (p - 1) (i - (p - 1)) =
-                  B.obj (p - 1) (i + 1 - 1 - (p - 1)) by congr 1 <;> ring) ≫
+                eqToHom (by congr 1 <;> ring) ≫
                   Sigma.ι (fun r : ℤ => B.obj r (i + 1 - 1 - r)) (p - 1) := by
             have hnat := eqToHom_naturality
               (fun F : ℤ → C => Sigma.ι F (p - 1))
@@ -3010,57 +3020,6 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
                   ring)
             simpa only [CategoryTheory.eqToHom_comp_heq_iff,
               CategoryTheory.heq_eqToHom_comp_iff] using hnat
-          have htransEq :
-              eqToHom (show B.obj (p - 1) (i - p + 1) =
-                B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) ≫
-                eqToHom (show B.obj (p - 1) (i - (p - 1)) =
-                  B.obj (p - 1) (i + 1 - 1 - (p - 1)) by congr 1 <;> ring) =
-              eqToHom (show B.obj (p - 1) (i - p + 1) =
-                B.obj (p - 1) (i + 1 - 1 - (p - 1)) by congr 1 <;> ring) := by
-            rw [eqToHom_trans]
-          have htransport2 :
-              eqToHom (show B.obj (p - 1) (i - p + 1) =
-                B.obj (p - 1) (i + 1 - 1 - (p - 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i + 1 - 1 - r)) (p - 1) ≫
-                    (eqToHom hnextEq :
-                      (∐ fun r : ℤ => B.obj r (i + 1 - 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r)) =
-                eqToHom (show B.obj (p - 1) (i - p + 1) =
-                  B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) := by
-            calc
-              _ = eqToHom (show B.obj (p - 1) (i - p + 1) =
-                    B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) ≫
-                    eqToHom (show B.obj (p - 1) (i - (p - 1)) =
-                      B.obj (p - 1) (i + 1 - 1 - (p - 1)) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i + 1 - 1 - r)) (p - 1) ≫
-                      (eqToHom hnextEq :
-                        (∐ fun r : ℤ => B.obj r (i + 1 - 1 - r)) ⟶
-                          ∐ fun r : ℤ => B.obj r (i - r)) := by
-                simpa only [Category.assoc] using
-                  congrArg
-                    (fun k => k ≫
-                      Sigma.ι (fun r : ℤ => B.obj r (i + 1 - 1 - r)) (p - 1) ≫
-                        (eqToHom hnextEq :
-                          (∐ fun r : ℤ => B.obj r (i + 1 - 1 - r)) ⟶
-                            ∐ fun r : ℤ => B.obj r (i - r)))
-                    htransEq.symm
-              _ = eqToHom (show B.obj (p - 1) (i - p + 1) =
-                    B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) ≫
-                      eqToHom hcoprod_next ≫ eqToHom hnextEq := by
-                simpa only [Category.assoc] using
-                  congrArg
-                    (fun k =>
-                      eqToHom (show B.obj (p - 1) (i - p + 1) =
-                        B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) ≫
-                        k ≫ (eqToHom hnextEq :
-                          (∐ fun r : ℤ => B.obj r (i + 1 - 1 - r)) ⟶
-                            ∐ fun r : ℤ => B.obj r (i - r)))
-                    hι_next.symm
-              _ = _ := by
-                rw [hcomp_next]
-                simp
           have hprev1 :
               h.h p (i - p) ≫ B.d1 (p - 1) (i - p) ≫
                   eqToHom (by congr 1 <;> ring) ≫
@@ -3103,213 +3062,11 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
               (eqToHom hprevEqH)
             simpa [Category.assoc, hcomp_prev, eqToHom_refl, Category.comp_id]
               using hnat
-          have hindex1 :
-              eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p =
-                eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                  B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) := by
-            have sigma_ι_transport {a b : ℤ} {F : ℤ → C} (hab : a = b) :
-                eqToHom (show F a = F b by subst b; rfl) ≫ Sigma.ι F b =
-                  Sigma.ι F a := by
-              subst b
-              simp
-            have hι := sigma_ι_transport
-              (F := fun r : ℤ => B.obj r (i - 1 + 1 - r))
-              (a := p - 1 + 1) (b := p) (by ring)
-            have htransport :
-                eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                  B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                    eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) =
-                      B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) =
-                  eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                    B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) := by
-              rw [eqToHom_trans]
-            have hidx :
-                eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) =
-                  B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p =
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) := hι
-            calc
-              _ = eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                    B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                    eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) =
-                      B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p := by
-                simpa only [Category.assoc] using
-                  congrArg (fun k => k ≫ Sigma.ι
-                    (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p)
-                    htransport.symm
-              _ = _ := by
-                simpa only [Category.assoc] using
-                  congrArg (fun k => eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                    B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫ k)
-                    hidx
-          have hprev1_transport :
-              (eqToHom (by congr 1 <;> ring) ≫
-                h.h p (i - 1 + 1 - p) ≫
-                  B.d1 (p - 1) (i - 1 + 1 - p) ≫
-                  eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                    B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p ≫
-                  (eqToHom hprevEqH :
-                    (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                      ∐ fun r : ℤ => B.obj r (i - r))) =
-                eqToHom (by congr 1 <;> ring) ≫
-                  h.h p (i - 1 + 1 - p) ≫
-                    B.d1 (p - 1) (i - 1 + 1 - p) ≫
-                    eqToHom (show B.obj (p - 1 + 1) (i - 1 + 1 - p) =
-                      B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) ≫
-                    (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r)) := by
-            simpa only [Category.assoc] using
-              congrArg (fun k =>
-                eqToHom (by congr 1 <;> ring) ≫
-                  h.h p (i - 1 + 1 - p) ≫
-                  B.d1 (p - 1) (i - 1 + 1 - p) ≫ k ≫
-                  (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r))) hindex1
-          have hindex1_q :
-              eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p =
-                eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                  B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) := by
-            convert hindex1 using 1 <;> subst_vars <;> simp
-          have hprev1_transport_q :
-              (eqToHom (by congr 1 <;> ring) ≫
-                h.h p (i - 1 - (p - 1)) ≫
-                  B.d1 (p - 1) (i - 1 - (p - 1)) ≫
-                  eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                    B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p ≫
-                  (eqToHom hprevEqH :
-                    (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                      ∐ fun r : ℤ => B.obj r (i - r))) =
-                eqToHom (by congr 1 <;> ring) ≫
-                  h.h p (i - 1 - (p - 1)) ≫
-                    B.d1 (p - 1) (i - 1 - (p - 1)) ≫
-                    eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                      B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) ≫
-                    (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r)) := by
-            simpa only [Category.assoc] using
-              congrArg (fun k =>
-                eqToHom (by congr 1 <;> ring) ≫
-                  h.h p (i - 1 - (p - 1)) ≫
-                  B.d1 (p - 1) (i - 1 - (p - 1)) ≫ k ≫
-                  (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r))) hindex1_q
-          have hprev1_transport_q' :
-              (eqToHom (by congr 1 <;> ring) ≫
-                h.h p (i - 1 - (p - 1)) ≫
-                  B.d1 (p - 1) (i - 1 - (p - 1)) ≫
-                  eqToHom (show B.obj (p - 1) (i - 1 - (p - 1) + 1) =
-                    B.obj (p - 1) (i - 1 + 1 - (p - 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) ≫
-                  (eqToHom hprevEqH :
-                    (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                      ∐ fun r : ℤ => B.obj r (i - r))) =
-                eqToHom (by congr 1 <;> ring) ≫
-                  h.h p (i - 1 - (p - 1)) ≫
-                    B.d1 (p - 1) (i - 1 - (p - 1)) ≫
-                    eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                      B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p ≫
-                    (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r : ℤ => B.obj r (i - r)) := by
-            simpa only [Category.assoc] using hprev1_transport_q.symm
-          have hprev1_transport_target :
-              (eqToHom (show A.obj p (i - p) = A.obj p (i - 1 - (p - 1)) by
-                  congr 1 <;> ring) ≫
-                h.h p (i - 1 - (p - 1)) ≫
-                  B.d1 (p - 1) (i - 1 - (p - 1)) ≫
-                  eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                    B.obj (p - 1 + 1) (i - 1 + 1 - (p - 1 + 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1 + 1) ≫
-                  (eqToHom hprevEqH :
-                    (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                      ∐ fun r : ℤ => B.obj r (i - r)) :
-                A.obj p (i - p) ⟶ (totalComplex B).X i) =
-                ((eqToHom (show A.obj p (i - p) = A.obj p (i - 1 - (p - 1)) by
-                  congr 1 <;> ring) ≫
-                  h.h p (i - 1 - (p - 1)) ≫
-                    B.d1 (p - 1) (i - 1 - (p - 1)) ≫
-                    eqToHom (show B.obj (p - 1 + 1) (i - 1 - (p - 1)) =
-                      B.obj p (i - 1 + 1 - p) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) p ≫
-                    (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r => B.obj r (i - r))) :
-                  A.obj p (i - p) ⟶ (totalComplex B).X i) := by
-            simpa [totalComplex, Category.assoc] using
-              congrArg (fun k =>
-                eqToHom (show A.obj p (i - p) = A.obj p (i - 1 - (p - 1)) by
-                  congr 1 <;> ring) ≫
-                  h.h p (i - 1 - (p - 1)) ≫
-                  B.d1 (p - 1) (i - 1 - (p - 1)) ≫ k ≫
-                  (eqToHom hprevEqH :
-                    (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                      ∐ fun r => B.obj r (i - r))) hindex1_q.symm
-          have hprev2_transport_target :
-              (eqToHom (show A.obj p (i - p) = A.obj p (i - 1 - (p - 1)) by
-                  congr 1 <;> ring) ≫
-                h.h p (i - 1 - (p - 1)) ≫
-                  B.d2 (p - 1) (i - 1 - (p - 1)) ≫
-                  eqToHom (show B.obj (p - 1) (i - 1 - (p - 1) + 1) =
-                    B.obj (p - 1) (i - 1 + 1 - (p - 1)) by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1) ≫
-                  (eqToHom hprevEqH :
-                    (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                      ∐ fun r : ℤ => B.obj r (i - r))) =
-                h.h p (i - p) ≫ B.d2 (p - 1) (i - p) ≫
-                  eqToHom (by congr 1 <;> ring) ≫
-                  Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) := by
-            have hι_prev :
-                Sigma.ι (fun r : ℤ => B.obj r (i - 1 + 1 - r)) (p - 1) ≫
-                    (eqToHom hprevEqH :
-                      (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                        ∐ fun r => B.obj r (i - r)) =
-                  eqToHom (show B.obj (p - 1) (i - 1 + 1 - (p - 1)) =
-                    B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1) := by
-              have hnat := eqToHom_naturality
-                (fun F : ℤ → C => Sigma.ι F (p - 1))
-                (show (fun r : ℤ => B.obj r (i - 1 + 1 - r)) =
-                  (fun r : ℤ => B.obj r (i - r)) by
-                    funext r
-                    congr 1
-                    ring)
-              simpa only [CategoryTheory.eqToHom_comp_heq_iff,
-                CategoryTheory.heq_eqToHom_comp_iff] using hnat
-            have hnat :
-                eqToHom (show A.obj p (i - p) =
-                    A.obj p (i - 1 - (p - 1)) by congr 1 <;> ring) ≫
-                  h.h p (i - 1 - (p - 1)) ≫
-                    B.d2 (p - 1) (i - 1 - (p - 1)) ≫
-                    eqToHom (show B.obj (p - 1) (i - 1 - (p - 1) + 1) =
-                      B.obj (p - 1) (i - (p - 1)) by congr 1 <;> ring) =
-                  h.h p (i - p) ≫ B.d2 (p - 1) (i - p) := by
-              simpa only [Category.assoc] using
-                (eqToHom_naturality_assoc
-                  (fun q : ℤ => h.h p q ≫ B.d2 (p - 1) q)
-                  (show i - p = i - 1 - (p - 1) by ring))
-            simpa only [Category.assoc] using
-              congrArg (fun k => k ≫ (eqToHom hprevEqH :
-                (∐ fun r : ℤ => B.obj r (i - 1 + 1 - r)) ⟶
-                  ∐ fun r : ℤ => B.obj r (i - r))) hnat
+          /- prior attempt:
           refine hhom.trans ?_
-          rw [← hmapTarget_smul]
-          rw [htransport2]
+          conv_rhs =>
+            lhs
+            rw [← hA1]
           conv_rhs =>
             rhs
             rhs
@@ -3320,29 +3077,15 @@ private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
             rw [Sigma.ι_desc]
             simp only [Category.assoc, Preadditive.add_comp,
               Linear.units_smul_comp]
-          rw [Preadditive.comp_add]
-          conv_rhs =>
-            lhs
-            lhs
-            rw [← hA1]
-          conv_rhs =>
-            rhs
-            rw [Preadditive.comp_add]
-          change @Eq (A.obj p (i - p) ⟶ ∐ fun r : ℤ => B.obj r (i - r)) _ _
-          erw [hprev1_transport_target]
-          rw [hprev2_transport_target]
-          have hneg :
-              (-p.negOnePow) •
-                  (h.h p (i - p) ≫ B.d2 (p - 1) (i - p) ≫
-                    eqToHom (by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1)) =
-                -(p.negOnePow •
-                  (h.h p (i - p) ≫ B.d2 (p - 1) (i - p) ≫
-                    eqToHom (by congr 1 <;> ring) ≫
-                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1))) := by
-            exact Units.neg_smul (R := ℤ) p.negOnePow _
-          rw [hneg]
+          rw [← hmapTarget_smul]
+          simp [Category.assoc, hsign,
+            show i - 1 - (p - 1) = i - p by ring,
+            show i - 1 + 1 = i by ring,
+            show p - 1 + 1 = p by ring]
+          rw [hprev1, hprev2]
           abel
+          -/
+          sorry
         refine hfirst.trans ?_
         exact hadd.symm
   · intro n

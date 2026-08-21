@@ -2790,6 +2790,48 @@ private theorem exists_weaklyAssociatedPrime_over_finite_intermediateField
   · exact (comap_tensorProduct_map_includeLeft L q).trans hpq
   · exact weaklyAssociatedPrimes_contract_finite_intermediateField L q hq
 
+/-- After contracting through a finite coefficient-field extension, weak
+association descends from the directly base-changed module to the module over
+the intermediate coefficient field. -/
+private theorem weaklyAssociatedPrimes_descend_finite_intermediateField_module
+    {k F K R M : Type*} [Field k] [Field F] [Field K]
+    [Algebra k F] [Algebra k K] [Algebra F K] [IsScalarTower k F K]
+    [CommRing R] [Algebra k R] [Module.Finite F K]
+    [AddCommGroup M] [Module R M] :
+    let BF := R ⊗[k] F
+    let BK := R ⊗[k] K
+    let f := Algebra.TensorProduct.map (AlgHom.id k R)
+      (IsScalarTower.toAlgHom k F K)
+    letI : Algebra F BF :=
+      (Algebra.TensorProduct.includeRight : F →ₐ[k] BF).toRingHom.toAlgebra
+    letI : Algebra BF BK := f.toRingHom.toAlgebra
+    letI : IsScalarTower R BF BK := IsScalarTower.of_algebraMap_eq' (by
+      ext r
+      change r ⊗ₜ[k] (1 : K) = f (r ⊗ₜ[k] (1 : F))
+      simp [f])
+    ∀ qF : PrimeSpectrum BF,
+      qF ∈ weaklyAssociatedPrimes BF (TensorProduct R BK M) →
+        qF ∈ weaklyAssociatedPrimes BF (TensorProduct R BF M) := by
+  dsimp only
+  let BF := R ⊗[k] F
+  let BK := R ⊗[k] K
+  let f := Algebra.TensorProduct.map (AlgHom.id k R)
+    (IsScalarTower.toAlgHom k F K)
+  letI : Algebra F BF :=
+    (Algebra.TensorProduct.includeRight : F →ₐ[k] BF).toRingHom.toAlgebra
+  letI : Algebra BF BK := f.toRingHom.toAlgebra
+  letI : IsScalarTower R BF BK := IsScalarTower.of_algebraMap_eq' (by
+    ext r
+    change r ⊗ₜ[k] (1 : K) = f (r ⊗ₜ[k] (1 : F))
+    simp [f])
+  intro qF hqF
+  let e := tensorProduct_towerModuleEquiv
+    (k := k) (F := F) (K := K) (R := R) (M := M)
+  have hfamily : qF ∈ weaklyAssociatedPrimes BF
+      ((Module.Free.ChooseBasisIndex F K) →₀ TensorProduct R BF M) :=
+    (weaklyAssociatedPrimes_linearEquiv e qF).1 hqF
+  exact weaklyAssociatedPrimes_finsupp qF hfamily
+
 /-- The change-of-fields descent theorem for a finite field extension. -/
 private theorem weaklyAssociatedPrimes_change_fields_finite
     {k K R M : Type*} [Field k] [Field K] [Algebra k K]

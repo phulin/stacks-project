@@ -55,7 +55,7 @@ def tensorProduct_towerAlgEquiv
     rw [TensorProduct.AlgebraTensorModule.congr_tmul]
     simp
   have hmap : e.toRingHom.comp (algebraMap BF (BF ⊗[F] K)) = f.toRingHom := by
-    ext r x
+    ext r
     · change e (algebraMap BF (BF ⊗[F] K)
           (Algebra.TensorProduct.includeLeftRingHom r)) =
         f (Algebra.TensorProduct.includeLeftRingHom r)

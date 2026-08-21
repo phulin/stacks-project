@@ -1016,7 +1016,13 @@ theorem exactLengthOne_iff
       Formalization.Books.Algebra.Unit102.rank φ = m ∧
         Module.annihilator R
             (Formalization.Books.Algebra.Unit102.rankIdeal φ) = ⊥ := by
-  sorry
+  constructor
+  · intro hφ
+    sorry
+  · rintro ⟨hrank, hann⟩
+    exact injective_of_rank_eq_and_annihilator_eq_bot φ
+      (source_rank_le_of_rank_eq_and_annihilator_eq_bot φ hrank hann)
+      hrank hann
 
 /-- In the Noetherian local case, the nonzerodivisor formulation is equivalent
 to the two preceding formulations. -/

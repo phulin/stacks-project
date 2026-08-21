@@ -16,6 +16,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Free
 import Mathlib.RingTheory.TensorProduct.Free
 import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.RingTheory.LocalProperties.Reduced
+import Mathlib.RingTheory.Flat.Equalizer
 
 /-!
 # Commutative Algebra, Chapter 66: weakly associated primes
@@ -34,6 +35,72 @@ open scoped TensorProduct
 universe u v
 
 noncomputable section
+
+/-- Flat base change preserves the annihilator of a pure tensor. -/
+private theorem annihilator_one_tmul_eq_map
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M] [Module.Flat R S] (m : M) :
+    (⊥ : Submodule S (S ⊗[R] M)).colon ({(1 : S) ⊗ₜ[R] m} : Set (S ⊗[R] M)) =
+      ((⊥ : Submodule R M).colon ({m} : Set M)).map (algebraMap R S) := by
+  let f : R →ₗ[R] M := LinearMap.toSpanSingleton R M m
+  let I : Ideal R := (⊥ : Submodule R M).colon ({m} : Set M)
+  have hker : LinearMap.ker f = I := by
+    ext r
+    simp [f, I, Submodule.mem_colon_singleton, Submodule.mem_bot,
+      LinearMap.mem_ker, LinearMap.toSpanSingleton_apply]
+  ext s
+  constructor
+  · intro hs
+    have hs0 : s • ((1 : S) ⊗ₜ[R] m) = 0 := by
+      simpa [Submodule.mem_colon_singleton, Submodule.mem_bot] using hs
+    have hsKer : (s ⊗ₜ[R] (1 : R)) ∈
+        LinearMap.ker (TensorProduct.AlgebraTensorModule.lTensor S S f) := by
+      rw [LinearMap.mem_ker]
+      simp only [TensorProduct.AlgebraTensorModule.lTensor_tmul]
+      rw [show f 1 = m by simp [f]]
+      simpa only [TensorProduct.smul_tmul', smul_eq_mul, mul_one] using hs0
+    rw [Module.Flat.ker_lTensor_eq, hker] at hsKer
+    rcases hsKer with ⟨y, hy⟩
+    have hImage (y : S ⊗[R] I) :
+        TensorProduct.AlgebraTensorModule.rid R S S
+            (TensorProduct.AlgebraTensorModule.lTensor S S I.subtype y) ∈
+          I.map (algebraMap R S) := by
+      induction y with
+      | zero => simp
+      | tmul a x =>
+          simp only [TensorProduct.AlgebraTensorModule.lTensor_tmul,
+            Submodule.coe_subtype, TensorProduct.AlgebraTensorModule.rid_tmul]
+          simpa [Algebra.smul_def, mul_comm] using
+            Ideal.mul_mem_left (I.map (algebraMap R S)) a
+              (Ideal.mem_map_of_mem (algebraMap R S) x.property)
+      | add x y hx hy => simpa using Ideal.add_mem _ hx hy
+    have hyI := hImage y
+    have hyrid : TensorProduct.AlgebraTensorModule.rid R S S
+          (TensorProduct.AlgebraTensorModule.lTensor S S I.subtype y) = s := by
+      rw [hy]
+      simp
+    rwa [hyrid] at hyI
+  · intro hs
+    apply (show I.map (algebraMap R S) ≤
+        (⊥ : Submodule S (S ⊗[R] M)).colon ({(1 : S) ⊗ₜ[R] m} : Set _) by
+      rw [Ideal.map_le_iff_le_comap]
+      intro r hr
+      change algebraMap R S r ∈
+        (⊥ : Submodule S (S ⊗[R] M)).colon ({(1 : S) ⊗ₜ[R] m} : Set _)
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      change algebraMap R S r • ((1 : S) ⊗ₜ[R] m) = 0
+      have hr0 : r • m = 0 := by
+        simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hr
+      calc
+        algebraMap R S r • ((1 : S) ⊗ₜ[R] m) =
+            (algebraMap R S r * 1) ⊗ₜ[R] m := TensorProduct.smul_tmul' _ _ _
+        _ = (r • (1 : S)) ⊗ₜ[R] m := by
+          have hscalar : r • (1 : S) = algebraMap R S r := by
+            rw [Algebra.smul_def, mul_one]
+          rw [mul_one, hscalar]
+        _ = (1 : S) ⊗ₜ[R] (r • m) := (TensorProduct.tmul_smul _ _ _).symm
+        _ = 0 := by rw [hr0, TensorProduct.tmul_zero])
+    exact hs
 
 /-! ## Definition and localization -/
 

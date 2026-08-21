@@ -125,7 +125,9 @@ theorem exists_bounded_scheme_representatives (κ : Cardinal.{u}) :
     ∃ A : Set Scheme.{u},
       ∀ X : Scheme.{u}, schemeSize X ≤ κ →
         ∃ Y ∈ A, Nonempty (Y ≅ X) := by
-  sorry
+  refine ⟨Set.univ, ?_⟩
+  intro X hX
+  exact ⟨X, Set.mem_univ X, ⟨Iso.refl X⟩⟩
 
 /-- The stage condition used in the transfinite construction of the small category. -/
 def StageAdmissible (c : SchemeCoding.{u}) (α β : Ordinal.{u})
@@ -189,7 +191,9 @@ theorem reflected_witness_mem {M X : ZFSet.{u}}
     (hM : ReflectsWitnessRelation M P PRel) (hX : X ∈ M)
     (hP : ∃ Y, P X Y) :
     ∃ Y ∈ M, P X Y := by
-  sorry
+  rcases hP with ⟨Y, hY⟩
+  rcases (hM.2 X hX).mp ⟨Y, hY⟩ with ⟨Z, hZM, hPRel⟩
+  exact ⟨Z, hZM, (hM.1 X Z hX hZM).mpr hPRel⟩
 
 /-! ### Basic size bounds -/
 

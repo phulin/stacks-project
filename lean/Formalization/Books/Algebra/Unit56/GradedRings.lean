@@ -1035,6 +1035,90 @@ private lemma tensorProduct_component_decomposition
         apply Subtype.ext
         rfl
 
+private lemma tensorProduct_balanced
+    (G : GradedRingData S) (GM : GradedModuleData G M) (GN : GradedModuleData G N)
+    [Module (degreeZeroSubring G) M] [Module (degreeZeroSubring G) N]
+    (CM : ℤ → Submodule (degreeZeroSubring G) M)
+    (CN : ℤ → Submodule (degreeZeroSubring G) N)
+    (CT : ℤ → Submodule (degreeZeroSubring G) (TensorProduct S M N))
+    (F0 : TensorProduct (degreeZeroSubring G) M N →ₗ[degreeZeroSubring G]
+      (⨁ d, CT d))
+    (f : M →+ N →+ (⨁ d, CT d))
+    (hf : ∀ x y, f x y = F0 (x ⊗ₜ[degreeZeroSubring G] y))
+    (hCM : ∀ i (x : CM i), (x : M) ∈ GM.component i)
+    (hCN : ∀ i (x : CN i), (x : N) ∈ GN.component i)
+    (toCM : ∀ i, GM.component i → CM i)
+    (toCN : ∀ i, GN.component i → CN i)
+    (toCM_val : ∀ i (x : GM.component i), ((toCM i x : CM i) : M) = x)
+    (toCN_val : ∀ i (x : GN.component i), ((toCN i x : CN i) : N) = x)
+    (hCT : ∀ d, CT d = Submodule.span (degreeZeroSubring G)
+      (tensorProductHomogeneousTensors G GM GN d))
+    (hF0 : ∀ (i j : ℤ) (m : CM i) (n : CN j),
+      F0 ((m : M) ⊗ₜ[degreeZeroSubring G] (n : N)) =
+        DirectSum.of (fun d => CT d) (i + j)
+          ⟨(m : M) ⊗ₜ[S] (n : N), (hCT (i + j)).symm ▸
+            Submodule.subset_span
+              ⟨i, j, rfl, m, hCM i m, n, hCN j n, rfl⟩⟩) :
+    ∀ (s : S) (m : M) (n : N), f (s • m) n = f m (s • n) := by
+  let : DirectSum.Decomposition (ringModuleComponent G) :=
+    Classical.choice (ringModule_decomposition_exists G)
+  intro s m n
+  induction s using DirectSum.Decomposition.inductionOn
+      (ℳ := ringModuleComponent G) with
+  | zero => simp
+  | add s t hs ht =>
+      simpa [add_smul] using congrArg₂ (· + ·) hs ht
+  | @homogeneous k s =>
+      induction m using DirectSum.Decomposition.inductionOn
+          (ℳ := GM.component) with
+      | zero => simp
+      | add m m' hm hm' =>
+          simpa [smul_add] using congrArg₂ (· + ·) hm hm'
+      | @homogeneous i m =>
+          induction n using DirectSum.Decomposition.inductionOn
+              (ℳ := GN.component) with
+          | zero => simp
+          | add n n' hn hn' =>
+              simpa [smul_add] using congrArg₂ (· + ·) hn hn'
+          | @homogeneous j n =>
+              by_cases hk : 0 ≤ k
+              · have hs : (s : S) ∈ G.component k.toNat := by
+                  simpa [ringModuleComponent, hk] using s.property
+                have hsm : (s : S) • (m : M) ∈ GM.component (k + i) := by
+                  have h := GM.gradedSMul.smul_mem hs m.property
+                  change (s : S) • (m : M) ∈ GM.component ((k.toNat : ℤ) + i) at h
+                  simpa [Int.toNat_of_nonneg hk] using h
+                have hsn : (s : S) • (n : N) ∈ GN.component (k + j) := by
+                  have h := GN.gradedSMul.smul_mem hs n.property
+                  change (s : S) • (n : N) ∈ GN.component ((k.toNat : ℤ) + j) at h
+                  simpa [Int.toNat_of_nonneg hk] using h
+                rw [hf, hf]
+                have hleft_tensor :
+                    ((s : S) • (m : M)) ⊗ₜ[degreeZeroSubring G] (n : N) =
+                      (toCM _ ⟨(s : S) • (m : M), hsm⟩ : M) ⊗ₜ[degreeZeroSubring G]
+                        (toCN _ n : N) := by
+                  rw [toCM_val, toCN_val]
+                have hright_tensor :
+                    (m : M) ⊗ₜ[degreeZeroSubring G] ((s : S) • (n : N)) =
+                      (toCM _ m : M) ⊗ₜ[degreeZeroSubring G]
+                        (toCN _ ⟨(s : S) • (n : N), hsn⟩ : N) := by
+                  rw [toCM_val, toCN_val]
+                rw [hleft_tensor, hright_tensor]
+                rw [hF0 (k + i) j (toCM _ ⟨(s : S) • (m : M), hsm⟩) (toCN _ n),
+                  hF0 i (k + j) (toCM _ m) (toCN _ ⟨(s : S) • (n : N), hsn⟩)]
+                change DFinsupp.single (k + i + j) _ = DFinsupp.single (i + (k + j)) _
+                rw [DFinsupp.single_eq_single_iff]
+                left
+                have hdeg : k + i + j = i + (k + j) := by omega
+                constructor
+                · exact hdeg
+                · apply (Subtype.heq_iff_coe_eq (fun x => by
+                    simp [hdeg])).2
+                  simp [toCM_val, toCN_val, TensorProduct.smul_tmul]
+              · have hs0 : (s : S) = 0 := by
+                  simpa [ringModuleComponent, hk] using s.property
+                simp [hs0]
+
 theorem tensorProduct_decomposition_exists
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :
     Nonempty (DirectSum.Decomposition (tensorProductComponent G 𝓜 𝓝)) := by
@@ -1237,61 +1321,12 @@ theorem tensorProduct_decomposition_exists
             ((y : M) ⊗ₜ[degreeZeroSubring G] n) }
   let : DirectSum.Decomposition (ringModuleComponent G) :=
     Classical.choice (ringModule_decomposition_exists G)
-  have hbal : ∀ (s : S) (m : M) (n : N), f (s • m) n = f m (s • n) := by
-    intro s m n
-    induction s using DirectSum.Decomposition.inductionOn
-        (ℳ := ringModuleComponent G) with
-    | zero => simp [f]
-    | add s t hs ht =>
-        simpa [f, add_smul, TensorProduct.add_tmul, TensorProduct.tmul_add] using
-          congrArg₂ (· + ·) hs ht
-    | @homogeneous k s =>
-        induction m using DirectSum.Decomposition.inductionOn
-            (ℳ := 𝓜.component) with
-        | zero => simp [f]
-        | add m m' hm hm' =>
-            simpa [f, smul_add, TensorProduct.add_tmul, TensorProduct.tmul_add] using
-              congrArg₂ (· + ·) hm hm'
-        | @homogeneous i m =>
-            induction n using DirectSum.Decomposition.inductionOn
-                (ℳ := 𝓝.component) with
-            | zero => simp [f]
-            | add n n' hn hn' =>
-                simpa [f, smul_add, TensorProduct.tmul_add, TensorProduct.add_tmul] using
-                  congrArg₂ (· + ·) hn hn'
-            | @homogeneous j n =>
-                by_cases hk : 0 ≤ k
-                · have hs : (s : S) ∈ G.component k.toNat := by
-                    simpa [ringModuleComponent, hk] using s.property
-                  have hsm : (s : S) • (m : M) ∈ 𝓜.component (k + i) := by
-                    have h := 𝓜.gradedSMul.smul_mem hs m.property
-                    change (s : S) • (m : M) ∈
-                      𝓜.component ((k.toNat : ℤ) + i) at h
-                    simpa [Int.toNat_of_nonneg hk] using h
-                  have hsn : (s : S) • (n : N) ∈ 𝓝.component (k + j) := by
-                    have h := 𝓝.gradedSMul.smul_mem hs n.property
-                    change (s : S) • (n : N) ∈
-                      𝓝.component ((k.toNat : ℤ) + j) at h
-                    simpa [Int.toNat_of_nonneg hk] using h
-                  change F₀ (((s : S) • (m : M)) ⊗ₜ[degreeZeroSubring G] (n : N)) =
-                    F₀ ((m : M) ⊗ₜ[degreeZeroSubring G] ((s : S) • (n : N)))
-                  rw [hF₀_hom (k + i) j ⟨(s : S) • (m : M), hsm⟩ n,
-                    hF₀_hom i (k + j) m ⟨(s : S) • (n : N), hsn⟩]
-                  /- Prior attempt: the dependent `DirectSum.of` terms require
-                     transporting both the degree and its membership proof. -/
-                  change DFinsupp.single (k + i + j) _ =
-                    DFinsupp.single (i + (k + j)) _
-                  rw [DFinsupp.single_eq_single_iff]
-                  left
-                  have hdeg : k + i + j = i + (k + j) := by omega
-                  constructor
-                  · exact hdeg
-                  · apply (Subtype.heq_iff_coe_eq (fun x => by
-                      simp [CT, hdeg])).2
-                    simp [TensorProduct.smul_tmul]
-                · have hs0 : (s : S) = 0 := by
-                    simpa [ringModuleComponent, hk] using s.property
-                  simp [hs0]
+  have hbal : ∀ (s : S) (m : M) (n : N), f (s • m) n = f m (s • n) :=
+    tensorProduct_balanced G _ _ CM CN CT F₀ f (fun _ _ => rfl)
+      (fun _ x => by simpa [CM] using x.property)
+      (fun _ x => by simpa [CN] using x.property)
+      (fun i x => embM i x) (fun i x => embN i x)
+      (fun _ _ => rfl) (fun _ _ => rfl) (fun _ => rfl) hF₀_hom
   let F : TensorProduct S M N →+ (⨁ d, CT d) := TensorProduct.liftAddHom f hbal
   let coe : (⨁ d, CT d) →+ TensorProduct S M N := DirectSum.coeAddMonoidHom CT
   have hf (x : M) (y : N) :

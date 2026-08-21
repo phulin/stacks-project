@@ -21,6 +21,7 @@ namespace Formalization.Books.Algebra.Unit58
 open Formalization.Books.Algebra.Unit55
 open Formalization.Books.Algebra.Unit56
 open scoped BigOperators
+open scoped DirectSum
 
 universe u v
 
@@ -777,6 +778,186 @@ abbrev associatedGradedModule
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) : Type _ :=
   DirectSum ℕ (fun n => associatedGradedModulePiece (M := M) I n)
+
+/-! The following small wrappers turn an external direct sum back into the
+internal grading interface used by the Hilbert-polynomial argument. -/
+
+def directSumComponent
+    {ι : Type u} {A : ι → Type v} [∀ i, AddCommGroup (A i)] [DecidableEq ι]
+    (i : ι) :
+    AddSubgroup (DirectSum ι A) :=
+  (DirectSum.of A i).range
+
+@[instance_reducible]
+def directSumComponent_decomposition
+    {ι : Type u} {A : ι → Type v} [∀ i, AddCommGroup (A i)] [DecidableEq ι] :
+    DirectSum.Decomposition (directSumComponent (A := A)) := by
+  classical
+  change DirectSum.Decomposition (fun i => (DirectSum.of A i).range)
+  let f : (DirectSum ι A) →+
+      (⨁ i, (DirectSum.of A i).range) :=
+    DirectSum.map (fun i => (DirectSum.of A i).rangeRestrict)
+  apply DirectSum.Decomposition.ofAddHom
+    (ℳ := fun i => (DirectSum.of A i).range) f
+  · apply DirectSum.addHom_ext
+    intro i x
+    change (DirectSum.coeAddMonoidHom
+        (fun i => (DirectSum.of A i).range))
+        (DirectSum.map (fun i => (DirectSum.of A i).rangeRestrict)
+          (DirectSum.of A i x)) = DirectSum.of A i x
+    rw [DirectSum.map_of, DirectSum.coeAddMonoidHom_of]
+    rfl
+  · apply DirectSum.addHom_ext
+    intro i x
+    rcases x with ⟨x, hx⟩
+    rcases hx with ⟨y, rfl⟩
+    simp [f]
+    rfl
+
+def directSumNatComponent
+    {A : ℕ → Type u} [∀ i, AddCommGroup (A i)] (d : ℤ) :
+    AddSubgroup (DirectSum ℕ A) :=
+  if 0 ≤ d then directSumComponent (A := A) d.toNat else ⊥
+
+instance directSumNatComponent_module
+    {R : Type u} {A : ℕ → Type v} [CommRing R]
+    [∀ i, AddCommGroup (A i)] [∀ i, Module R (A i)] (d : ℤ) :
+    Module R (directSumNatComponent (A := A) d) where
+  smul r x := ⟨r • (x : DirectSum ℕ A), by
+    by_cases hd : 0 ≤ d
+    · have hx : (x : DirectSum ℕ A) ∈ directSumComponent (A := A) d.toNat := by
+        simpa [directSumNatComponent, hd] using x.property
+      rcases hx with ⟨y, hy⟩
+      simp only [directSumNatComponent, hd]
+      refine ⟨r • y, ?_⟩
+      rw [← hy, DirectSum.of_smul]
+    · have hx : (x : DirectSum ℕ A) = 0 := by
+        simpa [directSumNatComponent, hd] using x.property
+      simp only [directSumNatComponent, hd]
+      rw [hx, smul_zero]
+      exact (⊥ : AddSubgroup (DirectSum ℕ A)).zero_mem⟩
+  one_smul x := by
+    apply Subtype.ext
+    exact one_smul R (x : DirectSum ℕ A)
+  mul_smul r s x := by
+    apply Subtype.ext
+    exact (smul_smul r s (x : DirectSum ℕ A)).symm
+  smul_add r x y := by
+    apply Subtype.ext
+    exact smul_add r (x : DirectSum ℕ A) (y : DirectSum ℕ A)
+  smul_zero r := by
+    apply Subtype.ext
+    exact smul_zero r
+  add_smul r s x := by
+    apply Subtype.ext
+    exact add_smul r s (x : DirectSum ℕ A)
+  zero_smul x := by
+    apply Subtype.ext
+    exact zero_smul R (x : DirectSum ℕ A)
+
+@[instance_reducible]
+def directSumNatComponent_decomposition
+    {A : ℕ → Type u} [∀ i, AddCommGroup (A i)] :
+    DirectSum.Decomposition (directSumNatComponent (A := A)) := by
+  classical
+  let φ : ∀ n : ℕ, A n →+
+      directSumNatComponent (A := A) (n : ℤ) := fun n =>
+    { toFun := fun x => ⟨DirectSum.of A n x, by
+        simp [directSumNatComponent, directSumComponent]⟩
+      map_zero' := by
+        apply Subtype.ext
+        simp
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp }
+  let decompose : (DirectSum ℕ A) →+
+      (⨁ d, directSumNatComponent (A := A) d) :=
+    DirectSum.toAddMonoid (β := A) (fun n : ℕ =>
+      (DirectSum.of (fun d : ℤ => directSumNatComponent (A := A) d) (n : ℤ)).comp
+        (φ n))
+  apply DirectSum.Decomposition.ofAddHom
+    (ℳ := fun d => directSumNatComponent (A := A) d) decompose
+  · apply DirectSum.addHom_ext
+    intro n x
+    simp [decompose, φ]
+  · apply DirectSum.addHom_ext
+    intro d x
+    change decompose ((DirectSum.coeAddMonoidHom
+        (fun d => directSumNatComponent (A := A) d))
+        (DirectSum.of (fun d : ℤ => directSumNatComponent (A := A) d) d x)) =
+      DirectSum.of (fun d : ℤ => directSumNatComponent (A := A) d) d x
+    rw [DirectSum.coeAddMonoidHom_of]
+    by_cases hd : 0 ≤ d
+    · have hx : (x : DirectSum ℕ A) ∈ directSumComponent (A := A) d.toNat := by
+        simpa [directSumNatComponent, hd] using x.property
+      rcases hx with ⟨y, hy⟩
+      have hcast : (d.toNat : ℤ) = d := Int.toNat_of_nonneg hd
+      have hxy : (x : DirectSum ℕ A) = DirectSum.of A d.toNat y := hy.symm
+      have hxeq :
+          (⟨DirectSum.of A d.toNat y, by
+            simpa [directSumNatComponent, hd] using
+              (show DirectSum.of A d.toNat y ∈
+                  directSumComponent (A := A) d.toNat from ⟨y, rfl⟩)⟩ :
+            directSumNatComponent (A := A) d) = x := by
+        apply Subtype.ext
+        exact hxy.symm
+      rw [← hxeq]
+      dsimp [decompose]
+      rw [DirectSum.toAddMonoid_of]
+      dsimp [φ]
+      cases d <;> simp_all [directSumNatComponent, directSumComponent]
+    · have hx : (x : DirectSum ℕ A) = 0 := by
+        simpa [directSumNatComponent, hd] using x.property
+      have hxeq : x = (0 : directSumNatComponent (A := A) d) :=
+        Subtype.ext hx
+      rw [hxeq]
+      simp [decompose, φ]
+
+noncomputable def directSumNatComponent_linearEquiv
+    {R : Type u} {A : ℕ → Type v} [CommRing R]
+    [∀ i, AddCommGroup (A i)] [∀ i, Module R (A i)] (n : ℕ) :
+    directSumNatComponent (A := A) (n : ℤ) ≃ₗ[R] A n := by
+  let f : directSumNatComponent (A := A) (n : ℤ) →ₗ[R] A n :=
+    { toFun := fun x => x.1 n
+      map_add' := by intro x y; rfl
+      map_smul' := by intro r x; rfl }
+  let g : A n →ₗ[R] directSumNatComponent (A := A) (n : ℤ) :=
+    { toFun := fun x => ⟨DirectSum.of A n x, by
+        simp [directSumNatComponent, directSumComponent]
+        ⟩
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp
+      map_smul' := by
+        intro r x
+        apply Subtype.ext
+        change DirectSum.of A n (r • x) = r • DirectSum.of A n x
+        exact DirectSum.of_smul R n r x }
+  exact { f with
+    invFun := g
+    left_inv := by
+      intro x
+      apply Subtype.ext
+      have hx : (x : DirectSum ℕ A) ∈ directSumComponent (A := A) n := by
+        simpa [directSumNatComponent] using x.property
+      rcases hx with ⟨y, hy⟩
+      change DirectSum.of A n (x.1 n) = x.1
+      calc
+        DirectSum.of A n (x.1 n) =
+            DirectSum.of A n ((DirectSum.of A n y) n) := by rw [← hy]
+        _ = DirectSum.of A n y := by simp
+        _ = x.1 := hy
+    right_inv := by
+      intro x
+      simp [f, g] }
+
+def associatedGradedRingComponent
+    {R : Type u} [CommRing R] (I : Ideal R) (n : ℕ) :
+    AddSubgroup (associatedGradedRing I) :=
+  directSumComponent (A := fun n => associatedGradedRingPiece I n) n
+
 
 private def associatedGradedRingPieceMulAux
     {R : Type u} [CommRing R] (I : Ideal R) (i j : ℕ) :
@@ -1588,6 +1769,292 @@ noncomputable def noetherianGradedHilbertFunction
 def GeneratedInDegreeOne (G : GradedRingData S) : Prop :=
   ∃ t : Set S, (∀ x ∈ t, x ∈ G.component 1) ∧
     Ideal.span t = irrelevantIdeal G
+
+theorem associatedGradedRingComponent_graded
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    SetLike.GradedMonoid (associatedGradedRingComponent I) := by
+  refine { one_mem := ?_, mul_mem := ?_ }
+  · change (1 : associatedGradedRing I) ∈
+      directSumComponent (A := fun n => associatedGradedRingPiece I n) 0
+    refine ⟨GradedMonoid.GOne.one, ?_⟩
+    rfl
+  · intro i j x y hx hy
+    rcases hx with ⟨x, rfl⟩
+    rcases hy with ⟨y, rfl⟩
+    refine ⟨@GradedMonoid.GMul.mul ℕ
+      (fun n => associatedGradedRingPiece I n) _ _ _ _ x y, ?_⟩
+    rw [DirectSum.of_mul_of]
+
+noncomputable def associatedGradedRingData
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    GradedRingData (associatedGradedRing I) := by
+  let D : DirectSum.Decomposition (associatedGradedRingComponent I) :=
+    directSumComponent_decomposition
+  let G : SetLike.GradedMonoid (associatedGradedRingComponent I) :=
+    associatedGradedRingComponent_graded I
+  exact ⟨associatedGradedRingComponent I,
+    { one_mem := G.one_mem, mul_mem := G.mul_mem,
+      decompose' := D.decompose', left_inv := D.left_inv,
+      right_inv := D.right_inv }⟩
+
+def associatedGradedModuleComponent
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (d : ℤ) : AddSubgroup (associatedGradedModule (M := M) I) :=
+  directSumNatComponent
+    (A := fun n => associatedGradedModulePiece (M := M) I n) d
+
+theorem associatedGradedModuleComponent_gradedSMul
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) :
+    SetLike.GradedSMul (associatedGradedRingComponent I)
+      (associatedGradedModuleComponent I (M := M)) := by
+  refine { smul_mem := ?_ }
+  intro i j x y hx hy
+  rcases hx with ⟨a, rfl⟩
+  by_cases hj : 0 ≤ j
+  · have hy' : (y : associatedGradedModule (M := M) I) ∈
+        directSumComponent
+          (A := fun n => associatedGradedModulePiece (M := M) I n) j.toNat := by
+      simpa [associatedGradedModuleComponent, directSumNatComponent, hj] using hy
+    rcases hy' with ⟨b, hb⟩
+    have hcast : ((i + j.toNat : ℕ) : ℤ) = (i : ℤ) + j := by
+      simp [Int.toNat_of_nonneg hj]
+    have hpos : 0 ≤ (i : ℤ) + j := by omega
+    have htoNat : ((i : ℤ) + j).toNat = i + j.toNat := by
+      apply Int.ofNat_inj.mp
+      rw [Int.toNat_of_nonneg hpos]
+      exact hcast.symm
+    have hsmul :
+        (DirectSum.of (fun n => associatedGradedRingPiece I n) i a) • y =
+          DirectSum.of
+            (fun n => associatedGradedModulePiece (M := M) I n)
+            (i + j.toNat)
+            ((associatedGradedModule_gmodule I).toGdistribMulAction.toGMulAction.toGSMul.smul
+              a b) := by
+      rw [← hb]
+      simp [vadd_eq_add]
+    rw [hsmul]
+    change DirectSum.of
+        (fun n => associatedGradedModulePiece (M := M) I n)
+        (i + j.toNat)
+        ((associatedGradedModule_gmodule I).toGdistribMulAction.toGMulAction.toGSMul.smul a b) ∈
+      if 0 ≤ (i : ℤ) + j then
+        directSumComponent
+          (A := fun n => associatedGradedModulePiece (M := M) I n)
+          ((i : ℤ) + j).toNat else ⊥
+    rw [if_pos hpos, htoNat]
+    exact ⟨_, rfl⟩
+  · have hy0 : (y : associatedGradedModule (M := M) I) = 0 := by
+      simp [associatedGradedModuleComponent, directSumNatComponent, hj] at hy
+      exact hy
+    have hzero :
+        (DirectSum.of (fun n => associatedGradedRingPiece I n) i a :
+            associatedGradedRing I) •
+            (0 : associatedGradedModule (M := M) I) = 0 := by
+      change DirectSum.Gmodule.smulAddMonoidHom
+          (associatedGradedRingPiece I)
+          (fun n => associatedGradedModulePiece (M := M) I n)
+          (DirectSum.of (fun n => associatedGradedRingPiece I n) i a) 0 = 0
+      exact (DirectSum.Gmodule.smulAddMonoidHom
+        (associatedGradedRingPiece I)
+        (fun n => associatedGradedModulePiece (M := M) I n)
+        (DirectSum.of (fun n => associatedGradedRingPiece I n) i a)).map_zero
+    rw [hy0, hzero]
+    exact (associatedGradedModuleComponent I (M := M) ((i : ℤ) + j)).zero_mem
+
+noncomputable def associatedGradedModuleData
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) :
+    GradedModuleData (associatedGradedRingData I)
+      (associatedGradedModule (M := M) I) := by
+  let D : DirectSum.Decomposition
+      (associatedGradedModuleComponent I (M := M)) :=
+    directSumNatComponent_decomposition
+  exact ⟨associatedGradedModuleComponent I (M := M), D, by
+      change SetLike.GradedSMul (associatedGradedRingComponent I)
+        (associatedGradedModuleComponent I (M := M))
+      exact associatedGradedModuleComponent_gradedSMul I⟩
+
+theorem associatedGradedModule_external_smul_of_of
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) {i j : ℕ}
+    (a : associatedGradedRingPiece I i)
+    (b : associatedGradedModulePiece (M := M) I j) :
+    (DirectSum.of (fun n => associatedGradedRingPiece I n) i a :
+        associatedGradedRing I) •
+        (DirectSum.of (fun n => associatedGradedModulePiece (M := M) I n)
+          j b : associatedGradedModule (M := M) I) =
+      DirectSum.of
+        (fun n => associatedGradedModulePiece (M := M) I n)
+        (i +ᵥ j)
+          ((associatedGradedModule_gmodule I).toGdistribMulAction.toGMulAction.toGSMul.smul a b) := by
+    simp [vadd_eq_add]
+
+theorem associatedGradedRingData_generatedInDegreeOne
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    GeneratedInDegreeOne (associatedGradedRingData I) := by
+  let : GradedRing (associatedGradedRingComponent I) :=
+    (associatedGradedRingData I).graded
+  let : GradedRing (associatedGradedRingData I).component :=
+    (associatedGradedRingData I).graded
+  let : Algebra (degreeZeroSubring (associatedGradedRingData I))
+      (associatedGradedRing I) :=
+    Algebra.ofSubsemiring (degreeZeroSubring (associatedGradedRingData I))
+  let f : associatedGradedRingPiece I 1 → associatedGradedRing I :=
+    fun x => DirectSum.of (fun n => associatedGradedRingPiece I n) 1 x
+  have hf : ∀ x, IsHomogeneousElement (associatedGradedRingData I) (f x) ∧
+      f x ∈ irrelevantIdeal (associatedGradedRingData I) := by
+    intro x
+    refine ⟨⟨1, ?_⟩, ?_⟩
+    · exact ⟨x, rfl⟩
+    · exact HomogeneousIdeal.mem_irrelevant_of_mem
+        (𝒜 := associatedGradedRingComponent I) (by omega) ⟨x, rfl⟩
+  have hgen : Algebra.adjoin (degreeZeroSubring (associatedGradedRingData I))
+      (Set.range f) = (⊤ : Subalgebra (degreeZeroSubring (associatedGradedRingData I))
+        (associatedGradedRing I)) := by
+    let P := Algebra.adjoin (degreeZeroSubring (associatedGradedRingData I))
+      (Set.range f)
+    have hpow : ∀ n : ℕ, ∀ x : R, ∀ hx : x ∈ I ^ n,
+        DirectSum.of (fun n => associatedGradedRingPiece I n) n
+            (Submodule.Quotient.mk ⟨x, hx⟩) ∈ P := by
+      intro n x hx
+      exact Submodule.pow_induction_on_left' I
+        (C := fun n x hx =>
+          DirectSum.of (fun n => associatedGradedRingPiece I n) n
+              (Submodule.Quotient.mk ⟨x, hx⟩) ∈ P)
+        (algebraMap := by
+          intro r
+          let q : associatedGradedRingPiece I 0 :=
+            Submodule.Quotient.mk ⟨algebraMap R R r, by simp⟩
+          have hq : (DirectSum.of
+              (fun n => associatedGradedRingPiece I n) 0 q : associatedGradedRing I) ∈ P := by
+            have hzero : (DirectSum.of
+                (fun n => associatedGradedRingPiece I n) 0 q : associatedGradedRing I) ∈
+                (associatedGradedRingData I).component 0 := by
+              change (DirectSum.of
+                  (fun n => associatedGradedRingPiece I n) 0 q : associatedGradedRing I) ∈
+                associatedGradedRingComponent I 0
+              exact ⟨q, rfl⟩
+            let hz : degreeZeroSubring (associatedGradedRingData I) :=
+              ⟨(DirectSum.of (fun n => associatedGradedRingPiece I n) 0 q :
+                  associatedGradedRing I), hzero⟩
+            have hq' := P.algebraMap_mem hz
+            change (hz : associatedGradedRing I) ∈ P at hq'
+            have hq'' : (DirectSum.of
+                (fun n => associatedGradedRingPiece I n) 0 q : associatedGradedRing I) ∈ P := by
+              simpa only [hz] using hq'
+            simpa [q] using hq''
+          exact hq)
+        (add := by
+          intro x y n hx hy h₁ h₂
+          change (DirectSum.of (fun n => associatedGradedRingPiece I n) n)
+              (Submodule.Quotient.mk
+                ((⟨x, hx⟩ : (I ^ n : Submodule R R)) +
+                  (⟨y, hy⟩ : (I ^ n : Submodule R R)))) ∈ P
+          rw [Submodule.Quotient.mk_add, map_add]
+          exact P.add_mem h₁ h₂)
+        (mem_mul := by
+          intro m hm n x hx hxn
+          have hm' : m ∈ I ^ 1 := by simpa using hm
+          have hmP : f (Submodule.Quotient.mk ⟨m, hm'⟩) ∈ P :=
+            Algebra.subset_adjoin
+              (Set.mem_range.mpr ⟨Submodule.Quotient.mk ⟨m, hm'⟩, rfl⟩)
+          have hmul := P.mul_mem hmP hxn
+          rw [DirectSum.of_mul_of] at hmul
+          change (DirectSum.of (fun n => associatedGradedRingPiece I n) (1 + n))
+              (associatedGradedRingPieceMul I 1 n
+                (Submodule.Quotient.mk ⟨m, hm'⟩)
+                (Submodule.Quotient.mk ⟨x, hx⟩)) ∈ P at hmul
+          have hpiece := associatedGradedRingPieceMul_mk I
+            (a := (⟨m, hm'⟩ : (I ^ 1 : Submodule R R)))
+            (b := (⟨x, hx⟩ : (I ^ n : Submodule R R)))
+          have hmul' :
+              (DirectSum.of (fun n => associatedGradedRingPiece I n) (1 + n))
+                  (Submodule.Quotient.mk ⟨m * x, by
+                    rw [Ideal.IsTwoSided.pow_add]
+                    exact Ideal.mul_mem_mul hm' hx⟩) ∈ P := by
+            rw [← hpiece]
+            exact hmul
+          have hindex : 1 + n = n.succ := by omega
+          have hp₂ : m * x ∈ I ^ n.succ := by
+            have hpow : I ^ n.succ = I ^ 1 * I ^ n := by
+              calc
+                I ^ n.succ = I ^ (1 + n) := by
+                  congr 1
+                  omega
+                _ = I ^ 1 * I ^ n := Ideal.IsTwoSided.pow_add 1 n
+            rw [hpow]
+            exact Ideal.mul_mem_mul hm' hx
+          let a : (I ^ (1 + n) : Submodule R R) := ⟨m * x, by
+            rw [Ideal.IsTwoSided.pow_add]
+            exact Ideal.mul_mem_mul hm' hx⟩
+          let b : (I ^ n.succ : Submodule R R) := ⟨m * x, hp₂⟩
+          have hval :
+              (DirectSum.of (fun n => associatedGradedRingPiece I n) (1 + n)
+                (Submodule.Quotient.mk a)) =
+                DirectSum.of (fun n => associatedGradedRingPiece I n) n.succ
+                  (Submodule.Quotient.mk b) := by
+            apply DirectSum.of_eq_of_gradedMonoid_eq
+            apply Sigma.ext hindex
+            exact associatedGradedRingPiece_mk_heq I hindex a b rfl
+          have hmul_a :
+              (DirectSum.of (fun n => associatedGradedRingPiece I n) (1 + n)
+                (Submodule.Quotient.mk a)) ∈ P := by
+            change (DirectSum.of (fun n => associatedGradedRingPiece I n) (1 + n)
+              (Submodule.Quotient.mk a)) ∈ P at hmul'
+            exact hmul'
+          change (DirectSum.of (fun n => associatedGradedRingPiece I n) n.succ
+            (Submodule.Quotient.mk b)) ∈ P
+          rw [← hval]
+          exact hmul_a)
+        hx
+    apply top_unique
+    intro z hz
+    clear hz
+    induction z using DirectSum.Decomposition.inductionOn
+      (ℳ := (associatedGradedRingData I).component) with
+    | zero => exact P.zero_mem
+    | @homogeneous n z =>
+        rcases z.property with ⟨a, ha⟩
+        rw [← ha]
+        refine Submodule.Quotient.induction_on _ a ?_
+        intro a
+        exact hpow n (a : R) a.property
+    | add z w hz hw => exact P.add_mem hz hw
+  refine ⟨Set.range f, ?_, ?_⟩
+  · intro x hx
+    rcases Set.mem_range.mp hx with ⟨i, rfl⟩
+    change DirectSum.of (fun n => associatedGradedRingPiece I n) 1 i ∈
+      directSumComponent (A := fun n => associatedGradedRingPiece I n) 1
+    exact ⟨i, rfl⟩
+  · exact (sPlus_generated_iff (associatedGradedRingData I) f hf).mp hgen
+
+instance associatedGradedModuleData_component_module
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (d : ℤ) :
+    Module R ((associatedGradedModuleData (M := M) I).component d) := by
+  change Module R
+    (directSumNatComponent
+      (A := fun n => associatedGradedModulePiece (M := M) I n) d)
+  infer_instance
+
+noncomputable def associatedGradedModuleComponentLinearEquiv
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (n : ℕ) :
+    (associatedGradedModuleData (M := M) I).component (n : ℤ) ≃ₗ[R]
+    associatedGradedModulePiece (M := M) I n :=
+  by
+    change directSumNatComponent
+      (A := fun n => associatedGradedModulePiece (M := M) I n) (n : ℤ) ≃ₗ[R]
+      associatedGradedModulePiece (M := M) I n
+    exact directSumNatComponent_linearEquiv n
+
+theorem associatedGradedModuleComponent_length_eq
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (n : ℕ) :
+    Module.length R ((associatedGradedModuleData (M := M) I).component (n : ℤ)) =
+      Module.length R (associatedGradedModulePiece (M := M) I n) := by
+  exact (associatedGradedModuleComponentLinearEquiv I n).length_eq
 
 private noncomputable def gradedKernelModule
     (G : GradedRingData S) {A B : Type v}

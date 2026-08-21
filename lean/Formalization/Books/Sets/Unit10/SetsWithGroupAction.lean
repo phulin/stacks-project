@@ -14,7 +14,7 @@ textbook regards these objects as sets in the ambient cumulative hierarchy;
 coding bridge used in the preceding Sets chapter.
 -/
 
-universe u
+universe u v w
 
 namespace Formalization.Books.Sets.Unit10
 
@@ -62,13 +62,13 @@ def IsRepresentedAt [Group G] (c : GSetCoding G) (α : Ordinal.{u}) (T : GSet G)
 
 /-- The source's assertion that a limit in `GSet α` agrees with the ambient limit. -/
 def GSetLimitConeAgreesWithAmbient [Group G] {c : GSetCoding G} {α : Ordinal.{u}}
-    {I : Type u} [Category.{u} I] (F : I ⥤ GSetLevel c α) : Prop :=
+    {I : Type v} [Category.{w, v} I] (F : I ⥤ GSetLevel c α) : Prop :=
   ∀ (t : LimitCone F) (s : LimitCone (F ⋙ gSetInclusion c α)),
     Nonempty ((gSetInclusion c α).mapCone t.cone ≅ s.cone)
 
 /-- The source's assertion that a colimit in `GSet α` agrees with the ambient colimit. -/
 def GSetColimitCoconeAgreesWithAmbient [Group G] {c : GSetCoding G} {α : Ordinal.{u}}
-    {I : Type u} [Category.{u} I] (F : I ⥤ GSetLevel c α) : Prop :=
+    {I : Type v} [Category.{w, v} I] (F : I ⥤ GSetLevel c α) : Prop :=
   ∀ (t : ColimitCocone F) (s : ColimitCocone (F ⋙ gSetInclusion c α)),
     Nonempty ((gSetInclusion c α).mapCocone t.cocone ≅ s.cocone)
 
@@ -81,18 +81,18 @@ structure GSetLevelData [Group G] (c : GSetCoding G) (S₀ : Set (GSet G))
     ∀ S : GSetLevel c α, ∀ T : GSet G,
       gSetSize G T ≤ Bound (gSetSize G S.obj) → IsRepresentedAt c α T
   limits :
-    ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
+    ∀ {I : Type v} [Category.{w, v} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α),
       Nonempty (LimitCone (F ⋙ gSetInclusion c α)) ↔ Nonempty (LimitCone F)
   limit_agreement :
-    ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
+    ∀ {I : Type v} [Category.{w, v} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α), GSetLimitConeAgreesWithAmbient F
   colimits :
-    ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
+    ∀ {I : Type v} [Category.{w, v} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α),
       Nonempty (ColimitCocone (F ⋙ gSetInclusion c α)) ↔ Nonempty (ColimitCocone F)
   colimit_agreement :
-    ∀ {I : Type u} [Category.{u} I] [CountableCategory I]
+    ∀ {I : Type v} [Category.{w, v} I] [CountableCategory I]
       (F : I ⥤ GSetLevel c α), GSetColimitCoconeAgreesWithAmbient F
 
 /-! ### The first source lemma -/

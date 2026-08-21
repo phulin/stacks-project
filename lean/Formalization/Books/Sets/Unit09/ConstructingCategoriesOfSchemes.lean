@@ -205,7 +205,8 @@ theorem schemeSize_affine (X : Scheme.{u}) [IsAffine X] :
 /-- The size bound for an open cover by schemes. -/
 theorem schemeSize_le_of_openCover (X : Scheme.{u}) (𝒰 : X.OpenCover) :
     schemeSize X ≤
-      max (Cardinal.mk 𝒰.I₀) (⨆ i : 𝒰.I₀, schemeSize (𝒰.X i)) := by
+      max Cardinal.aleph0
+        (max (Cardinal.mk 𝒰.I₀) (⨆ i : 𝒰.I₀, schemeSize (𝒰.X i))) := by
   sorry
 
 /-- The size bound for a fibre product of schemes. -/

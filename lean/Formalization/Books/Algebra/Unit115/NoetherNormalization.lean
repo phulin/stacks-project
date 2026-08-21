@@ -1936,12 +1936,23 @@ private theorem comap_tail_of_triangular_composition
     (hβ : (∀ i : Fin n, β (MvPolynomial.X i.castSucc) =
         MvPolynomial.rename Fin.castSucc (ψ (MvPolynomial.X i))) ∧
       β (MvPolynomial.X (Fin.last n)) = MvPolynomial.X (Fin.last n))
+    (hταC : τ.comp (MvPolynomial.C : k →+*
+        MvPolynomial (Fin (n + 1)) k) =
+      α.comp (MvPolynomial.C : k →+*
+        MvPolynomial (Fin n) k))
+    (hψC : ψ.comp (MvPolynomial.C : k →+*
+        MvPolynomial (Fin n) k) =
+      (MvPolynomial.C : k →+* MvPolynomial (Fin n) k))
+    (hβC : β.comp (MvPolynomial.C : k →+*
+        MvPolynomial (Fin (n + 1)) k) =
+      (MvPolynomial.C : k →+* MvPolynomial (Fin (n + 1)) k))
     (hf : f ∈ q)
     (hr : r ≤ n)
     (hp : (q.comap α).comap ψ = tailVariableIdeal k n r) :
     q.comap (τ.comp β) = tailVariableIdeal k (n + 1) r := by
   sorry
-/-
+/- Prior attempt retained for review; it predates the coefficient restrictions
+   added above and therefore does not close its constant cases.
   let qmk : MvPolynomial (Fin (n + 1)) k →+*
       (MvPolynomial (Fin (n + 1)) k) ⧸ q := Ideal.Quotient.mk q
   let ι : MvPolynomial (Fin n) k →+*

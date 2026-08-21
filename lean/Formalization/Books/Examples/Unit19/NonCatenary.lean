@@ -3111,8 +3111,6 @@ private theorem localization_n_presentation_predata (d : PowerSeriesData k) :
     change Polynomial.eval₂ (localization_n_presentation_gF (k := k)) 0
       (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = c
     rw [Polynomial.eval₂_C]
-    change (localization_n_presentation_gF (k := k))
-        (algebraMap k (LaurentPolynomialRing k) c) = c
     change ((localization_n_presentation_gF (k := k)).comp
         (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
         (Polynomial.C c) = c
@@ -3185,9 +3183,9 @@ private theorem localization_n_presentation_equiv_of_data
     [IsLocalization (nIdeal d).primeCompl S] [IsLocalRing S]
     (gP : nPresentationRing k →+* S) (fP : nPresentationRing k →+* k)
     (hres : S ⧸ IsLocalRing.maximalIdeal S ≃+* k)
-    (hrescomp : (hres.toRingHom.comp
+    (_hrescomp : (hres.toRingHom.comp
       (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S))).comp gP = fP)
-    (hkerP : RingHom.ker fP = nPresentationIdeal k)
+    (_hkerP : RingHom.ker fP = nPresentationIdeal k)
     (hunitP : ∀ y : (nPresentationIdeal k).primeCompl, IsUnit (gP y))
     (hFsurj : Function.Surjective
       (IsLocalization.lift (S := Localization.AtPrime (nPresentationIdeal k))
@@ -3271,12 +3269,12 @@ theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
       ringKrullDim (Localization.AtPrime (nIdeal d)) = 2 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (nIdeal d)) ≃+* k) := by
   rcases localization_n_presentation d with ⟨e⟩
-  haveI : IsRegularRing (LaurentPolynomialRing k) := by
+  have : IsRegularRing (LaurentPolynomialRing k) := by
     rw [isRegularRing_iff]
     intro p hp
     let q : Ideal (Polynomial k) :=
       p.comap (algebraMap (Polynomial k) (LaurentPolynomialRing k))
-    haveI : q.IsPrime := by
+    have : q.IsPrime := by
       dsimp [q]
       infer_instance
     have hd : Disjoint (Submonoid.powers (Polynomial.X : Polynomial k) : Set (Polynomial k))
@@ -3289,12 +3287,12 @@ theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
         exact IsLocalization.map_units (M := Submonoid.powers (Polynomial.X : Polynomial k))
           (LaurentPolynomialRing k) ⟨(Polynomial.X : Polynomial k) ^ n, ⟨n, rfl⟩⟩
       exact hp.ne_top (p.eq_top_of_isUnit_mem hq hunit)
-    letI : IsRegularRing (Polynomial k) := by infer_instance
+    let : IsRegularRing (Polynomial k) := by infer_instance
     exact IsRegularLocalRing.of_ringEquiv
       (IsLocalization.localizationLocalizationAtPrimeIsoLocalization
         (M := Submonoid.powers (Polynomial.X : Polynomial k)) p).toRingEquiv
-  haveI : IsRegularRing (nPresentationRing k) := by infer_instance
-  haveI : IsRegularLocalRing (Localization.AtPrime (nPresentationIdeal k)) := by
+  have : IsRegularRing (nPresentationRing k) := by infer_instance
+  have : IsRegularLocalRing (Localization.AtPrime (nPresentationIdeal k)) := by
     infer_instance
   have hregS : IsRegularLocalRing (Localization.AtPrime (nIdeal d)) :=
     IsRegularLocalRing.of_ringEquiv
@@ -3305,7 +3303,7 @@ theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
     let q : Ideal (LaurentPolynomialRing k) :=
       (nPresentationIdeal k).comap
         (algebraMap (LaurentPolynomialRing k) (nPresentationRing k))
-    letI : (nPresentationIdeal k).LiesOver q := ⟨rfl⟩
+    let : (nPresentationIdeal k).LiesOver q := ⟨rfl⟩
     have hqprime : q.IsPrime :=
       Ideal.isPrime_of_liesOver (nPresentationIdeal k) q
     have hxne : xInLaurentPolynomialRing k - 1 ≠ 0 := by
@@ -3322,7 +3320,7 @@ theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
         change algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
             (xInLaurentPolynomialRing k - 1) ∈ nPresentationIdeal k
         rw [map_sub]
-        exact Ideal.subset_span (by simp [nPresentationIdeal])
+        exact Ideal.subset_span (by simp)
       rw [hq] at hxm
       exact hxne (by simpa using hxm)
     have hLaurentDomain : IsDomain (LaurentPolynomialRing k) :=
@@ -3338,8 +3336,8 @@ theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
       obtain ⟨x, hx⟩ := IsPrincipalIdealRing.principal (I.under (Polynomial k))
       refine ⟨⟨algebraMap (Polynomial k) (LaurentPolynomialRing k) x, ?_⟩⟩
       rw [hx, Ideal.map_span, Set.image_singleton]
-    letI : IsDomain (LaurentPolynomialRing k) := hLaurentDomain
-    letI : IsPrincipalIdealRing (LaurentPolynomialRing k) := hLaurentPIR
+    let : IsDomain (LaurentPolynomialRing k) := hLaurentDomain
+    let : IsPrincipalIdealRing (LaurentPolynomialRing k) := hLaurentPIR
     have hqmax : q.IsMaximal :=
       Ideal.IsPrime.isMaximal hqprime hqnebot
     have hqheight : q.height = 1 := by
@@ -3446,7 +3444,7 @@ theorem b_is_k_algebra (d : PowerSeriesData k) :
 /-- The two displayed ideals remain maximal after passing from `R` to `B`. -/
 theorem mBIdeal_isMaximal (d : PowerSeriesData k) :
     (mBIdeal d).IsMaximal := by
-  haveI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  have : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   have hdisjoint :
@@ -3461,7 +3459,7 @@ theorem mBIdeal_isMaximal (d : PowerSeriesData k) :
     rw [mBIdeal]
     exact IsLocalization.under_map_of_isPrime_disjoint
       (multiplicativeSubmonoid d) (B d) (mIdeal_isPrime d) hdisjoint
-  letI : ((mBIdeal d).under (R d)).IsMaximal := by
+  let : ((mBIdeal d).under (R d)).IsMaximal := by
     rw [hunder]
     exact mIdeal_isMaximal d
   exact Ideal.IsMaximal.of_isLocalization_of_disjoint
@@ -3469,7 +3467,7 @@ theorem mBIdeal_isMaximal (d : PowerSeriesData k) :
 
 theorem nBIdeal_isMaximal (d : PowerSeriesData k) :
     (nBIdeal d).IsMaximal := by
-  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  let : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   have hdisjoint :
@@ -3484,7 +3482,7 @@ theorem nBIdeal_isMaximal (d : PowerSeriesData k) :
     rw [nBIdeal]
     exact IsLocalization.under_map_of_isPrime_disjoint
       (multiplicativeSubmonoid d) (B d) (nIdeal_isPrime d) hdisjoint
-  letI : ((nBIdeal d).under (R d)).IsMaximal := by
+  let : ((nBIdeal d).under (R d)).IsMaximal := by
     rw [hunder]
     exact nIdeal_isMaximal d
   exact Ideal.IsMaximal.of_isLocalization_of_disjoint
@@ -3507,7 +3505,7 @@ instance nBIdeal_isPrime_instance (d : PowerSeriesData k) :
 theorem b_maximal_ideals (d : PowerSeriesData k) :
     mBIdeal d ≠ nBIdeal d ∧
       ∀ I : Ideal (B d), I.IsMaximal ↔ I = mBIdeal d ∨ I = nBIdeal d := by
-  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  let : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   have hdisjoint_m :
@@ -3542,9 +3540,9 @@ theorem b_maximal_ideals (d : PowerSeriesData k) :
         _ = (nBIdeal d).under (R d) := by rw [hmn]
         _ = nIdeal d := hunder_n
     have hxM : xInGeneratedRing d ∈ mIdeal d := by
-      exact Ideal.subset_span (by simp [mIdeal])
+      exact Ideal.subset_span (by simp)
     have hx1N : xInGeneratedRing d - 1 ∈ nIdeal d := by
-      exact Ideal.subset_span (by simp [nIdeal])
+      exact Ideal.subset_span (by simp)
     have hx1M : xInGeneratedRing d - 1 ∈ mIdeal d := by
       rw [hmn']
       exact hx1N
@@ -3609,8 +3607,8 @@ private theorem b_quotient_equiv_of_disjoint
     (hdisjoint :
       Disjoint (multiplicativeSubmonoid d : Set (R d)) (I : Set (R d))) :
     Nonempty (B d ⧸ Ideal.map (algebraMap (R d) (B d)) I ≃+* k) := by
-  letI : Nontrivial (R d ⧸ I) := e.toEquiv.nontrivial
-  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  let : Nontrivial (R d ⧸ I) := e.toEquiv.nontrivial
+  let : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   let q : R d →+* k := e.toRingHom.comp (Ideal.Quotient.mk I)
@@ -3653,7 +3651,7 @@ private theorem b_quotient_equiv_of_disjoint
     refine ⟨algebraMap (R d) (B d) r, ?_⟩
     calc
       f (algebraMap (R d) (B d) r) = q r := by
-        simpa [f] using (IsLocalization.lift_eq hunit r)
+        simp [f]
       _ = c := by
         change e (Ideal.Quotient.mk I r) = c
         rw [hr]
@@ -3691,7 +3689,7 @@ theorem b_residue_fields (d : PowerSeriesData k) :
 theorem b_localization_m_equiv (d : PowerSeriesData k) :
     Nonempty (Localization.AtPrime (mBIdeal d) ≃+*
       Localization.AtPrime (mIdeal d)) := by
-  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  let : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   have hdisjoint :
@@ -3711,7 +3709,7 @@ theorem b_localization_m_equiv (d : PowerSeriesData k) :
   have hp : p.IsPrime := by
     change (mBIdeal d).IsPrime
     exact mBIdeal_isPrime d
-  letI : p.IsPrime := hp
+  let : p.IsPrime := hp
   have hcomap : p.comap
       (algebraMap (R d) (Localization (multiplicativeSubmonoid d))) = mIdeal d := by
     change (mBIdeal d).under (R d) = mIdeal d
@@ -3721,7 +3719,7 @@ theorem b_localization_m_equiv (d : PowerSeriesData k) :
         (p.comap (algebraMap (R d) (Localization (multiplicativeSubmonoid d)))) :=
       inferInstance
     simpa only [hcomap] using hloc'
-  letI : IsLocalization.AtPrime (Localization.AtPrime p) (mIdeal d) := hloc
+  let : IsLocalization.AtPrime (Localization.AtPrime p) (mIdeal d) := hloc
   have he : Localization.AtPrime (mIdeal d) ≃ₐ[R d]
       Localization.AtPrime p :=
     IsLocalization.algEquiv (mIdeal d).primeCompl
@@ -3732,7 +3730,7 @@ theorem b_localization_m_equiv (d : PowerSeriesData k) :
 private theorem b_localization_n_equiv_core (d : PowerSeriesData k) :
     Nonempty (Localization.AtPrime (nBIdeal d) ≃+*
       Localization.AtPrime (nIdeal d)) := by
-  haveI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  have : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   have hdisjoint :
@@ -3752,7 +3750,7 @@ private theorem b_localization_n_equiv_core (d : PowerSeriesData k) :
   have hp : p.IsPrime := by
     change (nBIdeal d).IsPrime
     exact nBIdeal_isPrime d
-  haveI : p.IsPrime := hp
+  have : p.IsPrime := hp
   have hcomap : p.comap
       (algebraMap (R d) (Localization (multiplicativeSubmonoid d))) = nIdeal d := by
     change (nBIdeal d).under (R d) = nIdeal d
@@ -3762,7 +3760,7 @@ private theorem b_localization_n_equiv_core (d : PowerSeriesData k) :
         (p.comap (algebraMap (R d) (Localization (multiplicativeSubmonoid d)))) :=
       inferInstance
     simpa only [hcomap] using hloc'
-  haveI : IsLocalization.AtPrime (Localization.AtPrime p) (nIdeal d) := hloc
+  have : IsLocalization.AtPrime (Localization.AtPrime p) (nIdeal d) := hloc
   have he : Localization.AtPrime (nIdeal d) ≃ₐ[R d]
       Localization.AtPrime p :=
     IsLocalization.algEquiv (nIdeal d).primeCompl
@@ -3783,9 +3781,9 @@ private theorem b_localization_m_properties_core (d : PowerSeriesData k) :
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mBIdeal d)) ≃+* k) := by
   rcases b_localization_m_equiv d with ⟨e⟩
   rcases localization_m_is_noetherian_regular d with ⟨hnoeth, hreg⟩
-  haveI : IsNoetherianRing (Localization.AtPrime (mIdeal d)) := hnoeth
-  haveI : IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := hreg
-  haveI : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
+  have : IsNoetherianRing (Localization.AtPrime (mIdeal d)) := hnoeth
+  have : IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := hreg
+  have : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
     localization_m_is_dvr d
   have hnoeth' : IsNoetherianRing (Localization.AtPrime (mBIdeal d)) :=
     isNoetherianRing_of_ringEquiv _ e.symm
@@ -3820,8 +3818,8 @@ private theorem b_localization_n_properties_core (d : PowerSeriesData k) :
   rcases b_localization_n_equiv d with ⟨e⟩
   rcases localization_n_is_regular_local_dim_two d with
     ⟨hnoeth, hreg, hdim, hres⟩
-  haveI : IsNoetherianRing (Localization.AtPrime (nIdeal d)) := hnoeth
-  haveI : IsRegularLocalRing (Localization.AtPrime (nIdeal d)) := hreg
+  have : IsNoetherianRing (Localization.AtPrime (nIdeal d)) := hnoeth
+  have : IsRegularLocalRing (Localization.AtPrime (nIdeal d)) := hreg
   have hnoeth' : IsNoetherianRing (Localization.AtPrime (nBIdeal d)) :=
     isNoetherianRing_of_ringEquiv _ e.symm
   have hreg' : IsRegularLocalRing (Localization.AtPrime (nBIdeal d)) :=
@@ -3852,7 +3850,7 @@ private theorem b_isNoetherian_core (d : PowerSeriesData k) :
     apply hinsert.subset
     intro I hI
     exact (b_maximal_ideals d).2 I |>.mp hI
-  haveI : Finite (MaximalSpectrum (B d)) :=
+  have : Finite (MaximalSpectrum (B d)) :=
     @Finite.of_equiv (MaximalSpectrum (B d)) {I : Ideal (B d) // I.IsMaximal}
       (Set.finite_coe_iff.mp hfinite) (MaximalSpectrum.equivSubtype (B d)).symm
   refine IsNoetherianRing.of_isLocalization_maximal
@@ -3874,7 +3872,7 @@ private theorem b_dimension_two_core (d : PowerSeriesData k) :
     apply hinsert.subset
     intro I hI
     exact (b_maximal_ideals d).2 I |>.mp hI
-  haveI : Finite (MaximalSpectrum (B d)) :=
+  have : Finite (MaximalSpectrum (B d)) :=
     @Finite.of_equiv (MaximalSpectrum (B d)) {I : Ideal (B d) // I.IsMaximal}
       (Set.finite_coe_iff.mp hfinite) (MaximalSpectrum.equivSubtype (B d)).symm
   have hle : Ring.KrullDimLE 2 (B d) := by

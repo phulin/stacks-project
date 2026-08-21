@@ -1151,7 +1151,105 @@ theorem dimensions_of_successive_parameter_quotients
           (R ⧸ Ideal.span
             (Set.range (fun j : Fin i =>
               x ⟨j.1, lt_of_lt_of_le j.2 hid⟩))) = d₀ - i := by
-  sorry
+  classical
+  intro i _hi hid
+  let first : Fin i → R := fun j => x ⟨j.1, lt_of_lt_of_le j.2 hid⟩
+  let J : Ideal R := Ideal.span (Set.range first)
+  let A := R ⧸ J
+  let mk : R →+* A := Ideal.Quotient.mk J
+  let rest : Fin (d₀ - i) → A := fun j => mk (x ⟨i + j.1, by omega⟩)
+  have hJle : J ≤ Ideal.span (Set.range x) := by
+    apply Ideal.span_mono
+    rintro r ⟨j, rfl⟩
+    exact ⟨⟨j.1, lt_of_lt_of_le j.2 hid⟩, rfl⟩
+  have hparam_ne : Ideal.span (Set.range x) ≠ ⊤ := by
+    intro htop
+    have : maximalIdeal R = ⊤ := by
+      rw [← hdef, htop, Ideal.radical_top]
+    exact (IsLocalRing.maximalIdeal.isMaximal R).ne_top this
+  have hJne : J ≠ ⊤ := ne_top_of_le_ne_top hparam_ne hJle
+  let _ : Nontrivial A := Ideal.Quotient.nontrivial_iff.mpr hJne
+  let _ : IsLocalRing A :=
+    IsLocalRing.of_surjective' mk Ideal.Quotient.mk_surjective
+  have hmap : Ideal.map mk (Ideal.span (Set.range x)) =
+      Ideal.span (Set.range rest) := by
+    apply le_antisymm
+    · rw [Ideal.map_span]
+      apply Ideal.span_le.2
+      rintro z ⟨r, ⟨j, rfl⟩, rfl⟩
+      by_cases hj : j.1 < i
+      · have hxJ : x j ∈ J := by
+          apply Ideal.subset_span
+          exact ⟨⟨j.1, hj⟩, rfl⟩
+        have hz : mk (x j) = 0 := (Ideal.Quotient.eq_zero_iff_mem).2 hxJ
+        rw [hz]
+        exact Ideal.zero_mem _
+      · have hjle : i ≤ j.1 := Nat.le_of_not_gt hj
+        let t : Fin (d₀ - i) := ⟨j.1 - i, by omega⟩
+        have ht : i + t.1 = j.1 := by dsimp [t]; omega
+        apply Ideal.subset_span
+        refine ⟨t, ?_⟩
+        simp only [rest]
+        congr 2
+        apply Fin.ext
+        exact ht
+    · apply Ideal.span_le.2
+      rintro z ⟨j, rfl⟩
+      apply Ideal.mem_map_of_mem
+      apply Ideal.subset_span
+      exact ⟨⟨i + j.1, by omega⟩, rfl⟩
+  have hdefA : IsIdealOfDefinition A (Ideal.span (Set.range rest)) := by
+    unfold IsIdealOfDefinition at hdef ⊢
+    rw [← hmap, ← Ideal.map_radical_of_surjective
+      Ideal.Quotient.mk_surjective (by simpa [mk, Ideal.mk_ker] using hJle), hdef]
+    exact IsLocalRing.map_maximalIdeal_of_surjective mk Ideal.Quotient.mk_surjective
+  let s : Finset A := Finset.univ.image rest
+  have hsp : Ideal.span (s : Set A) = Ideal.span (Set.range rest) := by
+    congr 1
+    ext z
+    simp [s]
+  have hu : ringKrullDim A ≤ d₀ - i := by
+    have hle := ringKrullDim_le_of_isIdealOfDefinition_span A
+      (s := s) (by simpa [hsp] using hdefA)
+    have hcard : s.card ≤ d₀ - i := by
+      dsimp [s]
+      simpa using Finset.card_image_le (f := rest)
+        (s := (Finset.univ : Finset (Fin (d₀ - i))))
+    exact hle.trans (by exact_mod_cast hcard)
+  have hfirst : (Set.range first).encard ≤ i := by
+    calc
+      (Set.range first).encard = (first '' Set.univ).encard := by rw [Set.image_univ]
+      _ ≤ Set.encard (Set.univ : Set (Fin i)) := Set.encard_image_le first Set.univ
+      _ = i := by simp
+  have hjac : Set.range first ⊆ Ring.jacobson R := by
+    rintro r ⟨j, rfl⟩
+    rw [IsLocalRing.ringJacobson_eq_maximalIdeal]
+    exact hx ⟨j.1, lt_of_lt_of_le j.2 hid⟩
+  have hl := ringKrullDim_le_ringKrullDim_quotient_add_encard
+    (R := R) (Set.range first) hjac
+  change ringKrullDim R ≤ ringKrullDim A + (Set.range first).encard at hl
+  have hfirst' : ((Set.range first).encard : WithBot ℕ∞) ≤ i := by
+    exact_mod_cast hfirst
+  have hl' : ringKrullDim R ≤ ringKrullDim A + i :=
+    hl.trans (by simpa [add_comm] using add_le_add_right hfirst' (ringKrullDim A))
+  have hbot : ringKrullDim A ≠ ⊥ := ringKrullDim_ne_bot
+  have htop : ringKrullDim A ≠ ⊤ := ringKrullDim_ne_top
+  cases hA : ringKrullDim A with
+  | bot => exact (hbot hA).elim
+  | coe q =>
+      cases q with
+      | top => exact (htop hA).elim
+      | coe k =>
+          have hku : k ≤ d₀ - i := by
+            rw [hA] at hu
+            exact ENat.natCast_le_natCast.mp (WithBot.coe_le_coe.mp hu)
+          have hdl : d₀ ≤ k + i := by
+            rw [hdim, hA] at hl'
+            exact_mod_cast hl'
+          have hk : k = d₀ - i := by omega
+          rw [hk]
+          exact congrArg (fun z : ℕ∞ => (z : WithBot ℕ∞))
+            (ENat.natCast_sub d₀ i).symm
 
 end
 

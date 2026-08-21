@@ -2,6 +2,7 @@ import Formalization.Books.MoreAlgebra.Unit55.InjectiveModules
 import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.CategoryTheory.Limits.Types.Colimits
+import Mathlib.CategoryTheory.Limits.Types.Filtered
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
 import Mathlib.CategoryTheory.Abelian.GrothendieckCategory.Monomorphisms
 import Mathlib.CategoryTheory.MorphismProperty.Basic
@@ -77,7 +78,90 @@ theorem comparisonMap_bijective_of_finite
     (F : Set.Iio α ⥤ Type u) [HasColimit F]
     [HasColimit (F ⋙ coyoneda.obj (Opposite.op A))] :
     Function.Bijective (comparisonMap A F) := by
-  sorry
+  let _ : Fintype A := Fintype.ofFinite A
+  let _ : IsDirectedOrder (Set.Iio α) :=
+    ⟨fun a b => ⟨⟨max a.1 b.1, by
+        exact max_lt (show a.1 < α from a.2) (show b.1 < α from b.2)⟩,
+      le_max_left _ _, le_max_right _ _⟩⟩
+  let _ : Nonempty (Set.Iio α) := ⟨⟨0, hα⟩⟩
+  let comparisonCocone : Cocone (F ⋙ coyoneda.obj (Opposite.op A)) :=
+    { pt := A ⟶ colimit F
+      ι :=
+        { app := fun j =>
+            (coyoneda.obj (Opposite.op A)).map (colimit.ι F j)
+          naturality := by
+            intro j k f
+            ext g
+            change (g ≫ F.map f) ≫ colimit.ι F k = g ≫ colimit.ι F j
+            rw [Category.assoc, colimit.w] } }
+  have comparisonMap_ι (i : Set.Iio α)
+      (x : (F ⋙ coyoneda.obj (Opposite.op A)).obj i) :
+      comparisonMap A F
+          ((colimit.cocone (F ⋙ coyoneda.obj (Opposite.op A))).ι.app i x) =
+        comparisonCocone.ι.app i x := by
+    dsimp only [comparisonMap]
+    change (colimit.desc _ comparisonCocone)
+      ((colimit.cocone (F ⋙ coyoneda.obj (Opposite.op A))).ι.app i x) = _
+    exact congrArg (fun f => f x) (colimit.ι_desc comparisonCocone i)
+  constructor
+  · intro x y hxy
+    obtain ⟨i, xi, rfl⟩ := Types.jointly_surjective_of_isColimit
+      (colimit.isColimit (F ⋙ coyoneda.obj (Opposite.op A))) x
+    obtain ⟨j, yj, rfl⟩ := Types.jointly_surjective_of_isColimit
+      (colimit.isColimit (F ⋙ coyoneda.obj (Opposite.op A))) y
+    rw [comparisonMap_ι, comparisonMap_ι] at hxy
+    dsimp only [comparisonCocone] at hxy
+    have hxy_a (a : A) : colimit.ι F i (xi.hom a) =
+        colimit.ι F j (yj.hom a) := by
+      exact congrArg (fun q : A ⟶ colimit F => q.hom a) hxy
+    apply (Types.FilteredColimit.colimit_eq_iff _).2
+    let K : A → Set.Iio α := fun a =>
+      (Types.FilteredColimit.colimit_eq_iff F).1 (hxy_a a) |>.choose
+    let fi : ∀ a, i ⟶ K a := fun a =>
+      (Types.FilteredColimit.colimit_eq_iff F).1
+        (hxy_a a) |>.choose_spec.choose
+    let fj : ∀ a, j ⟶ K a := fun a =>
+      (Types.FilteredColimit.colimit_eq_iff F).1
+        (hxy_a a) |>.choose_spec.choose_spec.choose
+    let hK : ∀ a, F.map (fi a) (xi.hom a) = F.map (fj a) (yj.hom a) := fun a =>
+      (Types.FilteredColimit.colimit_eq_iff F).1
+        (hxy_a a) |>.choose_spec.choose_spec.choose_spec
+    let D : Discrete A ⥤ Set.Iio α :=
+      Discrete.functor fun a : A => K a
+    let c : Cocone D := IsFiltered.cocone D
+    let l := IsFiltered.max (IsFiltered.max i j) c.pt
+    let ii : i ⟶ l := IsFiltered.leftToMax i j ≫
+      IsFiltered.leftToMax (IsFiltered.max i j) c.pt
+    let jj : j ⟶ l := IsFiltered.rightToMax i j ≫
+      IsFiltered.leftToMax (IsFiltered.max i j) c.pt
+    let kl : c.pt ⟶ l := IsFiltered.rightToMax (IsFiltered.max i j) c.pt
+    refine ⟨l, ii, jj, ?_⟩
+    apply ConcreteCategory.hom_ext
+    intro a
+    rw [show ii = fi a ≫ c.ι.app ⟨a⟩ ≫ kl from Subsingleton.elim _ _,
+      show jj = fj a ≫ c.ι.app ⟨a⟩ ≫ kl from Subsingleton.elim _ _]
+    simp only [Functor.map_comp]
+    change F.map kl (F.map (c.ι.app ⟨a⟩) (F.map (fi a) (xi.hom a))) =
+      F.map kl (F.map (c.ι.app ⟨a⟩) (F.map (fj a) (yj.hom a)))
+    rw [hK a]
+  · intro z
+    choose i xi hxi using fun a =>
+      Types.jointly_surjective_of_isColimit (colimit.isColimit F) (z a)
+    let D : Discrete A ⥤ Set.Iio α :=
+      Discrete.functor fun a : A => i a
+    let c : Cocone D := IsFiltered.cocone D
+    let g : A → F.obj c.pt := fun a => F.map (c.ι.app ⟨a⟩) (xi a)
+    refine ⟨colimit.ι (F ⋙ coyoneda.obj (Opposite.op A)) c.pt (↾g), ?_⟩
+    change comparisonMap A F
+      ((colimit.cocone (F ⋙ coyoneda.obj (Opposite.op A))).ι.app c.pt (↾g)) = z
+    rw [comparisonMap_ι]
+    dsimp only [comparisonCocone]
+    ext a
+    change colimit.ι F c.pt (F.map (c.ι.app ⟨a⟩) (xi a)) = z a
+    calc
+      _ = colimit.ι F (i a) (xi a) :=
+        congrArg (fun f => f (xi a)) (colimit.w F (c.ι.app ⟨a⟩))
+      _ = z a := hxi a
 
 /-- The increasing finite-set diagram used in the first counterexample.  We
 use `Fin (n + 1)` as the zero-based version of `{1, ..., n}`. -/

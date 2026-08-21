@@ -141,7 +141,7 @@ theorem auslander_buchsbaum
     ((localDepth R R : ℕ∞) : WithBot ℕ∞) =
       CategoryTheory.projectiveDimension (ModuleCat.of R M) +
         ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
-  sorry
+  exact auslander_buchsbaum_of_finite_projective_dimension hpd
 
 end
 

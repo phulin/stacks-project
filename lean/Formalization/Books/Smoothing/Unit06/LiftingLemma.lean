@@ -970,6 +970,82 @@ private structure liftingAuxiliaryModPiLocalizedBSetup
   hDideal : ∀ p : liftingPolynomial R d.n d.m,
     p ∈ liftingAuxiliaryDefiningIdeal d k → bmap p = 0
 
+private opaque liftingAuxiliary_modPi_bmap_correction
+    {R T : Type u} [CommRing R] [CommRing T] {π : R}
+    (d : LiftingConstructionData R π) (k : Fin d.r)
+    (evalx : MvPolynomial (Fin d.n) R →+* T) (ainv : T)
+    (bmap : liftingPolynomial R d.n d.m →+*
+      MvPolynomial (Fin (d.e k)) T)
+    (bmap_lift : ∀ p : MvPolynomial (Fin d.n) R,
+      bmap (liftLiftingPolynomial p) = MvPolynomial.C (evalx p))
+    (hX : ∀ t : Fin d.m,
+      bmap (MvPolynomial.X (Sum.inr t)) =
+        MvPolynomial.C ainv * ∑ j : Fin (d.e k),
+          MvPolynomial.C (evalx (d.h k t j)) * MvPolynomial.X j)
+    (hCpi : bmap (MvPolynomial.C π) = 0)
+    (haT : evalx (d.a k) * ainv = 1) :
+    ∀ ℓ : Fin d.m,
+      bmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0 := by
+  have hXsel : ∀ j : Fin (d.e k),
+      bmap (MvPolynomial.X (Sum.inr (d.selected k j))) =
+        MvPolynomial.C ainv * MvPolynomial.C (evalx (d.a k)) *
+          MvPolynomial.X j := by
+    intro j
+    rw [hX, Finset.sum_eq_single j]
+    · rw [d.selected_h]
+      simp only [if_true]
+      ring
+    · intro b hb hbj
+      rw [d.selected_h]
+      simp [hbj]
+    · intro hj
+      exact (hj (Finset.mem_univ j)).elim
+  intro ℓ
+  have hrel :
+      bmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) =
+        MvPolynomial.C (evalx (d.a k)) *
+            (MvPolynomial.C ainv * ∑ j : Fin (d.e k),
+              MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) -
+          (∑ j : Fin (d.e k),
+            MvPolynomial.C (evalx (d.h k ℓ j)) *
+              (MvPolynomial.C ainv * MvPolynomial.C (evalx (d.a k)) *
+                MvPolynomial.X j)) - 0 := by
+    change bmap (liftLiftingPolynomial (d.a k) *
+        MvPolynomial.X (Sum.inr ℓ) -
+      ∑ j : Fin (d.e k),
+        liftLiftingPolynomial (d.h k ℓ j) *
+          MvPolynomial.X (Sum.inr (d.selected k j)) -
+      MvPolynomial.C π * liftLiftingPolynomial (d.g k ℓ)) = _
+    rw [map_sub, map_sub, map_mul, map_sum]
+    simp only [map_mul, bmap_lift, hXsel, hX, hCpi, zero_mul, sub_zero]
+  rw [hrel]
+  simp only [sub_zero]
+  have hscalar :
+      (MvPolynomial.C : T →+* MvPolynomial (Fin (d.e k)) T) (evalx (d.a k)) *
+        (MvPolynomial.C : T →+* MvPolynomial (Fin (d.e k)) T) ainv = 1 := by
+    rw [← map_mul, haT, map_one]
+  have hleft :
+      MvPolynomial.C (evalx (d.a k)) *
+          (MvPolynomial.C ainv * ∑ j : Fin (d.e k),
+            MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) =
+        ∑ j : Fin (d.e k),
+          (MvPolynomial.C (evalx (d.a k)) * MvPolynomial.C ainv) *
+            (MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) := by
+    rw [← mul_assoc, Finset.mul_sum]
+  have hright :
+      (∑ j : Fin (d.e k),
+        MvPolynomial.C (evalx (d.h k ℓ j)) *
+          (MvPolynomial.C ainv * MvPolynomial.C (evalx (d.a k)) *
+            MvPolynomial.X j)) =
+        ∑ j : Fin (d.e k),
+          (MvPolynomial.C (evalx (d.a k)) * MvPolynomial.C ainv) *
+            (MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) := by
+    apply Finset.sum_congr rfl
+    intro j hj
+    ring
+  rw [hleft, hright, hscalar]
+  simp
+
 private opaque liftingAuxiliary_modPi_localized_b_setup
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r) :
@@ -1106,86 +1182,10 @@ private opaque liftingAuxiliary_modPi_localized_b_setup
             MvPolynomial.C (evalx (d.h k t j)) * MvPolynomial.X j := by
       intro t
       simp [bmap, bvar]
-    have hXsel : ∀ j : Fin (d.e k),
-        bmap (MvPolynomial.X (Sum.inr (d.selected k j))) =
-          MvPolynomial.C ainv * MvPolynomial.C (evalx (d.a k)) *
-            MvPolynomial.X j := by
-      intro j
-      rw [hX]
-      rw [Finset.sum_eq_single j]
-      · rw [d.selected_h]
-        simp only [if_true]
-        ring
-      · intro b hb hbj
-        rw [d.selected_h]
-        simp [hbj]
-      · intro hj
-        exact (hj (Finset.mem_univ j)).elim
     have hCpi : bmap (MvPolynomial.C π) = 0 := by
-      have hcoeff : bmap (MvPolynomial.C π) = bcoeff π := by
-        simp [bmap]
-      rw [hcoeff, bpi]
-    intro ℓ
-    have hrel :
-        bmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) =
-          MvPolynomial.C (evalx (d.a k)) *
-              (MvPolynomial.C ainv * ∑ j : Fin (d.e k),
-                MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) -
-            (∑ j : Fin (d.e k),
-              MvPolynomial.C (evalx (d.h k ℓ j)) *
-                (MvPolynomial.C ainv * MvPolynomial.C (evalx (d.a k)) *
-                  MvPolynomial.X j)) - 0 := by
-      change bmap (liftLiftingPolynomial (d.a k) *
-          MvPolynomial.X (Sum.inr ℓ) -
-        ∑ j : Fin (d.e k),
-          liftLiftingPolynomial (d.h k ℓ j) *
-            MvPolynomial.X (Sum.inr (d.selected k j)) -
-        MvPolynomial.C π * liftLiftingPolynomial (d.g k ℓ)) = _
-      calc
-        bmap (liftLiftingPolynomial (d.a k) *
-            MvPolynomial.X (Sum.inr ℓ) -
-          ∑ j : Fin (d.e k),
-            liftLiftingPolynomial (d.h k ℓ j) *
-              MvPolynomial.X (Sum.inr (d.selected k j)) -
-          MvPolynomial.C π * liftLiftingPolynomial (d.g k ℓ)) =
-            bmap (liftLiftingPolynomial (d.a k)) *
-                bmap (MvPolynomial.X (Sum.inr ℓ)) -
-              (∑ j : Fin (d.e k),
-                bmap (liftLiftingPolynomial (d.h k ℓ j)) *
-                  bmap (MvPolynomial.X (Sum.inr (d.selected k j)))) -
-              bmap (MvPolynomial.C π) *
-                bmap (liftLiftingPolynomial (d.g k ℓ)) := by
-          rw [map_sub, map_sub, map_mul, map_sum]
-          simp only [map_mul]
-        _ = _ := by
-          simp only [bmap_lift, hXsel, hX, hCpi, zero_mul, sub_zero]
-    rw [hrel]
-    simp only [sub_zero]
-    have hscalar :
-        (MvPolynomial.C : T →+* B) (evalx (d.a k)) *
-          (MvPolynomial.C : T →+* B) ainv = 1 := by
-      rw [← map_mul, haT, map_one]
-    have hleft :
-        MvPolynomial.C (evalx (d.a k)) *
-            (MvPolynomial.C ainv * ∑ j : Fin (d.e k),
-              MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) =
-          ∑ j : Fin (d.e k),
-            (MvPolynomial.C (evalx (d.a k)) * MvPolynomial.C ainv) *
-              (MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) := by
-      rw [← mul_assoc, Finset.mul_sum]
-    have hright :
-        (∑ j : Fin (d.e k),
-          MvPolynomial.C (evalx (d.h k ℓ j)) *
-            (MvPolynomial.C ainv * MvPolynomial.C (evalx (d.a k)) *
-              MvPolynomial.X j)) =
-          ∑ j : Fin (d.e k),
-            (MvPolynomial.C (evalx (d.a k)) * MvPolynomial.C ainv) *
-              (MvPolynomial.C (evalx (d.h k ℓ j)) * MvPolynomial.X j) := by
-      apply Finset.sum_congr rfl
-      intro j hj
-      ring
-    rw [hleft, hright, hscalar]
-    simp
+      exact bmap_pi
+    exact liftingAuxiliary_modPi_bmap_correction d k evalx ainv bmap
+      bmap_lift hX hCpi haT
   have hDideal : ∀ p : liftingPolynomial R d.n d.m,
       p ∈ liftingAuxiliaryDefiningIdeal d k → bmap p = 0 := by
     intro p hp

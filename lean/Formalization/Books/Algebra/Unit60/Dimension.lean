@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit59.NoetherianLocalRings
 import Mathlib.RingTheory.Ideal.KrullsHeightTheorem
 import Mathlib.RingTheory.KrullDimension.Zero
+import Mathlib.RingTheory.KrullDimension.Regular
 import Mathlib.RingTheory.RegularLocalRing.Defs
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -21,6 +22,7 @@ open Formalization.Books.Algebra.Unit59
 open Formalization.Books.Algebra.Unit58
 open Set
 open IsLocalRing
+open scoped Pointwise
 
 universe u v
 
@@ -1102,7 +1104,8 @@ theorem one_equation_dimension_le
     (x : R) (hx : x ∈ maximalIdeal R) :
     ringKrullDim R ≤
       ringKrullDim (R ⧸ Ideal.span ({x} : Set R)) + 1 := by
-  sorry
+  simpa using ringKrullDim_le_ringKrullDim_quotient_add_encard
+    ({x} : Set R) (by simpa [IsLocalRing.ringJacobson_eq_maximalIdeal] using hx)
 
 theorem one_equation_dimension_eq_of_not_mem_minimalPrimes
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
@@ -1111,7 +1114,21 @@ theorem one_equation_dimension_eq_of_not_mem_minimalPrimes
     (hmin : ∀ p ∈ (⊥ : Ideal R).minimalPrimes, x ∉ p) :
     ringKrullDim R =
       ringKrullDim (R ⧸ Ideal.span ({x} : Set R)) + 1 := by
-  sorry
+  have hspan : Ideal.span ({x} : Set R) = x • (⊤ : Ideal R) := by
+    simp [← Submodule.ideal_span_singleton_smul]
+  have hann : Module.annihilator R R = ⊥ :=
+    Module.annihilator_eq_bot.mpr inferInstance
+  have heq := Module.supportDim_quotSMulTop_succ_eq_of_notMem_minimalPrimes_of_mem_maximalIdeal
+    (R := R) (M := R) (x := x) (by simpa only [hann] using hmin) hx
+  have hequiv : Module.supportDim R (R ⧸ Ideal.span ({x} : Set R)) =
+      Module.supportDim R (QuotSMulTop x R) :=
+    Module.supportDim_eq_of_equiv
+      (Submodule.quotEquivOfEq (Ideal.span ({x} : Set R))
+        (x • (⊤ : Ideal R)) hspan)
+  rw [← Module.supportDim_self_eq_ringKrullDim,
+    ← Module.supportDim_quotient_eq_ringKrullDim]
+  rw [hequiv]
+  exact heq.symm
 
 theorem one_equation_dimension_eq_of_nonzerodivisor
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
@@ -1119,7 +1136,9 @@ theorem one_equation_dimension_eq_of_nonzerodivisor
     (x : R) (hx : x ∈ maximalIdeal R) (hreg : x ∈ nonZeroDivisors R) :
     ringKrullDim R =
       ringKrullDim (R ⧸ Ideal.span ({x} : Set R)) + 1 := by
-  sorry
+  exact
+    (ringKrullDim_quotient_span_singleton_succ_eq_ringKrullDim_of_mem_nonZeroDivisors
+      hreg hx).symm
 
 theorem dimensions_of_successive_parameter_quotients
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]

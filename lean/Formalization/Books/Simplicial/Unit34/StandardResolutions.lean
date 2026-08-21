@@ -391,6 +391,27 @@ noncomputable def standardResolutionOuterHomotopyInverse
       (standardResolutionOuterObject T).map f)
       (Category.id_comp h0)
 
+/-- The degree-zero unit section for the inner whiskered resolution, with all
+associator and unitor transports exposed. -/
+noncomputable def standardResolutionInnerDegreeZeroSection
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    T.U ⟶ (standardResolutionInnerObject T).obj
+      (op (SimplexCategory.mk 0)) := by
+  change T.U ⟶ T.U ⋙ (standardResolutionObject T).obj
+    (op (SimplexCategory.mk 0))
+  let raw : (𝟭 S) ⋙ T.U ⟶ (T.U ⋙ T.V) ⋙ T.U :=
+    Functor.whiskerRight T.adjunction.unit T.U
+  exact (Functor.leftUnitor T.U).inv ≫ raw ≫
+    (Functor.associator T.U T.V T.U).hom ≫
+    Functor.whiskerLeft T.U
+      (Functor.rightUnitor (standardResolutionBase T)).inv ≫
+    Functor.whiskerLeft T.U
+      (eqToHom (show standardResolutionBase T ⋙ 𝟭 A =
+        standardResolutionDegree T (some 0) from rfl)) ≫
+    Functor.whiskerLeft T.U
+      (eqToHom (standardResolution_object_degree T 0).symm)
+
 noncomputable def standardResolutionInnerHomotopyInverse
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
@@ -398,11 +419,7 @@ noncomputable def standardResolutionInnerHomotopyInverse
       standardResolutionInnerObject T := by
   let h0 : T.U ⟶
       (standardResolutionInnerObject T).obj (op (SimplexCategory.mk 0)) := by
-    change T.U ⟶ T.U ⋙ (standardResolutionObject T).obj (op (SimplexCategory.mk 0))
-    rw [standardResolution_object_degree]
-    let raw : (𝟭 S) ⋙ T.U ⟶ (T.U ⋙ T.V) ⋙ T.U :=
-      Functor.whiskerRight T.adjunction.unit T.U
-    exact (Functor.leftUnitor T.U).inv ≫ raw
+    exact standardResolutionInnerDegreeZeroSection T
   let q : ∀ n : SimplexCategoryᵒᵖ, op (SimplexCategory.mk 0) ⟶ n :=
     fun n => (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
   let app : ∀ n : SimplexCategoryᵒᵖ, T.U ⟶
@@ -431,6 +448,15 @@ noncomputable def standardResolutionInnerHomotopyInverse
       (standardResolutionInnerObject T).map qX ≫
       (standardResolutionInnerObject T).map f)
       (Category.id_comp h0)
+
+theorem standardResolutionInnerHomotopyInverse_app
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) (n : SimplexCategoryᵒᵖ) :
+    (standardResolutionInnerHomotopyInverse T).app n =
+      standardResolutionInnerDegreeZeroSection T ≫
+        (standardResolutionInnerObject T).map
+          (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op := by
+  rfl
 
 theorem standardResolution_outer_inverse_section
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]

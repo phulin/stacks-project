@@ -214,6 +214,49 @@ integers; this file uses `ℕ`, reindexing the first source index to `0`. -/
 def squareZeroRelations (k : Type u) [CommRing k] : Set (MvPolynomial ℕ k) :=
   Set.range (fun i : ℕ => (MvPolynomial.X i : MvPolynomial ℕ k) ^ 2)
 
+/-- Membership in the square-zero relation ideal is detected monomial by
+monomial: every supported exponent vector must contain a square. -/
+theorem mem_span_squareZeroRelations_iff
+    (k : Type u) [Field k] (f : MvPolynomial ℕ k) :
+    f ∈ Ideal.span (squareZeroRelations k) ↔
+      ∀ d ∈ f.support, ∃ i : ℕ, Finsupp.single i 2 ≤ d := by
+  have hgen : squareZeroRelations k =
+      (fun d : ℕ →₀ ℕ => MvPolynomial.monomial d (1 : k)) ''
+        Set.range (fun i : ℕ => Finsupp.single i 2) := by
+    ext z
+    constructor
+    · rintro ⟨i, rfl⟩
+      refine ⟨Finsupp.single i 2, ⟨i, rfl⟩, ?_⟩
+      exact (MvPolynomial.X_pow_eq_monomial
+        (R := k) (σ := ℕ) (e := 2) (n := i)).symm
+    · rintro ⟨d, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, MvPolynomial.X_pow_eq_monomial
+        (R := k) (σ := ℕ) (e := 2) (n := i)⟩
+  rw [hgen, MvPolynomial.mem_ideal_span_monomial_image]
+  simp only [Set.mem_range]
+  constructor
+  · intro h d hd
+    obtain ⟨si, ⟨i, rfl⟩, hsi⟩ := h d hd
+    exact ⟨i, hsi⟩
+  · intro h d hd
+    obtain ⟨i, hi⟩ := h d hd
+    exact ⟨Finsupp.single i 2, ⟨i, rfl⟩, hi⟩
+
+/-- A squarefree monomial remains nonzero in the square-zero quotient. -/
+theorem squareZeroMonomial_ne_zero
+    (k : Type u) [Field k] (d : ℕ →₀ ℕ) (hd : ∀ i, d i ≤ 1) :
+    Ideal.Quotient.mk (Ideal.span (squareZeroRelations k))
+      (MvPolynomial.monomial d (1 : k)) ≠ 0 := by
+  intro hzero
+  have hmem : MvPolynomial.monomial d (1 : k) ∈
+      Ideal.span (squareZeroRelations k) :=
+    Ideal.Quotient.eq_zero_iff_mem.mp hzero
+  have hsupp : d ∈ (MvPolynomial.monomial d (1 : k)).support := by simp
+  obtain ⟨i, hi⟩ := (mem_span_squareZeroRelations_iff k _).mp hmem d hsupp
+  have hi' : 2 ≤ d i := by simpa using hi i
+  have hi'' : d i ≤ 1 := hd i
+  omega
+
 /-- The polynomial ring `k[x_1, x_2, ...]/(x_i^2)`, with the source's positive
 indices reindexed by `ℕ`. -/
 abbrev squareZeroRing (k : Type u) [CommRing k] :=

@@ -611,6 +611,38 @@ private structure liftingAuxiliaryModPiLocalizedSetup
         (Localization.Away (liftingAuxiliaryModPiElement d k))
         (liftingAuxiliaryModPiElement d k)
 
+private opaque liftingAuxiliary_modPi_base_vanish
+    {R : Type u} [CommRing R] {π : R}
+    (d : LiftingConstructionData R π) (k : Fin d.r)
+    (U : Type u) [CommRing U]
+    (rmapU : R →+* U) (qvar : (Fin d.n ⊕ Fin d.m) → U)
+    (hrpi : rmapU π = 0)
+    (hsel : ∀ j : Fin (d.e k),
+      MvPolynomial.eval₂Hom rmapU qvar
+        (liftingBaseRelation π d.relations (d.selected k j)) = 0)
+    (haunit : IsUnit (MvPolynomial.eval₂Hom rmapU qvar
+      (liftLiftingPolynomial (d.a k)))) :
+    ∀ ℓ : Fin d.m,
+      MvPolynomial.eval₂Hom rmapU qvar
+        (liftLiftingPolynomial (d.relations ℓ)) = 0 := by
+  intro ℓ
+  let qmap : liftingPolynomial R d.n d.m →+* U :=
+    MvPolynomial.eval₂Hom rmapU qvar
+  have hid := congrArg
+    (fun p : MvPolynomial (Fin d.n) R => qmap (liftLiftingPolynomial p))
+    (d.relation_identity k ℓ)
+  simp only [qmap, liftLiftingPolynomial, MvPolynomial.eval₂Hom_rename,
+    map_mul, map_add, map_sum, map_pow] at hid
+  have hsel' : ∀ j : Fin (d.e k),
+      (MvPolynomial.eval₂Hom rmapU (qvar ∘ Sum.inl))
+          (d.relations (d.selected k j)) = 0 := by
+    intro j
+    simpa [qmap, liftingBaseRelation, liftLiftingPolynomial,
+      MvPolynomial.eval₂Hom_rename, MvPolynomial.eval₂_rename, hrpi] using hsel j
+  simp only [hsel', MvPolynomial.eval₂Hom_C, hrpi] at hid
+  apply haunit.mul_left_cancel
+  simpa [qmap, liftLiftingPolynomial, MvPolynomial.eval₂Hom_rename] using hid
+
 private opaque liftingAuxiliary_modPi_localized_base_setup
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r) :
@@ -666,21 +698,7 @@ private opaque liftingAuxiliary_modPi_localized_base_setup
     exact IsLocalization.Away.algebraMap_isUnit _
   have hbase : ∀ ℓ : Fin d.m,
       qmap (liftLiftingPolynomial (d.relations ℓ)) = 0 := by
-    intro ℓ
-    have hid := congrArg
-      (fun p : MvPolynomial (Fin d.n) R => qmap (liftLiftingPolynomial p))
-      (d.relation_identity k ℓ)
-    simp only [qmap, liftLiftingPolynomial, MvPolynomial.eval₂Hom_rename,
-      map_mul, map_add, map_sum, map_pow] at hid
-    have hsel' : ∀ j : Fin (d.e k),
-        (MvPolynomial.eval₂Hom rmapU (qvar ∘ Sum.inl))
-            (d.relations (d.selected k j)) = 0 := by
-      intro j
-      simpa [qmap, liftingBaseRelation, liftLiftingPolynomial,
-        MvPolynomial.eval₂Hom_rename, MvPolynomial.eval₂_rename, hrpi] using hsel j
-    simp only [hsel', MvPolynomial.eval₂Hom_C, hrpi] at hid
-    apply haunit.mul_left_cancel
-    simpa [qmap, liftLiftingPolynomial, MvPolynomial.eval₂Hom_rename] using hid
+    exact liftingAuxiliary_modPi_base_vanish d k U rmapU qvar hrpi hsel haunit
   let rmap2 : piQuotient R (π ^ 2) →+* U :=
     Ideal.Quotient.lift (Ideal.span ({π ^ 2} : Set R)) rmapU (by
       intro x hx

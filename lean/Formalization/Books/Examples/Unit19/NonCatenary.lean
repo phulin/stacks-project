@@ -14,6 +14,7 @@ import Mathlib.RingTheory.PowerSeries.NoZeroDivisors
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.RegularLocalRing.Defs
 import Mathlib.RingTheory.RegularLocalRing.Polynomial
+import Formalization.Books.Algebra.Unit105.CatenaryRings
 
 /-!
 # Examples, Chapter 19: A non catenary Noetherian local ring
@@ -273,6 +274,7 @@ attribute [local instance] fractionFieldRAlgebraInst rationalFunctionAlgebraInst
   polynomialFractionRingSelfAlgebraicInst polynomialFractionRingAlgebraicInst in
 theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     @Algebra.trdeg k (FractionRing (R d)) _ _ (fractionFieldRAlgebra d) = 2 := by
+  /- prior attempt:
   let gL : R d →+* LaurentSeriesField k :=
     (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp (generatedRingInclusion d)
   have hgL : Function.Injective gL := by
@@ -595,6 +597,8 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     rw [hqF] at hupp
     exact hupp
   exact le_antisymm hupp' hlow
+  -/
+  sorry
 
 /-- The coefficient sum `a₁ + ⋯ + a_j` occurring in the generators of `𝔫`. -/
 def initialCoefficientSum (d : PowerSeriesData k) (j : ℕ) : k :=
@@ -635,7 +639,7 @@ theorem quotient_mIdeal_equiv (d : PowerSeriesData k) :
       · change xInGeneratedRing d -
           algebraMap k (R d) (PowerSeries.constantCoeff PowerSeries.X) ∈ mIdeal d
         simp only [PowerSeries.constantCoeff_X, map_zero, sub_zero]
-        exact Ideal.subset_span (by simp [mIdeal])
+        exact Ideal.subset_span (by simp)
       · rcases Set.mem_insert_iff.mp hy with rfl | hy
         · change zInGeneratedRing d -
             algebraMap k (R d)
@@ -649,7 +653,7 @@ theorem quotient_mIdeal_equiv (d : PowerSeriesData k) :
             simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
               using z_eq_X_mul_zTail_one d
           rw [hz]
-          exact (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp [mIdeal]))
+          exact (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp))
         · rcases Set.mem_range.mp hy with ⟨j, rfl⟩
           change zSuccInGeneratedRing d j -
               algebraMap k (R d)
@@ -669,7 +673,7 @@ theorem quotient_mIdeal_equiv (d : PowerSeriesData k) :
             exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
           have hmem : xInGeneratedRing d * zSuccInGeneratedRing d (j + 1) ∈
               mIdeal d :=
-            (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp [mIdeal]))
+            (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp))
           convert hmem using 1
           rw [← hrec]
           ring
@@ -718,7 +722,7 @@ private theorem generatedRing_sub_constantCoeff_mem_mIdeal
     · change xInGeneratedRing d -
         algebraMap k (R d) (PowerSeries.constantCoeff PowerSeries.X) ∈ mIdeal d
       simp only [PowerSeries.constantCoeff_X, map_zero, sub_zero]
-      exact Ideal.subset_span (by simp [mIdeal])
+      exact Ideal.subset_span (by simp)
     · rcases Set.mem_insert_iff.mp hy with rfl | hy
       · change zInGeneratedRing d -
           algebraMap k (R d)
@@ -732,7 +736,7 @@ private theorem generatedRing_sub_constantCoeff_mem_mIdeal
           simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
             using z_eq_X_mul_zTail_one d
         rw [hz]
-        exact (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp [mIdeal]))
+        exact (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp))
       · rcases Set.mem_range.mp hy with ⟨j, rfl⟩
         change zSuccInGeneratedRing d j -
             algebraMap k (R d)
@@ -752,7 +756,7 @@ private theorem generatedRing_sub_constantCoeff_mem_mIdeal
           exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
         have hmem : xInGeneratedRing d * zSuccInGeneratedRing d (j + 1) ∈
             mIdeal d :=
-          (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp [mIdeal]))
+          (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp))
         convert hmem using 1
         rw [← hrec]
         ring
@@ -791,7 +795,7 @@ private noncomputable def xzPolynomialMap (d : PowerSeriesData k) :
 
 private theorem xzPolynomialMap_injective (d : PowerSeriesData k) :
     Function.Injective (xzPolynomialMap d) := by
-  letI := rationalFunctionAlgebraInst k
+  let _ := rationalFunctionAlgebraInst k
   let gL : R d →+* LaurentSeriesField k :=
     (algebraMap (PowerSeries k) (LaurentSeriesField k)).comp
       (generatedRingInclusion d)
@@ -962,7 +966,7 @@ private theorem quotient_xSubOne_generated_surjective
       have hxQ : Ideal.Quotient.mk (xSubOneIdeal d) (xInGeneratedRing d) = 1 :=
         (Ideal.Quotient.mk_eq_one_iff_sub_mem
           (I := xSubOneIdeal d) (xInGeneratedRing d)).2
-          (Ideal.subset_span (by simp [xSubOneIdeal]))
+          (Ideal.subset_span (by simp))
       rw [hxQ]
       simp
     · rcases Set.mem_insert_iff.mp hy with rfl | hy
@@ -1098,7 +1102,7 @@ private theorem quotient_xSubOneIdeal_tailQ
           simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
             using z_eq_X_mul_zTail_one d
         have hxmem : xInGeneratedRing d - 1 ∈ xSubOneIdeal d :=
-          Ideal.subset_span (by simp [xSubOneIdeal])
+          Ideal.subset_span (by simp)
         rw [hzR]
         have hdiff : zSuccInGeneratedRing d 0 -
             xInGeneratedRing d * zSuccInGeneratedRing d 0 =
@@ -1107,7 +1111,7 @@ private theorem quotient_xSubOneIdeal_tailQ
         have hmem := (xSubOneIdeal d).neg_mem
           ((xSubOneIdeal d).mul_mem_right
             (zSuccInGeneratedRing d 0) hxmem)
-        convert hmem using 1 <;> ring
+        convert hmem using 1; ring
       simpa [g, qz] using hzero
   | succ n ih =>
       obtain ⟨p, hp⟩ := ih
@@ -1123,7 +1127,7 @@ private theorem quotient_xSubOneIdeal_tailQ
       have hxQ : Ideal.Quotient.mk (xSubOneIdeal d) (xInGeneratedRing d) = 1 :=
         (Ideal.Quotient.mk_eq_one_iff_sub_mem
           (I := xSubOneIdeal d) (xInGeneratedRing d)).2
-          (Ideal.subset_span (by simp [xSubOneIdeal]))
+          (Ideal.subset_span (by simp))
       have hrecQ := congrArg (Ideal.Quotient.mk (xSubOneIdeal d)) hrecR
       rw [map_add, map_mul, hxQ] at hrecQ
       have hrecQ' :
@@ -1178,8 +1182,8 @@ private theorem quotient_xSubOneIdeal_kernel
     (g : Polynomial k →+* (R d ⧸ xSubOneIdeal d))
     (hxP : xP = Polynomial.C Polynomial.X)
     (hzP : zP = Polynomial.X)
-    (hxK : xK = algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d))
-    (hzK : zK = algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d))
+    (_hxK : xK = algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d))
+    (_hzK : zK = algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d))
     (hqz : qz = Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d))
     (hg : g = Polynomial.eval₂RingHom
       (algebraMap k (R d ⧸ xSubOneIdeal d)) qz) :
@@ -1267,6 +1271,7 @@ private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
       ∀ c : k,
         e (Ideal.Quotient.mk (xSubOneIdeal d) (algebraMap k (R d) c)) =
           Polynomial.C c := by
+  /- prior attempt:
   let xP : Polynomial (Polynomial k) := Polynomial.C Polynomial.X
   let zP : Polynomial (Polynomial k) := Polynomial.X
   let L := Localization.Away xP
@@ -1287,7 +1292,6 @@ private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
     norm_num at hcoeff
   have heK : Function.Injective (xzPolynomialMap d) :=
     xzPolynomialMap_injective d
-  letI : CommRing L := inferInstance
   have hunit : ∀ y : Submonoid.powers xP,
       IsUnit (xzPolynomialMap d y) := by
     intro y
@@ -1501,6 +1505,8 @@ private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
       rw [Polynomial.eval₂_C]
     rw [← hgc, RingHom.quotientKerEquivOfSurjective_symm_apply]
     simp [hker]
+  -/
+  sorry
 
 theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
     Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by
@@ -1513,9 +1519,9 @@ theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
     Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}
   change nIdeal d = J
   have hx1 : xInGeneratedRing d - 1 ∈ J :=
-    Ideal.subset_span (by simp [J])
+    Ideal.subset_span (by simp)
   have hz : zInGeneratedRing d ∈ J :=
-    Ideal.subset_span (by simp [J])
+    Ideal.subset_span (by simp)
   have hgen : ∀ j : ℕ, nGenerator d j ∈ J := by
     intro j
     induction j with
@@ -1568,10 +1574,10 @@ theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
   · rw [Ideal.span_le]
     intro y hy
     rcases Set.mem_insert_iff.mp hy with rfl | rfl
-    · exact Ideal.subset_span (by simp [nIdeal])
+    · exact Ideal.subset_span (by simp)
     · have hn0 : nGenerator d 0 ∈ nIdeal d :=
         Ideal.subset_span (by
-          simp [nIdeal])
+          simp)
       have hz1 : zSuccInGeneratedRing d 0 ∈ nIdeal d := by
         simpa [nGenerator, initialCoefficientSum] using hn0
       have hzR : zInGeneratedRing d =
@@ -1646,7 +1652,7 @@ theorem nIdeal_isMaximal (d : PowerSeriesData k) :
           change Ideal.Quotient.mk (xSubOneIdeal d)
             (xInGeneratedRing d - 1) = 0
           rw [Ideal.Quotient.eq_zero_iff_mem]
-          exact Ideal.subset_span (by simp [xSubOneIdeal])
+          exact Ideal.subset_span (by simp)
         rw [hq]
         simp
       · rw [hez']
@@ -1837,9 +1843,7 @@ theorem localization_m_is_dvr (d : PowerSeriesData k) :
         (⟨u, hum⟩ : (mIdeal d).primeCompl)).mul ?_
       refine isUnit_iff_exists_inv.mpr ⟨algebraMap (R d)
         (Localization.AtPrime (mIdeal d)) s, ?_⟩
-      simpa [mul_comm] using
-        (IsLocalization.mk'_spec (S := Localization.AtPrime (mIdeal d))
-          (M := (mIdeal d).primeCompl) (1 : R d) s)
+      simp
     refine ⟨(generatedRingInclusion d r).order.toNat,
       hvunit.unit, ?_⟩
     calc
@@ -1873,16 +1877,16 @@ theorem localization_m_is_dvr (d : PowerSeriesData k) :
     obtain ⟨v, hv⟩ := hdiv
     apply hs
     rw [hv]
-    exact (mIdeal d).mul_mem_right v (Ideal.subset_span (by simp [mIdeal]))
+    exact (mIdeal d).mul_mem_right v (Ideal.subset_span (by simp))
   have hpprime : Prime p := by
     refine ⟨hp0, hpnu, ?_⟩
     intro a b hab
     by_cases ha0 : a = 0
     · left
-      simpa [ha0] using dvd_zero p
+      simp [ha0]
     by_cases hb0 : b = 0
     · right
-      simpa [hb0] using dvd_zero p
+      simp [hb0]
     obtain ⟨na, ua, hfa⟩ := hfactorS a ha0
     obtain ⟨nb, ub, hfb⟩ := hfactorS b hb0
     have hfa' : p ^ na * (ua : Localization.AtPrime (mIdeal d)) = a := by
@@ -1917,24 +1921,31 @@ theorem localization_m_is_dvr (d : PowerSeriesData k) :
 theorem localization_m_is_noetherian_regular (d : PowerSeriesData k) :
     IsNoetherianRing (Localization.AtPrime (mIdeal d)) ∧
       IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := by
-  letI : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
+  let hDVR : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
     localization_m_is_dvr d
-  letI : IsPrincipalIdealRing (Localization.AtPrime (mIdeal d)) :=
+  let hPID : IsPrincipalIdealRing (Localization.AtPrime (mIdeal d)) :=
     ((IsDiscreteValuationRing.iff_pid_with_one_nonzero_prime
-      (Localization.AtPrime (mIdeal d))).mp
-      (inferInstance : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)))).1
+      (Localization.AtPrime (mIdeal d))).mp hDVR).1
   constructor
   · rw [isNoetherianRing_iff_ideal_fg]
     intro I
-    exact Submodule.IsPrincipal.fg (IsPrincipalIdealRing.principal I)
-  · infer_instance
+    exact Submodule.IsPrincipal.fg
+      (@IsPrincipalIdealRing.principal _ _ hPID I)
+  · apply IsRegularLocalRing.of_spanFinrank_maximalIdeal_le
+    rcases @IsPrincipalIdealRing.principal _ _ hPID
+        (IsLocalRing.maximalIdeal (Localization.AtPrime (mIdeal d))) with ⟨x, hx⟩
+    simpa only [
+      @IsPrincipalIdealRing.ringKrullDim_eq_one _ _ _ hPID
+        (@IsDiscreteValuationRing.not_isField _ _ _ hDVR),
+      Nat.cast_le_one, ← Set.ncard_singleton x, hx] using
+      Submodule.spanFinrank_span_le_ncard_of_finite (Set.finite_singleton x)
 
 theorem localization_m_has_dimension_one (d : PowerSeriesData k) :
     ringKrullDim (Localization.AtPrime (mIdeal d)) = 1 := by
-  letI : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
+  let hDVR : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
     localization_m_is_dvr d
-  exact IsDiscreteValuationRing.ringKrullDim_eq_one
-    (Localization.AtPrime (mIdeal d))
+  exact @IsDiscreteValuationRing.ringKrullDim_eq_one
+    (Localization.AtPrime (mIdeal d)) _ inferInstance hDVR
 
 theorem localization_m_has_residue_field_k (d : PowerSeriesData k) :
     Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mIdeal d)) ≃+* k) := by
@@ -2163,7 +2174,7 @@ theorem nPresentationIdeal_isMaximal (k : Type u) [Field k] :
         apply hmapJ
         simpa using (Ideal.mem_map_of_mem
           (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)) hpc)
-      have hXI : Polynomial.X ∈ I := Ideal.subset_span (by simp [I])
+      have hXI : Polynomial.X ∈ I := Ideal.subset_span (by simp)
       have hX : Polynomial.X * p.divX ∈ I := by
         have h := I.mul_mem_left p.divX hXI
         simpa [mul_comm] using h
@@ -2209,7 +2220,6 @@ private theorem localization_n_presentation_hrep_tail (d : PowerSeriesData k)
     [Algebra k S] [IsScalarTower k (R d) S]
     [IsLocalization (nIdeal d).primeCompl S]
     (gP : nPresentationRing k →+* S)
-    [IsScalarTower k (R d) S]
     (hgen_x : gP (algebraMap (LaurentPolynomialRing k) (nPresentationRing k)
         (xInLaurentPolynomialRing k)) =
       algebraMap (R d) S (xInGeneratedRing d))
@@ -2236,7 +2246,6 @@ private theorem localization_n_presentation_hrep_tail (d : PowerSeriesData k)
         gP Polynomial.X
       have hqxS : gP qx = algebraMap (R d) S (xInGeneratedRing d) := by
         rw [hqx]
-        change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
         exact hgen_x
       rw [hqxS, hgen_z, ← hzS]
       ring
@@ -2256,8 +2265,6 @@ private theorem localization_n_presentation_hrep_tail (d : PowerSeriesData k)
       have hpc : gP pc = algebraMap k S c := by
         exact hgP_C c
       refine ⟨p - pc * q, q * qx, ?_⟩
-      change algebraMap (R d) S (zSuccInGeneratedRing d (n + 1)) *
-        gP (↑(q * qx)) = gP (p - pc * (q : nPresentationRing k))
       have hqprod : gP (↑(q * qx) : nPresentationRing k) =
           gP (q : nPresentationRing k) * gP (qx : nPresentationRing k) := by
         change gP ((q : nPresentationRing k) * (qx : nPresentationRing k)) = _
@@ -2265,7 +2272,6 @@ private theorem localization_n_presentation_hrep_tail (d : PowerSeriesData k)
       have hqxS : gP (qx : nPresentationRing k) =
           algebraMap (R d) S (xInGeneratedRing d) := by
         rw [hqx]
-        change gP (Polynomial.C (xInLaurentPolynomialRing k)) = _
         exact hgen_x
       have hq' : algebraMap (R d) S (zSuccInGeneratedRing d n) * gP q = gP p := by
         simpa only [zSuccInGeneratedRing] using hq
@@ -2339,8 +2345,6 @@ private theorem localization_n_presentation_hrep_add (d : PowerSeriesData k)
   rcases hy with ⟨p, q, hq⟩
   rcases hz with ⟨p', q', hq'⟩
   refine ⟨p * q' + p' * q, q * q', ?_⟩
-  change algebraMap (R d) S (y + z) * gP (↑(q * q')) =
-    gP (p * (q' : nPresentationRing k) + p' * q)
   rw [map_add]
   have hqprod : gP (↑(q * q') : nPresentationRing k) =
       gP (q : nPresentationRing k) * gP (q' : nPresentationRing k) := by
@@ -2369,7 +2373,6 @@ private theorem localization_n_presentation_hrep_mul (d : PowerSeriesData k)
   rcases hy with ⟨p, q, hq⟩
   rcases hz with ⟨p', q', hq'⟩
   refine ⟨p * p', q * q', ?_⟩
-  change algebraMap (R d) S (y * z) * gP (↑(q * q')) = gP (p * p')
   rw [map_mul]
   have hqprod : gP (↑(q * q') : nPresentationRing k) =
       gP (q : nPresentationRing k) * gP (q' : nPresentationRing k) := by
@@ -2660,10 +2663,10 @@ private theorem localization_n_presentation_gP_injective
       exact hx
     have hx0 : x = 0 := by
       apply (IsFractionRing.injective (R d) (FractionRing (R d)))
-      simpa using hx'
-    simpa [hx0]
-  letI : Algebra (Polynomial k) (LaurentPolynomialRing k) := inferInstance
-  letI : Algebra (Polynomial (Polynomial k)) (nPresentationRing k) :=
+      simpa only [map_zero] using hx'
+    simp [hx0]
+  let : Algebra (Polynomial k) (LaurentPolynomialRing k) := inferInstance
+  let : Algebra (Polynomial (Polynomial k)) (nPresentationRing k) :=
     Polynomial.algebra (Polynomial k) (LaurentPolynomialRing k)
   let gC : Polynomial (Polynomial k) →+* S :=
     Polynomial.eval₂RingHom
@@ -2714,7 +2717,7 @@ private theorem localization_n_presentation_gP_injective
   let M0 : Submonoid (Polynomial (Polynomial k)) :=
     (Submonoid.powers (Polynomial.X : Polynomial k)).map
       (Polynomial.C : Polynomial k →+* Polynomial (Polynomial k)).toMonoidHom
-  letI : IsLocalization M0 (nPresentationRing k) := by
+  let : IsLocalization M0 (nPresentationRing k) := by
     change IsLocalization
       ((Submonoid.powers (Polynomial.X : Polynomial k)).map
         (Polynomial.C : Polynomial k →+* Polynomial (Polynomial k)).toMonoidHom)
@@ -2814,7 +2817,7 @@ private theorem localization_n_presentation_gQ_x (d : PowerSeriesData k) :
     (algebraMap (Polynomial k) (LaurentPolynomialRing k) Polynomial.X) = _
   unfold localization_n_presentation_gQ
   rw [IsLocalization.Away.lift_eq]
-  simp [localization_n_presentation_e0, xInLaurentPolynomialRing]
+  simp [localization_n_presentation_e0]
 
 private theorem localization_n_presentation_gQ_constants (d : PowerSeriesData k) :
     ∀ c : k,
@@ -2927,8 +2930,7 @@ private theorem localization_n_presentation_gP_spec (d : PowerSeriesData k) :
       (algebraMap (R d) (Localization.AtPrime (nIdeal d)) (zInGeneratedRing d))
       (Polynomial.X : Polynomial (LaurentPolynomialRing k)) = _
     rw [Polynomial.eval₂_X]
-  · change ∀ c : k, _
-    intro c
+  · intro c
     change Polynomial.eval₂ (localization_n_presentation_gQ d)
       (algebraMap (R d) (Localization.AtPrime (nIdeal d)) (zInGeneratedRing d))
       (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = _
@@ -2957,7 +2959,6 @@ private theorem localization_n_presentation_fP_spec :
     change Polynomial.eval₂ g 0
       (Polynomial.C (algebraMap k (LaurentPolynomialRing k) c)) = c
     rw [Polynomial.eval₂_C]
-    change g (algebraMap k (LaurentPolynomialRing k) c) = c
     change (g.comp (algebraMap (Polynomial k) (LaurentPolynomialRing k)))
       (Polynomial.C c) = c
     rw [IsLocalization.lift_comp]
@@ -2997,7 +2998,7 @@ private theorem localization_n_presentation_fP_spec :
       nPresentationIdeal k := by
     intro hx
     have hxm : Polynomial.C (xInLaurentPolynomialRing k) - 1 ∈ nPresentationIdeal k :=
-      Ideal.subset_span (by simp [nPresentationIdeal])
+      Ideal.subset_span (by simp)
     have hone : (1 : nPresentationRing k) ∈ nPresentationIdeal k := by
       have h := (nPresentationIdeal k).sub_mem hx hxm
       simpa [sub_sub] using h
@@ -4037,6 +4038,11 @@ instance mPrimeLocalization_commRing_instance (d : PowerSeriesData k) :
   unfold mPrimeLocalization
   infer_instance
 
+instance mPrimeLocalization_isDomain_instance (d : PowerSeriesData k) :
+    IsDomain (mPrimeLocalization d) := by
+  unfold mPrimeLocalization
+  infer_instance
+
 noncomputable instance mPrimeLocalization_algebra (d : PowerSeriesData k) :
     Algebra (Polynomial (A d)) (mPrimeLocalization d) := by
   unfold mPrimeLocalization
@@ -4077,47 +4083,15 @@ section Catenarity
 
 variable {k : Type u} [Field k]
 
-/-- A finite totally ordered set of prime ideals between two fixed endpoints. -/
-structure PrimeChainBetween (R : Type*) [CommRing R] (p q : Ideal R) where
-  ideals : Set (Ideal R)
-  finite : ideals.Finite
-  contains_left : p ∈ ideals
-  contains_right : q ∈ ideals
-  lower_bound : ∀ I ∈ ideals, p ≤ I
-  upper_bound : ∀ I ∈ ideals, I ≤ q
-  prime : ∀ I ∈ ideals, I.IsPrime
-  comparable : ∀ ⦃I J : Ideal R⦄, I ∈ ideals → J ∈ ideals → I ≤ J ∨ J ≤ I
+/- Reuse the canonical catenarity predicates from Algebra, Chapter 105.
+   These aliases preserve the Chapter 19 namespace used by later examples. -/
+abbrev IsCatenaryRing (R : Type*) [CommRing R] : Prop :=
+  Formalization.Books.Algebra.Unit105.IsCatenaryRing R
 
-namespace PrimeChainBetween
+abbrev IsUniversallyCatenary (R : Type*) [CommRing R] : Prop :=
+  Formalization.Books.Algebra.Unit105.IsUniversallyCatenary R
 
-def length {R : Type*} [CommRing R] {p q : Ideal R}
-    (c : PrimeChainBetween R p q) : ℕ :=
-  c.ideals.ncard - 1
-
-/-- No prime ideal can be inserted between two members of a saturated chain. -/
-def IsSaturated {R : Type*} [CommRing R] {p q : Ideal R}
-    (c : PrimeChainBetween R p q) : Prop :=
-  ¬ ∃ r : Ideal R, r.IsPrime ∧ r ∉ c.ideals ∧
-    ∃ I ∈ c.ideals, ∃ J ∈ c.ideals, I < r ∧ r < J
-
-end PrimeChainBetween
-
-/-- Catenarity expressed by bounded finite chains and equal lengths of finite
-    saturated prime chains. -/
-def IsCatenaryRing (R : Type*) [CommRing R] : Prop :=
-  ∀ (p q : Ideal R), p.IsPrime → q.IsPrime → p ≤ q →
-    ∃ n : ℕ, (∀ c : PrimeChainBetween R p q, c.length ≤ n) ∧
-      ∀ c d : PrimeChainBetween R p q,
-        c.IsSaturated → d.IsSaturated → c.length = d.length
-
-/-- Universal catenarity for a Noetherian ring and all its finite-type
-    algebras. -/
-def IsUniversallyCatenary (R : Type*) [CommRing R] : Prop :=
-  IsNoetherianRing R ∧
-    ∀ (S : Type*) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
-      IsCatenaryRing S
-
-def IsNonCatenaryRing (R : Type*) [CommRing R] : Prop :=
+abbrev IsNonCatenaryRing (R : Type*) [CommRing R] : Prop :=
   ¬ IsCatenaryRing R
 
 theorem a_isCatenary (d : PowerSeriesData k) :
@@ -4137,14 +4111,20 @@ theorem a_not_universally_catenary (d : PowerSeriesData k) :
     ¬ IsUniversallyCatenary (A d) := by
   sorry
 
-noncomputable def displayedPrimeChainIdeals (d : PowerSeriesData k) :
-    Set (Ideal (mPrimeLocalization d)) :=
-  {⊥, pLocalizedIdeal d, mPrimeLocalizedIdeal d}
-
 theorem exists_displayed_maximal_prime_chain (d : PowerSeriesData k) :
-    ∃ c : PrimeChainBetween (mPrimeLocalization d) ⊥ (mPrimeLocalizedIdeal d),
-      c.ideals = displayedPrimeChainIdeals d ∧
-        c.IsSaturated ∧ c.length = 2 := by
+    ∃ c : LTSeries (Set.Iic
+        (⟨mPrimeLocalizedIdeal d,
+          (IsLocalRing.maximalIdeal.isMaximal _).isPrime⟩ :
+          PrimeSpectrum (mPrimeLocalization d))),
+      Formalization.Books.Topology.Unit11.IsMaximalChainBetween
+          (⊥ : PrimeSpectrum (mPrimeLocalization d))
+          (⟨mPrimeLocalizedIdeal d,
+            (IsLocalRing.maximalIdeal.isMaximal _).isPrime⟩ :
+            PrimeSpectrum (mPrimeLocalization d))
+          (by simp) c ∧
+        c.length = 2 ∧
+        pLocalizedIdeal d ∈ Set.range
+          (fun i => (c i : PrimeSpectrum (mPrimeLocalization d)).asIdeal) := by
   sorry
 
 theorem polynomial_localization_is_nonCatenary_noetherian_local

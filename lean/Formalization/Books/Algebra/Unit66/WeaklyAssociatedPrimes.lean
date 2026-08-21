@@ -14,6 +14,7 @@ import Mathlib.RingTheory.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basis
 import Mathlib.LinearAlgebra.TensorProduct.Free
 import Mathlib.RingTheory.TensorProduct.Free
+import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.RingTheory.LocalProperties.Reduced
 import Mathlib.RingTheory.Flat.Equalizer
@@ -2630,6 +2631,77 @@ private theorem weaklyAssociatedPrimes_finsupp
       exact congrArg (fun v : ι →₀ X => v i) ha
     exact hIP (by simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hai)
   exact hp.2 hP' hPle
+
+/-- The change-of-fields descent theorem for a finite field extension. -/
+private theorem weaklyAssociatedPrimes_change_fields_finite
+    {k K R M : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] [Module.Finite k K]
+    [AddCommGroup M] [Module R M]
+    (q : PrimeSpectrum (R ⊗[k] K)) (p : PrimeSpectrum R)
+    (hpq : PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeLeftRingHom : R →+* R ⊗[k] K) q = p)
+    (hq : q ∈ weaklyAssociatedPrimes (R ⊗[k] K)
+      (TensorProduct R (R ⊗[k] K) M)) :
+    p ∈ weaklyAssociatedPrimes R M := by
+  classical
+  let B := R ⊗[k] K
+  have hfiniteB : Module.Finite R B := inferInstance
+  have hfiniteMap : RingHom.Finite
+      (Algebra.TensorProduct.includeLeftRingHom : R →+* B) :=
+    RingHom.finite_algebraMap.mpr hfiniteB
+  let b := Module.Free.chooseBasis k K
+  let eB : B ≃ₗ[R] ((Module.Free.ChooseBasisIndex k K) →₀ R) :=
+    Algebra.TensorProduct.equivFinsuppOfBasis R b
+  let eCan : TensorProduct R B M ≃+
+      TensorProduct R ((Module.Free.ChooseBasisIndex k K) →₀ R) M :=
+    (LinearEquiv.rTensor M eB).toAddEquiv
+  let : Module R (TensorProduct R B M) :=
+    Module.compHom (TensorProduct R B M)
+      (Algebra.TensorProduct.includeLeftRingHom : R →+* B)
+  have hpTensor : p ∈ weaklyAssociatedPrimes R (TensorProduct R B M) := by
+    have heq := weaklyAssociatedPrimes_finite_ring_map
+      (M := TensorProduct R B M)
+      (Algebra.TensorProduct.includeLeftRingHom : R →+* B) hfiniteMap
+    have himage : p ∈ PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeLeftRingHom : R →+* B) ''
+          weaklyAssociatedPrimes B (TensorProduct R B M) := by
+      exact ⟨q, by simpa [B] using hq, by simpa [B] using hpq⟩
+    rw [← heq]
+    exact himage
+  let ePstd : TensorProduct R B M ≃ₗ[R]
+      TensorProduct R ((Module.Free.ChooseBasisIndex k K) →₀ R) M :=
+    { eCan with
+      map_smul' := by
+        intro r z
+        change eCan
+            ((Algebra.TensorProduct.includeLeftRingHom : R →+* B) r • z) =
+          r • eCan z
+        induction z using TensorProduct.induction_on with
+        | zero => simp
+        | tmul a m =>
+            simp only [eCan, LinearEquiv.coe_toAddEquiv,
+              TensorProduct.smul_tmul']
+            have hr :
+                (Algebra.TensorProduct.includeLeftRingHom : R →+* B) r • a = r • a := by
+              rw [smul_eq_mul, Algebra.smul_def]
+              rfl
+            rw [hr]
+            change (eB (r • a)) ⊗ₜ[R] m = r • ((eB a) ⊗ₜ[R] m)
+            rw [eB.map_smul]
+            exact (TensorProduct.smul_tmul' (R := R) (R' := R)
+              r (eB a) m).symm
+        | add x y hx hy => rw [smul_add, map_add, hx, hy, map_add, smul_add] }
+  let eF : TensorProduct R ((Module.Free.ChooseBasisIndex k K) →₀ R) M ≃ₗ[R]
+      ((Module.Free.ChooseBasisIndex k K) →₀ M) :=
+    TensorProduct.equivFinsuppOfBasisLeft
+      (Finsupp.basisSingleOne
+        (R := R) (ι := Module.Free.ChooseBasisIndex k K))
+  let eall : TensorProduct R B M ≃ₗ[R]
+      ((Module.Free.ChooseBasisIndex k K) →₀ M) := ePstd.trans eF
+  have hpFinsupp : p ∈ weaklyAssociatedPrimes R
+      ((Module.Free.ChooseBasisIndex k K) →₀ M) :=
+    (weaklyAssociatedPrimes_linearEquiv eall p).1 hpTensor
+  exact weaklyAssociatedPrimes_finsupp p hpFinsupp
 
 /-! ## Change of fields -/
 

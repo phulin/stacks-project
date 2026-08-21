@@ -999,6 +999,78 @@ private theorem standardResolutionOuterCompositeMorphism
         (eqToHom (standardResolution_object_degree T n).symm) T.V)
       augmentationApp, hcancel, Category.id_comp, hkaugApp]
 
+private theorem standardResolutionInnerIdentityMorphism
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    GodementInnerMorphism (𝟭 A) (𝟭 A)
+      (standardResolutionBase T) (standardResolutionCounit T)
+      (standardResolutionComultiplication T) (𝟙 (𝟭 A))
+      (fun n => 𝟙 ((𝟭 A) ⋙ godementDegree
+        (standardResolutionBase T) n)) := by
+  refine { face := ?_, degeneracy := ?_, augmentation := ?_ }
+  · intro n j
+    change 𝟙 ((𝟭 A) ⋙ godementDegree
+          (standardResolutionBase T) (n + 1)) ≫
+        Functor.whiskerLeft (𝟭 A)
+          (godementFace (standardResolutionBase T)
+            (standardResolutionCounit T) (n := n + 1) j) =
+      Functor.whiskerLeft (𝟭 A)
+          (godementFace (standardResolutionBase T)
+            (standardResolutionCounit T) (n := n + 1) j) ≫
+        𝟙 ((𝟭 A) ⋙ godementDegree
+          (standardResolutionBase T) n)
+    rw [Category.id_comp]
+    apply eq_of_heq
+    exact heq_of_eq (Category.comp_id (Functor.whiskerLeft (𝟭 A)
+      (godementFace (standardResolutionBase T)
+        (standardResolutionCounit T) (n := n + 1) j))).symm
+  · intro n j
+    change 𝟙 ((𝟭 A) ⋙ godementDegree
+          (standardResolutionBase T) n) ≫
+        Functor.whiskerLeft (𝟭 A)
+          (godementDegeneracy (standardResolutionBase T)
+            (standardResolutionComultiplication T) (n := n) j) =
+      Functor.whiskerLeft (𝟭 A)
+          (godementDegeneracy (standardResolutionBase T)
+            (standardResolutionComultiplication T) (n := n) j) ≫
+        𝟙 ((𝟭 A) ⋙ godementDegree
+          (standardResolutionBase T) (n + 1))
+    ext X
+    simp only [NatTrans.comp_app, Category.id_comp, Category.comp_id]
+  · intro n
+    change 𝟙 ((𝟭 A) ⋙ godementDegree
+          (standardResolutionBase T) n) ≫
+        godementInnerAugmentationComponent (𝟭 A)
+          (standardResolutionBase T) (standardResolutionCounit T) n =
+      godementInnerAugmentationComponent (𝟭 A)
+          (standardResolutionBase T) (standardResolutionCounit T) n ≫
+        𝟙 (𝟭 A)
+    ext X
+    simp only [NatTrans.comp_app, Category.id_comp, Category.comp_id]
+
+private theorem standardResolutionOuterExplicitHomotopy
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    Nonempty (GodementWhiskeredHomotopy (𝟭 A) (𝟭 A)
+      (standardResolutionBase T) T.V T.V
+      (standardResolutionCounit T) (standardResolutionComultiplication T)
+      (godementTwoMapLeft (𝟭 A) (𝟭 A)
+        (standardResolutionBase T) T.V T.V (𝟙 T.V)
+        (fun n => 𝟙 ((𝟭 A) ⋙ godementDegree
+          (standardResolutionBase T) n)))
+      (godementTwoMapRight (𝟭 A) (𝟭 A)
+        (standardResolutionBase T) T.V T.V
+        (standardResolutionOuterCompositeDegree T) (𝟙 (𝟭 A)))) := by
+  exact godement_two_maps_homotopic (𝟭 A) (𝟭 A)
+    (standardResolutionBase T) T.V T.V
+    (standardResolutionCounit T) (standardResolutionComultiplication T)
+    (standardResolution_godementEquations T) (𝟙 T.V)
+    (standardResolutionOuterCompositeDegree T)
+    (standardResolutionOuterCompositeMorphism T) (𝟙 (𝟭 A))
+    (fun n => 𝟙 ((𝟭 A) ⋙ godementDegree
+      (standardResolutionBase T) n))
+    (standardResolutionInnerIdentityMorphism T)
+
 theorem standardResolution_homotopy_equivalences
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :

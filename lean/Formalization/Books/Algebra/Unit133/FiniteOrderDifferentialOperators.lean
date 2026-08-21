@@ -3214,6 +3214,84 @@ variable {A B M N : Type*} [CommRing A] [CommRing B] [Algebra A B]
   [Module B M] [Module B N] [Module A M] [Module A N]
   [IsScalarTower A B M] [IsScalarTower A B N]
 
+private theorem differentialOperator_localization_unique_zero (T : Submonoid B)
+    (D : differentialOperatorSubmodule (R := A) (S := B) (M := M) (N := N) 0) :
+    ∃! E : differentialOperatorSubmodule (R := A) (S := B) 0
+        (M := LocalizedModule T M) (N := LocalizedModule T N),
+      ∀ m, E.1 (LocalizedModule.mkLinearMap T M m) =
+        LocalizedModule.mkLinearMap T N (D.1 m) := by
+  classical
+  let Dzero : M →ₗ[B] N :=
+    { toFun := D.1
+      map_add' := D.1.map_add
+      map_smul' := by
+        intro b m
+        exact D.2 b m }
+  let g : M →ₗ[B] LocalizedModule T N :=
+    (LocalizedModule.mkLinearMap T N).comp Dzero
+  have hunit (s : T) :
+      IsUnit (algebraMap B (Module.End B (LocalizedModule T N)) s) :=
+    (inferInstance : IsLocalizedModule T
+      (LocalizedModule.mkLinearMap T N)).map_units s
+  let E0B : LocalizedModule T M →ₗ[B] LocalizedModule T N :=
+    LocalizedModule.lift T g hunit
+  let E0 : differentialOperatorSubmodule (R := A) (S := B) 0
+      (M := LocalizedModule T M) (N := LocalizedModule T N) :=
+    ⟨E0B.restrictScalars A, by
+      intro b x
+      exact E0B.map_smul b x⟩
+  have hE0 : ∀ m,
+      E0.1 (LocalizedModule.mkLinearMap T M m) =
+        LocalizedModule.mkLinearMap T N (D.1 m) := by
+    intro m
+    change E0B (LocalizedModule.mkLinearMap T M m) =
+      LocalizedModule.mkLinearMap T N (D.1 m)
+    have hcomp : E0B.comp (LocalizedModule.mkLinearMap T M) = g := by
+      exact LocalizedModule.lift_comp T g hunit
+    calc
+      E0B (LocalizedModule.mkLinearMap T M m) =
+          (E0B.comp (LocalizedModule.mkLinearMap T M)) m := rfl
+      _ = g m := DFunLike.congr_fun hcomp m
+      _ = LocalizedModule.mkLinearMap T N (D.1 m) := by rfl
+  refine ⟨E0, hE0, ?_⟩
+  intro E hE
+  apply Subtype.ext
+  apply LinearMap.ext
+  intro x
+  induction x using LocalizedModule.induction_on with
+  | _ m s =>
+      have hs : (s : B) • LocalizedModule.mk m s =
+          LocalizedModule.mk m 1 := by
+        calc
+          (s : B) • LocalizedModule.mk m s =
+              LocalizedModule.mk ((s : B) • m) s := by
+            rw [LocalizedModule.smul'_mk]
+          _ = LocalizedModule.mk m 1 := by
+            simpa only [Submonoid.smul_def] using
+              (LocalizedModule.mk_cancel s m)
+      have hEs : (s : B) • E.1 (LocalizedModule.mk m s) =
+          E.1 (LocalizedModule.mk m 1) := by
+        rw [← E.2, hs]
+      have hbase : E.1 (LocalizedModule.mk m 1) =
+          E0.1 (LocalizedModule.mk m 1) := by
+        rw [show LocalizedModule.mk m 1 =
+            LocalizedModule.mkLinearMap T M m by rfl]
+        rw [hE m, hE0 m]
+      have hE0s : (s : B) • E0.1 (LocalizedModule.mk m s) =
+          E0.1 (LocalizedModule.mk m 1) := by
+        rw [← E0.2, hs]
+      have hEq : (s : B) • E.1 (LocalizedModule.mk m s) =
+          (s : B) • E0.1 (LocalizedModule.mk m s) :=
+        hEs.trans (hbase.trans hE0s.symm)
+      have hEq' :
+          algebraMap B (Module.End B (LocalizedModule T N)) s
+              (E.1 (LocalizedModule.mk m s)) =
+            algebraMap B (Module.End B (LocalizedModule T N)) s
+              (E0.1 (LocalizedModule.mk m s)) := by
+        simpa [Module.algebraMap_end_apply] using hEq
+      have hmul := congrArg (LocalizedModule.divBy s) hEq'
+      simpa only [LocalizedModule.divBy_mul_by] using hmul
+
 theorem differentialOperator_localization_unique (T : Submonoid B) (k : ℕ)
     (D : differentialOperatorSubmodule (R := A) (S := B) (M := M) (N := N) k) :
     ∃! E : differentialOperatorSubmodule (R := A) (S := B) k
@@ -3223,79 +3301,7 @@ theorem differentialOperator_localization_unique (T : Submonoid B) (k : ℕ)
           LocalizedModule.mkLinearMap T N (D.1 m) := by
   revert D
   induction k with
-  | zero =>
-      intro D
-      classical
-      let Dzero : M →ₗ[B] N :=
-        { toFun := D.1
-          map_add' := D.1.map_add
-          map_smul' := by
-            intro b m
-            exact D.2 b m }
-      let g : M →ₗ[B] LocalizedModule T N :=
-        (LocalizedModule.mkLinearMap T N).comp Dzero
-      have hunit (s : T) :
-          IsUnit (algebraMap B (Module.End B (LocalizedModule T N)) s) :=
-        (inferInstance : IsLocalizedModule T
-          (LocalizedModule.mkLinearMap T N)).map_units s
-      let E0B : LocalizedModule T M →ₗ[B] LocalizedModule T N :=
-        LocalizedModule.lift T g hunit
-      let E0 : differentialOperatorSubmodule (R := A) (S := B) 0
-          (M := LocalizedModule T M) (N := LocalizedModule T N) :=
-        ⟨E0B.restrictScalars A, by
-          intro b x
-          exact E0B.map_smul b x⟩
-      have hE0 : ∀ m,
-          E0.1 (LocalizedModule.mkLinearMap T M m) =
-            LocalizedModule.mkLinearMap T N (D.1 m) := by
-        intro m
-        change E0B (LocalizedModule.mkLinearMap T M m) =
-          LocalizedModule.mkLinearMap T N (D.1 m)
-        have hcomp : E0B.comp (LocalizedModule.mkLinearMap T M) = g := by
-          exact LocalizedModule.lift_comp T g hunit
-        calc
-          E0B (LocalizedModule.mkLinearMap T M m) =
-              (E0B.comp (LocalizedModule.mkLinearMap T M)) m := rfl
-          _ = g m := DFunLike.congr_fun hcomp m
-          _ = LocalizedModule.mkLinearMap T N (D.1 m) := by rfl
-      refine ⟨E0, hE0, ?_⟩
-      intro E hE
-      apply Subtype.ext
-      apply LinearMap.ext
-      intro x
-      induction x using LocalizedModule.induction_on with
-      | _ m s =>
-          have hs : (s : B) • LocalizedModule.mk m s =
-              LocalizedModule.mk m 1 := by
-            calc
-              (s : B) • LocalizedModule.mk m s =
-                  LocalizedModule.mk ((s : B) • m) s := by
-                rw [LocalizedModule.smul'_mk]
-              _ = LocalizedModule.mk m 1 := by
-                simpa only [Submonoid.smul_def] using
-                  (LocalizedModule.mk_cancel s m)
-          have hEs : (s : B) • E.1 (LocalizedModule.mk m s) =
-              E.1 (LocalizedModule.mk m 1) := by
-            rw [← E.2, hs]
-          have hbase : E.1 (LocalizedModule.mk m 1) =
-              E0.1 (LocalizedModule.mk m 1) := by
-            rw [show LocalizedModule.mk m 1 =
-                LocalizedModule.mkLinearMap T M m by rfl]
-            rw [hE m, hE0 m]
-          have hE0s : (s : B) • E0.1 (LocalizedModule.mk m s) =
-              E0.1 (LocalizedModule.mk m 1) := by
-            rw [← E0.2, hs]
-          have hEq : (s : B) • E.1 (LocalizedModule.mk m s) =
-              (s : B) • E0.1 (LocalizedModule.mk m s) :=
-            hEs.trans (hbase.trans hE0s.symm)
-          have hEq' :
-              algebraMap B (Module.End B (LocalizedModule T N)) s
-                  (E.1 (LocalizedModule.mk m s)) =
-                algebraMap B (Module.End B (LocalizedModule T N)) s
-                  (E0.1 (LocalizedModule.mk m s)) := by
-            simpa [Module.algebraMap_end_apply] using hEq
-          have hmul := congrArg (LocalizedModule.divBy s) hEq'
-          simpa only [LocalizedModule.divBy_mul_by] using hmul
+  | zero => exact differentialOperator_localization_unique_zero T
   | succ k ih =>
       intro D
       classical

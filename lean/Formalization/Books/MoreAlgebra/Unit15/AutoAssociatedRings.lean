@@ -371,7 +371,44 @@ theorem squareZeroMap_residueTensor_bijective
     letI : Module (squareZeroRing k) k :=
       Module.compHom k (squareZeroResidueMap k)
     Function.Bijective ((squareZeroMap k).rTensor k) := by
-  sorry
+  letI : Module (squareZeroRing k) k :=
+    Module.compHom k (squareZeroResidueMap k)
+  have hvar (i : ℕ) (q : k) : squareZeroVariable k i • q = 0 := by
+    change squareZeroResidueMap k (squareZeroVariable k i) * q = 0
+    simp [squareZeroVariable, squareZeroResidueMap]
+  have hmap : (squareZeroMap k).rTensor k = LinearMap.id := by
+    apply LinearMap.ext
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul x q =>
+      induction x using Finsupp.induction with
+      | zero => simp
+      | @single_add i a x hi ha ih =>
+        rw [TensorProduct.add_tmul, map_add, ih]
+        simp only [squareZeroMap, LinearMap.rTensor_tmul,
+          Finsupp.linearCombination_single, LinearMap.id_apply]
+        congr 1
+        rw [TensorProduct.smul_tmul, TensorProduct.sub_tmul]
+        simp only [Finsupp.smul_single, smul_eq_mul, mul_one]
+        rw [show Finsupp.single (i + 1) (squareZeroVariable k i) =
+          squareZeroVariable k i •
+            Finsupp.single (i + 1) (1 : squareZeroRing k) by simp]
+        rw [TensorProduct.smul_tmul (R := squareZeroRing k)
+          (squareZeroVariable k i)
+          (Finsupp.single (i + 1) (1 : squareZeroRing k)) (a • q), hvar]
+        simp
+        have hs : a • Finsupp.single i (1 : squareZeroRing k) =
+            Finsupp.single i a := by
+          ext j
+          simp [Finsupp.single_apply]
+        change a •
+            (Finsupp.single i (1 : squareZeroRing k) ⊗ₜ[squareZeroRing k] q) =
+          Finsupp.single i a ⊗ₜ[squareZeroRing k] q
+        rw [TensorProduct.smul_tmul' (R := squareZeroRing k), hs]
+    | add x y hx hy => simp [hx, hy]
+  rw [hmap]
+  exact Function.bijective_id
 
 /-- The displayed map is not surjective. -/
 theorem squareZeroMap_not_surjective

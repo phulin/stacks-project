@@ -1233,6 +1233,48 @@ private opaque liftingAuxiliary_modPi_localized_b_setup
       evalx_a_isUnit := evalx_a_isUnit
       hDideal := hDideal }
 
+private opaque liftingAuxiliary_modPi_solve_z_variables
+    {R U : Type u} [CommRing R] [CommRing U] {π : R}
+    (d : LiftingConstructionData R π) (k : Fin d.r)
+    (qmap : liftingPolynomial R d.n d.m →+* U) (ainv : U)
+    (hpi : qmap (MvPolynomial.C π) = 0)
+    (qcorr : ∀ ℓ : Fin d.m,
+      qmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0)
+    (hqainv : qmap (liftLiftingPolynomial (d.a k)) * ainv = 1) :
+    ∀ ℓ : Fin d.m,
+      qmap (MvPolynomial.X (Sum.inr ℓ)) =
+        ainv * ∑ j : Fin (d.e k),
+          qmap (liftLiftingPolynomial (d.h k ℓ j)) *
+            qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
+  intro ℓ
+  have h := qcorr ℓ
+  change qmap (liftLiftingPolynomial (d.a k) *
+      MvPolynomial.X (Sum.inr ℓ) -
+    ∑ j : Fin (d.e k),
+      liftLiftingPolynomial (d.h k ℓ j) *
+        MvPolynomial.X (Sum.inr (d.selected k j)) -
+    MvPolynomial.C π * liftLiftingPolynomial (d.g k ℓ)) = 0 at h
+  rw [map_sub, map_sub, map_sum] at h
+  simp only [map_mul] at h
+  rw [hpi] at h
+  have hmul : qmap (liftLiftingPolynomial (d.a k)) *
+        qmap (MvPolynomial.X (Sum.inr ℓ)) =
+      ∑ j : Fin (d.e k),
+        qmap (liftLiftingPolynomial (d.h k ℓ j)) *
+          qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
+    apply sub_eq_zero.mp
+    simpa only [zero_mul, sub_zero] using h
+  calc
+    qmap (MvPolynomial.X (Sum.inr ℓ)) =
+        1 * qmap (MvPolynomial.X (Sum.inr ℓ)) := by simp
+    _ = (ainv * qmap (liftLiftingPolynomial (d.a k))) *
+        qmap (MvPolynomial.X (Sum.inr ℓ)) := by
+          rw [show ainv * qmap (liftLiftingPolynomial (d.a k)) = 1 by
+            simpa [mul_comm] using hqainv]
+    _ = ainv * (qmap (liftLiftingPolynomial (d.a k)) *
+        qmap (MvPolynomial.X (Sum.inr ℓ))) := by ring
+    _ = _ := congrArg (fun z => ainv * z) hmul
+
 private opaque liftingAuxiliary_modPi_localized_equiv_right
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r)
@@ -1367,56 +1409,10 @@ private opaque liftingAuxiliary_modPi_localized_equiv_right
         IsLocalization.Away.invSelf (liftingAuxiliaryModPiElement d k) *
           ∑ j : Fin (d.e k),
             qmap (liftLiftingPolynomial (d.h k ℓ j)) *
-              qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
-    intro ℓ
-    have h := qcorr ℓ
-    change qmap (liftLiftingPolynomial (d.a k) *
-        MvPolynomial.X (Sum.inr ℓ) -
-      ∑ j : Fin (d.e k),
-        liftLiftingPolynomial (d.h k ℓ j) *
-          MvPolynomial.X (Sum.inr (d.selected k j)) -
-      MvPolynomial.C π * liftLiftingPolynomial (d.g k ℓ)) = 0 at h
-    rw [map_sub] at h
-    rw [map_sub] at h
-    rw [map_sum] at h
-    simp only [map_mul] at h
-    rw [hpi] at h
-    have hmul : qmap (liftLiftingPolynomial (d.a k)) *
-          qmap (MvPolynomial.X (Sum.inr ℓ)) =
-        ∑ j : Fin (d.e k),
-          qmap (liftLiftingPolynomial (d.h k ℓ j)) *
-            qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
-      have hzero :
-          qmap (liftLiftingPolynomial (d.a k)) *
-              qmap (MvPolynomial.X (Sum.inr ℓ)) -
-            ∑ j : Fin (d.e k),
-              qmap (liftLiftingPolynomial (d.h k ℓ j)) *
-                qmap (MvPolynomial.X (Sum.inr (d.selected k j))) = 0 := by
-        simpa only [zero_mul, sub_zero] using h
-      exact sub_eq_zero.mp hzero
-    calc
-      qmap (MvPolynomial.X (Sum.inr ℓ)) =
-          1 * qmap (MvPolynomial.X (Sum.inr ℓ)) := by simp
-      _ = (IsLocalization.Away.invSelf
-          (liftingAuxiliaryModPiElement d k) *
-          qmap (liftLiftingPolynomial (d.a k))) *
-          qmap (MvPolynomial.X (Sum.inr ℓ)) := by
-            calc
-              1 * qmap (MvPolynomial.X (Sum.inr ℓ)) =
-                  (qmap (liftLiftingPolynomial (d.a k)) *
-                    IsLocalization.Away.invSelf
-                      (liftingAuxiliaryModPiElement d k)) *
-                    qmap (MvPolynomial.X (Sum.inr ℓ)) := by
-                      rw [hqainv]
-              _ = _ := by ring
-      _ = IsLocalization.Away.invSelf
-          (liftingAuxiliaryModPiElement d k) *
-          (qmap (liftLiftingPolynomial (d.a k)) *
-            qmap (MvPolynomial.X (Sum.inr ℓ))) := by ring
-      _ = _ := by
-        exact congrArg
-          (fun z => IsLocalization.Away.invSelf
-            (liftingAuxiliaryModPiElement d k) * z) hmul
+              qmap (MvPolynomial.X (Sum.inr (d.selected k j))) :=
+    liftingAuxiliary_modPi_solve_z_variables d k qmap
+      (IsLocalization.Away.invSelf (liftingAuxiliaryModPiElement d k))
+      hpi qcorr hqainv
   have htmap_model : ∀ p : liftingPresentationModPiModel d,
       tmap ((algebraMap (liftingPresentationModPiModel d) T) p) = smap2 p := by
     intro p

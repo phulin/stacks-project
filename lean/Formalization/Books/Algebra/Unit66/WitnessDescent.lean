@@ -7,6 +7,22 @@ open scoped TensorProduct
 
 noncomputable section
 
+/-- The coefficient-field inclusion on tensor products, regarded as an
+`R`-linear map. -/
+def intermediateFieldTensorMapLinear
+    {k K R : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (L : IntermediateField k K) :
+    (R ⊗[k] L) →ₗ[R] (R ⊗[k] K) :=
+  let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+  { toFun := f
+    map_add' := f.map_add
+    map_smul' := by
+      intro r b
+      induction b using TensorProduct.induction_on with
+      | zero => simp
+      | tmul a x => simp [f, TensorProduct.smul_tmul']
+      | add x y hx hy => simp [smul_add, hx, hy] }
+
 /-- Going down contracts a minimal annihilator of a pure base-change tensor
 to a minimal annihilator over the source ring. -/
 theorem weaklyAssociatedPrime_contract_tmul_of_flat
@@ -68,17 +84,7 @@ theorem exists_fg_intermediateField_module_preimage
     [CommRing R] [Algebra k R] [AddCommGroup M] [Module R M]
     (z : TensorProduct R (R ⊗[k] K) M) :
     ∃ L : IntermediateField k K, L.FG ∧
-      let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
-      let fR : (R ⊗[k] L) →ₗ[R] (R ⊗[k] K) :=
-        { toFun := f
-          map_add' := f.map_add
-          map_smul' := by
-            intro r b
-            induction b using TensorProduct.induction_on with
-            | zero => simp
-            | tmul a x => simp [f, TensorProduct.smul_tmul']
-            | add x y hx hy => simp [smul_add, hx, hy] }
-      z ∈ LinearMap.range (fR.rTensor M) := by
+      z ∈ LinearMap.range ((intermediateFieldTensorMapLinear L).rTensor M) := by
   classical
   obtain ⟨s, hs⟩ := TensorProduct.exists_multiset z
   let rep (b : R ⊗[k] K) : Multiset (R × K) :=
@@ -101,16 +107,8 @@ theorem exists_fg_intermediateField_module_preimage
     ((rep b).map fun a => a.1 ⊗ₜ[k] coeff a.2).sum
   let zL : TensorProduct R (R ⊗[k] L) M :=
     (s.map fun bm => liftB bm.1 ⊗ₜ[R] bm.2).sum
-  let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
   let fR : (R ⊗[k] L) →ₗ[R] (R ⊗[k] K) :=
-    { toFun := f
-      map_add' := f.map_add
-      map_smul' := by
-        intro r b
-        induction b using TensorProduct.induction_on with
-        | zero => simp
-        | tmul a x => simp [f, TensorProduct.smul_tmul']
-        | add x y hx hy => simp [smul_add, hx, hy] }
+    intermediateFieldTensorMapLinear L
   refine ⟨L, IntermediateField.fg_adjoin_finset t, zL, ?_⟩
   rw [hs]
   dsimp only [zL]
@@ -128,7 +126,7 @@ theorem exists_fg_intermediateField_module_preimage
       apply congrArg Multiset.sum
       refine Multiset.map_congr rfl ?_
       intro a ha
-      simp [fR, f, coeff, hmem bm hbm a ha]
+      simp [fR, intermediateFieldTensorMapLinear, coeff, hmem bm hbm a ha]
     _ = bm.1 := hrep bm.1
 
 end

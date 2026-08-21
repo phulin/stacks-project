@@ -2745,6 +2745,50 @@ private theorem weaklyAssociatedPrimes_contract_finite_intermediateField
   rw [← weaklyAssociatedPrimes_finite_ring_map f.toRingHom hf]
   exact ⟨q, hq, rfl⟩
 
+/-- Contracting through an intermediate coefficient field has the same effect
+on the original ring as contracting the full scalar extension directly. -/
+private theorem comap_tensorProduct_map_includeLeft
+    {k K R : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (L : IntermediateField k K)
+    (q : PrimeSpectrum (R ⊗[k] K)) :
+    let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+    PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeLeftRingHom : R →+* R ⊗[k] L)
+        (PrimeSpectrum.comap f.toRingHom q) =
+      PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeLeftRingHom : R →+* R ⊗[k] K) q := by
+  dsimp only
+  change (PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeLeftRingHom : R →+* R ⊗[k] L) ∘
+        PrimeSpectrum.comap
+          (Algebra.TensorProduct.map (AlgHom.id k R) L.val).toRingHom) q = _
+  rw [← PrimeSpectrum.comap_comp]
+  congr 1
+
+/-- The finite remainder of a finitely generated coefficient extension can be
+removed while preserving both weak association and the prime over `R`. -/
+private theorem exists_weaklyAssociatedPrime_over_finite_intermediateField
+    {k K R N : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (L : IntermediateField k K)
+    [Module.Finite L K] [AddCommGroup N] [Module (R ⊗[k] K) N]
+    (q : PrimeSpectrum (R ⊗[k] K)) (p : PrimeSpectrum R)
+    (hpq : PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeLeftRingHom : R →+* R ⊗[k] K) q = p)
+    (hq : q ∈ weaklyAssociatedPrimes (R ⊗[k] K) N) :
+    let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+    letI : Module (R ⊗[k] L) N := Module.compHom N f.toRingHom
+    ∃ qL : PrimeSpectrum (R ⊗[k] L),
+      PrimeSpectrum.comap
+          (Algebra.TensorProduct.includeLeftRingHom : R →+* R ⊗[k] L) qL = p ∧
+        qL ∈ weaklyAssociatedPrimes (R ⊗[k] L) N := by
+  dsimp only
+  let f := Algebra.TensorProduct.map (AlgHom.id k R) L.val
+  letI : Module (R ⊗[k] L) N := Module.compHom N f.toRingHom
+  let qL : PrimeSpectrum (R ⊗[k] L) := PrimeSpectrum.comap f.toRingHom q
+  refine ⟨qL, ?_, ?_⟩
+  · exact (comap_tensorProduct_map_includeLeft L q).trans hpq
+  · exact weaklyAssociatedPrimes_contract_finite_intermediateField L q hq
+
 /-- The change-of-fields descent theorem for a finite field extension. -/
 private theorem weaklyAssociatedPrimes_change_fields_finite
     {k K R M : Type*} [Field k] [Field K] [Algebra k K]

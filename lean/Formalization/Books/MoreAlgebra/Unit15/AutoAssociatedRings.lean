@@ -460,6 +460,64 @@ theorem squareZeroMap_cokernel_countablyGenerated
       (Submodule.mkQ_surjective
         (p := LinearMap.range (squareZeroMap k))))
 
+/-- The cokernel of the displayed map is not projective. -/
+theorem squareZeroMap_cokernel_not_projective
+    (k : Type u) [Field k] :
+    ¬ Module.Projective (squareZeroRing k)
+      ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range (squareZeroMap k)) := by
+  intro hprojective
+  letI : Module.Projective (squareZeroRing k)
+      ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range (squareZeroMap k)) :=
+    hprojective
+  let u := squareZeroMap k
+  let q : (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k]
+      ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range u) :=
+    Submodule.mkQ (LinearMap.range u)
+  obtain ⟨s, hs⟩ := Module.projective_lifting_property q LinearMap.id
+    (Submodule.mkQ_surjective (p := LinearMap.range u))
+  let p : (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k]
+      (ℕ →₀ squareZeroRing k) := LinearMap.id - s.comp q
+  have hp0 : q.comp p = 0 := by
+    apply LinearMap.ext
+    intro x
+    dsimp [p]
+    have hx := congrArg (fun f => f (q x)) hs
+    have hx' : q (s (q x)) = q x := by
+      simpa [LinearMap.comp_apply] using hx
+    simp only [map_sub, hx']
+    exact sub_self (q x)
+  have hp_mem (x : ℕ →₀ squareZeroRing k) : p x ∈ LinearMap.range u := by
+    rw [← Submodule.ker_mkQ (p := LinearMap.range u)]
+    exact congrArg (fun f => f x) hp0
+  have hu : Function.Injective u := squareZeroMap_injective k
+  let e : (ℕ →₀ squareZeroRing k) ≃ₗ[squareZeroRing k] LinearMap.range u :=
+    LinearEquiv.ofInjective u hu
+  let r : (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k]
+      (ℕ →₀ squareZeroRing k) := e.symm.toLinearMap.comp
+        (p.codRestrict (LinearMap.range u) hp_mem)
+  have hur : u.comp r = p := by
+    apply LinearMap.ext
+    intro x
+    change u (e.symm (p.codRestrict (LinearMap.range u) hp_mem x)) = p x
+    exact congrArg Subtype.val (e.apply_symm_apply _)
+  have hpu : p.comp u = u := by
+    apply LinearMap.ext
+    intro x
+    have hqu : q (u x) = 0 := by
+      apply Quotient.sound
+      exact (Submodule.quotientRel_def (LinearMap.range u)).2
+        ⟨x, by simp⟩
+    simp [p, LinearMap.comp_apply, hqu]
+  have hru : r.comp u = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply hu
+    have h₁ := congrArg (fun f => f (u x)) hur
+    have h₂ := congrArg (fun f => f x) hpu
+    exact h₁.trans h₂
+  exact squareZeroMap_not_surjective k
+    (squareZeroMap_split_implies_surjective k r (by simpa [u] using hru))
+
 /-- The cokernel of the displayed map is flat, countably generated, and not
 projective; consequently it is not Mittag--Leffler. -/
 theorem squareZeroMap_cokernel_properties
@@ -474,7 +532,12 @@ theorem squareZeroMap_cokernel_properties
       ¬ IsMittagLefflerModule
         (ModuleCat.of (squareZeroRing k)
           ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range (squareZeroMap k))) := by
-  sorry
+  have hflat := squareZeroMap_cokernel_flat k
+  have hcount := squareZeroMap_cokernel_countablyGenerated k
+  have hnotproj := squareZeroMap_cokernel_not_projective k
+  exact ⟨hflat, hcount, hnotproj,
+    Formalization.Books.Algebra.Unit91.flat_countablyGenerated_nonprojective_not_mittagLeffler
+        hflat hcount hnotproj⟩
 
 /-! ### Maps of finite free modules -/
 

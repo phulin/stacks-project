@@ -408,11 +408,95 @@ theorem squareZeroMap_apply_succ
       · have hsucc : i + 1 ≠ j + 1 := by omega
         simp [squareZeroMap, Finsupp.single_apply, hij, his, hsucc, mul_add] <;> ring
 
+private theorem polynomial_sub_constant_mem_nilradical
+    {k Q σ : Type*} [Field k] [CommRing Q] [Algebra k Q]
+    (f : MvPolynomial σ k →+* Q)
+    (hf : f.comp (MvPolynomial.C : k →+* MvPolynomial σ k) = algebraMap k Q)
+    (hX : ∀ v : σ, IsNilpotent (f (MvPolynomial.X v))) :
+    ∀ p : MvPolynomial σ k,
+      f p - algebraMap k Q (MvPolynomial.constantCoeff p) ∈ nilradical Q := by
+  have hC (r : k) : f (MvPolynomial.C r) = algebraMap k Q r :=
+    RingHom.congr_fun hf r
+  intro p
+  induction p using MvPolynomial.induction_on with
+  | C r => simp [hC]
+  | add p q hp hq =>
+      rw [map_add, map_add]
+      simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using
+        (nilradical Q).add_mem hp hq
+  | mul_X p v hp =>
+      rw [map_mul, map_mul, MvPolynomial.constantCoeff_X, mul_zero, map_zero,
+        sub_zero]
+      exact (nilradical Q).mul_mem_left _ (mem_nilradical.mpr (hX v))
+
+private theorem squareZeroRing_nontrivial
+    (k : Type u) [Field k] : Nontrivial (squareZeroRing k) := by
+  refine ⟨⟨1, 0, ?_⟩⟩
+  simpa [MvPolynomial.monomial_zero] using
+    squareZeroMonomial_ne_zero k (0 : ℕ →₀ ℕ) (fun _ => by simp)
+
+private theorem squareZeroRing_nonunit_isNilpotent
+    (k : Type u) [Field k] (x : squareZeroRing k) (hx : ¬ IsUnit x) :
+    IsNilpotent x := by
+  letI : Nontrivial (squareZeroRing k) := squareZeroRing_nontrivial k
+  obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+  let f : MvPolynomial ℕ k →+* squareZeroRing k :=
+    Ideal.Quotient.mk (Ideal.span (squareZeroRelations k))
+  have hf : f.comp (MvPolynomial.C : k →+* MvPolynomial ℕ k) =
+      algebraMap k (squareZeroRing k) := by
+    ext r
+    rfl
+  have hX (i : ℕ) : IsNilpotent (f (MvPolynomial.X i)) := by
+    refine ⟨2, ?_⟩
+    exact squareZeroVariable_sq k i
+  have hp := polynomial_sub_constant_mem_nilradical f hf hX p
+  by_cases hc : MvPolynomial.constantCoeff p = 0
+  · rw [hc, map_zero, sub_zero] at hp
+    exact mem_nilradical.mp hp
+  · have hu : IsUnit (algebraMap k (squareZeroRing k)
+        (MvPolynomial.constantCoeff p)) :=
+      (isUnit_iff_ne_zero.mpr hc).map (algebraMap k (squareZeroRing k))
+    have hnil : IsNilpotent
+        (f p - algebraMap k (squareZeroRing k) (MvPolynomial.constantCoeff p)) :=
+      mem_nilradical.mp hp
+    have hunit : IsUnit (f p) := by
+      have := hnil.isUnit_add_right_of_commute hu (Commute.all _ _)
+      simpa [sub_add_cancel] using this
+    exact (hx hunit).elim
+
+private theorem squareZeroRing_isLocalRing
+    (k : Type u) [Field k] : IsLocalRing (squareZeroRing k) := by
+  letI : Nontrivial (squareZeroRing k) := squareZeroRing_nontrivial k
+  apply IsLocalRing.of_nonunits_add
+  intro a b ha hb hab
+  exact ((Commute.all _ _).isNilpotent_add
+    (squareZeroRing_nonunit_isNilpotent k a ha)
+    (squareZeroRing_nonunit_isNilpotent k b hb)).not_isUnit hab
+
 /-- The countable square-zero ring is auto-associated. -/
 theorem squareZeroRing_autoAssociated
     (k : Type u) [Field k] :
     AutoAssociated (squareZeroRing k) := by
-  sorry
+  let hlocal : IsLocalRing (squareZeroRing k) := squareZeroRing_isLocalRing k
+  refine ⟨hlocal, ?_⟩
+  letI : IsLocalRing (squareZeroRing k) := hlocal
+  let m : Ideal (squareZeroRing k) := IsLocalRing.maximalIdeal (squareZeroRing k)
+  change ∃ x : squareZeroRing k,
+    m ∈ ((⊥ : Submodule (squareZeroRing k) (squareZeroRing k)).colon
+      ({x} : Set (squareZeroRing k))).minimalPrimes
+  refine ⟨1, ?_⟩
+  have hcolon : (⊥ : Submodule (squareZeroRing k) (squareZeroRing k)).colon
+      ({1} : Set (squareZeroRing k)) = (⊥ : Ideal (squareZeroRing k)) := by
+    ext a
+    simp [Submodule.mem_colon_singleton]
+  rw [hcolon]
+  refine ⟨⟨(IsLocalRing.maximalIdeal.isMaximal _).isPrime, bot_le⟩, ?_⟩
+  intro q hq hqm
+  intro x hx
+  have hxnonunit : ¬ IsUnit x := by
+    simpa [m, IsLocalRing.mem_maximalIdeal] using hx
+  obtain ⟨n, hn⟩ := squareZeroRing_nonunit_isNilpotent k x hxnonunit
+  exact hq.1.mem_of_pow_mem n (hn ▸ q.zero_mem)
 
 /-- Every finite restriction of the displayed map is injective. -/
 theorem squareZeroFiniteMap_injective

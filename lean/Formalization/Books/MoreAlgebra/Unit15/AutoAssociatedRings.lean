@@ -441,6 +441,25 @@ theorem squareZeroMap_cokernel_flat
   exact ((universallyInjective_into_flat_iff (squareZeroMap k) inferInstance).mp
     (squareZeroMap_universallyInjective k)) I hI
 
+/-- The cokernel of the displayed map is countably generated. -/
+theorem squareZeroMap_cokernel_countablyGenerated
+    (k : Type u) [Field k] :
+    Formalization.Books.Algebra.Unit84.Module.IsCountablyGenerated
+      (squareZeroRing k)
+      ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range (squareZeroMap k)) := by
+  let b : Module.Basis ℕ (squareZeroRing k) (ℕ →₀ squareZeroRing k) :=
+    Finsupp.basisSingleOne
+  let q : (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k]
+      ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range (squareZeroMap k)) :=
+    Submodule.mkQ (LinearMap.range (squareZeroMap k))
+  refine ⟨q '' Set.range b, Set.countable_range b |>.image q, ?_⟩
+  rw [← Submodule.map_span, b.span_eq]
+  rw [Submodule.map_top]
+  exact LinearMap.range_eq_top.mpr (by
+    simpa [q] using
+      (Submodule.mkQ_surjective
+        (p := LinearMap.range (squareZeroMap k))))
+
 /-- The cokernel of the displayed map is flat, countably generated, and not
 projective; consequently it is not Mittag--Leffler. -/
 theorem squareZeroMap_cokernel_properties

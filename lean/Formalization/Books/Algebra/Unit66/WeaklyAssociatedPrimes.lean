@@ -43,7 +43,7 @@ universe u v
 noncomputable section
 
 /-- Flat base change preserves the annihilator of a pure tensor. -/
-private theorem annihilator_one_tmul_eq_map
+theorem annihilator_one_tmul_eq_map
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module R M] [Module.Flat R S] (m : M) :
     (⊥ : Submodule S (S ⊗[R] M)).colon ({(1 : S) ⊗ₜ[R] m} : Set (S ⊗[R] M)) =

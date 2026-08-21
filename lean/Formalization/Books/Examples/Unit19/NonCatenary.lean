@@ -512,9 +512,11 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     simp [eK, xzPolynomialMap, zK]
   have hxK : xK ≠ 0 := by
     intro h
+    change algebraMap (R d) (FractionRing (R d))
+      (xInGeneratedRing d) = 0 at h
     have h' : algebraMap (R d) (FractionRing (R d))
-        (xInGeneratedRing d) = algebraMap (R d) (FractionRing (R d)) 0 := by
-      simpa [xK] using h
+        (xInGeneratedRing d) = algebraMap (R d) (FractionRing (R d)) 0 :=
+      h.trans ((map_zero (algebraMap (R d) (FractionRing (R d)))).symm)
     have hR : xInGeneratedRing d = 0 :=
       (IsFractionRing.injective (R d) (FractionRing (R d))) h'
     have hX : (PowerSeries.X : PowerSeries k) = 0 := by

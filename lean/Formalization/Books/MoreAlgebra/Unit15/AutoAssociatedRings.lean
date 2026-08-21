@@ -6,6 +6,7 @@ import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
 import Formalization.Books.Algebra.Unit88.MittagLefflerModules
 import Formalization.Books.Algebra.Unit91.ExamplesAndNonExamples
 import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
+import Formalization.Books.MoreAlgebra.Unit15.McCoy
 import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 import Mathlib.LinearAlgebra.Matrix.Nonsingular
@@ -1434,7 +1435,68 @@ theorem exactLengthOne_iff
             (Formalization.Books.Algebra.Unit102.rankIdeal φ) = ⊥ := by
   constructor
   · intro hφ
-    sorry
+    classical
+    let A : Matrix (Fin n) (Fin m) R := LinearMap.toMatrix' φ
+    have hA : Function.Injective (Matrix.mulVecLin A) := by
+      simpa [A, ← Matrix.toLin'_apply'] using hφ
+    have hannMax :
+        Module.annihilator R
+          (Ideal.span (Set.range fun p :
+            (Fin m ↪ Fin n) × (Fin m ↪ Fin m) =>
+            (A.submatrix p.1 p.2).det)) = ⊥ := by
+      exact annihilator_maximalMinorIdeal_eq_bot_of_injective A hA
+    have hminor : ∃ p :
+        (Fin m ↪ Fin n) × (Fin m ↪ Fin m),
+        (A.submatrix p.1 p.2).det ≠ 0 := by
+      by_contra hnone
+      push_neg at hnone
+      have hDbot : Ideal.span (Set.range fun p :
+          (Fin m ↪ Fin n) × (Fin m ↪ Fin m) =>
+          (A.submatrix p.1 p.2).det) = ⊥ := by
+        apply le_bot_iff.mp
+        rw [Ideal.span_le]
+        rintro _ ⟨p, rfl⟩
+        simpa using hnone p
+      have hone : (1 : R) ∈ Module.annihilator R
+          (Ideal.span (Set.range fun p :
+            (Fin m ↪ Fin n) × (Fin m ↪ Fin m) =>
+            (A.submatrix p.1 p.2).det)) := by
+        rw [Module.mem_annihilator]
+        intro z
+        have hz : (z : R) = 0 := by simpa [hDbot] using z.property
+        exact Subtype.ext (by simp [hz])
+      rw [hannMax] at hone
+      simpa using hone
+    obtain ⟨p, hp⟩ := hminor
+    have hmmap : exteriorPower.map m φ ≠ 0 :=
+      exteriorPower_map_ne_zero_of_full_minor_ne_zero φ p (by simpa [A] using hp)
+    have hsourceBound :
+        ∀ r : ℕ, exteriorPower.map r φ ≠ 0 → r ≤ m := by
+      intro r hr
+      by_contra hrm
+      have hlt : m < r := Nat.lt_of_not_ge hrm
+      have hfin : Module.finrank R (⋀[R]^r (Fin m → R)) = 0 := by
+        rw [exteriorPower.finrank_eq, Module.finrank_fin_fun,
+          Nat.choose_eq_zero_of_lt hlt]
+      letI : Subsingleton (⋀[R]^r (Fin m → R)) :=
+        (Module.finrank_eq_zero_iff_of_free R _).mp hfin
+      apply hr
+      apply LinearMap.ext
+      intro x
+      have hx : x = 0 := Subsingleton.elim _ _
+      rw [hx]
+      simp
+    have hrank : Formalization.Books.Algebra.Unit102.rank φ = m := by
+      rw [Formalization.Books.Algebra.Unit102.rank]
+      apply le_antisymm
+      · apply csSup_le
+        · exact ⟨m, hmmap⟩
+        · intro r hr
+          exact hsourceBound r hr
+      · exact le_csSup ⟨m, hsourceBound⟩ hmmap
+    refine ⟨hrank, ?_⟩
+    rw [Formalization.Books.Algebra.Unit102.rankIdeal, hrank]
+    simpa [A] using hannMax
   · rintro ⟨hrank, hann⟩
     exact injective_of_rank_eq_and_annihilator_eq_bot φ
       (source_rank_le_of_rank_eq_and_annihilator_eq_bot φ hrank hann)

@@ -430,6 +430,17 @@ theorem squareZeroMap_split_implies_surjective
     Function.Surjective (squareZeroMap k) := by
   sorry
 
+/-- The cokernel of the displayed map is flat. -/
+theorem squareZeroMap_cokernel_flat
+    (k : Type u) [Field k] :
+    Module.Flat (squareZeroRing k)
+      ((ℕ →₀ squareZeroRing k) ⧸ LinearMap.range (squareZeroMap k)) := by
+  apply Formalization.Books.Algebra.Unit39.flat_quotient_of_ideal_quotient_injective
+    (squareZeroMap k) inferInstance
+  intro I hI
+  exact ((universallyInjective_into_flat_iff (squareZeroMap k) inferInstance).mp
+    (squareZeroMap_universallyInjective k)) I hI
+
 /-- The cokernel of the displayed map is flat, countably generated, and not
 projective; consequently it is not Mittag--Leffler. -/
 theorem squareZeroMap_cokernel_properties

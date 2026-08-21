@@ -2,6 +2,9 @@ import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.TensorProduct.MvPolynomial
+import Mathlib.RingTheory.TensorProduct.Quotient
+import Mathlib.RingTheory.Nakayama
+import Mathlib.RingTheory.LocalRing.MaximalIdeal.Basic
 
 open scoped TensorProduct
 
@@ -77,5 +80,53 @@ theorem isDomain_tensorProduct_adjoin_of_algebraicIndependent
     IsDomain (κ ⊗[k] IntermediateField.adjoin k (Set.range x)) := by
   exact isDomain_tensorProduct_of_algEquiv_fractionRing ι
     hx.aevalEquivField.symm
+
+/-- If the residue tensor product is a domain, extension of the prime to the
+coefficient-field base change remains prime. -/
+theorem ideal_map_includeLeft_isPrime_of_isDomain_tensorProduct_quotient
+    {k K R : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (p : Ideal R)
+    (hdom : IsDomain ((R ⧸ p) ⊗[k] K)) :
+    (p.map (Algebra.TensorProduct.includeLeftRingHom :
+      R →+* R ⊗[k] K)).IsPrime := by
+  let e := Algebra.TensorProduct.quotientTensorEquiv
+    (R := k) k K R p
+  have hquot : IsDomain ((R ⊗[k] K) ⧸
+      p.map (Algebra.TensorProduct.includeLeftRingHom :
+        R →+* R ⊗[k] K)) :=
+    e.toRingEquiv.isDomain_iff.mp hdom
+  exact (Ideal.Quotient.isDomain_iff_prime _).mp hquot
+
+/-- A finitely supported family whose coefficients all lie in the maximal
+ideal times their own span must vanish.  This is the finite-coefficient form
+of Nakayama used for an individual tensor. -/
+theorem finsupp_eq_zero_of_coeff_mem_maximalIdeal_smul_span
+    {R M ι : Type*} [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M] (z : ι →₀ M)
+    (hz : ∀ i, z i ∈ IsLocalRing.maximalIdeal R •
+      Submodule.span R (z '' (z.support : Set ι))) :
+    z = 0 := by
+  let N : Submodule R M := Submodule.span R (z '' (z.support : Set ι))
+  have hNfg : N.FG := Submodule.fg_span
+    (z.support.finite_toSet.image z)
+  have hNle : N ≤ IsLocalRing.maximalIdeal R • N := by
+    change Submodule.span R (z '' (z.support : Set ι)) ≤
+      IsLocalRing.maximalIdeal R •
+        Submodule.span R (z '' (z.support : Set ι))
+    rw [Submodule.span_le]
+    rintro _ ⟨i, hi, rfl⟩
+    exact hz i
+  have hNzero : N = ⊥ := Submodule.eq_bot_of_le_smul_of_le_jacobson_bot
+    (IsLocalRing.maximalIdeal R) N hNfg hNle
+      (IsLocalRing.maximalIdeal_le_jacobson ⊥)
+  apply Finsupp.ext
+  intro i
+  by_cases hi : i ∈ z.support
+  · have hzi : z i ∈ N := by
+      change z i ∈ Submodule.span R (z '' (z.support : Set ι))
+      exact Submodule.subset_span ⟨i, hi, rfl⟩
+    rw [hNzero] at hzi
+    simpa using hzi
+  · exact Finsupp.notMem_support_iff.mp hi
 
 end Formalization.Books.Algebra.Unit66

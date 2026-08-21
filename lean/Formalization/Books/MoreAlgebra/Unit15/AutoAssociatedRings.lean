@@ -266,6 +266,29 @@ abbrev squareZeroRing (k : Type u) [CommRing k] :=
 def squareZeroVariable (k : Type u) [CommRing k] (i : ℕ) : squareZeroRing k :=
   Ideal.Quotient.mk (Ideal.span (squareZeroRelations k)) (MvPolynomial.X i)
 
+/-- Every finite product of distinct square-zero variables is nonzero. -/
+theorem squareZeroVariables_prod_ne_zero
+    (k : Type u) [Field k] (n : ℕ) :
+    (∏ i ∈ Finset.range n, squareZeroVariable k i) ≠ 0 := by
+  let d : ℕ →₀ ℕ := ∑ i ∈ Finset.range n, Finsupp.single i 1
+  have hpoly : (∏ i ∈ Finset.range n,
+      (MvPolynomial.X i : MvPolynomial ℕ k)) =
+      MvPolynomial.monomial d 1 := by
+    dsimp [d]
+    induction n with
+    | zero => simp
+    | succ n ih =>
+      rw [Finset.prod_range_succ, Finset.sum_range_succ, ih]
+      simp [MvPolynomial.X, MvPolynomial.monomial_mul]
+  have hd (i : ℕ) : d i ≤ 1 := by
+    simp [d, Finsupp.single_apply]
+    split <;> omega
+  change (∏ i ∈ Finset.range n,
+    Ideal.Quotient.mk (Ideal.span (squareZeroRelations k))
+      (MvPolynomial.X i)) ≠ 0
+  rw [← map_prod, hpoly]
+  exact squareZeroMonomial_ne_zero k d hd
+
 /-- The residue map which sends every polynomial variable to zero. -/
 def squareZeroResidueMap (k : Type u) [CommRing k] : squareZeroRing k →+* k :=
   Ideal.Quotient.lift (Ideal.span (squareZeroRelations k))
@@ -292,6 +315,40 @@ def squareZeroFiniteMap (k : Type u) [CommRing k] (n : ℕ) :
     (fun i : Fin n =>
       Finsupp.single i.1 (1 : squareZeroRing k) -
         squareZeroVariable k i.1 • Finsupp.single (i.1 + 1) (1 : squareZeroRing k))
+
+@[simp]
+theorem squareZeroMap_apply_zero
+    (k : Type u) [Field k] (x : ℕ →₀ squareZeroRing k) :
+    squareZeroMap k x 0 = x 0 := by
+  induction x using Finsupp.induction with
+  | zero => simp
+  | @single_add i a x hi ha ih =>
+    rw [map_add, Finsupp.add_apply, Finsupp.add_apply, ih]
+    simp [squareZeroMap, Finsupp.single_apply]
+
+@[simp]
+theorem squareZeroMap_apply_succ
+    (k : Type u) [Field k] (x : ℕ →₀ squareZeroRing k) (j : ℕ) :
+    squareZeroMap k x (j + 1) =
+      x (j + 1) - squareZeroVariable k j * x j := by
+  induction x using Finsupp.induction with
+  | zero => simp
+  | @single_add i a x hi ha ih =>
+    have hmap := (squareZeroMap k).map_add (Finsupp.single i a) x
+    rw [hmap]
+    change squareZeroMap k (Finsupp.single i a) (j + 1) +
+        squareZeroMap k x (j + 1) =
+      Finsupp.single i a (j + 1) + x (j + 1) -
+        squareZeroVariable k j * (Finsupp.single i a j + x j)
+    rw [ih]
+    by_cases hij : i = j
+    · subst i
+      simp [squareZeroMap, Finsupp.single_apply, mul_add, add_sub] <;> ring
+    · by_cases his : i = j + 1
+      · subst i
+        simp [squareZeroMap, Finsupp.single_apply, hij, mul_add] <;> ring
+      · have hsucc : i + 1 ≠ j + 1 := by omega
+        simp [squareZeroMap, Finsupp.single_apply, hij, his, hsucc, mul_add] <;> ring
 
 /-- The countable square-zero ring is auto-associated. -/
 theorem squareZeroRing_autoAssociated
@@ -453,17 +510,51 @@ theorem squareZeroMap_residueTensor_bijective
   rw [hmap]
   exact Function.bijective_id
 
-/-- The displayed map is not surjective. -/
-theorem squareZeroMap_not_surjective
-    (k : Type u) [Field k] : ¬ Function.Surjective (squareZeroMap k) := by
-  sorry
-
 /-- The first basis vector has no preimage under the displayed map. -/
 theorem squareZeroMap_firstBasis_no_preimage
     (k : Type u) [Field k] :
     ¬ ∃ x : ℕ →₀ squareZeroRing k,
       squareZeroMap k x = Finsupp.single 0 (1 : squareZeroRing k) := by
-  sorry
+  rintro ⟨x, hx⟩
+  have hx0 : x 0 = 1 := by
+    have h := congrArg (fun y : ℕ →₀ squareZeroRing k => y 0) hx
+    simpa using h
+  have hrec (j : ℕ) : x (j + 1) = squareZeroVariable k j * x j := by
+    have h := congrArg (fun y : ℕ →₀ squareZeroRing k => y (j + 1)) hx
+    rw [squareZeroMap_apply_succ] at h
+    have hrhs : Finsupp.single 0 (1 : squareZeroRing k) (j + 1) = 0 := by
+      simp [Finsupp.single_apply]
+    rw [hrhs] at h
+    exact sub_eq_zero.mp h
+  have hprod (n : ℕ) :
+      x n = ∏ i ∈ Finset.range n, squareZeroVariable k i := by
+    induction n with
+    | zero => simpa using hx0
+    | succ n ih =>
+      rw [hrec, ih, Finset.prod_range_succ]
+      exact mul_comm _ _
+  have hsupp : x.support.Nonempty := by
+    refine ⟨0, ?_⟩
+    apply Finsupp.mem_support_iff.mpr
+    rw [hx0]
+    simpa using squareZeroVariables_prod_ne_zero k 0
+  let m : ℕ := x.support.max' hsupp
+  have hmout : m + 1 ∉ x.support := by
+    intro hm
+    have hle : m + 1 ≤ m := by
+      dsimp [m]
+      exact Finset.le_max' x.support (m + 1) hm
+    omega
+  have hxout : x (m + 1) = 0 := Finsupp.notMem_support_iff.mp hmout
+  apply squareZeroVariables_prod_ne_zero k (m + 1)
+  rw [← hprod, hxout]
+
+/-- The displayed map is not surjective. -/
+theorem squareZeroMap_not_surjective
+    (k : Type u) [Field k] : ¬ Function.Surjective (squareZeroMap k) := by
+  intro hsurjective
+  apply squareZeroMap_firstBasis_no_preimage k
+  exact hsurjective (Finsupp.single 0 (1 : squareZeroRing k))
 
 /-- A splitting of the displayed map would make it surjective. -/
 theorem squareZeroMap_split_implies_surjective

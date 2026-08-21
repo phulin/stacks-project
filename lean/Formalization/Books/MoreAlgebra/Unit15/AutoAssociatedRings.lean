@@ -214,6 +214,71 @@ def FreeRankOneSplitCondition (R : Type u) [CommRing R] : Prop :=
       ∃ g : (Fin n → R) →ₗ[R] R,
         g.comp u = LinearMap.id
 
+private theorem hasPropertyP_of_freeRankOneSplitCondition
+    {R : Type u} [CommRing R]
+    (hsplit : FreeRankOneSplitCondition R) : HasPropertyP R := by
+  intro I hIproper hIfg
+  obtain ⟨n, f, hf⟩ :=
+    Submodule.fg_iff_exists_fin_generating_family.mp hIfg
+  let u : R →ₗ[R] (Fin n → R) :=
+    Formalization.Books.Algebra.Unit24.standardCoverMultiplicationMap f R
+  intro hIann
+  have hu : Function.Injective u := by
+    intro x y hxy
+    apply sub_eq_zero.mp
+    have hxy0 : u (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hmem : x - y ∈ Module.annihilator R I := by
+      rw [Module.mem_annihilator]
+      intro z
+      apply Subtype.ext
+      change (x - y) * (z : R) = 0
+      have hzspan : (z : R) ∈ Submodule.span R (Set.range f) := by
+        rw [hf]
+        exact z.2
+      refine Submodule.span_induction
+        (p := fun a _ => (x - y) * a = 0) ?_ ?_ ?_ ?_ hzspan
+      · rintro _ ⟨i, rfl⟩
+        have hi := congrFun hxy0 i
+        change u (x - y) i = (0 : R) at hi
+        change f i • (x - y) = 0 at hi
+        simpa [smul_eq_mul, mul_comm] using hi
+      · simp
+      · intro a b _ _ ha hb
+        simp [mul_add, ha, hb]
+      · intro r a _ ha
+        rw [smul_eq_mul]
+        calc
+          (x - y) * (r * a) = r * ((x - y) * a) := by ring
+          _ = 0 := by rw [ha, mul_zero]
+    rw [hIann] at hmem
+    simpa using hmem
+  obtain ⟨g, hg⟩ := hsplit n u hu
+  apply hIproper
+  rw [← top_le_iff]
+  intro r _
+  have hgu : g (u r) = r := by
+    have h := LinearMap.congr_fun hg r
+    simpa using h
+  rw [← hgu]
+  have hsum : u r = ∑ i : Fin n, Pi.single i (f i * r) := by
+    funext j
+    change f j * r = _
+    simp
+  rw [hsum, map_sum]
+  apply Ideal.sum_mem
+  intro i _
+  have hfi : f i ∈ I := by
+    rw [← hf]
+    exact Submodule.subset_span ⟨i, rfl⟩
+  have hsingle : Pi.single i (f i * r) =
+      f i • Pi.single i r := by
+    ext j
+    simp only [Pi.single_apply, Pi.smul_apply, smul_eq_mul]
+    split <;> simp_all
+  rw [hsingle, map_smul, smul_eq_mul]
+  exact Ideal.mul_mem_right (g (Pi.single i r)) I hfi
+
 /-- Property (P) is equivalent to the four finite-projective and split-map
 formulations in the source lemma. -/
 theorem hasPropertyP_iff_finiteProjective_conditions
@@ -223,7 +288,11 @@ theorem hasPropertyP_iff_finiteProjective_conditions
         FiniteProjectiveCokernelCondition R ∧
         FiniteProjectiveDirectSummandCondition R ∧
         FreeRankOneSplitCondition R) := by
-  sorry
+  constructor
+  · intro hP
+    sorry
+  · rintro ⟨_, _, _, hsplit⟩
+    exact hasPropertyP_of_freeRankOneSplitCondition hsplit
 
 /-! ### The countable square-zero example -/
 

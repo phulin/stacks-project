@@ -501,7 +501,13 @@ theorem godement_simplicial_data
           (d.app ((iteratedEndofunctor Y (i : ℕ)).obj X))
         try rw [← hmidMap]
         try rw [← hbigMap]
-        try rw [hsmall]
+        have hsmallF :
+            iteratedEndofunctor Y (n + 1 + 1 - ((j : ℕ) + 1)) =
+              iteratedEndofunctor Y (n + 1 - (j : ℕ)) :=
+          congrArg (iteratedEndofunctor Y) hsmall
+        have hsmallD := Functor.congr_hom hsmallF
+          (d.app ((iteratedEndofunctor Y (j : ℕ)).obj (Y.obj X)))
+        cases hsmallF
         simpa only [Category.assoc, CategoryTheory.eqToHom_trans,
           CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
           CategoryTheory.eqToHom_app, NatTrans.comp_app,
@@ -514,7 +520,7 @@ theorem godement_simplicial_data
           Functor.whiskerLeft_comp, Functor.whiskerRight_comp,
           Functor.associator, Functor.leftUnitor, Functor.rightUnitor,
           hp1, hq1, hp2, hq2, hp3, hq3, hp4, hq4, hFsource, hFtarget,
-          hj, hjY, hmid, hbig, hsmall, hdj, hdj', hdjMap, hmidD, hbigD,
+          hj, hjY, hmid, hbig, hsmall, hsmallD, hdj, hdj', hdjMap, hmidD, hbigD,
           hmidMap, hbigMap] using (hdd'.symm)
         
       δ_comp_σ_of_le := by
@@ -716,7 +722,12 @@ theorem godement_simplicial_data
         apply eq_of_heq
         try rw [← hmidMap]
         try rw [← hbigMap]
-        try rw [htailF]
+        have htailFunctor :
+            iteratedEndofunctor Y (n + 1 - ((j : ℕ) + 1)) =
+              iteratedEndofunctor Y (n - (j : ℕ)) :=
+          htailF
+        cases htailFunctor
+        try rw [htailS]
         simpa only [Category.assoc, CategoryTheory.eqToHom_trans,
           CategoryTheory.eqToHom_trans_assoc, CategoryTheory.eqToHom_refl,
           CategoryTheory.eqToHom_app, Category.comp_id, Category.id_comp,

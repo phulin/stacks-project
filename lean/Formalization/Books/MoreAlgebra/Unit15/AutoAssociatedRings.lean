@@ -359,7 +359,10 @@ theorem squareZeroMap_injective
 /-- The displayed map is universally injective. -/
 theorem squareZeroMap_universallyInjective
     (k : Type u) [Field k] : universallyInjective (squareZeroMap k) := by
-  sorry
+  apply (universallyInjective_iff_injective_of_hasPropertyP
+    (autoAssociated_hasPropertyP (squareZeroRing_autoAssociated k))
+    (squareZeroMap k)).2
+  exact squareZeroMap_injective k
 
 /-- The residue-field tensor of the displayed map is bijective; the ring map
 to the coefficient field supplies the scalar restriction used for the tensor. -/

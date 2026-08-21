@@ -345,250 +345,255 @@ final triangle proof lacks a local `IsIso` instance for a chosen lift leg.
 The construction through the inverse functor is otherwise retained below
 for continuation.
 -/
+private abbrev baseChangeForward
+    {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    {hC : Bicategory.IsLocallyGroupoid C} (B : BaseChangeData hC) :
+    DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
+      DottedArrowCategory (BaseChangeData.outerSquare B) := {
+  obj := fun A => by
+    dsimp [BaseChangeData.leftSquare] at A ⊢
+    exact
+      { a := A.a ≫ B.q
+        alpha := strictAssocInv B.j A.a B.q ≫
+          Bicategory.whiskerRight A.alpha B.q
+        beta := Bicategory.whiskerRight A.beta B.g ≫
+          strictAssocHom A.a B.p B.g ≫
+          Bicategory.whiskerLeft A.a B.phi ≫
+          strictAssocInv A.a B.q B.f
+        alpha_isIso := by infer_instance
+        beta_isIso := by infer_instance
+        commutes := by
+          dsimp [BaseChangeData.gamma]
+          have hA := A.commutes
+          dsimp [BaseChangeData.leftSquare] at hA
+          let hX : strictAssocHom B.x' B.q B.f =
+              (Bicategory.associator B.x' B.q B.f).hom := by
+            simpa [strictAssocHom] using congrArg Iso.hom
+              (Bicategory.Strict.associator_eqToIso B.x' B.q B.f) |>.symm
+          let hJY : strictAssocInv B.j B.y' B.g =
+              (Bicategory.associator B.j B.y' B.g).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso B.j B.y' B.g) |>.symm
+          let hJaq : strictAssocInv B.j (A.a ≫ B.q) B.f =
+              (Bicategory.associator B.j (A.a ≫ B.q) B.f).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso B.j (A.a ≫ B.q) B.f) |>.symm
+          let hJaq' : strictAssocInv B.j A.a B.q =
+              (Bicategory.associator B.j A.a B.q).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso B.j A.a B.q) |>.symm
+          let hAq : strictAssocInv A.a B.q B.f =
+              (Bicategory.associator A.a B.q B.f).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso A.a B.q B.f) |>.symm
+          let hApg : strictAssocHom A.a B.p B.g =
+              (Bicategory.associator A.a B.p B.g).hom := by
+            simpa [strictAssocHom] using congrArg Iso.hom
+              (Bicategory.Strict.associator_eqToIso A.a B.p B.g) |>.symm
+          let hXpg : strictAssocHom B.x' B.p B.g =
+              (Bicategory.associator B.x' B.p B.g).hom := by
+            simpa [strictAssocHom] using congrArg Iso.hom
+              (Bicategory.Strict.associator_eqToIso B.x' B.p B.g) |>.symm
+          have hβassoc :
+              (Bicategory.associator B.j B.y' B.g).inv ≫
+                  (Bicategory.whiskerLeft B.j A.beta) ▷ B.g =
+                Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
+                  (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv := by
+            apply (cancel_mono
+              (Bicategory.associator B.j (A.a ≫ B.p) B.g).hom).1
+            simp only [Category.assoc]
+            rw [Bicategory.whisker_assoc_symm]
+            simp only [Category.assoc, Iso.hom_inv_id_assoc]
+          let : IsIso (strictAssocHom B.x' B.q B.f) := by
+            dsimp [strictAssocHom]
+            infer_instance
+          apply (cancel_mono (strictAssocHom B.x' B.q B.f)).1
+          simp only [Category.assoc]
+          rw [hX, hJY, hJaq, hJaq', hAq, hApg, hXpg]
+          have hAg := congrArg
+            (fun t => Bicategory.whiskerRight t B.g) hA
+          rw [hAg]
+          rw [Bicategory.comp_whiskerRight]
+          simp only [Bicategory.whiskerLeft_comp, Category.assoc]
+          have hβtail :
+              ((Bicategory.associator B.j B.y' B.g).inv ≫
+                  (Bicategory.whiskerLeft B.j A.beta) ▷ B.g) ≫
+                  ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
+                    (Bicategory.associator B.x' B.p B.g).hom ≫
+                    B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
+                    (Bicategory.associator B.x' B.q B.f).hom) =
+                (Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
+                  (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv) ≫
+                  ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
+                    (Bicategory.associator B.x' B.p B.g).hom ≫
+                    B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
+                    (Bicategory.associator B.x' B.q B.f).hom) := by
+            calc
+              _ = ((Bicategory.associator B.j B.y' B.g).inv ≫
+                  (Bicategory.whiskerLeft B.j A.beta) ▷ B.g) ≫
+                  ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
+                    (Bicategory.associator B.x' B.p B.g).hom ≫
+                    B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
+                    (Bicategory.associator B.x' B.q B.f).hom) := by
+                      simp only [Category.assoc]
+              _ = (Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
+                  (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv) ≫
+                  ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
+                    (Bicategory.associator B.x' B.p B.g).hom ≫
+                    B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
+                    (Bicategory.associator B.x' B.q B.f).hom) := by
+                      rw [hβassoc]
+          calc
+            _ = (Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
+                  (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv) ≫
+                  ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
+                    (Bicategory.associator B.x' B.p B.g).hom ≫
+                    B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
+                    (Bicategory.associator B.x' B.q B.f).hom) := by
+                      simpa only [Category.assoc] using hβtail
+            _ = _ := by
+              let : IsIso (Bicategory.whiskerLeft B.j (A.beta ▷ B.g)) := by
+                infer_instance
+              simp only [Category.assoc]
+              apply (cancel_epi
+                (Bicategory.whiskerLeft B.j (A.beta ▷ B.g))).2
+              have hXq : strictAssocInv B.x' B.q B.f =
+                  (Bicategory.associator B.x' B.q B.f).inv := by
+                simpa [strictAssocInv] using congrArg Iso.inv
+                  (Bicategory.Strict.associator_eqToIso B.x' B.q B.f) |>.symm
+              have hJp : strictAssocInv B.j A.a B.p =
+                  (Bicategory.associator B.j A.a B.p).inv := by
+                simpa [strictAssocInv] using congrArg Iso.inv
+                  (Bicategory.Strict.associator_eqToIso B.j A.a B.p) |>.symm
+              rw [hXq, hJp]
+              simp only [← Category.assoc]
+              let : IsIso (Bicategory.associator B.x' B.q B.f).hom := by
+                infer_instance
+              rw [cancel_mono (Bicategory.associator B.x' B.q B.f).hom]
+              simp only [Bicategory.comp_whiskerRight, Category.assoc]
+              rw [Bicategory.associator_naturality_left_assoc A.alpha B.p B.g]
+              rw [← Bicategory.whisker_exchange_assoc]
+              rw [Bicategory.whiskerRight_comp]
+              simp only [Category.assoc]
+              simp only [Iso.hom_inv_id]
+              let : IsIso (Bicategory.whiskerRight
+                  (Bicategory.whiskerRight A.alpha B.q) B.f) := by
+                infer_instance
+              simp only [← Category.assoc]
+              simp only [Category.comp_id]
+              rw [cancel_mono
+                (Bicategory.whiskerRight
+                  (Bicategory.whiskerRight A.alpha B.q) B.f)]
+              simp only [Category.assoc]
+              rw [Bicategory.pentagon_inv_inv_hom_hom_inv_assoc B.j A.a B.p B.g]
+              rw [← Bicategory.associator_inv_naturality_right_assoc]
+              rw [Bicategory.pentagon_inv] }
+  map := fun {A A'} H => by
+    change DottedArrow (BaseChangeData.leftSquare B) at A A'
+    change DottedArrow.Hom A A' at H
+    dsimp [BaseChangeData.leftSquare] at A A' H ⊢
+    exact
+      { hom := Bicategory.whiskerRight H.hom B.q
+        alpha_naturality := by
+          dsimp
+          have hA : strictAssocInv B.j A.a B.q =
+              (Bicategory.associator B.j A.a B.q).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso B.j A.a B.q) |>.symm
+          have hA' : strictAssocInv B.j A'.a B.q =
+              (Bicategory.associator B.j A'.a B.q).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso B.j A'.a B.q) |>.symm
+          rw [hA']
+          rw [Bicategory.whisker_assoc_symm]
+          simp only [Category.assoc, Iso.hom_inv_id_assoc]
+          rw [← Bicategory.comp_whiskerRight, H.alpha_naturality]
+          rw [hA]
+        beta_naturality := by
+          dsimp
+          have hA : strictAssocInv A.a B.q B.f =
+              (Bicategory.associator A.a B.q B.f).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso A.a B.q B.f) |>.symm
+          have hA' : strictAssocInv A'.a B.q B.f =
+              (Bicategory.associator A'.a B.q B.f).inv := by
+            simpa [strictAssocInv] using congrArg Iso.inv
+              (Bicategory.Strict.associator_eqToIso A'.a B.q B.f) |>.symm
+          simp only [Category.assoc]
+          rw [hA, hA']
+          rw [Bicategory.whiskerRight_comp_symm]
+          simp only [Iso.inv_hom_id_assoc]
+          rw [← Category.assoc (Bicategory.whiskerLeft A.a B.phi)
+            (Bicategory.whiskerRight H.hom (B.q ≫ B.f))
+            (Bicategory.associator A'.a B.q B.f).inv]
+          rw [Bicategory.whisker_exchange H.hom B.phi]
+          have hApg : strictAssocHom A.a B.p B.g =
+              (Bicategory.associator A.a B.p B.g).hom := by
+            simpa [strictAssocHom] using congrArg Iso.hom
+              (Bicategory.Strict.associator_eqToIso A.a B.p B.g) |>.symm
+          have hApg' : strictAssocHom A'.a B.p B.g =
+              (Bicategory.associator A'.a B.p B.g).hom := by
+            simpa [strictAssocHom] using congrArg Iso.hom
+              (Bicategory.Strict.associator_eqToIso A'.a B.p B.g) |>.symm
+          have hnat :
+              strictAssocHom A.a B.p B.g ≫
+                  Bicategory.whiskerRight H.hom (B.p ≫ B.g) ≫
+                  Bicategory.whiskerLeft A'.a B.phi =
+                (Bicategory.whiskerRight H.hom B.p) ▷ B.g ≫
+                  strictAssocHom A'.a B.p B.g ≫
+                  Bicategory.whiskerLeft A'.a B.phi := by
+            rw [hApg, hApg']
+            rw [← Bicategory.associator_naturality_left_assoc]
+          calc
+            _ = A.beta ▷ B.g ≫
+                (strictAssocHom A.a B.p B.g ≫
+                  Bicategory.whiskerRight H.hom (B.p ≫ B.g) ≫
+                  Bicategory.whiskerLeft A'.a B.phi) ≫
+                  (Bicategory.associator A'.a B.q B.f).inv := by
+                    simp only [Category.assoc]
+            _ = A.beta ▷ B.g ≫
+                ((Bicategory.whiskerRight H.hom B.p) ▷ B.g ≫
+                  strictAssocHom A'.a B.p B.g ≫
+                  Bicategory.whiskerLeft A'.a B.phi) ≫
+                  (Bicategory.associator A'.a B.q B.f).inv := by
+                    rw [hnat]
+            _ = (A.beta ≫ Bicategory.whiskerRight H.hom B.p) ▷ B.g ≫
+                (strictAssocHom A'.a B.p B.g ≫
+                  Bicategory.whiskerLeft A'.a B.phi) ≫
+                  (Bicategory.associator A'.a B.q B.f).inv := by
+                    rw [Bicategory.comp_whiskerRight]
+                    simp only [Category.assoc]
+            _ = A'.beta ▷ B.g ≫
+                (strictAssocHom A'.a B.p B.g ≫
+                  Bicategory.whiskerLeft A'.a B.phi) ≫
+                  (Bicategory.associator A'.a B.q B.f).inv := by
+                    rw [H.beta_naturality]
+            _ = _ := by simp }
+  map_id := by
+    intro A
+    change DottedArrow (BaseChangeData.leftSquare B) at A
+    dsimp [BaseChangeData.leftSquare, BaseChangeData.outerSquare] at A ⊢
+    apply DottedArrow.Hom.ext
+    change (𝟙 A.a) ▷ B.q = 𝟙 (A.a ≫ B.q)
+    simp
+  map_comp := by
+    intro A A' A'' H K
+    change DottedArrow (BaseChangeData.leftSquare B) at A A' A''
+    change DottedArrow.Hom A A' at H
+    change DottedArrow.Hom A' A'' at K
+    dsimp [BaseChangeData.leftSquare, BaseChangeData.outerSquare] at A A' A'' H K ⊢
+    apply DottedArrow.Hom.ext
+    change (H.hom ≫ K.hom) ▷ B.q =
+      (H.hom ▷ B.q) ≫ (K.hom ▷ B.q)
+    rw [Bicategory.comp_whiskerRight] }
+
 theorem dottedArrow_baseChange_equivalence
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
     {hC : Bicategory.IsLocallyGroupoid C} (B : BaseChangeData hC) :
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
-  let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
-      DottedArrowCategory (BaseChangeData.outerSquare B) := {
-    obj := fun A => by
-      dsimp [BaseChangeData.leftSquare] at A ⊢
-      exact
-        { a := A.a ≫ B.q
-          alpha := strictAssocInv B.j A.a B.q ≫
-            Bicategory.whiskerRight A.alpha B.q
-          beta := Bicategory.whiskerRight A.beta B.g ≫
-            strictAssocHom A.a B.p B.g ≫
-            Bicategory.whiskerLeft A.a B.phi ≫
-            strictAssocInv A.a B.q B.f
-          alpha_isIso := by infer_instance
-          beta_isIso := by infer_instance
-          commutes := by
-            dsimp [BaseChangeData.gamma]
-            have hA := A.commutes
-            dsimp [BaseChangeData.leftSquare] at hA
-            let hX : strictAssocHom B.x' B.q B.f =
-                (Bicategory.associator B.x' B.q B.f).hom := by
-              simpa [strictAssocHom] using congrArg Iso.hom
-                (Bicategory.Strict.associator_eqToIso B.x' B.q B.f) |>.symm
-            let hJY : strictAssocInv B.j B.y' B.g =
-                (Bicategory.associator B.j B.y' B.g).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso B.j B.y' B.g) |>.symm
-            let hJaq : strictAssocInv B.j (A.a ≫ B.q) B.f =
-                (Bicategory.associator B.j (A.a ≫ B.q) B.f).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso B.j (A.a ≫ B.q) B.f) |>.symm
-            let hJaq' : strictAssocInv B.j A.a B.q =
-                (Bicategory.associator B.j A.a B.q).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso B.j A.a B.q) |>.symm
-            let hAq : strictAssocInv A.a B.q B.f =
-                (Bicategory.associator A.a B.q B.f).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso A.a B.q B.f) |>.symm
-            let hApg : strictAssocHom A.a B.p B.g =
-                (Bicategory.associator A.a B.p B.g).hom := by
-              simpa [strictAssocHom] using congrArg Iso.hom
-                (Bicategory.Strict.associator_eqToIso A.a B.p B.g) |>.symm
-            let hXpg : strictAssocHom B.x' B.p B.g =
-                (Bicategory.associator B.x' B.p B.g).hom := by
-              simpa [strictAssocHom] using congrArg Iso.hom
-                (Bicategory.Strict.associator_eqToIso B.x' B.p B.g) |>.symm
-            have hβassoc :
-                (Bicategory.associator B.j B.y' B.g).inv ≫
-                    (Bicategory.whiskerLeft B.j A.beta) ▷ B.g =
-                  Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
-                    (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv := by
-              apply (cancel_mono
-                (Bicategory.associator B.j (A.a ≫ B.p) B.g).hom).1
-              simp only [Category.assoc]
-              rw [Bicategory.whisker_assoc_symm]
-              simp only [Category.assoc, Iso.hom_inv_id_assoc]
-            let : IsIso (strictAssocHom B.x' B.q B.f) := by
-              dsimp [strictAssocHom]
-              infer_instance
-            apply (cancel_mono (strictAssocHom B.x' B.q B.f)).1
-            simp only [Category.assoc]
-            rw [hX, hJY, hJaq, hJaq', hAq, hApg, hXpg]
-            have hAg := congrArg
-              (fun t => Bicategory.whiskerRight t B.g) hA
-            rw [hAg]
-            rw [Bicategory.comp_whiskerRight]
-            simp only [Bicategory.whiskerLeft_comp, Category.assoc]
-            have hβtail :
-                ((Bicategory.associator B.j B.y' B.g).inv ≫
-                    (Bicategory.whiskerLeft B.j A.beta) ▷ B.g) ≫
-                    ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
-                      (Bicategory.associator B.x' B.p B.g).hom ≫
-                      B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
-                      (Bicategory.associator B.x' B.q B.f).hom) =
-                  (Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
-                    (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv) ≫
-                    ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
-                      (Bicategory.associator B.x' B.p B.g).hom ≫
-                      B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
-                      (Bicategory.associator B.x' B.q B.f).hom) := by
-              calc
-                _ = ((Bicategory.associator B.j B.y' B.g).inv ≫
-                    (Bicategory.whiskerLeft B.j A.beta) ▷ B.g) ≫
-                    ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
-                      (Bicategory.associator B.x' B.p B.g).hom ≫
-                      B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
-                      (Bicategory.associator B.x' B.q B.f).hom) := by
-                        simp only [Category.assoc]
-                _ = (Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
-                    (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv) ≫
-                    ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
-                      (Bicategory.associator B.x' B.p B.g).hom ≫
-                      B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
-                      (Bicategory.associator B.x' B.q B.f).hom) := by
-                        rw [hβassoc]
-            calc
-              _ = (Bicategory.whiskerLeft B.j (A.beta ▷ B.g) ≫
-                    (Bicategory.associator B.j (A.a ≫ B.p) B.g).inv) ≫
-                    ((strictAssocInv B.j A.a B.p ≫ A.alpha ▷ B.p) ▷ B.g ≫
-                      (Bicategory.associator B.x' B.p B.g).hom ≫
-                      B.x' ◁ B.phi ≫ strictAssocInv B.x' B.q B.f ≫
-                      (Bicategory.associator B.x' B.q B.f).hom) := by
-                        simpa only [Category.assoc] using hβtail
-              _ = _ := by
-                let : IsIso (Bicategory.whiskerLeft B.j (A.beta ▷ B.g)) := by
-                  infer_instance
-                simp only [Category.assoc]
-                apply (cancel_epi
-                  (Bicategory.whiskerLeft B.j (A.beta ▷ B.g))).2
-                have hXq : strictAssocInv B.x' B.q B.f =
-                    (Bicategory.associator B.x' B.q B.f).inv := by
-                  simpa [strictAssocInv] using congrArg Iso.inv
-                    (Bicategory.Strict.associator_eqToIso B.x' B.q B.f) |>.symm
-                have hJp : strictAssocInv B.j A.a B.p =
-                    (Bicategory.associator B.j A.a B.p).inv := by
-                  simpa [strictAssocInv] using congrArg Iso.inv
-                    (Bicategory.Strict.associator_eqToIso B.j A.a B.p) |>.symm
-                rw [hXq, hJp]
-                simp only [← Category.assoc]
-                let : IsIso (Bicategory.associator B.x' B.q B.f).hom := by
-                  infer_instance
-                rw [cancel_mono (Bicategory.associator B.x' B.q B.f).hom]
-                simp only [Bicategory.comp_whiskerRight, Category.assoc]
-                rw [Bicategory.associator_naturality_left_assoc A.alpha B.p B.g]
-                rw [← Bicategory.whisker_exchange_assoc]
-                rw [Bicategory.whiskerRight_comp]
-                simp only [Category.assoc]
-                simp only [Iso.hom_inv_id]
-                let : IsIso (Bicategory.whiskerRight
-                    (Bicategory.whiskerRight A.alpha B.q) B.f) := by
-                  infer_instance
-                simp only [← Category.assoc]
-                simp only [Category.comp_id]
-                rw [cancel_mono
-                  (Bicategory.whiskerRight
-                    (Bicategory.whiskerRight A.alpha B.q) B.f)]
-                simp only [Category.assoc]
-                rw [Bicategory.pentagon_inv_inv_hom_hom_inv_assoc B.j A.a B.p B.g]
-                rw [← Bicategory.associator_inv_naturality_right_assoc]
-                rw [Bicategory.pentagon_inv] }
-    map := fun {A A'} H => by
-      change DottedArrow (BaseChangeData.leftSquare B) at A A'
-      change DottedArrow.Hom A A' at H
-      dsimp [BaseChangeData.leftSquare] at A A' H ⊢
-      exact
-        { hom := Bicategory.whiskerRight H.hom B.q
-          alpha_naturality := by
-            dsimp
-            have hA : strictAssocInv B.j A.a B.q =
-                (Bicategory.associator B.j A.a B.q).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso B.j A.a B.q) |>.symm
-            have hA' : strictAssocInv B.j A'.a B.q =
-                (Bicategory.associator B.j A'.a B.q).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso B.j A'.a B.q) |>.symm
-            rw [hA']
-            rw [Bicategory.whisker_assoc_symm]
-            simp only [Category.assoc, Iso.hom_inv_id_assoc]
-            rw [← Bicategory.comp_whiskerRight, H.alpha_naturality]
-            rw [hA]
-          beta_naturality := by
-            dsimp
-            have hA : strictAssocInv A.a B.q B.f =
-                (Bicategory.associator A.a B.q B.f).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso A.a B.q B.f) |>.symm
-            have hA' : strictAssocInv A'.a B.q B.f =
-                (Bicategory.associator A'.a B.q B.f).inv := by
-              simpa [strictAssocInv] using congrArg Iso.inv
-                (Bicategory.Strict.associator_eqToIso A'.a B.q B.f) |>.symm
-            simp only [Category.assoc]
-            rw [hA, hA']
-            rw [Bicategory.whiskerRight_comp_symm]
-            simp only [Iso.inv_hom_id_assoc]
-            rw [← Category.assoc (Bicategory.whiskerLeft A.a B.phi)
-              (Bicategory.whiskerRight H.hom (B.q ≫ B.f))
-              (Bicategory.associator A'.a B.q B.f).inv]
-            rw [Bicategory.whisker_exchange H.hom B.phi]
-            have hApg : strictAssocHom A.a B.p B.g =
-                (Bicategory.associator A.a B.p B.g).hom := by
-              simpa [strictAssocHom] using congrArg Iso.hom
-                (Bicategory.Strict.associator_eqToIso A.a B.p B.g) |>.symm
-            have hApg' : strictAssocHom A'.a B.p B.g =
-                (Bicategory.associator A'.a B.p B.g).hom := by
-              simpa [strictAssocHom] using congrArg Iso.hom
-                (Bicategory.Strict.associator_eqToIso A'.a B.p B.g) |>.symm
-            have hnat :
-                strictAssocHom A.a B.p B.g ≫
-                    Bicategory.whiskerRight H.hom (B.p ≫ B.g) ≫
-                    Bicategory.whiskerLeft A'.a B.phi =
-                  (Bicategory.whiskerRight H.hom B.p) ▷ B.g ≫
-                    strictAssocHom A'.a B.p B.g ≫
-                    Bicategory.whiskerLeft A'.a B.phi := by
-              rw [hApg, hApg']
-              rw [← Bicategory.associator_naturality_left_assoc]
-            calc
-              _ = A.beta ▷ B.g ≫
-                  (strictAssocHom A.a B.p B.g ≫
-                    Bicategory.whiskerRight H.hom (B.p ≫ B.g) ≫
-                    Bicategory.whiskerLeft A'.a B.phi) ≫
-                    (Bicategory.associator A'.a B.q B.f).inv := by
-                      simp only [Category.assoc]
-              _ = A.beta ▷ B.g ≫
-                  ((Bicategory.whiskerRight H.hom B.p) ▷ B.g ≫
-                    strictAssocHom A'.a B.p B.g ≫
-                    Bicategory.whiskerLeft A'.a B.phi) ≫
-                    (Bicategory.associator A'.a B.q B.f).inv := by
-                      rw [hnat]
-              _ = (A.beta ≫ Bicategory.whiskerRight H.hom B.p) ▷ B.g ≫
-                  (strictAssocHom A'.a B.p B.g ≫
-                    Bicategory.whiskerLeft A'.a B.phi) ≫
-                    (Bicategory.associator A'.a B.q B.f).inv := by
-                      rw [Bicategory.comp_whiskerRight]
-                      simp only [Category.assoc]
-              _ = A'.beta ▷ B.g ≫
-                  (strictAssocHom A'.a B.p B.g ≫
-                    Bicategory.whiskerLeft A'.a B.phi) ≫
-                    (Bicategory.associator A'.a B.q B.f).inv := by
-                      rw [H.beta_naturality]
-              _ = _ := by simp }
-    map_id := by
-      intro A
-      change DottedArrow (BaseChangeData.leftSquare B) at A
-      dsimp [BaseChangeData.leftSquare, BaseChangeData.outerSquare] at A ⊢
-      apply DottedArrow.Hom.ext
-      change (𝟙 A.a) ▷ B.q = 𝟙 (A.a ≫ B.q)
-      simp
-    map_comp := by
-      intro A A' A'' H K
-      change DottedArrow (BaseChangeData.leftSquare B) at A A' A''
-      change DottedArrow.Hom A A' at H
-      change DottedArrow.Hom A' A'' at K
-      dsimp [BaseChangeData.leftSquare, BaseChangeData.outerSquare] at A A' A'' H K ⊢
-      apply DottedArrow.Hom.ext
-      change (H.hom ≫ K.hom) ▷ B.q =
-        (H.hom ▷ B.q) ≫ (K.hom ▷ B.q)
-      rw [Bicategory.comp_whiskerRight] }
+  let forward := baseChangeForward B
   let P : TwoCommutativeDiagram B.g B.f :=
     { vertex := B.objXp
       left := B.p

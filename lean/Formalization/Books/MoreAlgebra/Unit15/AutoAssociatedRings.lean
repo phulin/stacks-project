@@ -836,7 +836,36 @@ theorem exactLengthOne_noetherian_tfae
         (Formalization.Books.Algebra.Unit102.rankIdeal φ = ⊤ ∨
           ∃ x : R, x ∈ Formalization.Books.Algebra.Unit102.rankIdeal φ ∧
             x ∈ nonZeroDivisors R)] := by
-  sorry
+  let I := Formalization.Books.Algebra.Unit102.rankIdeal φ
+  have hann : Module.annihilator R I = ⊥ ↔
+      I = ⊤ ∨ ∃ x : R, x ∈ I ∧ x ∈ nonZeroDivisors R := by
+    constructor
+    · intro hI
+      letI : FaithfulSMul R I := Module.annihilator_eq_bot.mp hI
+      obtain ⟨x, hxI, hxreg⟩ :=
+        Ideal.nonempty_inter_nonZeroDivisors_of_faithfulSMul (I := I)
+      exact Or.inr ⟨x, hxI, hxreg⟩
+    · intro h
+      rcases h with htop | ⟨x, hxI, hxreg⟩
+      · rw [htop]
+        apply le_bot_iff.mp
+        intro a ha
+        rw [Module.mem_annihilator] at ha
+        have ha0 := congrArg Subtype.val (ha ⟨1, by simp⟩)
+        simpa [smul_eq_mul] using ha0
+      · apply le_bot_iff.mp
+        intro a ha
+        rw [Module.mem_annihilator] at ha
+        have hax : a * x = 0 := by
+          have := congrArg Subtype.val (ha ⟨x, hxI⟩)
+          simpa [smul_eq_mul] using this
+        have ha0 : a = 0 := (mem_nonZeroDivisors_iff.mp hxreg).2 a hax
+        simpa [ha0]
+  tfae_have 1 ↔ 2 := exactLengthOne_iff φ
+  tfae_have 2 ↔ 3 := by
+    simp only [I] at hann
+    exact and_congr_right (fun _ => hann)
+  tfae_finish
 
 /-- The dual of the cokernel of an injective endomorphism of a finite free
 module is zero. -/

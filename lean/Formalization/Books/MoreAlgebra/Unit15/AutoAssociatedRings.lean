@@ -318,7 +318,43 @@ theorem squareZeroFiniteMap_linearIndependent
 /-- The displayed map on the countable free module is injective. -/
 theorem squareZeroMap_injective
     (k : Type u) [Field k] : Function.Injective (squareZeroMap k) := by
-  sorry
+  intro x y h
+  change Finsupp.linearCombination (squareZeroRing k) _ x =
+    Finsupp.linearCombination (squareZeroRing k) _ y at h
+  let v : ℕ → (ℕ →₀ squareZeroRing k) := fun i =>
+    Finsupp.single i (1 : squareZeroRing k) -
+      squareZeroVariable k i • Finsupp.single (i + 1) (1 : squareZeroRing k)
+  let z : ℕ →₀ squareZeroRing k := x - y
+  have hz : Finsupp.linearCombination (squareZeroRing k) v z = 0 := by
+    dsimp [z, v]
+    rw [map_sub, h]
+    exact sub_self _
+  by_contra hne
+  have hzne : z ≠ 0 := by
+    intro hz0
+    apply hne
+    exact sub_eq_zero.mp (by simpa [z] using hz0)
+  have hsn : z.support.Nonempty := Finsupp.support_nonempty_iff.mpr hzne
+  let j : ℕ := z.support.min' hsn
+  have hj : j ∈ z.support := by
+    dsimp [j]
+    exact Finset.min'_mem _ _
+  have hjcoord : (Finsupp.linearCombination (squareZeroRing k) v z) j = z j := by
+    rw [Finsupp.linearCombination_apply, Finsupp.sum_apply, Finsupp.sum]
+    rw [Finset.sum_eq_single j]
+    · simp [v]
+    · intro i hi hij
+      have hle : j ≤ i := by
+        dsimp [j]
+        exact Finset.min'_le z.support i hi
+      have hsucc : i + 1 ≠ j := by omega
+      simp [v, hij, hsucc]
+    · intro hjnot
+      exact (hjnot hj).elim
+  have hzj : z j = 0 := by
+    rw [← hjcoord, hz]
+    rfl
+  exact (Finsupp.notMem_support_iff.mpr hzj) hj
 
 /-- The displayed map is universally injective. -/
 theorem squareZeroMap_universallyInjective

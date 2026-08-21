@@ -159,6 +159,22 @@ def ProjectiveInjectivityCondition (R : Type u) [CommRing R] : Prop :=
     [Module.Projective R N] [Module.Projective R M]
     (u : N →ₗ[R] M), Function.Injective u → universallyInjective u
 
+private theorem injective_of_universallyInjective
+    {R : Type u} [CommRing R] {N : Type v} {M : Type w}
+    [AddCommGroup N] [Module R N] [AddCommGroup M] [Module R M]
+    {f : N →ₗ[R] M} (hu : universallyInjective f) : Function.Injective f := by
+  intro x y hxy
+  have ht : (f.rTensor (ULift.{max v w} R))
+        (TensorProduct.tmul R x (ULift.up 1)) =
+      (f.rTensor (ULift.{max v w} R))
+        (TensorProduct.tmul R y (ULift.up 1)) := by
+    simp [hxy]
+  have ht' := (hu (ULift.{max v w} R)) ht
+  have ht'' := congrArg
+    (TensorProduct.congr (LinearEquiv.refl R N)
+      (ULift.moduleEquiv : ULift.{max v w} R ≃ₗ[R] R)) ht'
+  simpa using congrArg (TensorProduct.rid R N) ht''
+
 /-- For a fixed map of projective modules over a ring with property (P),
 universal injectivity is equivalent to injectivity. -/
 theorem universallyInjective_iff_injective_of_hasPropertyP
@@ -168,7 +184,10 @@ theorem universallyInjective_iff_injective_of_hasPropertyP
     [Module.Projective R N] [Module.Projective R M]
     (u : N →ₗ[R] M) :
     universallyInjective u ↔ Function.Injective u := by
-  sorry
+  constructor
+  · exact injective_of_universallyInjective
+  · intro hu
+    sorry
 
 /-- The finite-projective cokernel formulation of property (P). -/
 def FiniteProjectiveCokernelCondition (R : Type u) [CommRing R] : Prop :=

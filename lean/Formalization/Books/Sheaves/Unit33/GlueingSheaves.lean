@@ -1542,7 +1542,6 @@ theorem glueingSectionPresheaf_isSheaf
         have hxV : (x.1 : X) ∈ iSup V := hTV hx
         rcases Opens.mem_iSup.mp hxV with ⟨a, hxa⟩
         refine Opens.mem_iSup.mpr ⟨a, ?_⟩
-        change x ∈ C a
         change (x.1 : X) ∈ V a ⊓ T
         exact ⟨hxa, hx⟩
     let p : (D.sheaf j).presheaf.obj (op Q) :=

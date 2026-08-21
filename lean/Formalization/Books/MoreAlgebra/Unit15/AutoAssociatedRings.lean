@@ -342,6 +342,31 @@ private theorem projectiveInjectivityCondition_of_hasPropertyP
   intro N M _ _ _ _ _ _ u hu
   exact (universallyInjective_iff_injective_of_hasPropertyP hP u).2 hu
 
+private theorem cokernelCondition_of_hasPropertyP
+    {R : Type u} [CommRing R] (hP : HasPropertyP R) :
+    FiniteProjectiveCokernelCondition.{u, v, w} R := by
+  intro N M _ _ _ _ _ _ _ _ u hu
+  have hUI : universallyInjective u :=
+    (universallyInjective_iff_injective_of_hasPropertyP hP u).2 hu
+  have hflatM : Module.Flat R M := Module.Flat.of_projective
+  have hquot :=
+    (Formalization.Books.Algebra.Unit39.linearMap_rTensor_injective_iff_ideal_quotient_injective
+        u hflatM).1 (fun Q _ _ => hUI Q)
+  have hflatQ : Module.Flat R (M ⧸ LinearMap.range u) :=
+    Formalization.Books.Algebra.Unit39.flat_quotient_of_ideal_quotient_injective
+      u hflatM hquot
+  letI : Module.Flat R (M ⧸ LinearMap.range u) := hflatQ
+  letI : Module.FinitePresentation R M :=
+    Module.finitePresentation_of_projective R M
+  have hrange : (LinearMap.range u).FG := by
+    rw [← Submodule.map_top, ← Module.Finite.iff_fg]
+    infer_instance
+  let q := (LinearMap.range u).mkQ
+  letI : Module.FinitePresentation R (M ⧸ LinearMap.range u) :=
+    Module.finitePresentation_of_surjective q
+      (Submodule.mkQ_surjective _) (by simpa [q] using hrange)
+  exact ⟨inferInstance, Module.Flat.projective_of_finitePresentation⟩
+
 private theorem directSummandCondition_of_cokernelCondition_sameUniverse
     {R : Type u} [CommRing R]
     (hcoker : FiniteProjectiveCokernelCondition.{u, v, v} R) :
@@ -391,11 +416,13 @@ theorem hasPropertyP_iff_finiteProjective_conditions
         FreeRankOneSplitCondition R) := by
   constructor
   · intro hP
-    have hmiddle : FiniteProjectiveCokernelCondition R ∧
-        FiniteProjectiveDirectSummandCondition R := by
-      sorry
+    have hcoker : FiniteProjectiveCokernelCondition R :=
+      cokernelCondition_of_hasPropertyP hP
+    have hdirect : FiniteProjectiveDirectSummandCondition R := by
+      exact directSummandCondition_of_cokernelCondition_sameUniverse
+        (cokernelCondition_of_hasPropertyP hP)
     exact ⟨projectiveInjectivityCondition_of_hasPropertyP hP,
-      hmiddle.1, hmiddle.2, freeRankOneSplitCondition_of_hasPropertyP hP⟩
+      hcoker, hdirect, freeRankOneSplitCondition_of_hasPropertyP hP⟩
   · rintro ⟨_, _, _, hsplit⟩
     exact hasPropertyP_of_freeRankOneSplitCondition hsplit
 

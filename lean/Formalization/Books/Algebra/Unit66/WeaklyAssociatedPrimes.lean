@@ -2530,7 +2530,7 @@ theorem weaklyAssociatedPrimes_post_bourbaki
     weaklyAssociatedPrimes S N
   rw [← hWAeB, hfirstB, ← hSN]
 
-private theorem weaklyAssociatedPrimes_linearEquiv
+theorem weaklyAssociatedPrimes_linearEquiv
     {A X Y : Type*} [CommRing A] [AddCommGroup X] [AddCommGroup Y]
     [Module A X] [Module A Y] (e : X ≃ₗ[A] Y) (p : PrimeSpectrum A) :
     p ∈ weaklyAssociatedPrimes A X ↔
@@ -2567,7 +2567,7 @@ private theorem weaklyAssociatedPrimes_linearEquiv
     rw [hcolon]
     exact hy
 
-private theorem weaklyAssociatedPrimes_finsupp
+theorem weaklyAssociatedPrimes_finsupp
     {A X ι : Type*} [CommRing A] [AddCommGroup X] [Module A X]
     (p : PrimeSpectrum A) :
     p ∈ weaklyAssociatedPrimes A (ι →₀ X) →

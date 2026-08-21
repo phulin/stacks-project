@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit63.AssociatedPrimes
 import Formalization.Books.Algebra.Unit66.FieldTower
+import Formalization.Books.Algebra.Unit66.PureTranscendental
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.GoingUp

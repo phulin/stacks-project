@@ -984,6 +984,29 @@ private theorem injective_of_rank_eq_and_annihilator_eq_bot
   funext j
   exact hzcoord j
 
+private theorem source_rank_le_of_rank_eq_and_annihilator_eq_bot
+    {R : Type u} [CommRing R] [Nontrivial R] {m n : ℕ}
+    (φ : (Fin m → R) →ₗ[R] (Fin n → R))
+    (hrank : Formalization.Books.Algebra.Unit102.rank φ = m)
+    (hann : Module.annihilator R
+      (Formalization.Books.Algebra.Unit102.rankIdeal φ) = ⊥) :
+    m ≤ n := by
+  by_contra hmn
+  have hIbot : Formalization.Books.Algebra.Unit102.rankIdeal φ = ⊥ := by
+    rw [Formalization.Books.Algebra.Unit102.rankIdeal, hrank]
+    apply le_bot_iff.mp
+    rw [Ideal.span_le]
+    rintro _ ⟨p, rfl⟩
+    exact (hmn (by simpa using Fintype.card_le_of_embedding p.1)).elim
+  rw [hIbot] at hann
+  have hone : (1 : R) ∈ Module.annihilator R (⊥ : Ideal R) := by
+    rw [Module.mem_annihilator]
+    intro x
+    have hx0 : (x : R) = 0 := by simpa only [Ideal.mem_bot] using x.property
+    exact Subtype.ext (by simp [hx0])
+  rw [hann] at hone
+  simpa using hone
+
 /-- For a map of finite free modules, injectivity is equivalent to full rank
 and zero annihilator of its determinantal ideal. -/
 theorem exactLengthOne_iff

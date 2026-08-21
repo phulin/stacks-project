@@ -1829,6 +1829,55 @@ private structure LiftingRingLocalizationEquivData
       algebraMap R (MvPolynomial (Fin d.n) (Localization.Away π)) r
 
 /-- The shared equivalence data underlying the localization calculation. -/
+private theorem liftingCorrectionRelation_map_eq_zero
+    {R P : Type u} [CommRing R] [CommRing P] [Algebra R P] {π : R}
+    (d : LiftingConstructionData R π)
+    (xeval : MvPolynomial (Fin d.n) R →+* P) (sinv : P)
+    (pmap : liftingPolynomial R d.n d.m →+* P)
+    (hpmap_lift : ∀ p : MvPolynomial (Fin d.n) R,
+      pmap (liftLiftingPolynomial p) = xeval p)
+    (hidentity : ∀ k : Fin d.r, ∀ ℓ : Fin d.m,
+      xeval (d.a k) * xeval (d.relations ℓ) =
+        (∑ j : Fin (d.e k),
+          xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j))) +
+          (algebraMap R P) (π ^ 2) * xeval (d.g k ℓ))
+    (hpi2 : sinv * (algebraMap R P) (π ^ 2) = (algebraMap R P) π)
+    (hC : pmap (MvPolynomial.C π) = (algebraMap R P) π)
+    (hzvar : ∀ ℓ : Fin d.m,
+      pmap (MvPolynomial.X (Sum.inr ℓ)) = sinv * xeval (d.relations ℓ)) :
+    ∀ k : Fin d.r, ∀ ℓ : Fin d.m,
+      pmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0 := by
+  intro k ℓ
+  have hrel :
+      pmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) =
+        sinv *
+          (xeval (d.a k) * xeval (d.relations ℓ) -
+            (∑ j : Fin (d.e k),
+              xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j))) -
+            (algebraMap R P) (π ^ 2) * xeval (d.g k ℓ)) := by
+    simp only [liftingCorrectionRelation, map_sub, map_mul, map_sum]
+    simp only [hpmap_lift, hzvar, hC, map_pow]
+    have hpi2' : sinv * ((algebraMap R P) π) ^ 2 = (algebraMap R P) π := by
+      simpa only [map_pow] using hpi2
+    have hlast := congrArg (fun t : P => t * xeval (d.g k ℓ)) hpi2'.symm
+    have hsum :
+        (∑ j : Fin (d.e k),
+          xeval (d.h k ℓ j) *
+            (sinv * xeval (d.relations (d.selected k j)))) =
+          sinv * ∑ j : Fin (d.e k),
+            xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j)) := by
+      calc
+        _ = ∑ j : Fin (d.e k), sinv *
+            (xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j))) := by
+              apply Finset.sum_congr rfl
+              intro j hj
+              ring
+        _ = _ := by rw [Finset.mul_sum]
+    rw [hsum, hlast]
+    ring
+  rw [hrel, hidentity k ℓ]
+  ring
+
 private theorem liftingRing_localization_algEquiv_aux
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) :
@@ -1899,39 +1948,9 @@ private theorem liftingRing_localization_algEquiv_aux
         rw [show sinv * (algebraMap R P) π = 1 by simpa [mul_comm] using hpi]
         simp
   have hpmap_corr : ∀ k : Fin d.r, ∀ ℓ : Fin d.m,
-      pmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0 := by
-    intro k ℓ
-    have hrel :
-        pmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) =
-          sinv *
-            (xeval (d.a k) * xeval (d.relations ℓ) -
-              (∑ j : Fin (d.e k),
-                xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j))) -
-              (algebraMap R P) (π ^ 2) * xeval (d.g k ℓ)) := by
-      simp only [liftingCorrectionRelation, map_sub, map_mul, map_sum]
-      simp only [hpmap_lift]
-      simp [pmap, zvar]
-      have hpi2' : sinv * ((algebraMap R P) π) ^ 2 = (algebraMap R P) π := by
-        simpa only [map_pow] using hpi2
-      have hlast := congrArg (fun t : P => t * xeval (d.g k ℓ)) hpi2'.symm
-      have hsum :
-          (∑ j : Fin (d.e k),
-            xeval (d.h k ℓ j) *
-              (sinv * xeval (d.relations (d.selected k j)))) =
-            sinv * ∑ j : Fin (d.e k),
-              xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j)) := by
-        calc
-          _ = ∑ j : Fin (d.e k), sinv *
-              (xeval (d.h k ℓ j) * xeval (d.relations (d.selected k j))) := by
-                apply Finset.sum_congr rfl
-                intro j hj
-                ring
-          _ = _ := by rw [Finset.mul_sum]
-      rw [hsum]
-      rw [hlast]
-      ring
-    rw [hrel, hidentity k ℓ]
-    ring
+      pmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0 :=
+    liftingCorrectionRelation_map_eq_zero d xeval sinv pmap hpmap_lift
+      hidentity hpi2 (by simp [pmap]) (fun ℓ => by simp [pmap, zvar])
   have hkill : ∀ p ∈ liftingDefiningIdeal d, pmap p = 0 := by
     intro p hp
     have hle : liftingDefiningIdeal d ≤ Ideal.comap pmap ⊥ := by

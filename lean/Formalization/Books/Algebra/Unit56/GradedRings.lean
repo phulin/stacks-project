@@ -1321,13 +1321,8 @@ theorem tensorProduct_decomposition_exists
   have hF₀_hom_recompose (x : M) (z : N) :
       coe (F₀ (x ⊗ₜ[degreeZeroSubring G] z)) = q (x ⊗ₜ[degreeZeroSubring G] z) :=
     tensorProduct_recompose G 𝓜 𝓝 CM CN
-      (fun i x => (⟨x, by
-        change (x : M) ∈ 𝓜.component i
-        exact x.property⟩ : CM i))
-      (fun i z => (⟨z, by
-        change (z : N) ∈ 𝓝.component i
-        exact z.property⟩ : CN i))
-      (fun i x => rfl) (fun i z => rfl) hdecM hdecN CT F₀ q coe
+      (fun i x => embM i x) (fun i z => embN i z)
+      (fun _ _ => rfl) (fun _ _ => rfl) hdecM hdecN CT F₀ q coe
       hcoe_of hCT_def hF₀_pair hq_pair x z
   have hleft : coe.comp F = AddMonoidHom.id _ := by
     /- Prior attempt: the tensor-product induction depended on the

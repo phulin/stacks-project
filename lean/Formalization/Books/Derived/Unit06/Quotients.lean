@@ -65,7 +65,68 @@ def IsStrictlyFullSaturatedPretriangulated (P : ObjectProperty C) : Prop :=
 theorem isSaturated_iff_isEpaissse (P : ObjectProperty C)
     [CategoryTheory.IsTriangulated C] [P.IsTriangulated] :
     IsSaturated P ↔ IsEpaissse P := by
-  sorry
+  constructor
+  · intro hsat X S Y T a b c d e hab hdist hS hT
+    let R : ObjectProperty C := P.isoClosure
+    obtain ⟨A, p, q, hTa⟩ := distinguished_cocone_triangle a
+    let i : X ⟶ S ⊞ Y := biprod.lift a b
+    obtain ⟨Q, r, s, hTi⟩ := distinguished_cocone_triangle i
+    have hi : i ≫ (biprod.snd : S ⊞ Y ⟶ Y) = b := by simp [i]
+    let o₂ := Triangulated.someOctahedron hi hTi
+      (rot_of_distTriang _ (binaryBiproductTriangle_distinguished S Y)) hdist
+    have hS₁ : R (S⟦(1 : ℤ)⟧) := R.le_shift (1 : ℤ) _ hS
+    have hQ : R Q := R.ext_of_isTriangulatedClosed₁ _ o₂.mem hT hS₁
+    let E := Biprod.unipotentUpper (-c)
+    have hiE : i ≫ E.hom = a ≫ (biprod.inl : S ⟶ S ⊞ Y) := by
+      dsimp [i, E]
+      rw [← hab]
+      ext <;> simp
+    have hTi' : Triangle.mk (a ≫ (biprod.inl : S ⟶ S ⊞ Y)) (E.inv ≫ r) s ∈
+        distTriang C :=
+      isomorphic_distinguished (Triangle.mk i r s) hTi
+        (Triangle.mk (a ≫ (biprod.inl : S ⟶ S ⊞ Y)) (E.inv ≫ r) s)
+        (Triangle.isoMk _ _ (Iso.refl _) E.symm (Iso.refl _)
+          (by
+            dsimp only [Triangle.mk, Iso.symm_hom, Iso.refl_hom, Category.id_comp]
+            rw [← cancel_mono E.hom]
+            simpa only [Category.assoc, E.inv_hom_id, Category.comp_id,
+              Category.id_comp] using hiE.symm)
+          (by
+            change (E.inv ≫ r) ≫ 𝟙 Q = E.inv ≫ r
+            simp)
+          (by
+            change s ≫ (shiftFunctor C 1).map (𝟙 X) = 𝟙 Q ≫ s
+            simp))
+    let o₁ := Triangulated.someOctahedron rfl hTa
+      (binaryBiproductTriangle_distinguished S Y) hTi'
+    have ho₁ : Triangle.mk o₁.m₁ o₁.m₃ (0 : Y ⟶ A⟦(1 : ℤ)⟧) ∈ distTriang C := by
+      simpa only [zero_comp] using o₁.mem
+    obtain ⟨eQ, _⟩ := exists_iso_binaryBiproduct_of_distTriang
+      (Triangle.mk o₁.m₁ o₁.m₃ (0 : Y ⟶ A⟦(1 : ℤ)⟧)) ho₁ rfl
+    obtain ⟨hA, hY⟩ := hsat (R.prop_of_iso eQ hQ)
+    exact ⟨R.ext_of_isTriangulatedClosed₁ _ hTa hS hA, hY⟩
+  · intro h X Y hXY
+    let R : ObjectProperty C := P.isoClosure
+    have hYX : R (Y ⊞ X) := R.prop_of_iso (biprod.braiding X Y) hXY
+    let T := (binaryBiproductTriangle Y X).invRotate
+    have hTd : T ∈ distTriang C :=
+      inv_rot_of_distTriang _ (binaryBiproductTriangle_distinguished Y X)
+    have hzero : T.mor₁ = 0 := by
+      set_option backward.isDefEq.respectTransparency true in
+        dsimp [T, Triangle.invRotate, binaryBiproductTriangle, Triangle.mk]
+        rw [(shiftFunctor C (-1)).map_zero]
+        simp
+        rfl
+    let a₀ : T.obj₁ ⟶ Y ⊞ X := 0
+    let c₀ : Y ⊞ X ⟶ T.obj₂ := 0
+    have hT₃ : R T.obj₃ := by
+      simpa [T, Triangle.invRotate, Triangle.mk] using hYX
+    obtain ⟨hXneg, hY⟩ := h
+      a₀ T.mor₁ c₀ T.mor₂ T.mor₃
+      (by dsimp [a₀, c₀]; rw [hzero]; simp) hTd hYX hT₃
+    exact ⟨R.prop_of_iso (shiftNegShift X (1 : ℤ))
+      (R.le_shift (1 : ℤ) _ hXneg), by
+        simpa [T, Triangle.invRotate, Triangle.mk] using hY⟩
 
 end SaturatedSubcategories
 

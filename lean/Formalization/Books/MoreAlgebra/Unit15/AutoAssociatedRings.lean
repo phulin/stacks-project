@@ -619,7 +619,85 @@ theorem squareZeroMap_split_implies_surjective
     (g : (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k] (ℕ →₀ squareZeroRing k))
     (hg : g.comp (squareZeroMap k) = LinearMap.id) :
     Function.Surjective (squareZeroMap k) := by
-  sorry
+  let u := squareZeroMap k
+  let h : (ℕ →₀ squareZeroRing k) →ₗ[squareZeroRing k]
+      (ℕ →₀ squareZeroRing k) := LinearMap.id - u.comp g
+  have hhu : h.comp u = 0 := by
+    apply LinearMap.ext
+    intro x
+    have hx := congrArg (fun f => f x) hg
+    change u x - u (g (u x)) = 0
+    apply sub_eq_zero.mpr
+    exact (congrArg u hx).symm
+  have hrec (i : ℕ) :
+      h (Finsupp.single i (1 : squareZeroRing k)) =
+        squareZeroVariable k i •
+          h (Finsupp.single (i + 1) (1 : squareZeroRing k)) := by
+    have hi := congrArg (fun f => f (Finsupp.single i (1 : squareZeroRing k))) hhu
+    change h (u (Finsupp.single i (1 : squareZeroRing k))) = 0 at hi
+    have hui : u (Finsupp.single i (1 : squareZeroRing k)) =
+        Finsupp.single i 1 - squareZeroVariable k i •
+          Finsupp.single (i + 1) 1 := by
+      simp [u, squareZeroMap]
+    rw [hui, map_sub, map_smul] at hi
+    exact sub_eq_zero.mp hi
+  have hiter (i t : ℕ) :
+      h (Finsupp.single i (1 : squareZeroRing k)) =
+        (∏ j ∈ Finset.range t, squareZeroVariable k (i + j)) •
+          h (Finsupp.single (i + t) (1 : squareZeroRing k)) := by
+    induction t with
+    | zero => simp
+    | succ t iht =>
+      rw [iht, hrec (i + t), Finset.prod_range_succ]
+      calc
+        _ = ((∏ j ∈ Finset.range t, squareZeroVariable k (i + j)) *
+              squareZeroVariable k (i + t)) •
+            h (Finsupp.single (i + t + 1) 1) :=
+          (mul_smul
+            (∏ j ∈ Finset.range t, squareZeroVariable k (i + j) : squareZeroRing k)
+            (squareZeroVariable k (i + t) : squareZeroRing k)
+            (h (Finsupp.single (i + t + 1) 1) : ℕ →₀ squareZeroRing k)).symm
+        _ = _ := by
+          congr 2 <;> omega
+  have hbasis (i : ℕ) :
+      h (Finsupp.single i (1 : squareZeroRing k)) = 0 := by
+    apply Finsupp.ext
+    intro l
+    let a : squareZeroRing k := h (Finsupp.single i 1) l
+    obtain ⟨n, hin, herase⟩ := exists_squareZeroEraseMap_eq k a i
+    have hdiv := congrArg (fun z : ℕ →₀ squareZeroRing k => z l)
+      (hiter i (n - i + 1))
+    change a =
+      (∏ j ∈ Finset.range (n - i + 1), squareZeroVariable k (i + j)) *
+        h (Finsupp.single (i + (n - i + 1)) 1) l at hdiv
+    have hzero : squareZeroEraseMap k n
+        (∏ j ∈ Finset.range (n - i + 1), squareZeroVariable k (i + j)) = 0 := by
+      rw [map_prod]
+      apply Finset.prod_eq_zero (Finset.mem_range.mpr (by omega) : n - i ∈
+        Finset.range (n - i + 1))
+      have hadd : i + (n - i) = n := Nat.add_sub_of_le hin
+      simp [hadd]
+    have herased := congrArg (squareZeroEraseMap k n) hdiv
+    rw [herase, map_mul, hzero, zero_mul] at herased
+    exact herased
+  have hh : h = 0 := by
+    apply LinearMap.ext
+    intro x
+    induction x using Finsupp.induction with
+    | zero => simp
+    | @single_add i a x hi ha ih =>
+      rw [map_add, ih]
+      simp only [LinearMap.zero_apply, add_zero]
+      have hs : Finsupp.single i a =
+          a • Finsupp.single i (1 : squareZeroRing k) := by
+        ext j
+        simp [Finsupp.single_apply]
+      rw [hs, map_smul, hbasis, smul_zero]
+  intro y
+  refine ⟨g y, ?_⟩
+  have hy := congrArg (fun f => f y) hh
+  change y - u (g y) = 0 at hy
+  exact (sub_eq_zero.mp hy).symm
 
 /-- The cokernel of the displayed map is flat. -/
 theorem squareZeroMap_cokernel_flat

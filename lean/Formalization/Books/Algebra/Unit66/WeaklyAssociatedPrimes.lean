@@ -13,6 +13,7 @@ import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basis
 import Mathlib.LinearAlgebra.TensorProduct.Free
+import Mathlib.LinearAlgebra.TensorProduct.Finiteness
 import Mathlib.RingTheory.TensorProduct.Free
 import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.Algebra.Module.LocalizedModule.Exact
@@ -2631,6 +2632,34 @@ private theorem weaklyAssociatedPrimes_finsupp
       exact congrArg (fun v : ι →₀ X => v i) ha
     exact hIP (by simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hai)
   exact hp.2 hP' hPle
+
+/-- Every element of a scalar-extension tensor product is already defined over
+a finitely generated intermediate field. -/
+private theorem exists_fg_intermediateField_preimage
+    {k K R : Type*} [Field k] [Field K] [Algebra k K]
+    [CommRing R] [Algebra k R] (z : R ⊗[k] K) :
+    ∃ L : IntermediateField k K, L.FG ∧
+      z ∈ LinearMap.range (L.val.toLinearMap.lTensor R) := by
+  classical
+  obtain ⟨s, hs⟩ := TensorProduct.exists_multiset z
+  let t : Finset K := s.toFinset.image Prod.snd
+  let L : IntermediateField k K := IntermediateField.adjoin k (t : Set K)
+  have hcoeff (a : R × K) (ha : a ∈ s) : a.2 ∈ L := by
+    apply IntermediateField.subset_adjoin
+    exact Finset.mem_coe.mpr (Finset.mem_image.mpr
+      ⟨a, Multiset.mem_toFinset.mpr ha, rfl⟩)
+  let coeff (a : R × K) : L :=
+    if ha : a.2 ∈ L then ⟨a.2, ha⟩ else 0
+  let lift (a : R × K) : R ⊗[k] L := a.1 ⊗ₜ[k] coeff a
+  let zL : R ⊗[k] L := (s.map lift).sum
+  refine ⟨L, IntermediateField.fg_adjoin_finset t, zL, ?_⟩
+  rw [hs]
+  dsimp only [zL]
+  rw [map_multiset_sum, Multiset.map_map]
+  apply congrArg Multiset.sum
+  refine Multiset.map_congr rfl ?_
+  intro a ha
+  simp [lift, coeff, hcoeff a ha]
 
 /-- The change-of-fields descent theorem for a finite field extension. -/
 private theorem weaklyAssociatedPrimes_change_fields_finite

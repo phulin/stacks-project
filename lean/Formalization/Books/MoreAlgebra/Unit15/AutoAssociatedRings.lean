@@ -8,6 +8,7 @@ import Formalization.Books.Algebra.Unit91.ExamplesAndNonExamples
 import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
 import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.LinearAlgebra.Finsupp.LinearCombination
+import Mathlib.LinearAlgebra.Matrix.Nonsingular
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
@@ -843,7 +844,51 @@ theorem coker_injective_free_dual_eq_zero
     {R : Type u} [CommRing R] {n : ℕ}
     (φ : (Fin n → R) →ₗ[R] (Fin n → R)) (hφ : Function.Injective φ) :
     ∀ f : ((Fin n → R) ⧸ LinearMap.range φ) →ₗ[R] R, f = 0 := by
-  sorry
+  intro f
+  let q : (Fin n → R) →ₗ[R] ((Fin n → R) ⧸ LinearMap.range φ) :=
+    (LinearMap.range φ).mkQ
+  let l : (Fin n → R) →ₗ[R] R := f.comp q
+  let A : Matrix (Fin n) (Fin n) R := LinearMap.toMatrix' φ
+  have hAinj : Function.Injective A.mulVec := by
+    intro x y hxy
+    apply hφ
+    simpa only [A, LinearMap.toMatrix'_mulVec] using hxy
+  have hAns : A.Nonsingular :=
+    Matrix.Nonsingular.of_linearIndependent_col
+      (Matrix.mulVec_injective_iff.mp hAinj)
+  let c : Fin n → R := fun i => l (Pi.single i 1)
+  have hlφ : l.comp φ = 0 := by
+    apply LinearMap.ext
+    intro x
+    change f (q (φ x)) = 0
+    rw [show q (φ x) = 0 by
+      apply LinearMap.mem_ker.mp
+      change φ x ∈ LinearMap.ker (LinearMap.range φ).mkQ
+      rw [Submodule.ker_mkQ]
+      exact ⟨x, rfl⟩]
+    exact f.map_zero
+  have hl_apply (x : Fin n → R) : l x = ∑ i, x i * c i := by
+    conv_lhs => rw [← (Pi.basisFun R (Fin n)).sum_repr x]
+    rw [map_sum]
+    simp only [map_smul, Pi.basisFun_repr, Pi.basisFun_apply, c, smul_eq_mul]
+  have hcA : Matrix.vecMul c A = 0 := by
+    funext j
+    have hj := LinearMap.congr_fun hlφ (Pi.single j 1)
+    rw [LinearMap.comp_apply, LinearMap.zero_apply, hl_apply] at hj
+    simpa only [A, LinearMap.toMatrix'_apply, c, Matrix.vecMul, dotProduct,
+      Pi.zero_apply, mul_comm] using hj
+  have hc : c = 0 := by
+    apply (Matrix.vecMul_injective_iff.mpr hAns.linearIndependent_row)
+    simpa using hcA
+  have hl : l = 0 := by
+    apply LinearMap.ext
+    intro x
+    rw [hl_apply, hc]
+    simp
+  apply LinearMap.ext
+  intro y
+  induction y using Submodule.Quotient.induction_on with
+  | _ x => exact LinearMap.congr_fun hl x
 
 end
 

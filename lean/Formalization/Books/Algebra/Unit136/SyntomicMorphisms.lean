@@ -12,6 +12,8 @@ import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.RingTheory.Polynomial.UniversalFactorizationRing
+import Mathlib.RingTheory.Extension.Cotangent.Basis
 
 /-!
 # Commutative Algebra, Chapter 136: Syntomic morphisms
@@ -640,13 +642,88 @@ theorem relative_global_complete_intersection_localization
           (algebraMap R (Localization.Away g₀)) := by
   sorry
 
+private theorem relative_global_complete_intersection_of_algEquiv
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (fA : R →+* A) (fB : R →+* B) (e : A ≃+* B)
+    (he : e.toRingHom.comp fA = fB)
+    (h : IsRelativeGlobalCompleteIntersection fA) :
+    IsRelativeGlobalCompleteIntersection fB := by
+  letI : Algebra R A := fA.toAlgebra
+  letI : Algebra R B := fB.toAlgebra
+  let e' : A ≃ₐ[R] B :=
+    { toRingEquiv := e
+      commutes' := by
+        intro r
+        exact congrArg (fun z => z r) he }
+  rcases h with ⟨n, c, P, fs, hP, hdim⟩
+  let P' := P.ofAlgEquiv e'
+  have hker : P'.ker = P.ker := by
+    rw [P'.ker_eq_ker_aeval_val, P.ker_eq_ker_aeval_val]
+    ext z
+    change MvPolynomial.aeval (e' ∘ P.val) z = 0 ↔
+      MvPolynomial.aeval P.val z = 0
+    have heval : e' (MvPolynomial.aeval P.val z) =
+        MvPolynomial.aeval (e' ∘ P.val) z := by
+      simpa [Function.comp_def] using
+        (MvPolynomial.comp_aeval_apply (R := R) (f := P.val) e'.toAlgHom z)
+    rw [← heval]
+    constructor
+    · intro hz
+      apply e'.injective
+      simpa using hz
+    · intro hz
+      rw [← e'.map_zero]
+      exact congrArg e' hz
+  have hP' : IsPolynomialQuotientPresentation P' fs := by
+    exact hker.trans hP
+  refine ⟨n, c, P', fs, hP', ?_⟩
+  intro p hnon
+  let k := p.asIdeal.ResidueField
+  let ef : Fiber R A p ≃ₐ[k] Fiber R B p :=
+    Algebra.TensorProduct.congr (.refl : k ≃ₐ[k] k) e'
+  let qB : PrimeSpectrum (Fiber R B p) := Classical.choice hnon
+  let qA : PrimeSpectrum (Fiber R A p) :=
+    PrimeSpectrum.comap ef.toRingHom qB
+  have hdimA := hdim p (show Nonempty (PrimeSpectrum (Fiber R A p)) from ⟨qA⟩)
+  refine ⟨hdimA.1, ?_⟩
+  calc
+    ringKrullDim (Fiber R B p) = ringKrullDim (Fiber R A p) :=
+      (ringKrullDim_eq_of_ringEquiv ef.toRingEquiv).symm
+    _ = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := hdimA.2
+
 theorem relative_global_complete_intersection_localization_of_base
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (r : R) (g : Localization.Away r →+* S)
     (hfactor : g.comp (algebraMap R (Localization.Away r)) = f)
     (h : IsRelativeGlobalCompleteIntersection f) :
     IsRelativeGlobalCompleteIntersection g := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let f' := Formalization.Books.Algebra.Unit14.baseChangeRingMap f
+    (algebraMap R (Localization.Away r))
+  have hbase := relative_global_complete_intersection_base_change f
+    (algebraMap R (Localization.Away r)) h
+  have hunit : IsUnit (algebraMap R S r) := by
+    have hunit' : IsUnit (g (algebraMap R (Localization.Away r) r)) :=
+      (IsLocalization.Away.algebraMap_isUnit r).map g
+    have heq : g (algebraMap R (Localization.Away r) r) = f r :=
+      congrArg (fun k : Localization.Away r →+* S =>
+        k (algebraMap R (Localization.Away r) r)) hfactor
+    rw [show algebraMap R S r = g (algebraMap R (Localization.Away r) r) by
+      simpa [RingHom.algebraMap_toAlgebra] using heq.symm]
+    exact hunit'
+  letI : IsLocalization.Away (algebraMap R S r) S :=
+    IsLocalization.away_of_isUnit_of_bijective S hunit
+      Function.bijective_id
+  let eS : S ⊗[R] Localization.Away r ≃ₐ[S] S := by
+    exact (IsLocalization.Away.tensorEquiv (R := R) (S := S) (r := r) S).trans
+      (IsLocalization.atUnit S (algebraMap R S r) hunit).symm
+  have he : eS.toRingHom.comp f' = g := by
+    apply IsLocalization.ringHom_ext (M := Submonoid.powers r)
+    intro x
+    simp [eS, f', Formalization.Books.Algebra.Unit14.baseChangeRingMap,
+      IsLocalization.Away.tensorEquiv]
+  exact relative_global_complete_intersection_of_algEquiv f' g
+    eS.toRingEquiv he hbase
 
 /-! ## Huber's presentation lemma -/
 
@@ -678,7 +755,96 @@ theorem huber_presentation
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs ∧
         HasConormalBasisPresentation P fs := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra.FinitePresentation R S := hfp
+  rcases hconormal with ⟨n, P, hfree⟩
+  letI : Module.Free S P.toExtension.Cotangent := hfree
+  obtain ⟨P₁, b, hval, hb⟩ :=
+    Algebra.Generators.exists_presentation_of_free_cotangent P
+  let evar : Fin (1 + n) ≃ Unit ⊕ Fin n :=
+    finSumFinEquiv.symm.trans (Equiv.sumCongr finOneEquiv (Equiv.refl (Fin n)))
+  let r := Module.finrank S P.toExtension.Cotangent
+  let erel : Fin (1 + r) ≃ Unit ⊕ Fin r :=
+    finSumFinEquiv.symm.trans (Equiv.sumCongr finOneEquiv (Equiv.refl (Fin r)))
+  let P₂ := P₁.reindex evar erel
+  let H : P₁.toGenerators.Hom P₂.toGenerators :=
+    { val := fun i => MvPolynomial.X (evar.symm i)
+      aeval_val := by
+        intro i
+        simp [P₂, evar, Algebra.Generators.reindex_val] }
+  let H' : P₂.toGenerators.Hom P₁.toGenerators :=
+    { val := fun i => MvPolynomial.X (evar i)
+      aeval_val := by
+        intro i
+        simp [P₂, evar, Algebra.Generators.reindex_val] }
+  have hHH : H'.toExtensionHom.comp H.toExtensionHom =
+      Algebra.Extension.Hom.id _ := by
+    rw [← Algebra.Generators.Hom.toExtensionHom_comp]
+    have hgen : H'.comp H = Algebra.Generators.Hom.id _ := by
+      apply Algebra.Generators.Hom.ext
+      exact funext (fun i => by
+        rcases i with a | b <;> simp [H, H', evar])
+    rw [hgen, Algebra.Generators.Hom.toExtensionHom_id]
+  have hH'H : H.toExtensionHom.comp H'.toExtensionHom =
+      Algebra.Extension.Hom.id _ := by
+    rw [← Algebra.Generators.Hom.toExtensionHom_comp]
+    have hgen : H.comp H' = Algebra.Generators.Hom.id _ := by
+      apply Algebra.Generators.Hom.ext
+      exact funext (fun i => by
+        rcases i with a | b <;> simp [H, H', evar])
+    rw [hgen, Algebra.Generators.Hom.toExtensionHom_id]
+  let E : P₁.toExtension.Cotangent ≃ₗ[S] P₂.toExtension.Cotangent :=
+    LinearEquiv.ofLinear
+      (Algebra.Extension.Cotangent.map H.toExtensionHom)
+      (Algebra.Extension.Cotangent.map H'.toExtensionHom) (by
+        calc
+          _ = Algebra.Extension.Cotangent.map
+              (H.toExtensionHom.comp H'.toExtensionHom) := by
+            simpa using
+              (Algebra.Extension.Cotangent.map_comp (P'' := P₂.toExtension)
+                H'.toExtensionHom H.toExtensionHom).symm
+          _ = _ := by rw [hH'H, Algebra.Extension.Cotangent.map_id]) (by
+        calc
+          _ = Algebra.Extension.Cotangent.map
+              (H'.toExtensionHom.comp H.toExtensionHom) := by
+            simpa using
+              (Algebra.Extension.Cotangent.map_comp (P'' := P₁.toExtension)
+                H.toExtensionHom H'.toExtensionHom).symm
+          _ = _ := by rw [hHH, Algebra.Extension.Cotangent.map_id])
+  let b₂ : Module.Basis (Unit ⊕ Fin r) S P₂.toExtension.Cotangent := b.map E
+  let b₃ : Module.Basis (Fin (1 + r)) S P₂.toExtension.Cotangent :=
+    b₂.reindex erel.symm
+  let P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin (1 + n)) :=
+    P₂.toGenerators
+  let fs : Fin (1 + r) → P.Ring := fun i => P₂.relation i
+  refine ⟨1 + n, 1 + r, P, fs, ?_, ?_⟩
+  · change P₂.ker = Ideal.ofList (List.ofFn fs)
+    rw [← P₂.span_range_relation_eq_ker]
+    change Ideal.span (Set.range P₂.relation) = Ideal.ofList (List.ofFn fs)
+    rw [Ideal.ofList]
+    congr 1
+    ext x
+    simp [fs]
+  · refine ⟨?_, b₃, ?_⟩
+    · intro i
+      change P₂.relation i ∈ P₂.ker
+      exact P₂.relation_mem_ker i
+    intro i
+    simp only [b₃, Module.Basis.reindex_apply, b₂, Module.Basis.map_apply]
+    change E (b (erel i)) =
+      Algebra.Extension.Cotangent.mk
+        ⟨P₂.relation i, P₂.relation_mem_ker i⟩
+    rw [hb (erel i)]
+    change Algebra.Extension.Cotangent.map H.toExtensionHom
+        (Algebra.Extension.Cotangent.mk _) = _
+    rw [Algebra.Extension.Cotangent.map_mk]
+    apply congrArg (Algebra.Extension.Cotangent.mk (P := P₂.toExtension))
+    apply Subtype.ext
+    change H.toAlgHom (P₁.relation (erel i)) = P₂.relation i
+    change MvPolynomial.aeval (MvPolynomial.X ∘ evar.symm)
+        (P₁.relation (erel i)) =
+      MvPolynomial.rename evar.symm (P₁.relation (erel i))
+    rw [← MvPolynomial.rename_eq_aeval]
 
 /-! ## Polynomial examples -/
 
@@ -687,6 +853,116 @@ def monicPolynomial
     {A : Type u} [Semiring A] (n : ℕ) (a : Fin n → A) : Polynomial A :=
   Polynomial.X ^ n +
     ∑ i : Fin n, Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1)
+
+private theorem monicPolynomial_degree
+    {A : Type u} [Semiring A] [Nontrivial A] (n : ℕ) (a : Fin n → A) :
+    (monicPolynomial n a).degree = n := by
+  classical
+  unfold monicPolynomial
+  have hdeg := Polynomial.degree_sum_le (Finset.univ : Finset (Fin n))
+    (fun i : Fin n => Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1))
+  have hlt : (∑ i : Fin n, Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1)).degree <
+      (n : WithBot ℕ) := by
+    apply lt_of_le_of_lt hdeg
+    rw [Finset.sup_lt_iff]
+    · intro i hi
+      have hi' : i.1 < n := i.isLt
+      have hnat : n - i.1 - 1 < n := by omega
+      calc
+        (Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1)).degree ≤
+            ((n - i.1 - 1 : ℕ) : WithBot ℕ) :=
+          Polynomial.degree_C_mul_X_pow_le _ _
+        _ < (n : WithBot ℕ) := WithBot.coe_lt_coe.mpr hnat
+    · exact WithBot.bot_lt_coe n
+  calc
+    (Polynomial.X ^ n + ∑ i : Fin n,
+        Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1)).degree =
+        (Polynomial.X ^ n).degree :=
+      Polynomial.degree_add_eq_left_of_degree_lt (by
+        rw [Polynomial.degree_X_pow]
+        exact hlt)
+    _ = n := by exact Polynomial.degree_X_pow n
+
+private theorem monicPolynomial_monic
+    {A : Type u} [Semiring A] (n : ℕ) (a : Fin n → A) :
+    (monicPolynomial n a).Monic := by
+  unfold monicPolynomial
+  apply Polynomial.monic_X_pow_add
+  have hdeg := Polynomial.degree_sum_le (Finset.univ : Finset (Fin n))
+    (fun i : Fin n => Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1))
+  apply lt_of_le_of_lt hdeg
+  rw [Finset.sup_lt_iff]
+  · intro i hi
+    have hi' : i.1 < n := i.isLt
+    have hnat : n - i.1 - 1 < n := by omega
+    calc
+      (Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1)).degree ≤
+          ((n - i.1 - 1 : ℕ) : WithBot ℕ) :=
+        Polynomial.degree_C_mul_X_pow_le _ _
+      _ < (n : WithBot ℕ) := WithBot.coe_lt_coe.mpr hnat
+  · exact WithBot.bot_lt_coe n
+
+private theorem monicPolynomial_eq_of_monic
+    {A : Type u} [Semiring A] [Nontrivial A] (n : ℕ) (p : Polynomial A)
+    (hp : p.Monic) (hdeg : p.degree = n) :
+    monicPolynomial n (fun i => p.coeff (n - i.1 - 1)) = p := by
+  unfold monicPolynomial
+  conv_rhs => rw [hp.as_sum]
+  have hnat : p.natDegree = n :=
+    Polynomial.natDegree_eq_of_degree_eq_some hdeg
+  rw [hnat]
+  conv_rhs =>
+    rw [← Fin.sum_univ_eq_sum_range
+      (fun i : ℕ => Polynomial.C (p.coeff i) * Polynomial.X ^ i) n]
+    rw [← Equiv.sum_comp Fin.revPerm]
+  congr 1
+
+private theorem monicPolynomial_coeff
+    {A : Type u} [Semiring A] (n : ℕ) (a : Fin n → A) (k : Fin n) :
+    (monicPolynomial n a).coeff (n - k.1 - 1) = a k := by
+  classical
+  unfold monicPolynomial
+  change (Polynomial.X ^ n +
+      ∑ i ∈ (Finset.univ : Finset (Fin n)),
+        Polynomial.C (a i) * Polynomial.X ^ (n - i.1 - 1)).coeff
+      (n - k.1 - 1) = a k
+  rw [Polynomial.coeff_add, Polynomial.finsetSum_coeff]
+  simp only [Polynomial.coeff_X_pow, Polynomial.coeff_C_mul_X_pow]
+  have hklt : n - k.1 - 1 < n := by omega
+  simp only [if_neg (Nat.ne_of_lt hklt), zero_add]
+  have heq (x : Fin n) : n - k.1 - 1 = n - x.1 - 1 ↔ x = k := by
+    constructor
+    · intro h
+      apply Fin.ext
+      omega
+    · intro h
+      simpa [h]
+  simp_rw [heq]
+  simp
+
+private theorem map_freeMonic_rev
+    {R B : Type u} [CommRing R] [CommRing B] [Nontrivial R] [Nontrivial B]
+    (n : ℕ) (φ : MvPolynomial (Fin n) R →+* B) (a : Fin n → B)
+    (hφ : ∀ i, φ (MvPolynomial.X i) = a (Fin.revPerm i)) :
+    Polynomial.map φ (Polynomial.freeMonic R n) = monicPolynomial n a := by
+  have hp : (Polynomial.map φ (Polynomial.freeMonic R n)).Monic :=
+    (Polynomial.monic_freeMonic R n).map φ
+  have hd : (Polynomial.map φ (Polynomial.freeMonic R n)).degree = n := by
+    rw [(Polynomial.monic_freeMonic R n).degree_map, Polynomial.degree_freeMonic]
+  rw [← monicPolynomial_eq_of_monic n
+    (Polynomial.map φ (Polynomial.freeMonic R n)) hp hd]
+  congr 1
+  funext i
+  rw [Polynomial.coeff_map, Polynomial.coeff_freeMonic]
+  rw [dif_pos (by omega)]
+  rw [hφ]
+  congr 1
+  have hi : (⟨n - i.1 - 1, by omega⟩ : Fin n) = Fin.revPerm i := by
+    apply Fin.ext
+    simp [Fin.revPerm_apply]
+    omega
+  rw [hi]
+  simpa [Fin.revPerm] using (Fin.rev_involutive i)
 
 abbrev FactorPolynomialBase (n m : ℕ) := MvPolynomial (Fin (n + m)) ℤ
 
@@ -706,23 +982,270 @@ noncomputable def factorPolynomialMap (n m : ℕ) :
 theorem factorPolynomialMap_spec (n m : ℕ) (k : Fin (n + m)) :
     factorPolynomialMap n m (MvPolynomial.X k) =
       (factorTargetPolynomial n m).coeff (n + m - k.1 - 1) := by
-  sorry
+  simp [factorPolynomialMap]
 
 theorem factorPolynomialMap_factorization (n m : ℕ) :
     Polynomial.map (factorPolynomialMap n m).toRingHom
         (monicPolynomial (n + m) (fun k => MvPolynomial.X k)) =
       factorTargetPolynomial n m := by
-  sorry
+  have hp : (factorTargetPolynomial n m).Monic := by
+    unfold factorTargetPolynomial
+    exact
+      (monicPolynomial_monic n
+        (fun i : Fin n => MvPolynomial.X (Sum.inl i))).mul
+        (monicPolynomial_monic m
+          (fun j : Fin m => MvPolynomial.X (Sum.inr j)))
+  have hdeg : (factorTargetPolynomial n m).degree = n + m := by
+    unfold factorTargetPolynomial
+    rw [(monicPolynomial_monic m
+          (fun j : Fin m => MvPolynomial.X (Sum.inr j))).degree_mul]
+    rw [monicPolynomial_degree, monicPolynomial_degree]
+  rw [monicPolynomial, Polynomial.map_add, Polynomial.map_pow,
+    Polynomial.map_sum]
+  simp only [Polynomial.map_mul, Polynomial.map_C, Polynomial.map_X, Polynomial.map_pow]
+  simp [factorPolynomialMap_spec]
+  change monicPolynomial (n + m)
+    (fun k => (factorTargetPolynomial n m).coeff (n + m - k.1 - 1)) =
+      factorTargetPolynomial n m
+  exact monicPolynomial_eq_of_monic (n + m) (factorTargetPolynomial n m) hp hdeg
 
 theorem factorPolynomialMap_has_expected_presentation
     {n m : ℕ} (hn : 1 ≤ n) (hm : 1 ≤ m) :
     letI : Algebra (FactorPolynomialBase n m) (FactorPolynomialTarget n m) :=
       (factorPolynomialMap n m).toAlgebra
     ∃ (P : Formalization.Books.Algebra.Unit134.Presentation
-        (FactorPolynomialBase n m) (FactorPolynomialTarget n m) (Fin (n + m)))
+      (FactorPolynomialBase n m) (FactorPolynomialTarget n m) (Fin (n + m)))
       (fs : Fin (n + m) → P.Ring),
       IsPolynomialQuotientPresentation P fs := by
-  sorry
+  letI : Algebra (FactorPolynomialBase n m) (FactorPolynomialTarget n m) :=
+    (factorPolynomialMap n m).toAlgebra
+  let q0 := MvPolynomial.universalFactorizationMap ℤ (n + m) n m rfl
+  let er := MvPolynomial.renameEquiv (R := ℤ)
+    (σ := Fin (n + m)) (τ := Fin (n + m)) Fin.revPerm
+  let q := q0.comp er.toAlgHom
+  let esum := MvPolynomial.renameEquiv (R := ℤ)
+    (σ := Sum (Fin n) (Fin m)) (τ := Sum (Fin n) (Fin m))
+    (Equiv.sumCongr Fin.revPerm Fin.revPerm)
+  let e0 := (MvPolynomial.tensorEquivSum ℤ (Fin n) (Fin m) ℤ).trans esum
+  letI : Algebra (FactorPolynomialBase n m)
+      (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ) := q.toAlgebra
+  let φ₁ : MvPolynomial (Fin n) ℤ →+* FactorPolynomialTarget n m :=
+    e0.toRingHom.comp (algebraMap (MvPolynomial (Fin n) ℤ)
+      (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ))
+  have hφ₁ (i : Fin n) : φ₁ (MvPolynomial.X i) =
+      MvPolynomial.X (Sum.inl (Fin.revPerm i)) := by
+    simp [φ₁, e0, esum]
+  have hleftpoly :
+      Polynomial.map φ₁ (Polynomial.freeMonic ℤ n) =
+        monicPolynomial n (fun i => MvPolynomial.X (Sum.inl i)) := by
+    apply map_freeMonic_rev n φ₁
+      (fun i => MvPolynomial.X (Sum.inl i))
+    exact hφ₁
+  let φ₂ : MvPolynomial (Fin m) ℤ →+* FactorPolynomialTarget n m :=
+    e0.toRingHom.comp
+      (Algebra.TensorProduct.includeRight :
+        MvPolynomial (Fin m) ℤ →ₐ[ℤ]
+          MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ).toRingHom
+  have hφ₂ (i : Fin m) : φ₂ (MvPolynomial.X i) =
+      MvPolynomial.X (Sum.inr (Fin.revPerm i)) := by
+    simp [φ₂, e0, esum]
+  have hrightpoly :
+      Polynomial.map φ₂ (Polynomial.freeMonic ℤ m) =
+        monicPolynomial m (fun i => MvPolynomial.X (Sum.inr i)) := by
+    apply map_freeMonic_rev m φ₂
+      (fun i => MvPolynomial.X (Sum.inr i))
+    exact hφ₂
+  have hleftmap :
+      Polynomial.map e0.toRingHom
+          (Polynomial.map (algebraMap (MvPolynomial (Fin n) ℤ)
+            (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ))
+            (Polynomial.freeMonic ℤ n)) =
+        monicPolynomial n (fun i => MvPolynomial.X (Sum.inl i)) := by
+    rw [Polynomial.map_map]
+    exact hleftpoly
+  have hrightmap :
+      Polynomial.map e0.toRingHom
+          (Polynomial.map
+            ((Algebra.TensorProduct.includeRight :
+              MvPolynomial (Fin m) ℤ →ₐ[ℤ]
+                MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ).toRingHom)
+            (Polynomial.freeMonic ℤ m)) =
+        monicPolynomial m (fun i => MvPolynomial.X (Sum.inr i)) := by
+    rw [Polynomial.map_map]
+    exact hrightpoly
+  have hprod :
+      Polynomial.map e0.toRingHom
+          (Polynomial.map (algebraMap (MvPolynomial (Fin n) ℤ)
+            (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ))
+            (Polynomial.freeMonic ℤ n) *
+          Polynomial.map
+            ((Algebra.TensorProduct.includeRight :
+              MvPolynomial (Fin m) ℤ →ₐ[ℤ]
+                MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ).toRingHom)
+            (Polynomial.freeMonic ℤ m)) =
+        factorTargetPolynomial n m := by
+    rw [Polynomial.map_mul, hleftmap, hrightmap]
+    rfl
+  have hpoly :=
+    MvPolynomial.universalFactorizationMap_freeMonic ℤ (n + m) n m rfl
+  have hq : e0.toAlgHom.comp q = factorPolynomialMap n m := by
+    apply MvPolynomial.algHom_ext
+    intro k
+    rw [factorPolynomialMap_spec]
+    simp [q, er]
+    have hk := congrArg
+      (fun p : Polynomial (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ) =>
+        p.coeff (Fin.revPerm k).1) hpoly
+    have hleft (k : Fin (n + m)) :
+        e0 ((Polynomial.map q0 (Polynomial.freeMonic ℤ (n + m))).coeff
+          (Fin.revPerm k).1) =
+          e0 (q0 (MvPolynomial.X (Fin.revPerm k))) := by
+      rw [Polynomial.coeff_map, Polynomial.coeff_freeMonic]
+      rw [dif_pos (Fin.revPerm k).isLt]
+      congr 1
+    have hk' := congrArg (fun x => e0 x) hk
+    rw [hleft k] at hk'
+    have hkprod := congrArg
+      (fun p : Polynomial (FactorPolynomialTarget n m) =>
+        p.coeff (Fin.revPerm k).1) hprod
+    rw [Polynomial.coeff_map] at hkprod
+    convert hk'.trans hkprod using 1
+    · rfl
+    · congr 1
+  let e : (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ) ≃ₐ[FactorPolynomialBase n m]
+      FactorPolynomialTarget n m :=
+    { toRingEquiv := e0.toRingEquiv
+      commutes' := by
+        intro r
+        change e0 (q r) = factorPolynomialMap n m r
+        simpa using congrArg (fun F => F r) hq }
+  let P₀ := MvPolynomial.universalFactorizationMapPresentation ℤ (n + m) n m rfl
+  let rho : MvPolynomial (Sum (Fin n) (Fin m))
+      (MvPolynomial (Fin (n + m)) ℤ) ≃ₐ[ℤ]
+      MvPolynomial (Sum (Fin n) (Fin m)) (FactorPolynomialBase n m) :=
+    MvPolynomial.mapAlgEquiv (Sum (Fin n) (Fin m)) er.symm
+  let uval : Sum (Fin n) (Fin m) →
+      MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ :=
+    Sum.elim (fun i => MvPolynomial.X i ⊗ₜ[ℤ] 1)
+      (fun j => 1 ⊗ₜ[ℤ] MvPolynomial.X j)
+  let pval : MvPolynomial (Sum (Fin n) (Fin m))
+      (MvPolynomial (Fin (n + m)) ℤ) →+*
+      MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ :=
+    letI : Algebra (MvPolynomial (Fin (n + m)) ℤ)
+        (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ) := q0.toAlgebra
+    (MvPolynomial.aeval uval).toRingHom
+  let valq : MvPolynomial (Sum (Fin n) (Fin m)) (FactorPolynomialBase n m) →ₐ[
+      FactorPolynomialBase n m] FactorPolynomialTarget n m :=
+    MvPolynomial.aeval (fun s => e (uval s))
+  have hval : valq.toRingHom.comp rho.toRingHom =
+      e.toRingHom.comp pval := by
+    apply MvPolynomial.ringHom_ext
+    · intro a
+      simp [valq, rho, pval, uval, er]
+      change q (MvPolynomial.rename Fin.revPerm a) = q0 a
+      simp [q, er, MvPolynomial.rename_rename, Fin.revPerm]
+      have hrev : (Fin.rev ∘ Fin.rev : Fin (n + m) → Fin (n + m)) = id := by
+        funext i
+        simp [Fin.revPerm_apply]
+      rw [hrev, MvPolynomial.rename_id_apply]
+    · intro s
+      simp [valq, rho, pval, P₀]
+  have hsurj₀ : Function.Surjective pval := by
+    intro y
+    letI : Algebra (MvPolynomial (Fin (n + m)) ℤ)
+        (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ) := q0.toAlgebra
+    have huval : P₀.val = uval := by
+      funext s
+      cases s <;> rfl
+    obtain ⟨p, hp⟩ := P₀.toGenerators.aeval_val_surjective y
+    refine ⟨p, ?_⟩
+    change (MvPolynomial.aeval uval) p = y
+    rw [← huval]
+    exact hp
+  have hsurj : Function.Surjective valq := by
+    intro y
+    obtain ⟨p, hp⟩ := hsurj₀ (e.symm y)
+    refine ⟨rho p, ?_⟩
+    change (valq.toRingHom.comp rho.toRingHom) p = y
+    rw [hval]
+    have hpy : e (pval p) = y := by
+      rw [hp, e.apply_symm_apply]
+    have hpy' : e.toRingEquiv.toRingHom (pval p) = y := hpy
+    simpa only [RingHom.coe_comp, Function.comp_apply] using hpy'
+  let Gq : Algebra.Generators (FactorPolynomialBase n m)
+      (FactorPolynomialTarget n m) (Sum (Fin n) (Fin m)) :=
+    Algebra.Generators.ofSurjective
+      (fun s => e (uval s)) hsurj
+  let rel₀ : Fin (n + m) →
+      MvPolynomial (Sum (Fin n) (Fin m)) (MvPolynomial (Fin (n + m)) ℤ) :=
+    fun i => MvPolynomial.C (MvPolynomial.X i) -
+      (MvPolynomial.tensorEquivSum ℤ (Fin n) (Fin m) ℤ
+        (q0 (MvPolynomial.X i))).map MvPolynomial.C
+  let rel : Fin (n + m) → Gq.Ring :=
+    fun i => rho (rel₀ (Fin.revPerm i))
+  have hrel : Set.range rel = rho.toRingHom '' Set.range rel₀ := by
+    ext x
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact ⟨rel₀ (Fin.revPerm i), ⟨Fin.revPerm i, rfl⟩, rfl⟩
+    · rintro ⟨y, ⟨j, rfl⟩, rfl⟩
+      obtain ⟨i, rfl⟩ := Fin.revPerm.surjective j
+      simp [rel]
+  have hmap : Ideal.map rho.toRingHom (Ideal.span (Set.range rel₀)) =
+      Ideal.span (Set.range rel) := by
+    rw [Ideal.map_span, hrel]
+  have hker : Ideal.comap rho.toRingHom Gq.ker = RingHom.ker pval := by
+    ext x
+    change valq (rho x) = 0 ↔ pval x = 0
+    have hx := congrArg
+      (fun f : MvPolynomial (Sum (Fin n) (Fin m))
+          (MvPolynomial (Fin (n + m)) ℤ) →+* FactorPolynomialTarget n m => f x) hval
+    have hx' : valq.toRingHom (rho.toRingHom x) =
+        e.toRingEquiv.toRingHom (pval x) := hx
+    change valq.toRingHom (rho.toRingHom x) = 0 ↔ pval x = 0
+    rw [hx']
+    constructor
+    · intro h
+      apply e.toRingEquiv.injective
+      simpa using h
+    · intro h
+      simpa [h]
+  have hP₀span : Ideal.span (Set.range rel₀) = RingHom.ker pval := by
+    letI : Algebra (MvPolynomial (Fin (n + m)) ℤ)
+        (MvPolynomial (Fin n) ℤ ⊗[ℤ] MvPolynomial (Fin m) ℤ) := q0.toAlgebra
+    change Ideal.span (Set.range rel₀) =
+      RingHom.ker (MvPolynomial.eval₂Hom q0 uval)
+    simpa [rel₀] using
+      (MvPolynomial.ker_eval₂Hom_universalFactorizationMap ℤ (n + m) n m rfl).symm
+  have hspan : Ideal.span (Set.range rel) = Gq.ker := by
+    apply Ideal.comap_injective_of_surjective rho.toRingHom rho.surjective
+    rw [← hmap]
+    have hcm : Ideal.comap rho.toRingHom
+        (Ideal.map rho.toRingHom (Ideal.span (Set.range rel₀))) =
+        Ideal.span (Set.range rel₀) :=
+      Ideal.comap_map_of_bijective _ rho.bijective
+    rw [hcm]
+    rw [hker]
+    exact hP₀span
+  let Pq : Algebra.Presentation (FactorPolynomialBase n m)
+      (FactorPolynomialTarget n m) (Sum (Fin n) (Fin m)) (Fin (n + m)) :=
+    { __ := Gq
+      relation := rel
+      span_range_relation_eq_ker := hspan }
+  let Pq' := Pq.reindex (finSumFinEquiv.symm) (Equiv.refl (Fin (n + m)))
+  let P : Formalization.Books.Algebra.Unit134.Presentation
+      (FactorPolynomialBase n m) (FactorPolynomialTarget n m) (Fin (n + m)) :=
+    Pq'.toGenerators
+  let fs : Fin (n + m) → P.Ring := fun i => Pq'.relation i
+  refine ⟨P, fs, ?_⟩
+  change Pq'.ker = Ideal.ofList (List.ofFn fs)
+  rw [← Pq'.span_range_relation_eq_ker]
+  change Ideal.span (Set.range Pq'.relation) =
+    Ideal.ofList (List.ofFn fs)
+  rw [Ideal.ofList]
+  congr 1
+  ext x
+  simp [fs]
 
 theorem factorPolynomialMap_fibre_dimension_zero
     {n m : ℕ} (hn : 1 ≤ n) (hm : 1 ≤ m)

@@ -648,8 +648,6 @@ theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
     rw [hqF] at hupp
     exact hupp
   exact le_antisymm hupp' hlow
-  -/
-  sorry
 
 /-- The coefficient sum `a₁ + ⋯ + a_j` occurring in the generators of `𝔫`. -/
 def initialCoefficientSum (d : PowerSeriesData k) (j : ℕ) : k :=
@@ -2601,6 +2599,7 @@ private theorem localization_n_presentation_gP_injective
             (algebraMap (R d) (FractionRing (R d))
               (xInGeneratedRing d)) p := by
         simp [xzPolynomialMap]
+        rfl
       change hSFrac (gC (Polynomial.C p)) =
         xzPolynomialMap d (Polynomial.C p)
       rw [hgc, hxz]

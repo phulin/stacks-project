@@ -1,4 +1,4 @@
-import Formalization.Books.Sets.Unit09
+import Formalization.Books.Sets.Unit09.ConstructingCategoriesOfSchemes
 import Mathlib.CategoryTheory.Action.Concrete
 import Mathlib.CategoryTheory.Action.Limits
 import Mathlib.CategoryTheory.Limits.Preserves.Finite
@@ -65,13 +65,13 @@ def IsRepresentedAt [Group G] (c : GSetCoding G) (α : Ordinal.{u}) (T : GSet G)
 def GSetLimitConeAgreesWithAmbient [Group G] {c : GSetCoding G} {α : Ordinal.{u}}
     {I : Type u} [Category.{u} I] (F : I ⥤ GSetLevel c α) : Prop :=
   ∀ (t : LimitCone F) (s : LimitCone (F ⋙ gSetInclusion c α)),
-    Nonempty ((gSetInclusion c α).obj t.cone.pt ≅ s.cone.pt)
+    Nonempty ((gSetInclusion c α).mapCone t.cone ≅ s.cone)
 
 /-- The source's assertion that a colimit in `GSet α` agrees with the ambient colimit. -/
 def GSetColimitCoconeAgreesWithAmbient [Group G] {c : GSetCoding G} {α : Ordinal.{u}}
     {I : Type u} [Category.{u} I] (F : I ⥤ GSetLevel c α) : Prop :=
   ∀ (t : ColimitCocone F) (s : ColimitCocone (F ⋙ gSetInclusion c α)),
-    Nonempty ((gSetInclusion c α).obj t.cocone.pt ≅ s.cocone.pt)
+    Nonempty ((gSetInclusion c α).mapCocone t.cocone ≅ s.cocone)
 
 /-- All closure and agreement properties asserted for a level in the first lemma. -/
 structure GSetLevelData [Group G] (c : GSetCoding G) (S₀ : Set (GSet G))

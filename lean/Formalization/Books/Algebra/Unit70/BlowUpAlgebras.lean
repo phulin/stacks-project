@@ -226,6 +226,40 @@ theorem affineBlowup_localization_equiv
 
 /-! ## Base change -/
 
+private theorem ker_eq_powerTorsionIdeal_of_localization
+    {A C L : Type*} [CommRing A] [CommRing C] [CommRing L]
+    (b : A) [Algebra A L] [IsLocalization.Away b L]
+    (g : A →+* C) (cval : C →+* L) (hcval : Function.Injective cval)
+    (hcomp : cval.comp g = algebraMap A L) :
+    RingHom.ker g = powerTorsionIdeal A b := by
+  ext x
+  constructor
+  · intro hx
+    rw [mem_powerTorsionIdeal_iff]
+    have hxmap : algebraMap A L x = algebraMap A L 0 := by
+      have hx' : g x = 0 := hx
+      have hccomp := RingHom.congr_fun hcomp x
+      change cval (g x) = algebraMap A L x at hccomp
+      calc
+        algebraMap A L x = cval (g x) := hccomp.symm
+        _ = cval 0 := congrArg cval hx'
+        _ = algebraMap A L 0 := by simp
+    obtain ⟨n, hn⟩ := IsLocalization.Away.exists_of_eq
+      (S := L) b hxmap
+    exact ⟨n, by simpa using hn⟩
+  · rw [mem_powerTorsionIdeal_iff]
+    rintro ⟨n, hn⟩
+    apply hcval
+    rw [map_zero]
+    have hc := RingHom.congr_fun hcomp x
+    change cval (g x) = algebraMap A L x at hc
+    rw [hc]
+    change algebraMap A L x = 0
+    apply (IsUnit.pow n
+      (IsLocalization.Away.algebraMap_isUnit b)).mul_left_cancel
+    rw [← map_pow]
+    simpa [map_mul] using congrArg (algebraMap A L) hn
+
 /-- The torsion ideal occurring in the base-change description. -/
 def baseChangeTorsionIdeal
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
@@ -511,49 +545,12 @@ theorem affineBlowup_baseChange
     change RingHom.ker g.toRingHom =
       powerTorsionIdeal (S ⊗[R] A)
         (algebraMap S (S ⊗[R] A) (f a))
-    ext x
-    constructor
-    · intro hx
-      rw [mem_powerTorsionIdeal_iff]
-      change g x = 0 at hx
-      have he : cval (g x) = h x := by
-        exact congrArg (fun φ => φ x) h_eq
-      have hx' : h x = 0 := by
-        rw [← he, hx]
-        rfl
-      have hx'' :
-          algebraMap (S ⊗[R] A) (Localization.Away (f a)) x =
-            algebraMap (S ⊗[R] A) (Localization.Away (f a)) 0 := by
-        simpa [RingHom.algebraMap_toAlgebra] using hx'
-      obtain ⟨n, hn⟩ := IsLocalization.Away.exists_of_eq
-        (S := Localization.Away (f a))
-        (algebraMap S (S ⊗[R] A) (f a)) hx''
-      exact ⟨n, by simpa using hn⟩
-    · rw [mem_powerTorsionIdeal_iff]
-      rintro ⟨n, hn⟩
-      apply Subtype.ext
-      change cval (g x) = 0
-      have hxmap :
-          algebraMap (S ⊗[R] A) (Localization.Away (f a)) x = 0 := by
-        apply (IsUnit.pow n
-          (IsLocalization.Away.algebraMap_isUnit
-            (algebraMap S (S ⊗[R] A) (f a)))).mul_left_cancel
-        have hb : algebraMap S (S ⊗[R] A) (f a) =
-            f a ⊗ₜ[R] (1 : A) := by
-          rw [Algebra.TensorProduct.algebraMap_apply]
-          simp
-        rw [← map_pow, hb, Algebra.TensorProduct.tmul_pow]
-        simpa [map_mul] using
-          congrArg (algebraMap (S ⊗[R] A) (Localization.Away (f a))) hn
-      have he : cval (g x) = h x := by
-        exact congrArg (fun φ => φ x) h_eq
-      have hx' : h x = 0 := by
-        change algebraMap (S ⊗[R] A) (Localization.Away (f a)) x = 0
-        exact hxmap
-      calc
-        cval (g x) = h x := he
-        _ = 0 := hx'
-        _ = cval 0 := by simp
+    apply ker_eq_powerTorsionIdeal_of_localization
+      (algebraMap S (S ⊗[R] A) (f a)) g.toRingHom cval.toRingHom
+    · intro x y hxy
+      exact Subtype.ext hxy
+    · change cval.toRingHom.comp g.toRingHom = h.toRingHom
+      exact congrArg AlgHom.toRingHom h_eq
   let eQ :
       (S ⊗[R] A) ⧸ RingHom.ker g.toRingHom ≃+* C :=
     RingHom.quotientKerEquivOfSurjective hg_surj

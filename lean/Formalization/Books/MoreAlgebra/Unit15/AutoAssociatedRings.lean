@@ -266,6 +266,63 @@ abbrev squareZeroRing (k : Type u) [CommRing k] :=
 def squareZeroVariable (k : Type u) [CommRing k] (i : ℕ) : squareZeroRing k :=
   Ideal.Quotient.mk (Ideal.span (squareZeroRelations k)) (MvPolynomial.X i)
 
+@[simp]
+theorem squareZeroVariable_sq
+    (k : Type u) [CommRing k] (i : ℕ) : squareZeroVariable k i ^ 2 = 0 := by
+  rw [squareZeroVariable, ← map_pow, Ideal.Quotient.eq_zero_iff_mem]
+  exact Ideal.subset_span (Set.mem_range_self i)
+
+/-- The quotient endomorphism which erases one square-zero variable. -/
+def squareZeroEraseMap (k : Type u) [CommRing k] (n : ℕ) :
+    squareZeroRing k →+* squareZeroRing k :=
+  Ideal.Quotient.lift (Ideal.span (squareZeroRelations k))
+    (MvPolynomial.eval₂Hom
+      ((Ideal.Quotient.mk (Ideal.span (squareZeroRelations k))).comp MvPolynomial.C)
+      (fun i : ℕ => if i = n then 0 else squareZeroVariable k i)) (by
+        intro a ha
+        apply (show Ideal.span (squareZeroRelations k) ≤
+          RingHom.ker (MvPolynomial.eval₂Hom
+            ((Ideal.Quotient.mk (Ideal.span (squareZeroRelations k))).comp MvPolynomial.C)
+            (fun i : ℕ => if i = n then 0 else squareZeroVariable k i)) from ?_) ha
+        rw [Ideal.span_le]
+        rintro _ ⟨i, rfl⟩
+        simp [squareZeroVariable_sq])
+
+@[simp]
+theorem squareZeroEraseMap_variable_same
+    (k : Type u) [CommRing k] (n : ℕ) :
+    squareZeroEraseMap k n (squareZeroVariable k n) = 0 := by
+  simp [squareZeroEraseMap, squareZeroVariable]
+
+@[simp]
+theorem squareZeroEraseMap_variable_of_ne
+    (k : Type u) [CommRing k] {n i : ℕ} (h : i ≠ n) :
+    squareZeroEraseMap k n (squareZeroVariable k i) = squareZeroVariable k i := by
+  simp [squareZeroEraseMap, squareZeroVariable, h]
+
+/-- Every quotient element is fixed by erasing some sufficiently late variable. -/
+theorem exists_squareZeroEraseMap_eq
+    (k : Type u) [Field k] (a : squareZeroRing k) (start : ℕ) :
+    ∃ n ≥ start, squareZeroEraseMap k n a = a := by
+  obtain ⟨f, rfl⟩ := Ideal.Quotient.mk_surjective a
+  let n : ℕ := max start (f.vars.sup id + 1)
+  refine ⟨n, le_max_left _ _, ?_⟩
+  change MvPolynomial.eval₂Hom
+      ((Ideal.Quotient.mk (Ideal.span (squareZeroRelations k))).comp MvPolynomial.C)
+      (fun i : ℕ => if i = n then 0 else squareZeroVariable k i) f =
+    Ideal.Quotient.mk (Ideal.span (squareZeroRelations k)) f
+  apply MvPolynomial.hom_congr_vars
+  · ext c
+    simp
+  · intro i hi _
+    have hin : i ≠ n := by
+      have hle : i ≤ f.vars.sup id := Finset.le_sup (f := id) hi
+      have hlt : f.vars.sup id < n := by
+        exact lt_of_lt_of_le (Nat.lt_succ_self _) (le_max_right _ _)
+      exact ne_of_lt (lt_of_le_of_lt hle hlt)
+    simp [hin, squareZeroVariable]
+  · rfl
+
 /-- Every finite product of distinct square-zero variables is nonzero. -/
 theorem squareZeroVariables_prod_ne_zero
     (k : Type u) [Field k] (n : ℕ) :

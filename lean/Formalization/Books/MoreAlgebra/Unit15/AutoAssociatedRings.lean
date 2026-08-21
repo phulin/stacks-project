@@ -256,6 +256,28 @@ private theorem split_rankOne_to_projective_of_hasPropertyP
   rw [LinearMap.comp_assoc, LinearMap.comp_assoc]
   exact hg
 
+private theorem projective_retractionKernel
+    {R : Type u} [CommRing R]
+    {P : Type v} [AddCommGroup P] [Module R P] [Module.Projective R P]
+    (u : R →ₗ[R] P) (g : P →ₗ[R] R)
+    (hg : g.comp u = LinearMap.id) : Module.Projective R (LinearMap.ker g) := by
+  let k : P →ₗ[R] P := LinearMap.id - u.comp g
+  have hk_mem (x : P) : k x ∈ LinearMap.ker g := by
+    rw [LinearMap.mem_ker]
+    have hgu (r : R) : g (u r) = r := by
+      have h := LinearMap.congr_fun hg r
+      simpa using h
+    simp [k, LinearMap.comp_apply, hgu]
+  let p : P →ₗ[R] LinearMap.ker g :=
+    k.codRestrict (LinearMap.ker g) hk_mem
+  have hp : p.comp (LinearMap.ker g).subtype = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    have hx : g (x : P) = 0 := LinearMap.mem_ker.mp x.2
+    simp [p, k, LinearMap.comp_apply, hx]
+  exact Module.Projective.of_split (LinearMap.ker g).subtype p hp
+
 /-- The projective-module formulation of property (P). -/
 def ProjectiveInjectivityCondition (R : Type u) [CommRing R] : Prop :=
   ∀ {N : Type v} {M : Type w} [AddCommGroup N] [Module R N]

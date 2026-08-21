@@ -393,13 +393,11 @@ noncomputable def standardResolutionOuterHomotopyInverse
 
 /-- The degree-zero unit section for the inner whiskered resolution, with all
 associator and unitor transports exposed. -/
-noncomputable def standardResolutionInnerDegreeZeroSection
+noncomputable def standardResolutionInnerDegreeZeroSectionRaw
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
-    T.U ⟶ (standardResolutionInnerObject T).obj
+    T.U ⟶ T.U ⋙ (standardResolutionObject T).obj
       (op (SimplexCategory.mk 0)) := by
-  change T.U ⟶ T.U ⋙ (standardResolutionObject T).obj
-    (op (SimplexCategory.mk 0))
   let raw : (𝟭 S) ⋙ T.U ⟶ (T.U ⋙ T.V) ⋙ T.U :=
     Functor.whiskerRight T.adjunction.unit T.U
   exact (Functor.leftUnitor T.U).inv ≫ raw ≫
@@ -411,6 +409,15 @@ noncomputable def standardResolutionInnerDegreeZeroSection
         standardResolutionDegree T (some 0) from rfl)) ≫
     Functor.whiskerLeft T.U
       (eqToHom (standardResolution_object_degree T 0).symm)
+
+/-- The raw degree-zero section regarded as a component of the inner
+whiskered simplicial object. -/
+noncomputable def standardResolutionInnerDegreeZeroSection
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    T.U ⟶ (standardResolutionInnerObject T).obj
+      (op (SimplexCategory.mk 0)) :=
+  standardResolutionInnerDegreeZeroSectionRaw T
 
 noncomputable def standardResolutionInnerHomotopyInverse
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
@@ -458,6 +465,67 @@ theorem standardResolutionInnerHomotopyInverse_app
           (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op := by
   rfl
 
+private theorem standardResolutionInnerDegreeZeroSectionRaw_comp_augmentation
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    standardResolutionInnerDegreeZeroSectionRaw T ≫
+        (standardResolutionInnerRawAugmentation T).app
+          (op (SimplexCategory.mk 0)) ≫
+        (Functor.rightUnitor T.U).hom = 𝟙 T.U := by
+  have haug := congrArg (fun k => Functor.whiskerLeft T.U k)
+    (standardResolution_augmentation_formula T 0)
+  rw [Functor.whiskerLeft_comp] at haug
+  let p : T.U ⟶ T.U ⋙ standardResolutionDegree T (some 0) :=
+    (Functor.leftUnitor T.U).inv ≫
+      Functor.whiskerRight T.adjunction.unit T.U ≫
+      (Functor.associator T.U T.V T.U).hom ≫
+      Functor.whiskerLeft T.U
+        (Functor.rightUnitor (standardResolutionBase T)).inv ≫
+      Functor.whiskerLeft T.U
+        (eqToHom (show standardResolutionBase T ⋙ 𝟭 A =
+          standardResolutionDegree T (some 0) from rfl))
+  have hsection : standardResolutionInnerDegreeZeroSectionRaw T =
+      p ≫ Functor.whiskerLeft T.U
+        (eqToHom (standardResolution_object_degree T 0).symm) := by
+    unfold standardResolutionInnerDegreeZeroSectionRaw
+    dsimp [p]
+    simp only [Category.assoc]
+  rw [hsection]
+  dsimp [standardResolutionInnerRawAugmentation]
+  rw [← Category.assoc]
+  rw [Category.assoc p
+    (Functor.whiskerLeft T.U
+      (eqToHom (standardResolution_object_degree T 0).symm))
+    (Functor.whiskerLeft T.U
+      ((standardResolutionAugmentation T).app (op (SimplexCategory.mk 0)))), haug]
+  rw [(standardResolutionAugmentationData T).component_zero]
+  dsimp [godementAugmentationComponent, standardResolutionCounit]
+  have hdeg :
+      eqToHom (show standardResolutionBase T ⋙ 𝟭 A =
+        standardResolutionDegree T (some 0) from rfl) =
+        𝟙 (standardResolutionBase T ⋙ 𝟭 A) := by
+    rfl
+  dsimp only [p]
+  rw [hdeg]
+  dsimp [standardResolutionBase, standardResolutionDegree,
+    godementDegree, iteratedEndofunctor]
+  simp only [Category.assoc]
+  ext X
+  simp
+
+private theorem standardResolutionInnerDegreeZeroSection_comp_augmentation
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    standardResolutionInnerDegreeZeroSection T ≫
+        (standardResolutionInnerRawAugmentation T).app
+          (op (SimplexCategory.mk 0)) ≫
+        (Functor.rightUnitor T.U).hom = 𝟙 T.U := by
+  change standardResolutionInnerDegreeZeroSectionRaw T ≫
+      (standardResolutionInnerRawAugmentation T).app
+        (op (SimplexCategory.mk 0)) ≫
+      (Functor.rightUnitor T.U).hom = 𝟙 T.U
+  exact standardResolutionInnerDegreeZeroSectionRaw_comp_augmentation T
+
 theorem standardResolution_outer_inverse_section
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
@@ -472,7 +540,50 @@ theorem standardResolution_inner_inverse_section
     standardResolutionInnerHomotopyInverse T ≫
         standardResolutionInnerAugmentation T =
       𝟙 ((SimplicialObject.const (S ⥤ A)).obj T.U) := by
-  sorry
+  apply SimplicialObject.hom_ext
+  intro n
+  let q : op (SimplexCategory.mk 0) ⟶ n :=
+    (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
+  rw [NatTrans.comp_app, standardResolutionInnerHomotopyInverse_app]
+  change (standardResolutionInnerDegreeZeroSection T ≫
+      (standardResolutionInnerObject T).map q) ≫
+    ((standardResolutionInnerRawAugmentation T).app n ≫
+      (Functor.rightUnitor T.U).hom) = 𝟙 T.U
+  have hn := (standardResolutionInnerRawAugmentation T).naturality q
+  have hn' : (standardResolutionInnerObject T).map q ≫
+        (standardResolutionInnerRawAugmentation T).app n =
+      (standardResolutionInnerRawAugmentation T).app
+          (op (SimplexCategory.mk 0)) ≫
+        ((SimplicialObject.const (S ⥤ A)).obj (T.U ⋙ 𝟭 A)).map q := by
+    exact hn
+  have hconst :
+      ((SimplicialObject.const (S ⥤ A)).obj (T.U ⋙ 𝟭 A)).map q =
+        𝟙 (T.U ⋙ 𝟭 A) := by
+    rfl
+  rw [hconst] at hn'
+  have hn0 : (standardResolutionInnerObject T).map q ≫
+        (standardResolutionInnerRawAugmentation T).app n =
+      (standardResolutionInnerRawAugmentation T).app
+        (op (SimplexCategory.mk 0)) :=
+    hn'.trans (Category.comp_id _)
+  have hn'' := congrArg (fun k =>
+    standardResolutionInnerDegreeZeroSection T ≫ k ≫
+      (Functor.rightUnitor T.U).hom) hn0
+  rw [Category.assoc ((standardResolutionInnerObject T).map q)
+    ((standardResolutionInnerRawAugmentation T).app n)
+    (Functor.rightUnitor T.U).hom] at hn''
+  calc
+    _ = standardResolutionInnerDegreeZeroSection T ≫
+        (standardResolutionInnerRawAugmentation T).app
+          (op (SimplexCategory.mk 0)) ≫
+        (Functor.rightUnitor T.U).hom := by
+      rw [Category.assoc (standardResolutionInnerDegreeZeroSection T)
+        ((standardResolutionInnerObject T).map q)
+        ((standardResolutionInnerRawAugmentation T).app n ≫
+          (Functor.rightUnitor T.U).hom)]
+      exact hn''
+    _ = 𝟙 T.U :=
+      standardResolutionInnerDegreeZeroSection_comp_augmentation T
 
 /-- Both augmented whiskered resolutions are homotopy equivalences. The
 proof route is the section from Chapter 33, followed by its two-map homotopy
